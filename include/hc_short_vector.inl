@@ -916,17 +916,17 @@ private:
   typedef float v8_type_internal  __attribute__((ext_vector_type(8)));
   typedef float v16_type_internal  __attribute__((ext_vector_type(16)));
 
-  v1_type_internal clamp(v1_type_internal v) __CPU__GPU__ {
+  v1_type_internal clamp(v1_type_internal v) __CPU_GPU__ {
     return { value_type(v.s0) };
   }
 
-  v2_type_internal clamp(v2_type_internal v) __CPU__GPU__ {
+  v2_type_internal clamp(v2_type_internal v) __CPU_GPU__ {
     return { value_type(v.s0)
             ,value_type(v.s1)
             };
   }
 
-  v4_type_internal clamp(v4_type_internal v) __CPU__GPU__ {
+  v4_type_internal clamp(v4_type_internal v) __CPU_GPU__ {
     return { value_type(v.s0)
             ,value_type(v.s1)
             ,value_type(v.s2)
@@ -934,7 +934,7 @@ private:
             };
   }
 
-  v8_type_internal clamp(v8_type_internal v) __CPU__GPU__ {
+  v8_type_internal clamp(v8_type_internal v) __CPU_GPU__ {
     return { value_type(v.s0)
             ,value_type(v.s1)
             ,value_type(v.s2)
@@ -946,7 +946,7 @@ private:
             };
   }
 
-  v16_type_internal clamp(v16_type_internal v) __CPU__GPU__ {
+  v16_type_internal clamp(v16_type_internal v) __CPU_GPU__ {
     return { value_type(v.s0)
             ,value_type(v.s1)
             ,value_type(v.s2)

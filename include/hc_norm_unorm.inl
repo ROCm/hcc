@@ -50,11 +50,11 @@ public:
     set((float)other);
   }
 
-  float get() {
+  float get() __CPU_GPU__ {
     return data;
   }
 
-  void set(float f) {
+  void set(float f) __CPU_GPU__ {
     data = clamp(f);
   }
 
@@ -68,7 +68,7 @@ public:
     return *this;
   }
 
-  operator float() const __CPU__GPU { return data; }
+  operator float() const __CPU_GPU__ { return data; }
 
   norm_type& operator+=(const norm_type& other) __CPU_GPU__ {  
     set(data + other.data);
@@ -125,7 +125,7 @@ public:
 private:
   float data;
 
-  float clamp(float v) {
+  float clamp(float v) __CPU_GPU__ {
     return v>max?max:(v<min?min:v);
   }
 };
