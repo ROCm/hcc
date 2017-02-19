@@ -19,7 +19,7 @@ using namespace concurrency;
 
 class user_functor {
 public:
-  user_functor() {}
+  user_functor() restrict(amp,cpu) {}
 
   long value(const int& i) const restrict(amp,cpu) { return i + 1; }
 };
