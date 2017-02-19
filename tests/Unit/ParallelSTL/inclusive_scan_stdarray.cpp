@@ -1,5 +1,5 @@
 
-// RUN: %hc -Xclang -KO0 %s -o %t.out && %t.out
+// RUN: %hc %s -o %t.out && %t.out
 
 // Parallel STL headers
 #include <coordinate>
