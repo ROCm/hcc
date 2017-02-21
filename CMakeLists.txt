@@ -14,7 +14,7 @@ IF (NOT NUM_BUILD_THREADS)
   ProcessorCount(NUM_BUILD_THREADS)
 ENDIF(NOT NUM_BUILD_THREADS)
 
-# Query the systems distribution with lsb_release
+# Use two different methods to determine host distribution: lsb_release and if that fails grep /etc/os-release
 find_program( lsb_executable lsb_release )
 
 if( lsb_executable )
@@ -22,17 +22,19 @@ if( lsb_executable )
   execute_process( COMMAND ${lsb_executable} -rs OUTPUT_VARIABLE DISTRO_RELEASE OUTPUT_STRIP_TRAILING_WHITESPACE )
 else()
   if( EXISTS "/etc/os-release" )
-    file(STRINGS "/etc/os-release" DISTRO_ID REGEX "^ID=" )
-    file(STRINGS "/etc/os-release" DISTRO_RELEASE REGEX "^VERSION_ID=" )
+    file( STRINGS "/etc/os-release" DISTRO_ID REGEX "^ID=" )
+    file( STRINGS "/etc/os-release" DISTRO_RELEASE REGEX "^VERSION_ID=" )
+    string( REPLACE "ID=" "" DISTRO_ID ${DISTRO_ID} )
+    string( REPLACE "VERSION_ID=" "" DISTRO_RELEASE ${DISTRO_RELEASE} )
   endif( )
 endif( )
 
 # Accepted values for DISTRO_ID: trusty (Ubuntu 14.04), xenial (Ubuntu 16.06), fd23 (Fedora 23)
-string(TOLOWER DISTRO_ID "${DISTRO_ID}" DISTRO_ID )
+string(TOLOWER "${DISTRO_ID}" DISTRO_ID )
 if( DISTRO_ID MATCHES "ubuntu" OR DISTRO_ID MATCHES "fedora" )
   message( STATUS "Detected distribution: ${DISTRO_ID}:${DISTRO_RELEASE}" )
 else()
-  message( "Could not recognize host linux distribution.  Defaulting to Ubuntu logic" )
+  message( "This cmakefile does not natively support ${DISTRO_ID}:${DISTRO_RELEASE}.  Continuing with Ubuntu logic" )
   set( DISTRO_ID "ubuntu" )
   set( DISTRO_RELEASE "16.04" )
 endif()
@@ -81,9 +83,9 @@ LINK_DIRECTORIES( ${LLVM_LIB_DIR} )
 # ROCm external dependencies
 set (ROCM_ROOT "/opt/rocm" CACHE PATH "ROCM runtime path")
 
-find_path(HSA_HEADER hsa/hsa.h 
-  HINTS 
-    ${HSA_HEADER_DIR} 
+find_path(HSA_HEADER hsa/hsa.h
+  HINTS
+    ${HSA_HEADER_DIR}
   PATHS
     ${ROCM_ROOT}/include
 )
@@ -92,9 +94,9 @@ if (NOT HSA_HEADER)
   MESSAGE("HSA header not found. Use -DHSA_HEADER=<path_to_hsa.h>.")
 endif (NOT HSA_HEADER)
 
-find_library(HSA_LIBRARY hsa-runtime64 
-  HINTS 
-    ${HSA_LIBRARY_DIR} 
+find_library(HSA_LIBRARY hsa-runtime64
+  HINTS
+    ${HSA_LIBRARY_DIR}
   PATHS
     ${ROCM_ROOT}/lib
 )
@@ -111,12 +113,12 @@ endif (NOT HSA_LIBRARY)
 find_path(ROCM_DEVICE_LIB ocml.amdgcn.bc
   PATH_SUFFIXES
     lib
-  HINTS 
-    ${ROCM_DEVICE_LIB_DIR} 
+  HINTS
+    ${ROCM_DEVICE_LIB_DIR}
   PATHS
     ${ROCM_ROOT}/lib
 )
- 
+
 if (NOT ROCM_DEVICE_LIB)
   MESSAGE(FATAL_ERROR "ROCm Device Libs not found. Use -DROCM_DEVICE_LIB=<path_to_ocml.amdgcn.bc>.")
 endif (NOT ROCM_DEVICE_LIB)
@@ -164,13 +166,21 @@ endif (USE_CODEXL_ACTIVITY_LOGGER EQUAL 1)
 # hcc will use libc++ if USE_LIBCXX is set to ON; otherwise, it will use libstdc++
 #################
 
-# if USE_LIBCXX is not set, then pick the C++ runtime based on the version of the detected g++ compiler
+# if USE_LIBCXX is not expicitely set
 if( NOT DEFINED USE_LIBCXX )
+  # default to libstdc++
+  set( USE_LIBCXX "OFF" )
+
   if( CMAKE_COMPILER_IS_GNUCXX AND (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 5.0) )
+    # If host compiler is g++, use libc++ if version is less than 5.0
     set( USE_LIBCXX "ON" )
-  else()
-    set( USE_LIBCXX "OFF" )
-  endif()
+  elseif( CMAKE_CXX_COMPILER_ID MATCHES "Clang" )
+    # If host compiler is clang, detect version of system g++ and use libc++ if less than 5.0
+    execute_process( COMMAND g++ -dumpversion OUTPUT_VARIABLE gplusplus_version )
+    if( gplusplus_version VERSION_LESS 5.0 )
+      set( USE_LIBCXX "ON" )
+    endif( )
+  endif( )
 endif( )
 
 # Detect libc++
@@ -437,6 +447,11 @@ set(CPACK_PACKAGE_VERSION_MINOR ${KALMAR_VERSION_MINOR})
 set(CPACK_PACKAGE_VERSION_PATCH ${KALMAR_VERSION_PATCH})
 set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${DISTRO_ID})
 
+if( USE_LIBCXX )
+  set( CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_FILE_NAME}-libc++" )
+else( )
+  set( CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_FILE_NAME}-libstdc++" )
+endif( )
 
 set(PACKAGE_DESCRIPTION "HCC: An Open Source, Optimizing C++ Compiler for Heterogeneous Compute")
 
