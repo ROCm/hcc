@@ -3166,12 +3166,12 @@ extern "C" unsigned int get_static_group_segment_size() __HC__;
 /**
  * Fetch the address of the beginning of group segment.
  */
-extern "C" __attribute__((address_space(3))) void* get_group_segment_base_pointer() __HC__;
+extern "C" void* get_group_segment_base_pointer() __HC__;
 
 /**
  * Fetch the address of the beginning of dynamic group segment.
  */
-extern "C" __attribute__((address_space(3))) void* get_dynamic_group_segment_base_pointer() __HC__;
+extern "C" void* get_dynamic_group_segment_base_pointer() __HC__;
 
 // ------------------------------------------------------------------------
 // utility class for tiled_barrier
