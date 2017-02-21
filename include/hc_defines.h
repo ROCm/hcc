@@ -50,6 +50,10 @@ extern "C" __attribute__((const,amp)) int64_t amp_get_group_id(unsigned int n);
 #define tile_static __attribute__((tile_static))
 #endif
 
+#ifndef __device
+#define __device __attribute__((agent_allocated))
+#endif
+
 extern "C" __attribute__((noduplicate,hc)) void hc_barrier(unsigned int n);
 extern "C" __attribute__((noduplicate,amp)) void amp_barrier(unsigned int n) ;
 
