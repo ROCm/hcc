@@ -3381,7 +3381,7 @@ public:
      * @param[in] other An object of type tiled_index from which to initialize
      *                  this.
      */
-    tiled_index(const tiled_index& other) __CPU__ __HC__ : global(other.global), local(other.local), tile(other.tile), tile_origin(other.tile_origin), barrier(other.barrier), tile_dim(other.dim) {}
+    tiled_index(const tiled_index& other) __CPU__ __HC__ : global(other.global), local(other.local), tile(other.tile), tile_origin(other.tile_origin), barrier(other.barrier), tile_dim(other.tile_dim) {}
 
     /**
      * An index of rank 1, 2, or 3 that represents the global index within an
