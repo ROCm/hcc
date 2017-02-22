@@ -21,10 +21,10 @@ runall_result test1(const accelerator_view &av)
 	runall_result result;
 	const int M = 256;
 	const int N = 256;
-		
+
 	array_view<int,2> arrViewSrc(M,N);
 	array<int,2> arrDest(M,N);
-	
+
 	arrViewSrc.copy_to(arrDest); // Copying to Array
 	result &= REPORT_RESULT(VerifyDataOnCpu(arrViewSrc,arrDest));
 	return result;
@@ -40,11 +40,11 @@ runall_result test2(const accelerator_view &av)
 	runall_result result;
 	const int M = 256;
 	const int N = 256;
-		
+
 	array_view<int,2> arrViewSrc(M,N);
 	std::vector<int> destVect( M * N , -1 );
 	array_view<int,2> arrViewDest(M,N,destVect);
-	
+
 	arrViewSrc.copy_to(arrViewDest); // Copying to Array
 	arrViewDest.synchronize();
 	result &= REPORT_RESULT(VerifyDataOnCpu(arrViewSrc,arrViewDest));
@@ -52,9 +52,9 @@ runall_result test2(const accelerator_view &av)
 }
 runall_result test_main()
 {
-    accelerator_view av = require_device().get_default_view();
+    accelerator_view av = require_device(device_flags::NOT_SPECIFIED).get_default_view();
     runall_result res;
-	
+
 	res &= REPORT_RESULT(test1(av));
 	res &= REPORT_RESULT(test2(av));
     return res;

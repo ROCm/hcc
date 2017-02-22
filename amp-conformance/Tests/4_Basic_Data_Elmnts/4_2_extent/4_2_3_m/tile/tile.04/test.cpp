@@ -52,7 +52,7 @@ bool test_tile() restrict(amp,cpu)
 
 runall_result test_main()
 {
-	accelerator_view av = require_device().get_default_view();
+	accelerator_view av = require_device(device_flags::NOT_SPECIFIED).get_default_view();
 
 	runall_result result;
 	result &= INVOKE_TEST_FUNC_ON_CPU_AND_GPU(av, []() restrict(amp,cpu)->bool{return test_tile<extent<1>>();});

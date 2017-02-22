@@ -34,6 +34,6 @@ int main()
 
     array_view<int, 1> av(100, a);
 
-    delete a;
+    delete [] a;
 }
 

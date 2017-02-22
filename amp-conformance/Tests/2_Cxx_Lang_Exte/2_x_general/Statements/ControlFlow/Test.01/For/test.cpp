@@ -92,7 +92,7 @@ runall_result test(int level, int initialValue, int newValue, int expected)
     {
         while(A[i] != expected)
         {
-            fprintf(stderr, "A[%Id] = %d. Expected: %d\n", i, A[i], expected);
+            fprintf(stderr, "A[%d] = %d. Expected: %d\n", i, A[i], expected);
             passed = false;
             break;
         }

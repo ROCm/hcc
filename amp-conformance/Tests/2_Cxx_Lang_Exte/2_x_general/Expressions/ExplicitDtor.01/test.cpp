@@ -47,7 +47,7 @@ void destroy(const array_view<int>& res, const array_view<int>& scratch) restric
 // the final result, passed later to CPU context.
 runall_result test_main()
 {
-	accelerator_view av = require_device().get_default_view();
+	accelerator_view av = require_device(device_flags::NOT_SPECIFIED).get_default_view();
 
 	int res_ = 0, scratch_ = 0;
 	array_view<int> res(1, &res_);

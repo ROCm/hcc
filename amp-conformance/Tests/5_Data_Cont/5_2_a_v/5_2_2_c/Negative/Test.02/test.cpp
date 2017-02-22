@@ -34,6 +34,6 @@ int main()
     array_view<const int, 1> av_ro(100, a);
     array_view<int, 1> av_rw(av_ro);
 
-    delete a;
+    delete [] a;
 }
 

@@ -31,8 +31,8 @@ using namespace Concurrency::Test;
 
 runall_result test_main()
 {
-    accelerator acc = require_device();
-	
+    accelerator acc = require_device(device_flags::NOT_SPECIFIED);
+
     if(acc.get_supports_cpu_shared_memory())
     {
         acc.set_default_cpu_access_type(ACCESS_TYPE);
@@ -44,7 +44,7 @@ runall_result test_main()
 
     av.view().refresh();
 
-    Log() << "Reading on the GPU" << std::endl;
+    Log(LogType::Info, true) << "Reading on the GPU" << std::endl;
     std::vector<int> result_v(1);
     array_view<int, 1> result(1, result_v);
     array_view<int, 1> gpu_view = av.view();

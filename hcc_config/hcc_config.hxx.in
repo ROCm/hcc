@@ -1,0 +1,12 @@
+#pragma once
+#define CMAKE_BUILD_INC_DIR     "@HCC_SOURCE_DIR@/include"
+#define CMAKE_BUILD_LIB_DIR     "@PROJECT_BINARY_DIR@/lib"
+
+#define CMAKE_INSTALL_PREFIX    "@CMAKE_INSTALL_PREFIX@"
+#define CMAKE_INSTALL_INC           CMAKE_INSTALL_PREFIX"/include"
+#define CMAKE_INSTALL_LIB           CMAKE_INSTALL_PREFIX"/lib"
+
+#define CMAKE_HSA_ROOT         "@HSA_HEADER@"
+#define CMAKE_HSA_LIB          "@HSA_ROOT@/lib"
+
+#define CMAKE_GTEST_INC_DIR "@PROJECT_SOURCE_DIR@/utils"

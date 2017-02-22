@@ -1,4 +1,5 @@
-// XFAIL: Linux
+// NOTE: This is an invalid test.  C++ atomic_fetch_sub does not support floating point types.
+// XFAIL: *
 // RUN: %hc %s -o %t.out && %t.out
 #include <hc.hpp>
 #include <stdlib.h>

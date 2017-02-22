@@ -3506,10 +3506,10 @@ public:
      * @param[in] e0,e1,e2 The component values that will form the extent of
      *                     this array_view.
      */
-    explicit array_view(int e0) : array_view(Concurrency::extent<N>(e0)) {}
-    explicit array_view(int e0, int e1)
+    explicit array_view(int e0) restrict(cpu) : array_view(Concurrency::extent<N>(e0)) {}
+    explicit array_view(int e0, int e1) restrict(cpu)
         : array_view(Concurrency::extent<N>(e0, e1)) {}
-    explicit array_view(int e0, int e1, int e2)
+    explicit array_view(int e0, int e1, int e2) restrict(cpu)
         : array_view(Concurrency::extent<N>(e0, e1, e2)) {}
 
     /**

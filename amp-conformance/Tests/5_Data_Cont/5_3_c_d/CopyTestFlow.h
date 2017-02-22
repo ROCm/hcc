@@ -28,23 +28,23 @@ typedef std::vector<std::tuple<concurrency::access_type, concurrency::access_typ
 
 void print_access_type_tuple(std::tuple<concurrency::access_type, concurrency::access_type>& tup)
 {
-	Concurrency::Test::Log() << "CPU Access Types: (" << std::get<0>(tup) << ", " << std::get<1>(tup) << ")" << std::endl;			
+	Concurrency::Test::Log(Concurrency::Test::LogType::Info, true) << "CPU Access Types: (" << std::get<0>(tup) << ", " << std::get<1>(tup) << ")" << std::endl;
 }
 
 void compute_access_type_list(access_list& access_types_vec, concurrency::accelerator& gpu_acc, concurrency::access_type def_acc_type)
 {
 	if(gpu_acc.get_supports_cpu_shared_memory())
 	{
-		//Concurrency::Test::WLog() << "Accelerator " << gpu_acc.get_description() << " supports zero copy" << std::endl;
-		
+		//Concurrency::Test::WLog(LogType::Info, true) << "Accelerator " << gpu_acc.get_description() << " supports zero copy" << std::endl;
+
 		// Set the default cpu access type for this accelerator
 		gpu_acc.set_default_cpu_access_type(def_acc_type);
-		
+
 		concurrency::access_type a_t_list[] = { concurrency::access_type_none,
 												concurrency::access_type_read,
 												concurrency::access_type_write,
 												concurrency::access_type_read_write };
-	
+
 		for(int i = 0; i < 4; i++)
 		{
 			for(int j = 0; j < 4; j++)
@@ -56,7 +56,7 @@ void compute_access_type_list(access_list& access_types_vec, concurrency::accele
 	else
 	{
 		access_types_vec.push_back(std::make_tuple(concurrency::access_type_auto, concurrency::access_type_auto));
-	}	
+	}
 }
 
 void compute_access_type_list(
@@ -65,18 +65,18 @@ void compute_access_type_list(
 				concurrency::accelerator& gpu_acc2,
 				concurrency::access_type def_acc_type1,
 				concurrency::access_type def_acc_type2)
-{	
+{
 	if(!gpu_acc1.get_supports_cpu_shared_memory() && !gpu_acc2.get_supports_cpu_shared_memory())
 	{
 		access_types_vec.push_back(std::make_tuple(concurrency::access_type_auto, concurrency::access_type_auto));
 	}
 	else if(gpu_acc1.get_supports_cpu_shared_memory() && !gpu_acc2.get_supports_cpu_shared_memory())
 	{
-		//Concurrency::Test::WLog() << "Accelerator " << gpu_acc1.get_description() << " supports zero copy" << std::endl;
-		
+		//Concurrency::Test::WLog(LogType::Info, true) << "Accelerator " << gpu_acc1.get_description() << " supports zero copy" << std::endl;
+
 		// Set the default cpu access type for this accelerator
 		gpu_acc1.set_default_cpu_access_type(def_acc_type1);
-		
+
 		access_types_vec.push_back(std::make_tuple(concurrency::access_type_none, concurrency::access_type_auto));
 		access_types_vec.push_back(std::make_tuple(concurrency::access_type_read, concurrency::access_type_auto));
 		access_types_vec.push_back(std::make_tuple(concurrency::access_type_write, concurrency::access_type_auto));
@@ -84,11 +84,11 @@ void compute_access_type_list(
 	}
 	else if(!gpu_acc1.get_supports_cpu_shared_memory() && gpu_acc2.get_supports_cpu_shared_memory())
 	{
-		//Concurrency::Test::WLog() << "Accelerator " << gpu_acc2.get_description() << " supports zero copy" << std::endl;
-		
+		//Concurrency::Test::WLog(LogType::Info, true) << "Accelerator " << gpu_acc2.get_description() << " supports zero copy" << std::endl;
+
 		// Set the default cpu access type for this accelerator
 		gpu_acc2.set_default_cpu_access_type(def_acc_type2);
-		
+
 		access_types_vec.push_back(std::make_tuple(concurrency::access_type_auto, concurrency::access_type_auto));
 		access_types_vec.push_back(std::make_tuple(concurrency::access_type_auto, concurrency::access_type_read));
 		access_types_vec.push_back(std::make_tuple(concurrency::access_type_auto, concurrency::access_type_write));
@@ -96,18 +96,18 @@ void compute_access_type_list(
 	}
 	else
 	{
-		//Concurrency::Test::WLog() << "Accelerator " << gpu_acc1.get_description() << " supports zero copy" << std::endl;
-		//Concurrency::Test::WLog() << "Accelerator " << gpu_acc2.get_description() << " supports zero copy" << std::endl;
-		
+		//Concurrency::Test::WLog(LogType::Info, true) << "Accelerator " << gpu_acc1.get_description() << " supports zero copy" << std::endl;
+		//Concurrency::Test::WLog(LogType::Info, true) << "Accelerator " << gpu_acc2.get_description() << " supports zero copy" << std::endl;
+
 		// Set the default cpu access type for these accelerators
 		gpu_acc1.set_default_cpu_access_type(def_acc_type1);
 		gpu_acc2.set_default_cpu_access_type(def_acc_type2);
-		
+
 		concurrency::access_type a_t_list[] = { concurrency::access_type_none,
 												concurrency::access_type_read,
 												concurrency::access_type_write,
 												concurrency::access_type_read_write };
-	
+
 		for(int i = 0; i < 4; i++)
 		{
 			for(int j = 0; j < 4; j++)
@@ -184,7 +184,7 @@ bool CopyAndVerifyFromArrayToArray(
 
 	// Create source data
 	array<_type, _rank> src_arr = CreateArrayAndFillData<_type, _rank>(src_av, get_max_dim(_rank), src_access_type);
-	
+
 	// Copy: array (src_av) -> target array (target_av)
 	array<_type, _rank> target_arr(src_arr.get_extent(), target_av, target_access_type);
 	copy(src_arr, target_arr);
@@ -239,7 +239,7 @@ bool CopyAndVerifyFromArrayToStagingArray(
 
 	// Create source data
 	array<_type, _rank> src_arr = CreateArrayAndFillData<_type, _rank>(arr_av, get_max_dim(_rank), src_access_type);
-	
+
 	// Copy: array (src_av) -> staging array (stg_arr_av)
 	array<_type, _rank> stg_arr(src_arr.get_extent(), cpu_av, stg_arr_av);
 	copy(src_arr, stg_arr);
@@ -527,7 +527,7 @@ bool CopyAndVerifyFromNonContigArrayViewToNonContigArrayView(
 	array_view<_type, _rank> src_non_contig_arr_v = CreateNonContiguousArrayView<_type, _rank>(src_data_arr);
 
 	index<_rank> idx;
-	for(int i = 0; i < _rank; i++) { idx[i] = 0; }	
+	for(int i = 0; i < _rank; i++) { idx[i] = 0; }
 
 	// Copy: non-contiguous array_view (src_av) -> staging array (stg_arr_v)
 	array<_type, _rank> target_data_arr(src_non_contig_arr_v.get_extent(), target_av, target_access_type);
@@ -648,11 +648,11 @@ bool CopyAndVerifyBetweenArrayAndIterator(const concurrency::accelerator_view& t
 	using namespace concurrency::Test;
 
 	concurrency::extent<_rank> arr_extent = CreateRandomExtent<_rank>(get_max_dim(_rank));
-	Log() << "arr_extent = " << arr_extent << std::endl;
+	Log(LogType::Info, true) << "arr_extent = " << arr_extent << std::endl;
 
 	// Create source data
-	_stl_cont<_type> src_stl_cont(arr_extent.size(), static_cast<_type>(INIT_VALUE));	
-	
+	_stl_cont<_type> src_stl_cont(arr_extent.size(), static_cast<_type>(INIT_VALUE));
+
 	// Copy: STL container -> target array (target_av)
 	array<_type, _rank> target_arr(arr_extent, target_av, target_access_type);
 	copy(src_stl_cont.begin(), target_arr);
@@ -673,10 +673,10 @@ bool CopyAndVerifyFromIteratorToArrayView(const concurrency::accelerator_view& t
 	using namespace concurrency::Test;
 
 	concurrency::extent<_rank> arr_v_extent = CreateRandomExtent<_rank>(get_max_dim(_rank));
-	Log() << "arr_extent = " << arr_v_extent << std::endl;
+	Log(LogType::Info, true) << "arr_extent = " << arr_v_extent << std::endl;
 
 	// Create source data
-	_stl_cont<_type> src_stl_cont(arr_v_extent.size(), static_cast<_type>(_rank));	
+	_stl_cont<_type> src_stl_cont(arr_v_extent.size(), static_cast<_type>(_rank));
 
 	// Copy: STL container -> target array_view (target_av)
 	array<_type, _rank> target_data_arr(arr_v_extent, target_av, target_access_type);
@@ -700,7 +700,7 @@ bool CopyAndVerifyFromIteratorToNonContigArrayView(const concurrency::accelerato
 
 	array<_type, _rank> target_data_arr = CreateArrayAndFillData<_type, _rank>(target_av, get_max_dim(_rank), target_access_type);
 	array_view<_type, _rank> target_non_contig_arr_v = CreateNonContiguousArrayView<_type, _rank>(target_data_arr);
-	
+
 	// Create source data
 	_stl_cont<_type> src_stl_cont(target_non_contig_arr_v.get_extent().size(), static_cast<_type>(_rank));
 
@@ -723,7 +723,7 @@ bool CopyAndVerifyBetweenStagingArrayAndIterator(const concurrency::accelerator_
 	using namespace concurrency::Test;
 
 	concurrency::extent<_rank> arr_extent = CreateRandomExtent<_rank>(get_max_dim(_rank));
-	Log() << "arr_extent = " << arr_extent << std::endl;
+	Log(LogType::Info, true) << "arr_extent = " << arr_extent << std::endl;
 
 	// Create source data
 	_stl_cont<_type> src_stl_cont(arr_extent.size(), static_cast<_type>(_rank));
@@ -757,7 +757,7 @@ bool CopyAndVerifyFromStagingArrayToArray(
 
 	// Create source data
 	array<_type, _rank> src_stg_arr = CreateStagingArrayAndFillData<_type, _rank>(cpu_av, stg_arr_av, get_max_dim(_rank));
-	
+
 	// Copy: staging array (stg_arr_av) -> target array (arr_av)
 	array<_type, _rank> target_arr(src_stg_arr.get_extent(), arr_av, target_access_type);
 	copy(src_stg_arr, target_arr);
@@ -829,7 +829,7 @@ bool CopyAndVerifyFromStagingArrayToNonContigArrayView(
 							  	concurrency::access_type target_access_type)
 {
 	using namespace concurrency::Test;
-	
+
 	array<_type, _rank> data_arr = CreateArrayAndFillData<_type, _rank>(arr_v_av, get_max_dim(_rank), target_access_type);
 	array_view<_type, _rank> non_contig_arr_v = CreateNonContiguousArrayView<_type, _rank>(data_arr);
 

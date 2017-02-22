@@ -29,12 +29,12 @@ using namespace Concurrency::Test;
 
 int main()
 {
-    accelerator accel = require_device();
+    accelerator accel = require_device(device_flags::NOT_SPECIFIED);
 
     ArrayViewTest<int, 2> t(extent<2>(3, 3));
     array_view<int, 2> av = t.view();
 
-    Log() << "Setting known values on the GPU" << std::endl;
+    Log(LogType::Info, true) << "Setting known values on the GPU" << std::endl;
     // now set some values on the GPU
     parallel_for_each(accel.get_default_view(), extent<1>(1), [av](index<1>) __GPU {
         av[index<2>(0, 0)] = 1;

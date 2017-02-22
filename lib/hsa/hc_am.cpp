@@ -1,4 +1,6 @@
 #include "hc_am.hpp"
+
+#include <cstdint>
 #include <hsa/hsa.h>
 #include <hsa/hsa_ext_amd.h>
 
@@ -56,7 +58,8 @@ struct AmMemoryRangeCompare {
 
 std::ostream &operator<<(std::ostream &os, const hc::AmPointerInfo &ap)
 {
-    os << "hostPointer:" << ap._hostPointer << " devicePointer:"<< ap._devicePointer << " sizeBytes:" << ap._sizeBytes
+    os << "allocSeqNum:" << ap._allocSeqNum
+       << " hostPointer:" << ap._hostPointer << " devicePointer:"<< ap._devicePointer << " sizeBytes:" << ap._sizeBytes
        << " isInDeviceMem:" << ap._isInDeviceMem  << " isAmManaged:" << ap._isAmManaged 
        << " appId:" << ap._appId << " appAllocFlags:" << ap._appAllocationFlags;
     return os;
@@ -73,7 +76,7 @@ class AmPointerTracker {
 typedef std::map<AmMemoryRange, hc::AmPointerInfo, AmMemoryRangeCompare> MapTrackerType;
 public:
 
-    void insert(void *pointer, const hc::AmPointerInfo &p);
+    void insert(void *pointer, hc::AmPointerInfo &p);
     int remove(void *pointer);
 
     MapTrackerType::iterator find(const void *hostPtr) ;
@@ -90,13 +93,16 @@ private:
     MapTrackerType  _tracker;
     std::mutex      _mutex;
     //std::shared_timed_mutex _mut;
+    uint64_t        _allocSeqNum = 0;
 };
 
 
 //---
-void AmPointerTracker::insert (void *pointer, const hc::AmPointerInfo &p)
+void AmPointerTracker::insert (void *pointer, hc::AmPointerInfo &p)
 {
     std::lock_guard<std::mutex> l (_mutex);
+
+    p._allocSeqNum = ++ this->_allocSeqNum;
 
     mprintf ("insert: %p + %zu\n", pointer, p._sizeBytes);
     _tracker.insert(std::make_pair(AmMemoryRange(pointer, p._sizeBytes), p));
@@ -160,10 +166,7 @@ void AmPointerTracker::update_peers (const hc::accelerator &acc, int peerCnt, hs
     // relies on C++11 (erase returns iterator)
     for (auto iter = _tracker.begin() ; iter != _tracker.end(); ) {
         if (iter->second._acc == acc) {
-            if (iter->second._isInDeviceMem) {
-                mprintf ("update peers\n");
-                hsa_amd_agents_allow_access(peerCnt, peerAgents, NULL, const_cast<void*> (iter->first._basePointer));
-            }
+            hsa_amd_agents_allow_access(peerCnt, peerAgents, NULL, const_cast<void*> (iter->first._basePointer));
         } 
         iter++;
     }
@@ -216,13 +219,13 @@ auto_voidp am_alloc(size_t sizeBytes, hc::accelerator &acc, unsigned flags)
                         ptr = NULL;
                       }
                       else {
-                        g_amPointerTracker.insert(ptr,
-                          hc::AmPointerInfo(ptr/*hostPointer*/, ptr /*devicePointer*/, sizeBytes, acc, false/*isDevice*/, true /*isAMManaged*/));
+                        hc::AmPointerInfo ampi(ptr/*hostPointer*/, ptr /*devicePointer*/, sizeBytes, acc, false/*isDevice*/, true /*isAMManaged*/);
+                        g_amPointerTracker.insert(ptr,ampi);
                       }
                     }
                     else {
-                      g_amPointerTracker.insert(ptr,
-                        hc::AmPointerInfo(NULL/*hostPointer*/, ptr /*devicePointer*/, sizeBytes, acc, true/*isDevice*/, true /*isAMManaged*/));
+                        hc::AmPointerInfo ampi(NULL/*hostPointer*/, ptr /*devicePointer*/, sizeBytes, acc, true/*isDevice*/, true /*isAMManaged*/);
+                        g_amPointerTracker.insert(ptr,ampi);
                     }
                 }
             }
@@ -317,14 +320,46 @@ am_status_t am_memtracker_remove(void* ptr)
 }
 
 //---
-void am_memtracker_print()
+void am_memtracker_print(void *targetAddress)
 {
+    const char *targetAddressP = static_cast<const char *> (targetAddressP);
     std::ostream &os = std::cerr;
+
+    uint64_t beforeD = std::numeric_limits<uint64_t>::max() ;
+    uint64_t afterD =  std::numeric_limits<uint64_t>::max() ;
+    auto closestBefore = g_amPointerTracker.end();
+    auto closestAfter  = g_amPointerTracker.end();
+    bool foundMatch = false;
 
     //g_amPointerTracker.print(std::cerr);
     for (auto iter = g_amPointerTracker.readerLockBegin() ; iter != g_amPointerTracker.end(); iter++) {
-        os << "  " << iter->first._basePointer << "..." << iter->first._endPointer << "::  ";
+        const auto basePointer = static_cast<const char*> (iter->first._basePointer);
+        const auto endPointer = static_cast<const char*> (iter->first._endPointer);
+        if ((targetAddressP != nullptr) && (targetAddressP >= basePointer) && (targetAddressP < endPointer)) {
+            foundMatch = true;
+            os << "-->" ;
+        } else {
+            os << "   " ;
+            if ((targetAddressP < basePointer) && (basePointer - targetAddressP < beforeD)) {
+                beforeD = (basePointer - targetAddressP);
+                closestBefore = iter;
+            }
+            if ((endPointer > targetAddressP) && (targetAddressP - endPointer < afterD)) {
+                afterD = (targetAddressP - endPointer);
+                closestAfter = iter;
+            }
+        };
+        os << iter->first._basePointer << "-" << iter->first._endPointer << "::  ";
         os << iter->second << std::endl;
+    }
+
+    if (!foundMatch) { 
+        if (closestBefore != g_amPointerTracker.end()) {
+            os << "closest before: " << beforeD << " bytes before base of: " << closestBefore->second << std::endl;
+        }
+        if (closestAfter != g_amPointerTracker.end()) {
+            os << "closest after: " << afterD << "bytes after end of " << closestAfter->second << std::endl ;
+        }
     }
 
     g_amPointerTracker.readerUnlock();
@@ -462,7 +497,8 @@ am_status_t am_memory_host_lock(hc::accelerator &ac, void *hostPtr, size_t size,
     hsa_status_t hsa_status = hsa_amd_memory_lock(hostPtr, size, &agents[0], num_visible_ac, &devPtr);
     if(hsa_status == HSA_STATUS_SUCCESS)
     {
-       g_amPointerTracker.insert(hostPtr, hc::AmPointerInfo(hostPtr, devPtr, size, ac, false, false));
+       hc::AmPointerInfo ampi(hostPtr, devPtr, size, ac, false, false);
+       g_amPointerTracker.insert(hostPtr, ampi);
        am_status = AM_SUCCESS;
     }
     return am_status;

@@ -25,7 +25,7 @@ bool test() restrict(amp,cpu)
 
 runall_result test_main()
 {
-	accelerator_view av = require_device().get_default_view();
+	accelerator_view av = require_device(device_flags::NOT_SPECIFIED).get_default_view();
 	runall_result result;
 	result &= INVOKE_TEST_FUNC_ON_CPU_AND_GPU(av, []() restrict(amp,cpu)->bool{
 																return test<extent<1>>();
@@ -37,6 +37,6 @@ runall_result test_main()
 
 	result &= INVOKE_TEST_FUNC_ON_CPU_AND_GPU(av, []() restrict(amp,cpu)->bool{
 																return test<extent<10>>();
-																});																
+																});
     return result;
 }

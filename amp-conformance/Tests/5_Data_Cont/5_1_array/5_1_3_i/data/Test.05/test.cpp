@@ -43,7 +43,7 @@ int main()
 
 	passed &= test_feature();
 
-	Log() << (passed ? "Passed!" : "Failed!") << std::endl;
+	Log(LogType::Info, true) << (passed ? "Passed!" : "Failed!") << std::endl;
     return passed ? 0 : 1;
 }
 

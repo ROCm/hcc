@@ -28,7 +28,7 @@ using namespace Concurrency::Test;
 
 runall_result test_main()
 {
-    accelerator::set_default(require_device().get_device_path());
+    accelerator::set_default(require_device(device_flags::NOT_SPECIFIED).get_device_path());
 
     int size = 30;
     std::vector<int> v(size);
@@ -41,7 +41,7 @@ runall_result test_main()
 
     std::shared_future<void> w = av.synchronize_async();
     w.wait();
-	
+
     // All elements should equal 3
     return (std::count(v.begin(), v.end(), 3) == size);
 }

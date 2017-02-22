@@ -2,6 +2,9 @@
 
 namespace details {
 
+// FIXME: stablesort algorithm implementation breaks in Clang 4.0 as of now
+#if 0
+
 #define STABLESORT_BUFFER_SIZE 512
 #define STABLESORT_TILE_MAX 65535
 
@@ -305,7 +308,7 @@ stablesort_dispatch(const InputIt& first, const InputIt& last, const Compare& co
 
     return;
 }
-
+#endif
 
 template<class InputIt, class Compare>
 void stablesort_impl(InputIt first, InputIt last, Compare comp, std::input_iterator_tag) {
@@ -320,11 +323,16 @@ void stablesort_impl(InputIt first, InputIt last, Compare comp,
   if (N == 0)
       return;
 
+// FIXME: stablesort algorithm implementation breaks Clang 4.0 as of now
+#if 0
   // call to std::sort when small data size
   if (N <= details::PARALLELIZE_THRESHOLD) {
       std::stable_sort(first, last, comp);
   }
   stablesort_dispatch(first, last, comp);
+#endif
+
+  std::stable_sort(first, last, comp);
 }
 
 } // namespace details

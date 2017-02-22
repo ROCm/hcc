@@ -71,6 +71,8 @@ function(Q arg1) __attribute__((hc,cpu)) { \
   return hc::precise_math::function(arg1); \
 }
 
+#define HC_MATH_WRAPPER_FP_OVERLOAD_TQ_STD(function, T, arg1)  HC_MATH_WRAPPER_FP_OVERLOAD_TQ(function, T, arg1)
+
 #define HC_MATH_WRAPPER_TTQ(function, arg1, arg2) \
 template<typename T, typename Q> \
 inline T function(T arg1, Q arg2) __attribute__((hc,cpu)) { \
@@ -183,6 +185,20 @@ function(Q arg1) __attribute__((hc)) { \
   return ::function(arg1); \
 }
 
+#define HC_MATH_WRAPPER_FP_OVERLOAD_TQ_STD(function, T, arg1) \
+template<typename Q> \
+inline \
+typename std::enable_if<std::is_integral<Q>::value,T>::type \
+function(Q arg1) __attribute__((hc)) { \
+  return std::function(static_cast<HC_IMPLICIT_FLOAT_CONV>(arg1)); \
+}\
+template<typename Q> \
+inline \
+typename std::enable_if<std::is_floating_point<Q>::value,T>::type \
+function(Q arg1) __attribute__((hc)) { \
+  return std::function(arg1); \
+}
+
 #define HC_MATH_WRAPPER_TTQ(function, arg1, arg2) \
 template<typename T, typename Q> \
 inline T function(T arg1, Q arg2) __attribute__((hc,cpu)) { \
@@ -240,10 +256,10 @@ namespace {
 
 HC_MATH_WRAPPER_TQ(ilogbf, x)
 HC_MATH_WRAPPER_FP_OVERLOAD_TQ(ilogb, int, x)
-HC_MATH_WRAPPER_FP_OVERLOAD_TQ(isfinite, bool, x)
-HC_MATH_WRAPPER_FP_OVERLOAD_TQ(isinf, bool, x)
-HC_MATH_WRAPPER_FP_OVERLOAD_TQ(isnan, bool, x)
-HC_MATH_WRAPPER_FP_OVERLOAD_TQ(isnormal, bool, x)
+HC_MATH_WRAPPER_FP_OVERLOAD_TQ_STD(isfinite, bool, x)
+HC_MATH_WRAPPER_FP_OVERLOAD_TQ_STD(isinf, bool, x)
+HC_MATH_WRAPPER_FP_OVERLOAD_TQ_STD(isnan, bool, x)
+HC_MATH_WRAPPER_FP_OVERLOAD_TQ_STD(isnormal, bool, x)
 HC_MATH_WRAPPER_TQ(nanf, tagp)
 HC_MATH_WRAPPER_TQ(nan, tagp)
 HC_MATH_WRAPPER_TQ(signbitf, x)

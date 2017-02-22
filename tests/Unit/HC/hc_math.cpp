@@ -1,4 +1,4 @@
-// XFAIL: Linux
+
 // RUN: %hc %s -o %t.out && %t.out
 
 #include <hc.hpp>
@@ -7,67 +7,79 @@
 #include <algorithm>
 #include <iostream>
 
-#define ERROR_THRESHOLD (1E-4)
+#define ERROR_THRESHOLD (1E-4) // Potentially dangerous / inexact.
 
 //#define DEBUG 1
 
-// a test case which uses hc_math, which overrides math functions in the global namespace
-template<typename T, size_t GRID_SIZE>
-bool test() {
-  using namespace hc;
-  bool ret = true;
+void report_error(const char* fn_name, double cumulative_error)
+{
+    #ifdef DEBUG
+        std::cout << fn_name << " cumulative error = " << cumulative_error
+                  << ", test failed!" << std::endl;
+    #endif
 
-  array_view<T, 1> table(GRID_SIZE);
-  extent<1> ex(GRID_SIZE);
-
-#ifdef DEBUG
-#define REPORT_ERROR_IF(COND,F,E) if (COND) { std::cout << #F <<  " cumulative error=" << E << ", test failed!" << std::endl; }
-#define REPORT_DELTA_IF(COND,F,ARG,EXP,ACT) if (COND) { std::cout << #F << "(" << ARG << ") expected="<< EXP << ", actual=" << ACT << std::endl; }
-#else
-#define REPORT_ERROR_IF(COND,F,E)
-#define REPORT_DELTA_IF(COND,F,ARG,EXP,ACT) 
-#endif
-
-#define TEST(func) \
-  { \
-    for (int i = 0; i < GRID_SIZE; ++i) table[i] = T(); \
-    parallel_for_each(ex, [=](index<1>& idx) __HC__ { \
-      table(idx) = func((T)(idx[0]+1)); \
-    }); \
-    accelerator().get_default_view().wait(); \
-    float error = 0.0f; \
-    for (size_t i = 0; i < GRID_SIZE; ++i) { \
-      T actual = table[i];\
-      T expected = (T)func((T)(i+1));\
-      double delta = fabs((double)actual - (double)expected); \
-      REPORT_DELTA_IF(delta>=ERROR_THRESHOLD, func, (i+1), expected, actual);\
-      error+=delta;\
-    } \
-    REPORT_ERROR_IF(!(error<=ERROR_THRESHOLD),func,error);\
-    ret &= (error <= ERROR_THRESHOLD); \
-  } 
-
-
-  TEST(sqrt)
-  TEST(fabs)
-  TEST(cbrt)
-  TEST(log)
-  TEST(ilogb)
-  TEST(isnormal)
-  TEST(cospi)
-  TEST(sinpi)
-  TEST(rsqrt)
-
-  return ret;
 }
 
-int main() {
+void report_delta(const char* fn_name, double argument, double expected, double actual)
+{
+    #ifdef DEBUG
+        std::cout << fn_name << '(' << argument << ") expected = " << expected
+                  << ", actual = " << actual << std::endl;
+    #endif
+}
+
+// a test case which uses hc_math, which overrides math functions in the global namespace
+template<typename T, std::size_t grid_sz, typename F, typename G>
+bool test_math_fn(const char* name, F f, G ref_f)
+{   // TODO: ideally this should be refactored to use proper approximate
+    //       equality / comparison for floating-point types.
+    using namespace hc;
+
+    array_view<T> table(grid_sz);
+
+    parallel_for_each(table.get_extent(), [=](const index<1>& idx) __HC__ {
+       table[idx] = f(static_cast<T>(idx[0] + 1));
+    });
+
+    double error = 0.0;
+    for (auto i = 0; i != table.get_extent().size(); ++i) {
+        T actual = table[i];
+        T expected = ref_f(static_cast<T>(i + 1));
+        T delta = fabs(static_cast<double>(actual) - static_cast<double>(expected));
+
+        if (ERROR_THRESHOLD < delta) report_delta(name, i + 1, expected, actual);
+        error += delta;
+    }
+    if (ERROR_THRESHOLD < error) report_error(name, error);
+
+    return error <= ERROR_THRESHOLD;
+}
+
+template<typename T, std::size_t grid_sz>
+bool test()
+{   // TODO: ideally this should be refactored to use iteration through the
+    //       collection of tested functions, as opposed to this verbose form.
+    using namespace hc;
+
+    return test_math_fn<T, grid_sz>("sqrt", [](T x) __HC__ { return sqrt(x); }, [](T x) { return std::sqrt(x); }) &&
+           test_math_fn<T, grid_sz>("fabs", [](T x) __HC__ { return fabs(x); }, [](T x) { return std::fabs(x); }) &&
+           test_math_fn<T, grid_sz>("cbrt", [](T x) __HC__ { return cbrt(x); }, [](T x) { return std::cbrt(x); }) &&
+           test_math_fn<T, grid_sz>("log", [](T x) __HC__ { return log(x); }, [](T x) { return std::log(x); }) &&
+           test_math_fn<T, grid_sz>("ilogb", [](T x) __HC__ { return ilogb(x); }, [](T x) { return std::ilogb(x); }) &&
+           test_math_fn<T, grid_sz>("isnormal", [](T x) __HC__ { return isnormal(x); }, [](T x) { return std::isnormal(x); }) &&
+           test_math_fn<T, grid_sz>("cospi", [](T x) __HC__ { return cospi(x); }, [](T x) { return cospi(x); }) &&
+           test_math_fn<T, grid_sz>("sinpi", [](T x) __HC__ { return sinpi(x); }, [](T x) { return sinpi(x); }) &&
+           test_math_fn<T, grid_sz>("rsqrt", [](T x) __HC__ { return rsqrt(x); }, [](T x) { return rsqrt(x); });
+}
+
+int main()
+{
   bool ret = true;
 
   ret &= test<int,16>();
   ret &= test<float,16>();
   ret &= test<double,16>();
 
-  return !(ret == true);
+  return ret == false;
 }
 

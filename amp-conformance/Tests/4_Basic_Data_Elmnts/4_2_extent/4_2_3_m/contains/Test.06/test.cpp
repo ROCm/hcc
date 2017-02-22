@@ -63,13 +63,13 @@ runall_result test() restrict(cpu,amp)
 
 runall_result test_main()
 {
-	accelerator_view av = require_device().get_default_view();
+	accelerator_view av = require_device(device_flags::NOT_SPECIFIED).get_default_view();
 
 	runall_result cpu_result = test();
-	Log() << "Test " << cpu_result << " on host\n";
+	Log(LogType::Info, true) << "Test " << cpu_result << " on host\n";
 
 	runall_result amp_result = GPU_INVOKE(av, runall_result, test);
-	Log() << "Test " << amp_result << " on device\n";
+	Log(LogType::Info, true) << "Test " << amp_result << " on device\n";
 
 	return cpu_result & amp_result;
 }

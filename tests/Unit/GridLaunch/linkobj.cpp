@@ -1,4 +1,4 @@
-// XFAIL: Linux
+
 // RUN: %hc %s -DFILE_1 -c -o %t1.o && %hc %s -DFILE_2 -c -o %t2.o && %hc %t1.o %t2.o -lhc_am -o %t1.out && %t1.out
 // RUN: %hc -lhc_am %s -DFILE_1 -DFILE_2 -o %t2.out && %t2.out
 

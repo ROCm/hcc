@@ -1,0 +1,12 @@
+[submodule "llvm"]
+	path = compiler
+	url = https://github.com/RadeonOpenCompute/llvm.git
+	branch = amd-hcc
+[submodule "lld"]
+	path = lld
+	url = https://github.com/RadeonOpenCompute/lld.git
+	branch = amd-hcc
+[submodule "clang"]
+	path = clang
+	url = https://github.com/RadeonOpenCompute/hcc-clang-upgrade.git
+	branch = clang_tot_upgrade

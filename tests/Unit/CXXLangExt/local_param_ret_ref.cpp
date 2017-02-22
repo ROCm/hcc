@@ -1,4 +1,4 @@
-// XFAIL: Linux
+
 
 // RUN: %hc -DTYPE="char"  %s -o %t.out && %t.out
 // RUN: %hc -DTYPE="signed char"  %s -o %t.out && %t.out
@@ -30,11 +30,12 @@
 
 // RUN: %hc -DTYPE="wchar_t"  %s -o %t.out && %t.out
 
-#include <iostream>
 #include <amp.h>
-
 // added for checking HSA profile
 #include <hc.hpp>
+
+#include <cmath>
+#include <iostream>
 
 // test C++AMP with fine-grained SVM
 // requires HSA Full Profile to operate successfully
@@ -63,7 +64,9 @@ bool test() {
   // Verify
   int error = 0;
   for(int i = 0; i < vecSize; i++) {
-    error += abs((TYPE)ans[i] - (TYPE)i);
+    // TODO: this is dangerous, ideally we should use approximate comparisons
+    //       for floating point types.
+    error += ans[i] == i;
   }
   if (error == 0) {
     std::cout << "Verify success!\n";

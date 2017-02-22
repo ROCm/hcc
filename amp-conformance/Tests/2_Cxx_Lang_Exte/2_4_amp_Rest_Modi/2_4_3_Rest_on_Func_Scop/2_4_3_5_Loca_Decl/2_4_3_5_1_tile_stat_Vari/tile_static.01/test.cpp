@@ -31,7 +31,7 @@ int main(int argc, char **argv)
     bool passed = true;
 
     Concurrency::extent<1> ex(1);
-    array<int, 1> arr(ex);
+    Concurrency::array<int, 1> arr(ex);
 
     parallel_for_each(arr.get_extent(), [&](index<1> idx) __GPU_ONLY {
 

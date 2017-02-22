@@ -37,6 +37,15 @@ enum execute_order
     execute_any_order
 };
 
+
+// Flags to specify visibility of previous commands after a marker is executed.
+enum memory_scope
+{
+    accelerator_scope,  // One accelerator scope 
+    system_scope,       // CPU + All accelerators
+};
+
+
 enum hcCommandKind {
     hcCommandInvalid= -1,
 
@@ -47,6 +56,7 @@ enum hcCommandKind {
     hcCommandKernel = 4,
     hcCommandMarker = 5,
 };
+
 
 static inline bool isCopyCommand(hcCommandKind k) 
 {
@@ -92,7 +102,7 @@ struct rw_info;
 /// This is an abstraction of all asynchronous operations within Kalmar
 class KalmarAsyncOp {
 public:
-  KalmarAsyncOp(hcCommandKind xCommandKind) : seqNum(0), commandKind(xCommandKind) {} 
+  KalmarAsyncOp(hcCommandKind xCommandKind) : commandKind(xCommandKind), seqNum(0) {} 
 
   virtual ~KalmarAsyncOp() {} 
   virtual std::shared_future<void>* getFuture() { return nullptr; }
@@ -197,7 +207,7 @@ public:
 
   virtual uint32_t GetGroupSegmentSize(void *kernel) { return 0; }
 
-  KalmarDevice* getDev() { return pDev; }
+  KalmarDevice* getDev() const { return pDev; }
   queuing_mode get_mode() const { return mode; }
   void set_mode(queuing_mode mod) { mode = mod; }
 
@@ -205,6 +215,9 @@ public:
 
   /// get number of pending async operations in the queue
   virtual int getPendingAsyncOps() { return 0; }
+
+  /// Is the queue empty?  Same as getPendingAsyncOps but may be faster.
+  virtual bool isEmpty() { return 0; }
 
   /// get underlying native queue handle
   virtual void* getHSAQueue() { return nullptr; }
@@ -226,11 +239,11 @@ public:
   virtual bool hasHSAInterOp() { return false; }
 
   /// enqueue marker
-  virtual std::shared_ptr<KalmarAsyncOp> EnqueueMarker() { return nullptr; }
+  virtual std::shared_ptr<KalmarAsyncOp> EnqueueMarker(memory_scope) { return nullptr; }
 
   /// enqueue marker with prior dependency
-  virtual std::shared_ptr<KalmarAsyncOp> EnqueueMarkerWithDependency(int count, std::shared_ptr <KalmarAsyncOp> *depOps) { return nullptr; }
-  virtual std::shared_ptr<KalmarAsyncOp> EnqueueMarkerWithDependency(std::shared_ptr <KalmarAsyncOp> depOp) { return EnqueueMarkerWithDependency(1, &depOp); };
+  virtual std::shared_ptr<KalmarAsyncOp> EnqueueMarkerWithDependency(int count, std::shared_ptr <KalmarAsyncOp> *depOps, memory_scope scope) { return nullptr; }
+  virtual std::shared_ptr<KalmarAsyncOp> EnqueueMarkerWithDependency(std::shared_ptr <KalmarAsyncOp> depOp, memory_scope scope) { return EnqueueMarkerWithDependency(1, &depOp, scope); };
 
 
   /// copy src to dst asynchronously
@@ -328,10 +341,10 @@ public:
     virtual void release(void* ptr, struct rw_info* key) = 0;
 
     /// build program
-    virtual void BuildProgram(void* size, void* source, bool needsCompilation = true) {}
+    virtual void BuildProgram(void* size, void* source) {}
 
     /// create kernel
-    virtual void* CreateKernel(const char* fun, void* size, void* source, bool needsCompilation = true) { return nullptr; }
+    virtual void* CreateKernel(const char* fun) { return nullptr; }
 
     /// check if a given kernel is compatible with the device
     virtual bool IsCompatibleKernel(void* size, void* source) { return true; }
@@ -435,7 +448,7 @@ public:
     std::shared_ptr<KalmarQueue> createQueue(execute_order order = execute_in_order) override { return std::shared_ptr<KalmarQueue>(new CPUQueue(this)); }
     void* create(size_t count, struct rw_info* /* not used */ ) override { return kalmar_aligned_alloc(0x1000, count); }
     void release(void* ptr, struct rw_info* /* nout used */) override { kalmar_aligned_free(ptr); }
-    void* CreateKernel(const char* fun, void* size, void* source, bool needsCompilation = true) { return nullptr; }
+    void* CreateKernel(const char* fun) { return nullptr; }
 };
 
 /// KalmarContext

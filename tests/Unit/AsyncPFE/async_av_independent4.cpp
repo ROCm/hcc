@@ -1,4 +1,4 @@
-// XFAIL: Linux
+
 // RUN: %hc %s -o %t.out && %t.out
 
 #include <hc.hpp>
@@ -6,7 +6,7 @@
 #include <iostream>
 
 // loop to deliberately slow down kernel execution
-#define LOOP_COUNT (1024)
+#define LOOP_COUNT (1024 * 512)
 
 #define TEST_DEBUG (0)
 

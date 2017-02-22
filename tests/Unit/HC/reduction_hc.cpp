@@ -1,4 +1,4 @@
-// XFAIL: Linux
+
 // RUN: %hc %s -o %t.out && %t.out
 
 //----------------------------------------------------------------------------
@@ -19,6 +19,7 @@
 #include <iostream>
 #include <numeric>
 #include <assert.h>
+#include <climits>
 
 using namespace hc;
 

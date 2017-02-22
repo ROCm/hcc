@@ -72,7 +72,7 @@ int main(int argc, char **argv)
     // Verify results
 
     bool passed = true;
-    for (int i=0; i<M & passed; ++i)
+    for (int i=0; i<M && passed; ++i)
     {
         for(int j=0; j<N; ++j)
         {

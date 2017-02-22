@@ -36,8 +36,8 @@ struct Foo
 
 runall_result test_main()
 {
-    accelerator accel = require_device();
-	
+    accelerator accel = require_device(device_flags::NOT_SPECIFIED);
+
     if(accel.get_supports_cpu_shared_memory())
     {
         accel.set_default_cpu_access_type(ACCESS_TYPE);
@@ -47,13 +47,13 @@ runall_result test_main()
     std::fill(v.begin(), v.end(), 5.0f);
     ArrayViewTest<float, 1> av(extent<1>(static_cast<int>(v.size())), v);
 
-    Log() << "Creating a section [0-15) and reinterpreting as structs" << std::endl;
+    Log(LogType::Info, true) << "Creating a section [0-15) and reinterpreting as structs" << std::endl;
     array_view<Foo, 1> av_struct = av.view().section(extent<1>(15)).reinterpret_as<Foo>();
 
-    Log() << "Creating a section [15-30)" << std::endl;
+    Log(LogType::Info, true) << "Creating a section [15-30)" << std::endl;
     array_view<float, 1> av_float = av.view().section(index<1>(15), extent<1>(15));
 
-    Log() << "Updating struct data on the GPU" << std::endl;
+    Log(LogType::Info, true) << "Updating struct data on the GPU" << std::endl;
     parallel_for_each(accel.get_default_view(), extent<1>(1), [=](index<1>) __GPU {
         av_struct[0].r = 1.0;
         av_struct[0].b = 2.0;
@@ -63,10 +63,10 @@ runall_result test_main()
     av.set_known_value(index<1>(1), 2.0);
     av.set_known_value(index<1>(2), 3.0);
 
-    Log() << "Now performing implic synch on elements [15-30)" << std::endl;
+    Log(LogType::Info, true) << "Now performing implic synch on elements [15-30)" << std::endl;
     av_float[0];
 
-    Log() << "Now updating the struct part [0-15)" << std::endl;
+    Log(LogType::Info, true) << "Now updating the struct part [0-15)" << std::endl;
     return
         av_struct[0].r == 1.0 &&
         av_struct[0].b == 2.0 &&

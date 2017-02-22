@@ -18,7 +18,7 @@ const int START = 11;
 /*---------------- Test on Host ------------------ */
 bool TestOnHost()
 {
-    Log() << "Testing Index-self assignment operator on host" << std::endl;
+    Log(LogType::Info, true) << "Testing Index-self assignment operator on host" << std::endl;
 
     index<RANK> idx(START, START + 1, START + 2);
 
@@ -48,9 +48,9 @@ void kernel(array<int, 1>& A, array<int, 1>& B) __GPU
 
 bool TestOnDevice()
 {
-    Log() << "Testing Index-self assignment operator on Device" << std::endl;
+    Log(LogType::Info, true) << "Testing Index-self assignment operator on Device" << std::endl;
 
-    accelerator_view av = require_device().get_default_view();
+    accelerator_view av = require_device(device_flags::NOT_SPECIFIED).get_default_view();
 
     array<int, 1> A(extent<1>(RANK), av), B(extent<1>(1), av);
     extent<1> ex(1);

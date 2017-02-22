@@ -1,4 +1,3 @@
-// XFAIL: Linux
 // RUN: mkdir -p "%T/foo bar"
 // RUN: cp "%s" "%T/foo bar"
 // RUN: %hc -fPIC -Wl,-Bsymbolic -shared -DSHARED_LIBRARY "%T/foo bar/`basename "%s"`" -o "%T/foo bar/libfile_path_test4.so"

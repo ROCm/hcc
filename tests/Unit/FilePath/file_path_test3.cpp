@@ -1,4 +1,3 @@
-// XFAIL: Linux
 // RUN: mkdir -p "%T/foo bar"
 // RUN: cp "%s" "%T/foo bar"
 // RUN: %hc -DSTATIC_LIB "%T/foo bar/`basename "%s"`"  -c -o %t.o

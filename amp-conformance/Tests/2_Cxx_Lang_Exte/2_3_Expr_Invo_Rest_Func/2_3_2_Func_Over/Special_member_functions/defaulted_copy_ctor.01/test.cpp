@@ -200,7 +200,7 @@ bool test() restrict(cpu,amp)
 	A8 a8;
 	A8 a8c(a8);
 
-	const A9 a9;
+	const A9 a9 = {};
 	A9 a9c(a9);
 
 	const A10 a10;
@@ -220,7 +220,7 @@ bool test_cpu() restrict(cpu)
 	const A7 a7;
 	A7 a7c(a7);
 
-	const A11 a11;
+	const A11 a11 = {};
 	A11 a11c(a11);
 
 	return true; // Compile-time tests
@@ -236,7 +236,7 @@ int test_amp() restrict(amp)
 
 runall_result test_main()
 {
-	accelerator_view av = require_device().get_default_view();
+	accelerator_view av = require_device(device_flags::NOT_SPECIFIED).get_default_view();
 
 	runall_result result;
 	result &= REPORT_RESULT(INVOKE_TEST_FUNC_ON_CPU_AND_GPU(av, test));

@@ -13,26 +13,15 @@ if [ "$#" -eq 0 ]; then
   exit 1
 fi
 
+# enable bundle dumping
+KMDUMPBUNDLE="${KMDUMPBUNDLE:=0}"
+
 BINDIR=$(dirname $0)
 LINK=$BINDIR/llvm-link
 OPT=$BINDIR/opt
 CLAMP_DEVICE=$BINDIR/clamp-device
 CLAMP_EMBED=$BINDIR/clamp-embed
-HLC_DIR=$BINDIR/../../hlc
-HLC_LLVM_LINK=$HLC_DIR/bin/llvm-link
-HLC_OPT=$HLC_DIR/bin/opt
-HLC_LLC=$HLC_DIR/bin/llc
-HLC_ASM_DIR=$BINDIR/../../HSAILasm
-HLC_ASM=$HLC_ASM_DIR/HSAILasm
-
-
-HSA_LLVM_BIN_DIR="${BASH_SOURCE%/*}/../../llvm/bin"
-if [ -d "$HSA_LLVM_BIN_DIR" ]; then
-    HLC_DIR=$HSA_LLVM_BIN_DIR
-    HLC_LLVM_LINK=$HSA_LLVM_BIN_DIR/llvm-link
-    HLC_OPT=$HSA_LLVM_BIN_DIR/opt
-    HLC_LLC=$HSA_LLVM_BIN_DIR/llc
-fi
+CLANG_OFFLOAD_BUNDLER=$BINDIR/clang-offload-bundler
 
 ################
 # Verbose flag
@@ -42,57 +31,20 @@ VERBOSE=0
 
 ################
 # GPU targets
+# This array could be populated via 3 methods:
+# 1) clang driver adds multiple --amdgpu-target=<GPU target> options
+# 2) HCC_AMDGPU_TARGET env var, multiple targets are delimited by ",".
+#    Example:
+#
+#    export HCC_AMDGPU_TARGET=gfx701,gfx801,gfx802,gfx803
+#    # ISA for Hawaii(gfx701), Carrizo(gfx801), Tonga(gfx802) and Fiji(gfx803)
+#    # would be produced
+#    hcc `hcc-config --cxxflags --ldflags` foo.cpp
+#
+# 3) CMake AMDGPU_TARGET config value. This is the last resort options.
 ################
 
-LOWER_OPENCL=@HAS_OPENCL@
-LOWER_HSA=@HAS_HSA@
-LOWER_HOF=@HAS_HSA_HOF@
-AMDGPU_TARGET=@AMDGPU_TARGET@
-
-################
-# Sanity check for HSAIL backend
-################
-
-HSA_USE_AMDGPU_BACKEND=@HSA_USE_AMDGPU_BACKEND@
-
-if [ $HSA_USE_AMDGPU_BACKEND == "ON" ]; then
-  KM_USE_AMDGPU="${KM_USE_AMDGPU:=1}"
-fi
-
-if [ $LOWER_HSA == 1 ]; then
-  if [ -d $HLC_DIR ] && [ -e $HLC_LLVM_LINK ] && [ -e $HLC_OPT ] && [ -e $HLC_LLC ] && [ -d $HLC_ASM_DIR ] && [ -e $HLC_ASM ] || [ $KM_USE_AMDGPU -eq 1 ] ; then 
-    # all HSA tools are available
-    LOWER_HSA=1
-  else
-    # disable HSA lowering in case any of the required tools is missing
-    echo "WARNING: Missing HSA toolchain.  Disable HSA target."
-    LOWER_HSA=0
-  fi
-fi
-
-################
-# Sanity check for HSA offline finalization
-################
-
-if [ $LOWER_HSA == 1 ] && [ $LOWER_HOF == 1 ]; then
-  # Path to HOF
-  HOF_BIN=@HOF_BIN@
-
-  if [ -d $HOF_BIN ] && ( [ -e $HOF_BIN/hof ] || [ -e $HOF_BIN/amdhsafin ] ); then
-    # all HOF tools are available
-    HCC_NOISA="${HCC_NOISA:=0}"
-    if [ $HCC_NOISA == "1" ]; then
-      echo "WARNING: HSA offline finalization explicitely disabled."
-      LOWER_HOF=0
-    else
-      LOWER_HOF=1
-    fi
-  else
-    # disable HOF in case any of the required tools is missing
-    echo "WARNING: Missing HOF tools.  Disable HSA offline finalization."
-    LOWER_HOF=0
-  fi
-fi
+AMDGPU_TARGET_ARRAY=()
 
 ################
 # link
@@ -160,26 +112,28 @@ done
 for ARG in "$@"
 do
 
-  ####################################
-  #  parse the simple switches first...
-  ####################################
-
-  if [ "$ARG" == "--disable-opencl" ]; then
-    LOWER_OPENCL=0
-    continue
-  fi
-
-  if [ "$ARG" == "--disable-hsa" ]; then
-    LOWER_HSA=0
-    continue
-  fi
- 
-  ######################
-  # Parse AMDGPU target
-  ######################
   case $ARG in
+    ######################
+    # Parse AMDGPU target
+    ######################
     --amdgpu-target=*)
-    AMDGPU_TARGET="${ARG#*=}"
+    AMDGPU_TARGET_ARRAY+=("${ARG#*=}")
+    continue
+    ;;
+    ################################################
+    # Parse dump options and export them for called
+    # scripts e.g. clamp-device
+    ################################################
+    -dump-isa)
+    export KMDUMPISA=1
+    continue
+    ;;
+    -dump-llvm)
+    export KMDUMPLLVM=1
+    continue
+    ;;
+    -dump-dir=*)
+    export KMDUMPDIR="${ARG#*=}"
     continue
     ;;
   esac
@@ -195,7 +149,7 @@ do
 
     cp "$ARG" $TEMP_DIR/kernel_cpu.o
     LINK_CPU_ARG+=( "$TEMP_DIR/kernel_cpu.o" )
- 
+
   elif [[ "$ARG" =~ [^[:space:]]+\.o$ ]]; then
     # detected a .o file
     if [ $VERBOSE == 2 ]; then
@@ -263,11 +217,11 @@ do
         STATIC_LIB_LIST+=( "$DETECTED_STATIC_LIBRARY" )
       fi
     fi
- 
-    
-    KERNEL_UNDETECTED="1" 
+
+
+    KERNEL_UNDETECTED="1"
     if [[ $DETECTED_STATIC_LIBRARY != "" ]]; then
-      
+
       # we found a static library library
       if [ $VERBOSE == 2 ]; then
         echo "processing static library $DETECTED_STATIC_LIBRARY"
@@ -293,7 +247,7 @@ do
         if [ $VERBOSE == 2 ]; then
           echo "creating temp dir: $AR_TEMP_DIR"
         fi
- 
+
         mkdir -p "$AR_TEMP_DIR"
         TEMP_AR_DIRS+=( "$AR_TEMP_DIR" )
         cd "$AR_TEMP_DIR"
@@ -367,26 +321,41 @@ do
   done # for OBJ in "${OBJS_TO_PROCESS[@]}"
 done
 
-# AMDGPU_TARGET could be overridden by HCC_AMDGPU_TARGET env variable
+# AMDGPU_TARGET_ARRAY could be overridden by HCC_AMDGPU_TARGET env variable
 if [ -n "$HCC_AMDGPU_TARGET" ]; then
-  # map ISA version string to GPU family
-  if [ "$HCC_AMDGPU_TARGET" = "AMD:AMDGPU:7:0:0" ]; then
-    AMDGPU_TARGET="kaveri"
-  elif [ "$HCC_AMDGPU_TARGET" = "AMD:AMDGPU:7:0:1" ]; then
-    AMDGPU_TARGET="hawaii"
-  elif [ "$HCC_AMDGPU_TARGET" = "AMD:AMDGPU:8:0:1" ]; then
-    AMDGPU_TARGET="carrizo"
-  elif [ "$HCC_AMDGPU_TARGET" = "AMD:AMDGPU:8:0:2" ]; then
-    AMDGPU_TARGET="tonga"
-  elif [ "$HCC_AMDGPU_TARGET" = "AMD:AMDGPU:8:0:3" ]; then
-    AMDGPU_TARGET="fiji"
-  else
-    # not mappable, simply pass to backend and wish it accepts
-    AMDGPU_TARGET=$HCC_AMDGPU_TARGET
-  fi
+  # tokenize HCC_AMDGPU_TARGET
+  IFS=','
+  HCC_AMDGPU_TARGET_TOKENS=($HCC_AMDGPU_TARGET)
+  unset IFS
+
+  # parse individual token, override AMDGPU_TARGET_ARRAY
+  iter=0
+  for HCC_AMDGPU_TARGET_TOKEN in ${HCC_AMDGPU_TARGET_TOKENS[@]}; do
+    # map ISA version string to GPU family
+    if [ "$HCC_AMDGPU_TARGET_TOKEN" = "gfx701" ]; then
+      AMDGPU_TARGET_ARRAY[$iter]="hawaii"
+    elif [ "$HCC_AMDGPU_TARGET_TOKEN" = "gfx801" ]; then
+      AMDGPU_TARGET_ARRAY[$iter]="carrizo"
+    elif [ "$HCC_AMDGPU_TARGET_TOKEN" = "gfx802" ]; then
+      AMDGPU_TARGET_ARRAY[$iter]="tonga"
+    elif [ "$HCC_AMDGPU_TARGET_TOKEN" = "gfx803" ]; then
+      AMDGPU_TARGET_ARRAY[$iter]="fiji"
+    else
+      # not mappable, simply pass to backend and wish it accepts
+      AMDGPU_TARGET_ARRAY[$iter]=$HCC_AMDGPU_TARGET
+    fi
+    ((iter++))
+  done
 fi
+
+# In case neither Clang Driver nor HCC_AMDGPU_TARGET env var specify target,
+# use default value in CMake configuration
+if [ ${#AMDGPU_TARGET_ARRAY[@]} == 0 ]; then
+  AMDGPU_TARGET_ARRAY=(@AMDGPU_TARGET@)
+fi
+
 if [ $VERBOSE != 0 ]; then
-  echo "AMDGPU target: "$AMDGPU_TARGET
+  echo "AMDGPU target array: "${AMDGPU_TARGET_ARRAY[@]}
   echo ""
 fi
 
@@ -407,145 +376,61 @@ if [ ${#LINK_KERNEL_ARGS[@]} != 0 ]; then
 
   # combine kernel sections together
   $LINK "${LINK_KERNEL_ARGS[@]}" | $OPT -always-inline - -o $TEMP_DIR/kernel.bc
-  
-  # lower to SPIR
-  if [ $LOWER_OPENCL == 1 ]; then
-    # lower to SPIR
-    if [ $VERBOSE == 0 ]; then
-      $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.spir --spir
-    else
-      $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.spir --spir --verbose
-    fi
+
+  # lower to GCN ISA
+  if [ $VERBOSE == 1 ]; then
+    echo "Generating AMD GCN kernel"
+  fi
+
+  # touch an empty object for host part, to accomodate rule required by
+  # clang-offload-bundler
+  touch $TEMP_DIR/__empty.o
+
+  # invoke clang-offload-bundler to create kernel bundle
+  CLANG_OFFLOAD_BUNDLER_INPUTS_ARGS="-inputs=$TEMP_DIR/__empty.o"
+  CLANG_OFFLOAD_BUNDLER_TARGETS_ARGS="-targets=host-x86_64-unknown-linux"
+
+  # for each GPU target, lower to GCN ISA in HSACO format
+  for AMDGPU_TARGET in ${AMDGPU_TARGET_ARRAY[@]}; do
+    $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel-$AMDGPU_TARGET.hsaco --amdgpu-target=$AMDGPU_TARGET
+
+    # error handling
     ret=$?
-    if [ $ret == 0 ]; then
-      # build a new kernel object
-      pushd . > /dev/null
-      cd $TEMP_DIR
-      $CLAMP_EMBED kernel.spir kernel_spir.o
-      popd > /dev/null
-    fi
-  fi
-  
-  # lower to OpenCL C
-  if [ $LOWER_OPENCL == 1 ]; then
-    # lower to OpenCL C
-    if [ $VERBOSE == 0 ]; then
-      $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.cl --opencl
-    else
-      $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.cl --opencl --verbose
-    fi
-    ret=$?
-    if [ $ret == 0 ]; then
-      # build a new kernel object
-      pushd . > /dev/null
-      cd $TEMP_DIR
-      $CLAMP_EMBED kernel.cl kernel.o
-      popd > /dev/null
-    fi
-  fi
-  
-  # lower to HSA
-  if [ $LOWER_HSA == 1 ]; then
-    # lower to HSA BRIG
-    if [ $VERBOSE == 0 ]; then
-      $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.brig --hsa --amdgpu-target=$AMDGPU_TARGET
-    else
-      $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.brig --hsa --amdgpu-target=$AMDGPU_TARGET --verbose
-    fi
-    ret=$?
-    if [ $ret == 0 ]; then
-      # build a new kernel object
-      pushd . > /dev/null
-      cd $TEMP_DIR
-      $CLAMP_EMBED kernel.brig kernel_hsa.o
-      popd > /dev/null
-    fi
-  fi
-
-  # HSA offline finalization
-  if [ $LOWER_HSA == 1 ] && [ $LOWER_HOF == 1 ]; then
-    if [ -e $HOF_BIN/hof ]; then
-      # conduct HSA offline finalization for APU
-      $HOF_BIN/hof -output=$TEMP_DIR/kernel.isa -brig $TEMP_DIR/kernel.brig
-    else
-      if [ -e $HOF_BIN/amdhsafin ]; then
-        case $AMDGPU_TARGET in
-          #default set to fiji
-          fiji)
-            HOF_ARCH="8:0:3"
-          ;;
-          kaveri)
-            HOF_ARCH="7:0:0"
-          ;;
-          carrizo)
-            HOF_ARCH="8:0:1"
-          ;;
-          hawaii)
-            HOF_ARCH="7:0:1"
-          ;;
-          tonga)
-            HOF_ARCH="8:0:2"
-          ;;
-        esac
-
-        # conduct HSA offline finalization for DGPU
-        $HOF_BIN/amdhsafin -target=$HOF_ARCH -output=$TEMP_DIR/kernel.isa -brig $TEMP_DIR/kernel.brig -O2
-      fi
+    if [ $ret != 0 ]; then
+      exit $ret
     fi
 
-    ret=$?
-    if [ $ret == 0 ]; then
-      # build a new kernel object
-      pushd . > /dev/null
-      cd $TEMP_DIR
-      $CLAMP_EMBED kernel.isa kernel_hof.o
-      popd > /dev/null
+    # augment arguments to clang-offload-bundler
+    CLANG_OFFLOAD_BUNDLER_INPUTS_ARGS+=",$TEMP_DIR/kernel-$AMDGPU_TARGET.hsaco"
+    CLANG_OFFLOAD_BUNDLER_TARGETS_ARGS+=",hcc-amdgcn--amdhsa-$AMDGPU_TARGET"
+  done
 
-      # debug purpose
-      # dump the brig
-      KMDUMPBRIG="${KMDUMPBRIG:=0}"
-      if [ $KMDUMPBRIG == "1" ]; then
-        cp $TEMP_DIR/kernel.isa ./dump.isa
-      fi
-    fi
-  fi
-  
-  if [ $ret == 0 ]; then
-    # link everything together
-    if [ $LOWER_OPENCL == 1 ] && [ $LOWER_HSA == 1 ] && [ $LOWER_HOF == 1 ]; then
-      ld --allow-multiple-definition $TEMP_DIR/kernel.o $TEMP_DIR/kernel_spir.o $TEMP_DIR/kernel_hsa.o $TEMP_DIR/kernel_hof.o "${LINK_HOST_ARGS[@]}" "${LINK_CPU_ARG[@]}" "${LINK_OTHER_ARGS[@]}"
-    elif [ $LOWER_OPENCL == 1 ] && [ $LOWER_HSA == 1 ] && [ $LOWER_HOF == 0 ]; then
-      ld --allow-multiple-definition $TEMP_DIR/kernel.o $TEMP_DIR/kernel_spir.o $TEMP_DIR/kernel_hsa.o "${LINK_HOST_ARGS[@]}" "${LINK_CPU_ARG[@]}" "${LINK_OTHER_ARGS[@]}"
-      ret=$?
-    elif [ $LOWER_OPENCL == 1 ] && [ $LOWER_HSA == 0 ]; then
-      ld --allow-multiple-definition $TEMP_DIR/kernel.o $TEMP_DIR/kernel_spir.o "${LINK_HOST_ARGS[@]}" "${LINK_CPU_ARG[@]}" "${LINK_OTHER_ARGS[@]}"
-      ret=$?
-    elif [ $LOWER_OPENCL == 0 ] && [ $LOWER_HSA == 1 ] && [ $LOWER_HOF == 1 ]; then
-      ld --allow-multiple-definition $TEMP_DIR/kernel_hsa.o $TEMP_DIR/kernel_hof.o "${LINK_HOST_ARGS[@]}" "${LINK_CPU_ARG[@]}" "${LINK_OTHER_ARGS[@]}"
-    elif [ $LOWER_OPENCL == 0 ] && [ $LOWER_HSA == 1 ] && [ $LOWER_HOF == 0 ]; then
-      ld --allow-multiple-definition $TEMP_DIR/kernel_hsa.o "${LINK_HOST_ARGS[@]}" "${LINK_CPU_ARG[@]}" "${LINK_OTHER_ARGS[@]}"
-      ret=$?
-    else
-      echo "ERROR: No GPU target available! Linker failed."
-      ret=1
-    fi
+  # invoke clang-offload-bundler
+  $CLANG_OFFLOAD_BUNDLER -type=o $CLANG_OFFLOAD_BUNDLER_INPUTS_ARGS $CLANG_OFFLOAD_BUNDLER_TARGETS_ARGS -outputs=$TEMP_DIR/kernel.bundle
+
+  # error handling
+  ret=$?
+  if [ $ret != 0 ]; then
+    exit $ret
   fi
 
-fi # if [ -n "${LINK_KERNEL_ARGS[@]}" ];
+  if [ $KMDUMPBUNDLE == "1" ]; then
+    cp $TEMP_DIR/kernel.bundle ./dump.bundle
+  fi
+
+  # build a new kernel object
+  pushd . > /dev/null
+  cd $TEMP_DIR
+  $CLAMP_EMBED kernel.bundle kernel_hsa.o
+  popd > /dev/null
+
+  # link everything together
+  ld --allow-multiple-definition $TEMP_DIR/kernel_hsa.o "${LINK_HOST_ARGS[@]}" "${LINK_CPU_ARG[@]}" "${LINK_OTHER_ARGS[@]}"
+  ret=$?
+
+fi # if [ -n $LINK_KERNEL_ARGS ];
 
 # remove temp files
-if [ -e $TEMP_DIR/kernel.o ]; then
-  rm $TEMP_DIR/kernel.o
-fi
-
-if [ -e $TEMP_DIR/kernel_spir.o ]; then
-  rm $TEMP_DIR/kernel_spir.o
-fi
-
-if [ -e $TEMP_DIR/kernel_hof.o ]; then
-  rm $TEMP_DIR/kernel_hof.o
-fi
-
 if [ -e $TEMP_DIR/kernel_hsa.o ]; then
   rm $TEMP_DIR/kernel_hsa.o
 fi
@@ -554,21 +439,15 @@ if [ -e $TEMP_DIR/kernel_cpu.o ]; then
   rm $TEMP_DIR/kernel_cpu.o
 fi
 
-if [ -e $TEMP_DIR/kernel.cl ]; then
-  rm $TEMP_DIR/kernel.bc
+if [ -e $TEMP_DIR/__empty.o ]; then
+  rm $TEMP_DIR/__empty.o
 fi
 
-if [ -e $TEMP_DIR/kernel.spir ]; then
-  rm $TEMP_DIR/kernel.spir
+if [ -e $TEMP_DIR/kernel.bundle ]; then
+  rm $TEMP_DIR/kernel.bundle
 fi
 
-if [ -e $TEMP_DIR/kernel.isa ]; then
-  rm $TEMP_DIR/kernel.isa
-fi
-
-if [ -e $TEMP_DIR/kernel.brig ]; then
-  rm $TEMP_DIR/kernel.brig
-fi
+rm -f $TEMP_DIR/kernel-*.hsaco
 
 if [ -e $TEMP_DIR/kernel.bc ]; then
   rm $TEMP_DIR/kernel.bc

@@ -12,6 +12,9 @@
 #include "./../../../constructor.h"
 #include <amptest_main.h>
 
+using namespace Concurrency;
+using namespace Concurrency::Test;
+
 template<typename _type, int _rank>
 bool test_feature()
 {
@@ -37,7 +40,7 @@ bool test_feature()
 
 runall_result test_main()
 {
-	accelerator::set_default(require_device_for<AMPTEST_T>().get_device_path());
+	accelerator::set_default(require_device_for<AMPTEST_T>(device_flags::NOT_SPECIFIED, false).get_device_path());
 
 	runall_result result;
 

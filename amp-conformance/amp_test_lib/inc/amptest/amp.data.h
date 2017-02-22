@@ -38,8 +38,8 @@ namespace Concurrency
                 subscripts[i] = origin[i] + (rand() % ex[i]);
             }
             return index<rank>(subscripts);
-        }		
-		
+        }
+
 		// Creates an extent object with range of each dimension between 1 and maxRange.
         template<int _rank>
         extent<_rank> CreateRandomExtent(int max_range)
@@ -50,7 +50,7 @@ namespace Concurrency
 			{
 				extent_data[i] = 1 + (int)rand() % max_range;
 			}
-			
+
             return extent<_rank>(extent_data);;
         }
 
@@ -61,14 +61,14 @@ namespace Concurrency
 			{
 				throw amptest_failure("cpu_av is not an accelerator_view on the CPU accelerator.");
 			}
-			
+
 			extent<_rank> arr_extent = CreateRandomExtent<_rank>(extent_range);
 
             std::vector<_type> cont(arr_extent.size());
             Fill<_type>(cont);
 
             array<_type, _rank> src_arr(arr_extent, cont.begin(), cpu_av, gpu_av);
-            Log() << "Created staging array of " << src_arr.get_extent() << std::endl;
+            Log(LogType::Info, true) << "Created staging array of " << src_arr.get_extent() << std::endl;
 
             return src_arr;
         }
@@ -82,7 +82,7 @@ namespace Concurrency
             Fill<_type>(cont);
 
             array<_type, _rank> src_arr(arr_extent, cont.begin(), src_av, cpu_access_type);
-            Log() << "Created array of " << src_arr.get_extent() << std::endl;
+            Log(LogType::Info, true) << "Created array of " << src_arr.get_extent() << std::endl;
 
             return src_arr;
         }
@@ -91,7 +91,7 @@ namespace Concurrency
         template<typename _type, int _rank>
         array_view<_type, _rank> CreateNonContiguousArrayView(array<_type, _rank>& data_src_arr)
         {
-            Log() << "Data source array is of " << data_src_arr.get_extent() << std::endl;
+            Log(LogType::Info, true) << "Data source array is of " << data_src_arr.get_extent() << std::endl;
 
             index<_rank> idx;
 
@@ -101,7 +101,7 @@ namespace Concurrency
             }
 
             array_view<_type, _rank> non_contig_arr_v  = data_src_arr.section(idx);
-            Log() << "Created non-contiguous array view of " << non_contig_arr_v.get_extent() << std::endl;
+            Log(LogType::Info, true) << "Created non-contiguous array view of " << non_contig_arr_v.get_extent() << std::endl;
 
             return non_contig_arr_v;
         }
@@ -109,7 +109,7 @@ namespace Concurrency
 		template<typename _type, int _rank>
         array_view<const _type, _rank> CreateNonContiguousArrayViewWithConstType(array<_type, _rank>& data_src_arr)
         {
-            Log() << "Data source array is of " << data_src_arr.get_extent();
+            Log(LogType::Info, true) << "Data source array is of " << data_src_arr.get_extent();
 
             index<_rank> idx;
 
@@ -119,7 +119,7 @@ namespace Concurrency
             }
 
             array_view<const _type, _rank> non_contig_arr_v  = data_src_arr.section(idx);
-            Log() << "Created non-contiguous array view with const type of " << non_contig_arr_v.get_extent() << std::endl;
+            Log(LogType::Info, true) << "Created non-contiguous array view with const type of " << non_contig_arr_v.get_extent() << std::endl;
 
             return non_contig_arr_v;
         }

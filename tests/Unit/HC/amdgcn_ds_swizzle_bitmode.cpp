@@ -1,4 +1,4 @@
-// XFAIL: Linux
+
 // RUN: %hc %s -o %t.out && %t.out
 
 #include <climits>
@@ -34,7 +34,8 @@ bool run_test(const int num) {
   T max = std::is_signed<T>::value ? INT_MAX : UINT_MAX;
   T min = std::is_signed<T>::value ? INT_MIN : 0;
 
-  std::uniform_int_distribution<T> distribution(min, max);
+  typedef typename std::conditional<std::is_signed<T>::value, int, unsigned int>::type _RangeType;
+  std::uniform_int_distribution<_RangeType> distribution(static_cast<_RangeType>(min), static_cast<_RangeType>(max));
   auto gen = std::bind(distribution, random_gen);
   std::generate(input_x.begin(), input_x.end(), gen);
 

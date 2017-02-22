@@ -42,6 +42,6 @@ int main()
         results[i] = av_int[i];
     });
 
-    return Verify<const int>(reinterpret_cast<const int *>(av_float.data()), results.data(), v.size()) ? runall_pass : runall_fail;
+    return Verify<int>(reinterpret_cast<const int *>(av_float.data()), results.data(), v.size()) ? runall_pass : runall_fail;
 }
 

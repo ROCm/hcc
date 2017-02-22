@@ -38,7 +38,7 @@ int main()
 	t(1)= 14;
 
 	bool status = (t[0] == t(0) && t(1) == t(0) && t(0) == 14);
-	Log() << " Test 1: " << (status? "Passed": "Failed") << std::endl;
+	Log(LogType::Info, true) << " Test 1: " << (status? "Passed": "Failed") << std::endl;
 
 	vector<int> result(1);
 	result[0] = 0;
@@ -54,7 +54,7 @@ int main()
 
 
 	result = gpustatus;
-	Log() << " Test 2: " << runall_result_name(1==result[0]? true:false) << std::endl;
+	Log(LogType::Info, true) << " Test 2: " << runall_result_name(1==result[0]? true:false) << std::endl;
 
 	status = 1==result[0] ? status : false;
 

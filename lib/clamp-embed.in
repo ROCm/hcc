@@ -27,10 +27,4 @@ if [[ $OSTYPE == linux-gnu ]]; then
     else
         objcopy -B i386:x86-64 -I binary -O elf64-x86-64 --rename-section .data=.kernel "$1" "$2"
     fi
-elif [[ $OSTYPE == darwin* ]]; then
-# OS X
-  touch "$2.stub.c"
-  gcc -o "$2.stub.o" -c "$2.stub.c"
-  ld -r -o "$2" -sectcreate binary kernel_cl "$1" "$2.stub.o"
-  rm -f "$2.stub.c" "$2.stub.o"
 fi

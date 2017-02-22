@@ -101,15 +101,15 @@ bool test_array_copy_constructor()
 	{
         edata[i] = 3;
 	}
-	
+
     extent<_rank> e1(edata);
     std::vector<_type> data;
-	
+
     for (unsigned int i = 0; i < e1.size(); i++)
 	{
         data.push_back((_type)rand());
 	}
-	
+
     array<_type, _rank> src(e1, data.begin(), data.end());
 
 
@@ -119,7 +119,7 @@ bool test_array_copy_constructor()
         result &= VerifyDataOnCpu<_type, _rank>(src, dst);
     }
 
-	delete edata;
+	delete[] edata;
     return result;
 }
 
@@ -133,23 +133,23 @@ bool test_array_copy_constructors_with_array_view()
 	{
         edata[i] = 3;
 	}
-	
+
     extent<_rank> e1(edata);
     std::vector<_type> data;
-	
+
     for (unsigned int i = 0; i < e1.size(); i++)
 	{
         data.push_back((_type)rand());
 	}
-	
+
     array_view<_type, _rank> src(e1, data);
     // Verify non-const creation
     {
         array<_type, _rank> dst(src);
         result &= VerifyDataOnCpu<_type, _rank>(src, dst);
     }
-	
-	delete edata;
+
+	delete[] edata;
     return result;
 }
 
@@ -162,23 +162,23 @@ bool test_array_copy_constructors_with_array_view(_accl device)
 	{
         edata[i] = 3;
 	}
-	
+
     extent<_rank> e1(edata);
     std::vector<_type> data;
-	
+
     for (unsigned int i = 0; i < e1.size(); i++)
 	{
         data.push_back((_type)rand());
 	}
-	
+
     array_view<_type, _rank> src(e1, data);
     // Verify non-const creation
     {
         array<_type, _rank> dst(src, device);
         result &= VerifyDataOnCpu<_type, _rank>(src, dst);
     }
-	
-	delete edata;
+
+	delete[] edata;
     return result;
 }
 
@@ -191,23 +191,23 @@ bool test_array_copy_constructors_with_array_view(_accl device1,_accl device2)
 	{
         edata[i] = 3;
 	}
-	
+
     extent<_rank> e1(edata);
     std::vector<_type> data;
-	
+
     for (unsigned int i = 0; i < e1.size(); i++)
 	{
         data.push_back((_type)rand());
 	}
-	
+
     array_view<_type, _rank> src(e1, data);
     // Verify non-const creation
     {
         array<_type, _rank> dst(src, device1, device2);
         result &= VerifyDataOnCpu<_type, _rank>(src, dst);
     }
-	
-	delete edata;
+
+	delete[] edata;
     return result;
 }
 
@@ -766,7 +766,7 @@ bool test_accl_staging_buffer_constructor(_staging device1, _staging device2)
 	bool passed = true;
 
     { // Extent based staging constructor
-		Log() << "  Verifying array<" << get_type_name<_type>() << ", " << _rank << ">..." << std::endl;
+		Log(LogType::Info, true) << "  Verifying array<" << get_type_name<_type>() << ", " << _rank << ">..." << std::endl;
         extent<_rank> e1(edata);
         array<_type, _rank> src(e1, device1, device2);
 
@@ -786,7 +786,7 @@ bool test_accl_staging_buffer_constructor(_staging device1, _staging device2)
     if (_rank > 0) // for rank 1
     {
         const int rank = 1;
-		Log() << "  Verifying array<" << get_type_name<_type>() << ", " << rank << ">..." << std::endl;
+		Log(LogType::Info, true) << "  Verifying array<" << get_type_name<_type>() << ", " << rank << ">..." << std::endl;
         array<_type, rank> src(edata[0], device1, device2);
 
         // let the kernel initialize data;
@@ -806,7 +806,7 @@ bool test_accl_staging_buffer_constructor(_staging device1, _staging device2)
     if (_rank > 1) // for rank 2
     {
         const int rank = 2;
-		Log() << "  Verifying array<" << get_type_name<_type>() << ", " << rank << ">..." << std::endl;
+		Log(LogType::Info, true) << "  Verifying array<" << get_type_name<_type>() << ", " << rank << ">..." << std::endl;
         array<_type, rank> src(edata[0], edata[1], device1, device2);
 
         // let the kernel initialize data;
@@ -826,7 +826,7 @@ bool test_accl_staging_buffer_constructor(_staging device1, _staging device2)
     if (_rank > 2)
     {
         const int rank = 3;
-		Log() << "  Verifying array<" << get_type_name<_type>() << ", " << rank << ">..." << std::endl;
+		Log(LogType::Info, true) << "  Verifying array<" << get_type_name<_type>() << ", " << rank << ">..." << std::endl;
         array<_type, rank> src(edata[0], edata[1], edata[2], device1, device2);
 
         // let the kernel initialize data;

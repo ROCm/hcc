@@ -43,7 +43,7 @@ bool TestCopy1(accelerator_view av, int numElems, bool async)
         for (int i = 0; i < HEIGHT; i++) {
             for (int j = 0; j < WIDTH; ++j) {
                 if (tempArrayView(BORDER + i, BORDER + j) != (T)((i * WIDTH) + j)) {
-                    Log() << "destArrayView(" << i << ", " << j << ") = " << tempArrayView(BORDER + i, BORDER + j) << ", Expected = " << (T)((i * WIDTH) + j) << std::endl;
+                    Log(LogType::Info, true) << "destArrayView(" << i << ", " << j << ") = " << tempArrayView(BORDER + i, BORDER + j) << ", Expected = " << (T)((i * WIDTH) + j) << std::endl;
                     passed = false;
                 }
             }
@@ -86,7 +86,7 @@ bool TestCopy2(int numElems, bool async)
         for (int i = 0; i < HEIGHT; i++) {
             for (int j = 0; j < WIDTH; ++j) {
                 if (tempArrayView(BORDER + i, BORDER + j) != srcVec[(i * WIDTH) + j]) {
-                    Log() << "destArrayView(" << i << ", " << j << ") = " << tempArrayView(BORDER + i, BORDER + j) << ", Expected = " << srcVec[(i * WIDTH) + j] << std::endl;
+                    Log(LogType::Info, true) << "destArrayView(" << i << ", " << j << ") = " << tempArrayView(BORDER + i, BORDER + j) << ", Expected = " << srcVec[(i * WIDTH) + j] << std::endl;
                     passed = false;
                 }
             }
@@ -129,7 +129,7 @@ bool TestCopy2_1(int numElems, bool async)
         for (int i = 0; i < HEIGHT; i++) {
             for (int j = 0; j < WIDTH; ++j) {
                 if (tempArrayView(BORDER + i, BORDER + j) != srcVec[(i * WIDTH) + j]) {
-                    Log() << "destArrayView(" << i << ", " << j << ") = " << tempArrayView(BORDER + i, BORDER + j) << ", Expected = " << srcVec[(i * WIDTH) + j] << std::endl;
+                    Log(LogType::Info, true) << "destArrayView(" << i << ", " << j << ") = " << tempArrayView(BORDER + i, BORDER + j) << ", Expected = " << srcVec[(i * WIDTH) + j] << std::endl;
                     passed = false;
                 }
             }
@@ -174,7 +174,7 @@ bool TestCopy3(int numElems, bool async)
         for (int i = 0; i < HEIGHT; i++) {
             for (int j = 0; j < WIDTH; ++j) {
                 if (tempArrayView(BORDER + i, BORDER + j) != (T)((i * WIDTH) + j)) {
-                    Log() << "destArrayView(" << i << ", " << j << ") = " << tempArrayView(BORDER + i, BORDER + j) << ", Expected = " << (T)((i * WIDTH) + j) << std::endl;
+                    Log(LogType::Info, true) << "destArrayView(" << i << ", " << j << ") = " << tempArrayView(BORDER + i, BORDER + j) << ", Expected = " << (T)((i * WIDTH) + j) << std::endl;
                     passed = false;
                 }
             }
@@ -306,7 +306,7 @@ bool TestCopy5(int numElems, bool async)
         bool passed = true;
         for (int i = 0; i < HEIGHT * WIDTH; ++i) {
             if (destIter[i] != (T)(i)) {
-                Log() << "destIter[" << i << "] = " << destIter[i] << ", Expected = " << (T)(i) << std::endl;
+                Log(LogType::Info, true) << "destIter[" << i << "] = " << destIter[i] << ", Expected = " << (T)(i) << std::endl;
                 passed = false;
             }
         }
@@ -364,11 +364,11 @@ bool TestCopy6(bool async)
 
 runall_result test_main()
 {
-    accelerator_view av = require_device().get_default_view();
+    accelerator_view av = require_device(device_flags::NOT_SPECIFIED).get_default_view();
 
     runall_result result;
 
-#ifdef Copy1	
+#ifdef Copy1
     // Test sync and async copy from array to array_view without data source
     result &= REPORT_RESULT(TestCopy1<int>(av, (1 << 16), false)); // 256 KB
     result &= REPORT_RESULT(TestCopy1<graphics::int_3>(av, (1 << 16), false)); // 768 KB
@@ -410,7 +410,7 @@ runall_result test_main()
     result &= REPORT_RESULT(TestCopy2_1<graphics::int_3>((1 << 20), true)); // 12 MB
 #endif
 
-#ifdef Copy3	
+#ifdef Copy3
     // Test sync and async copy from array_view to array_view without data source
     result &= REPORT_RESULT(TestCopy3<int>((1 << 16), false)); // 256 KB
     result &= REPORT_RESULT(TestCopy3<graphics::int_3>((1 << 16), false)); // 768 KB

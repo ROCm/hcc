@@ -1,4 +1,3 @@
-// XFAIL: Linux
 // RUN: %hc %s %S/hsacodelib.CPP -I/opt/rocm/include -L/opt/rocm/lib -lhsa-runtime64 -lhc_am -o %t.out && %t.out %S/vcpy_isa.hsaco
 
 #include <hc.hpp>

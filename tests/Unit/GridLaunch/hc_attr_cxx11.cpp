@@ -1,4 +1,4 @@
-// XFAIL: Linux
+
 // RUN: %hc -lhc_am %s -o %t.out && %t.out
 
 

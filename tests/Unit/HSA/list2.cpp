@@ -1,4 +1,4 @@
-// XFAIL: Linux
+
 // RUN: %hc %s -o %t.out && %t.out
 
 #include <vector>
@@ -121,7 +121,8 @@ bool test() {
   return (error_struct == 0);
 }
 
-int main() {
+int main()
+{
   bool ret = true;
 
   // only conduct the test in case we are running on a HSA full profile stack

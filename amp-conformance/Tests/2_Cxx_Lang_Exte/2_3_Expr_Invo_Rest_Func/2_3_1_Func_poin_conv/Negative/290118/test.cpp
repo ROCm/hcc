@@ -9,13 +9,16 @@
 #include <amptest.h>
 #include <stdio.h>
 
+static
+inline
 int glorp(int x) __GPU_ONLY {
   return 668 + x;
 }
 
-int main() {
-  typedef int FT(int);
-  FT& p = glorp;
+int main()
+{
+  typedef int (&FT)(int);
+  FT p = glorp;
   printf("%d\n", p(-2));
   return 1;
 }

@@ -1,0 +1,32 @@
+
+# The following tests use instructions that are only
+# in gfx8 and newer.  They would fail on gf7 (i.e. Hawaii, Kaveri)
+
+    CPPAMP :: Unit/AMDGPU/clock.cpp
+    CPPAMP :: Unit/AMDGPU/shfl.cpp
+    CPPAMP :: Unit/AMDGPU/shfl_down.cpp
+    CPPAMP :: Unit/AMDGPU/shfl_up.cpp
+    CPPAMP :: Unit/AMDGPU/shfl_xor.cpp
+    CPPAMP :: Unit/HC/amdgcn_ds_bpermute.cpp
+    CPPAMP :: Unit/HC/amdgcn_ds_permute.cpp
+    CPPAMP :: Unit/HC/amdgcn_wave_rl1.cpp
+    CPPAMP :: Unit/HC/amdgcn_wave_rr1.cpp
+    CPPAMP :: Unit/HC/amdgcn_wave_sl1.cpp
+    CPPAMP :: Unit/HC/amdgcn_wave_sr1.cpp
+
+
+# The following tests are known to fail on non-Fiji asics since
+# they launched a binary kernel compiled for Fiji
+
+    CPPAMP :: Unit/DispatchAql/dispatch_hsa_kernel.cpp
+    CPPAMP :: benchEmptyKernel/bench.cpp
+
+
+# This test is known to fail on Hawaii (how about Kaveri?) because
+# it tries to allocate more HSA queues than what is allowed by the 
+# ROCR (looks like 22 HSA queues is the limit)
+
+    CPPAMP :: Unit/HC/accelerator_get_all_views_mt.cpp
+
+
+

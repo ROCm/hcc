@@ -6,6 +6,12 @@
 /// <tags>P1</tags>
 /// <summary>Array initialization in dual context with default constructor available only for one target dispach</summary>
 
+#include <amptest.h>
+#include <amptest_main.h>
+
+using namespace Concurrency;
+using namespace Concurrency::Test;
+
 struct A
 {
     int var;
@@ -17,4 +23,10 @@ void foo() restrict(amp,cpu)
     A arr[5];
 }
 
+runall_result test_main()
+{
+    foo();
+    // Should not get here.
+    return runall_pass;
+}
 //#Expects: Error: error C3931
