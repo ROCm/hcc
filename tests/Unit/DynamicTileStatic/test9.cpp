@@ -229,8 +229,10 @@ int main() {
   ret &= test2D<4096, 256>();
 
   ret &= test3D<1, 1, 1>();
+#if 0
   ret &= test3D<8, 8, 8>();
   ret &= test3D<1024, 32, 16>();
+#endif
 
   return !(ret == true);
 }
