@@ -958,7 +958,7 @@ public:
         hsa_signal_value_t oldv=0;
         s << "Queue: " << this << "  : " << asyncOps.size() << " op entries\n";
         for (int i=0; i<asyncOps.size(); i++) {
-            const std::shared_ptr<KalmarAsyncOp::KalmarAsyncOp> &op = asyncOps[i];
+            const std::shared_ptr<Kalmar::KalmarAsyncOp> &op = asyncOps[i];
             s << "index:" << std::setw(4) << i ;
             if (op != nullptr) {
                 s << " op#"<< op->getSeqNum() ;
