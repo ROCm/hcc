@@ -92,17 +92,9 @@ Resolve any merge conflicts encountered here. Commit to amd-hcc branch.
 
 ### Fetch amd-common Clang commits
 
-- `git checkout upstream`
-  - change to the branch to keep upstream commits.
-  - The branch contains no HCC-specific codes.
+- `git checkout clang_tot_upgrade`
 - `git fetch clang`
 - `git merge --no-ff clang/amd-common --no-edit`
-
-### Merge amd-common Clang with ToT HCC Clang
-
-- `git checkout clang_tot_upgrade`
-  - change to the main develop branch for ToT HCC Clang
-- `git merge upstream --no-edit`
 
 Resolve merge conflicts encountered here. Commit to clang_tot_upgrade branch.
 
@@ -148,14 +140,9 @@ bin/hcc `bin/hcc-config --build --cxxflags --ldflags` \
 - `cd clang`
 - `git checkout clang_tot_upgrade`
 - `git push`
-- `git checkout upstream`
-- `git push`
 
-Following steps are to ensure "develop" and "master" branch are kept the same
+Following steps are to ensure "master" branch are kept the same
 as "clang_tot_upgrade" branch.
-- `git checkout develop`
-- `git merge clang_tot_upgrade --no-edit`
-- `git push`
 - `git checkout master`
 - `git merge clang_tot_upgrade --no-edit`
 - `git push`
