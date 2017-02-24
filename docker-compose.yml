@@ -1,0 +1,30 @@
+version: '2.1'
+
+services:
+  hcc-lc-ubuntu-16.04:
+    build:
+      context: ./docker
+      dockerfile: dockerfile-build-ubuntu-16.04
+      args:
+        rocm_install_path: /opt/rocm
+        rocm_build_path: /usr/local/src/hcc-lc
+        build_type: Release
+        cmake_prefix: /opt/cmake
+        cmake_ver_major: 3.7
+        cmake_ver_minor: 3.7.2
+    image: hcc-lc-build-ubuntu-16.04
+    container_name: hcc-lc-build-ubuntu-16.04
+
+  hcc-lc-ubuntu-14.04:
+    build:
+      context: ./docker
+      dockerfile: dockerfile-build-ubuntu-14.04
+      args:
+        rocm_install_path: /opt/rocm
+        rocm_build_path: /usr/local/src/hcc-lc
+        build_type: Release
+        cmake_prefix: /opt/cmake
+        cmake_ver_major: 3.7
+        cmake_ver_minor: 3.7.2
+    image: hcc-lc-build-ubuntu-14.04
+    container_name: hcc-lc-build-ubuntu-14.04
