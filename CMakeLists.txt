@@ -43,6 +43,7 @@ include (MCWAMP)
 
 execute_process(COMMAND ln -sf ../../lld WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/compiler/tools)
 execute_process(COMMAND ln -sf ../../clang WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/compiler/tools)
+execute_process(COMMAND ln -sf ../../compiler-rt WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/compiler/projects)
 
 # Regression test
 set(LLVM_SRC "${PROJECT_SOURCE_DIR}/compiler")
@@ -376,6 +377,24 @@ install(DIRECTORY ${CLANG_BIN_DIR}/lib
         PATTERN lib*
         PATTERN LLVM*
         PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+
+install(FILES ${CLANG_BIN_DIR}/lib/clang/5.0.0/lib/linux/libclang_rt.builtins-x86_64.a
+        DESTINATION  ${CMAKE_INSTALL_LIBDIR}
+        COMPONENT compiler)
+
+install(DIRECTORY ${CLANG_BIN_DIR}/lib
+        DESTINATION compiler
+        COMPONENT compiler
+        PATTERN CMakeFiles EXCLUDE
+        PATTERN *tmp EXCLUDE
+        PATTERN *inc EXCLUDE
+        PATTERN Makefile EXCLUDE
+        PATTERN *.cmake EXCLUDE
+        PATTERN *.a EXCLUDE
+        PATTERN lib*
+        PATTERN LLVM*
+        PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+
 
 install(DIRECTORY ${CLANG_BIN_DIR}/include
         DESTINATION compiler
