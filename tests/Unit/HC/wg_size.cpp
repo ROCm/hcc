@@ -105,11 +105,9 @@ int main() {
   bool ret = true;
 
   ret &= test<4, 8, 8, 2048, 2048, 2048, 2048>();   // no truncation would take place
-#if 0
   ret &= test<16, 16, 16, 2048, 2048, 2048, 2048>();   // will be truncated to 8, 16, 16 
   ret &= test<64, 16, 4, 2048, 2048, 2048, 2048>(); // will be truncated to 32, 16, 4 
   ret &= test<64, 64, 64, 2048, 2048, 2048, 2048>();  // will be truncated to 16, 16, 8 
-#endif
 
   return !(ret == true);
 }
