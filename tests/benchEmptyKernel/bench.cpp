@@ -260,7 +260,7 @@ int main(int argc, char* argv[]) {
         hc::completion_future cf;
         for (int j=0; j<p_burst_count ;j++) {
             cf = hc::parallel_for_each(av, hc::extent<3>(lp.grid_dim.x*lp.group_dim.x,1,1).tile(lp.group_dim.x,1,1),
-            [=](hc::index<3>& idx) __HC__ {
+            [=](hc::tiled_index<3>& idx) __HC__ {
             });
         };
         cf.wait(hc::hcWaitModeBlocked);
