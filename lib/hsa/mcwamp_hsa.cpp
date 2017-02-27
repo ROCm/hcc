@@ -95,11 +95,11 @@ int HCC_OPT_FLUSH=0;
 #define DB_MISC      0x0  // 0x01  // misc debug, not yet classified.
 #define DB_CMD       0x1  // 0x02  // Kernel and COpy Commands and synchronization
 #define DB_WAIT      0x2  // 0x04  // Synchronization and waiting for commands to finish.
-#define DB_AQL       0x3  // 0x08  // Decode and display AQL packets 
+#define DB_AQL       0x3  // 0x08  // Decode and display AQL packets
 #define DB_QUEUE     0x4  // 0x10  // Queue creation and desruction commands
 #define DB_SIG       0x5  // 0x20  // Signal creation, allocation, pool
 #define DB_LOCK      0x6  // 0x40  // Locks and HCC thread-safety code
-#define DB_KERNARG   0x7  // 0x80  // Decode and display AQL packets 
+#define DB_KERNARG   0x7  // 0x80  // Decode and display AQL packets
 unsigned HCC_DB = 0;
 
 std::vector<std::string> g_DbStr = {"misc", "cmd", "wait", "aql", "queue", "sig", "lock", "kernarg" };
@@ -808,7 +808,7 @@ namespace Kalmar {
 // HSAQueue is the implementation of accelerator_view for HSA back-and.  HSAQueue
 // points to RocrQueue, or to nullptr if the HSAQueue is not currently attached to a RocrQueue.
 struct RocrQueue {
-    RocrQueue(hsa_agent_t agent, size_t queue_size, HSAQueue *hccQueue) 
+    RocrQueue(hsa_agent_t agent, size_t queue_size, HSAQueue *hccQueue)
     {
 
         assert(queue_size != 0);
@@ -845,9 +845,9 @@ struct RocrQueue {
     HSAQueue *_hccQueue;  // Pointe to the HCC "HSA" queue which is assigned to use the rocrQueue
 
     std::vector<uint32_t> cu_arrays;
-    
+
     // Track profiling enabled state here. - no need now since all hw queues have profiling enabled.
-    
+
     // Priority could be tracked here:
 };
 
@@ -860,7 +860,7 @@ private:
     friend class RocrQueue;
     friend std::ostream& operator<<(std::ostream& os, const HSAQueue & hav);
 
-    // ROCR queue associated with this HSAQueue instance. 
+    // ROCR queue associated with this HSAQueue instance.
     RocrQueue    *rocrQueue;
 
     std::mutex   qmutex;  // Protect structures for this KalmarQueue.  Currently just the hsaQueue.
@@ -878,8 +878,8 @@ private:
     uint64_t                                      opSeqNums;
     uint64_t                                      queueSeqNum; // sequence-number of this queue.
 
-    // Valid is used to prevent the fields of the HSAQueue from being disposed 
-    // multiple times.  
+    // Valid is used to prevent the fields of the HSAQueue from being disposed
+    // multiple times.
     bool                                            valid;
 
 
@@ -1060,7 +1060,7 @@ public:
     int getPendingAsyncOps() override {
         int count = 0;
         for (int i = 0; i < asyncOps.size(); ++i) {
-            auto &asyncOp = asyncOps[i]; 
+            auto &asyncOp = asyncOps[i];
 
             if (asyncOp != nullptr) {
                 hsa_signal_t signal = *(static_cast <hsa_signal_t*> (asyncOp->getNativeHandle()));
@@ -1096,10 +1096,10 @@ public:
         // Ensures younger ops have chance to complete before older ops reclaim their resources
         //
 
-  
-#if 0 
+
+#if 0
         // TODO - can remove this when HCC_OPT_FLUSH=1
-        // If oldest OP doesn't have a signal, we need to enqueue 
+        // If oldest OP doesn't have a signal, we need to enqueue
         // a barrier with a signal so host can tell when it finishes
         for (int i = asyncOps.size()-1; i >= 0;  i--) {
             auto asyncOp = asyncOps[i];
@@ -1120,7 +1120,7 @@ public:
             // In the loop below, this will be the first op waited on
             auto marker = EnqueueMarker(hc::system_scope);
 
-            
+
             DBOUT(DB_MISC, " Sys-release needed, enqueue marker to release written data " << marker<<"\n");
         }
 
@@ -1709,7 +1709,7 @@ private:
     uint16_t versionMajor;
     uint16_t versionMinor;
 
-    int      accSeqNum;     // unique accelerator seq num 
+    int      accSeqNum;     // unique accelerator seq num
     uint64_t queueSeqNums;  // used to assign queue seqnums.
 
 public:
@@ -1720,7 +1720,7 @@ public:
 
     // Creates or steals a rocrQueue and returns it in theif->rocrQueue
     void createOrstealRocrQueue(Kalmar::HSAQueue *thief) {
-        
+
         std::lock_guard<std::mutex> (this->rocrQueuesMutex);
 
         if (rocrQueues.size() < HCC_MAX_QUEUES) {
@@ -1743,7 +1743,7 @@ public:
                         foundRQ = rq;
                         break;
                     }
-                } 
+                }
                 if (!foundRQ) {
                     for (auto rq : rocrQueues) {
                         if (rq->_hccQueue != thief)  {
@@ -1754,7 +1754,7 @@ public:
                                 DBOUT(DB_LOCK, " ptr:" << this << " lock_guard...\n");
 
                                 assert (victimHccQueue->rocrQueue == rq);  // ensure the link is consistent.
-                                victimHccQueue->rocrQueue = nullptr; 
+                                victimHccQueue->rocrQueue = nullptr;
                                 foundRQ = rq;
                                 DBOUT(DB_QUEUE, "Stole existing rocrQueue=" << rq << " from victimHccQueue=" << victimHccQueue << " to hccQueue=" << thief << "\n")
                                 break;
@@ -1763,7 +1763,7 @@ public:
                     }
                 }
                 if (foundRQ) {
-                    
+
                     // update the queue pointers to indicate the theft:
                     foundRQ->assignHccQueue(thief);
 
@@ -1783,17 +1783,17 @@ public:
         // queues already locked:
         size_t hccSize = queues.size();
 
-        { 
+        {
             std::lock_guard<std::mutex> (this->rocrQueuesMutex);
 
             // a perf optimization to keep the HSA queue if we have more HCC queues that might want it.
-            // This defers expensive queue deallocation if an hccQueue that holds an hwQueue is destroyed - 
+            // This defers expensive queue deallocation if an hccQueue that holds an hwQueue is destroyed -
             // keep the hwqueue around until the number of hccQueues drops below the number of hwQueues
             // we have already allocated.
             auto rqSize = rocrQueues.size();
             if (hccSize < rqSize)  {
                 auto iter = std::find(rocrQueues.begin(), rocrQueues.end(), rocrQueue);
-                assert (iter != rocrQueues.end()); 
+                assert (iter != rocrQueues.end());
                 // Remove the pointer from the list:
                 rocrQueues.erase(iter);
                 DBOUT(DB_QUEUE, "removeRocrQueue-hard: rocrQueue=" << rocrQueue << " hccQueues/rocrQueues=" << hccSize << "/" << rqSize << "\n")
@@ -2748,14 +2748,14 @@ static void hccgetenv(const char *var_name, T *var, const char *usage)
 
 // Global free function to read HCC_ENV vars.  Really this should be called once per process not once-per-event.
 // Global so HCC clients or debuggers can force a re-read of the environment variables.
-void ReadHccEnv() 
+void ReadHccEnv()
 {
     GET_ENV_INT(HCC_PRINT_ENV, "Print values of HCC environment variables");
 
    // 0x1=pre-serialize, 0x2=post-serialize , 0x3= pre- and post- serialize.
    // HCC_SERIALIZE_KERNEL serializes PFE, GL, and dispatch_hsa_kernel calls.
    // HCC_SERIALIZE_COPY serializes av::copy_async operations.  (array_view copies are not currently impacted))
-    GET_ENV_INT(HCC_SERIALIZE_KERNEL, 
+    GET_ENV_INT(HCC_SERIALIZE_KERNEL,
                  "0x1=pre-serialize before each kernel launch, 0x2=post-serialize after each kernel launch, 0x3=both");
     GET_ENV_INT(HCC_SERIALIZE_COPY,
                  "0x1=pre-serialize before each data copy, 0x2=post-serialize after each data copy, 0x3=both");
@@ -2768,7 +2768,7 @@ void ReadHccEnv()
 
 
     GET_ENV_INT(HCC_UNPINNED_COPY_MODE, "Select algorithm for unpinned copies. 0=ChooseBest(see thresholds), 1=PinInPlace, 2=StagingBuffer, 3=Memcpy");
-   
+
     // Select thresholds to use for unpinned copies
     GET_ENV_INT (HCC_H2D_STAGING_THRESHOLD,    "Min size (in KB) to use staging buffer algorithm for H2D copy if ChooseBest algorithm selected");
     GET_ENV_INT (HCC_H2D_PININPLACE_THRESHOLD, "Min size (in KB) to use pin-in-place algorithm for H2D copy if ChooseBest algorithm selected");
@@ -3096,8 +3096,8 @@ HSADevice::getHSAAgent() override {
 // ----------------------------------------------------------------------
 namespace Kalmar  {
 
-                           
-std::ostream& operator<<(std::ostream& os, const HSAQueue & hav) 
+
+std::ostream& operator<<(std::ostream& os, const HSAQueue & hav)
 {
     auto device = static_cast<Kalmar::HSADevice*>(hav.getDev());
     os << "queue#" << device->accSeqNum << "." << hav.queueSeqNum;
@@ -3110,19 +3110,19 @@ inline void printOp(std::ostream& os, const HSAQueue &hav, uint64_t opNum)
     os << "op\n" ;
 }
 
-inline std::ostream& operator<<(std::ostream& os, const HSADispatch & op) 
+inline std::ostream& operator<<(std::ostream& os, const HSADispatch & op)
 {
     //printOp(os, *op.hsaQueue, op.getSeqNum());
     return os;
 }
 
 
-HSAQueue::HSAQueue(KalmarDevice* pDev, hsa_agent_t agent, execute_order order) : 
-    KalmarQueue(pDev, queuing_mode_automatic, order), 
+HSAQueue::HSAQueue(KalmarDevice* pDev, hsa_agent_t agent, execute_order order) :
+    KalmarQueue(pDev, queuing_mode_automatic, order),
     rocrQueue(nullptr),
-    asyncOps(), opSeqNums(0), valid(true), _needs_sys_release(false), bufferKernelMap(), kernelBufferMap() 
+    asyncOps(), opSeqNums(0), valid(true), _needs_sys_release(false), bufferKernelMap(), kernelBufferMap()
 {
-    { 
+    {
         // Protect the HSA queue we can steal it.
         DBOUT(DB_LOCK, " ptr:" << this << " create lock_guard...\n");
 
@@ -3171,7 +3171,7 @@ void HSAQueue::dispose() override {
 
         Kalmar::HSADevice* device = static_cast<Kalmar::HSADevice*>(getDev());
         if (this->rocrQueue != nullptr) {
-            
+
             device->removeRocrQueue(rocrQueue);
             rocrQueue = nullptr;
         }
@@ -3202,7 +3202,7 @@ hsa_queue_t *HSAQueue::acquireLockedRocrQueue() {
 
 void HSAQueue::releaseLockedRocrQueue()
 {
-   
+
     DBOUT(DB_LOCK, " ptr:" << this << " unlock...\n");
     this->qmutex.unlock();
 }
@@ -3449,13 +3449,13 @@ static std::ostream& operator<<(std::ostream& os, const hsa_kernel_dispatch_pack
        << " grid=[" << std::dec << aql.grid_size_x << "." <<  aql.grid_size_y << "." <<  aql.grid_size_z << "]"
        << " group=[" << std::dec << aql.workgroup_size_x << "." <<  aql.workgroup_size_y << "." <<  aql.workgroup_size_z << "]"
        << " private_seg_size=" <<  aql.private_segment_size
-       << " group_seg_size=" <<  aql.group_segment_size 
-       << " kernel_object=" << std::hex <<  aql.kernel_object 
+       << " group_seg_size=" <<  aql.group_segment_size
+       << " kernel_object=" << std::hex <<  aql.kernel_object
        << " kernarg_address=" <<  aql.kernarg_address
        << " completion_signal=" <<  aql.completion_signal.handle;
 
     const unsigned *aqlBytes = (unsigned*)&aql;
-     os << "\n              raw_aql=[" << std::hex << std::setfill('0'); 
+     os << "\n              raw_aql=[" << std::hex << std::setfill('0');
      for (int i=0; i<sizeof(aql)/sizeof(unsigned); i++) {
          os << " 0x" << std::setw(8) << aqlBytes[i];
      }
@@ -3476,7 +3476,7 @@ static std::ostream& operator<<(std::ostream& os, const hsa_barrier_and_packet_t
        << " completion_signal=" <<  aql.completion_signal.handle;
 
     const unsigned *aqlBytes = (unsigned*)&aql;
-     os << "              raw_aql=[" << std::hex << std::setfill('0'); 
+     os << "              raw_aql=[" << std::hex << std::setfill('0');
      for (int i=0; i<sizeof(aql)/sizeof(unsigned); i++) {
          os << " 0x" << std::setw(8) << aqlBytes[i];
      }
@@ -3486,7 +3486,7 @@ static std::ostream& operator<<(std::ostream& os, const hsa_barrier_and_packet_t
 }
 
 
-static void printKernarg(const void *kernarg_address, int bytesToPrint) 
+static void printKernarg(const void *kernarg_address, int bytesToPrint)
 {
     const unsigned int *ck = static_cast<const unsigned int*> (kernarg_address);
 
@@ -3495,8 +3495,8 @@ static void printKernarg(const void *kernarg_address, int bytesToPrint)
     ks << "kernarg_address: 0x" << kernarg_address << ", first " << bytesToPrint << " bytes:";
     for (int i=0; i<bytesToPrint/sizeof(unsigned int); i++) {
         bool newLine = ((i % 4) ==0);
-        
-        if (newLine) {    
+
+        if (newLine) {
             ks << "\n      ";
             ks << "0x" << std::setw(16) << std::setfill('0') << &(ck[i]) <<  ": " ;
         }
@@ -3514,7 +3514,7 @@ static void printKernarg(const void *kernarg_address, int bytesToPrint)
 // dispatch a kernel asynchronously
 // -  allocates signal, copies arguments into kernarg buffer, and places aql packet into queue.
 hsa_status_t
-HSADispatch::dispatchKernel(hsa_queue_t* lockedHsaQueue, const void *hostKernarg, 
+HSADispatch::dispatchKernel(hsa_queue_t* lockedHsaQueue, const void *hostKernarg,
                             int hostKernargSize, bool allocSignal) {
 
     hsa_status_t status = HSA_STATUS_SUCCESS;
@@ -3569,7 +3569,7 @@ HSADispatch::dispatchKernel(hsa_queue_t* lockedHsaQueue, const void *hostKernarg
     }
 
 
-    hsa_kernel_dispatch_packet_t* q_aql = 
+    hsa_kernel_dispatch_packet_t* q_aql =
         &(((hsa_kernel_dispatch_packet_t*)(lockedHsaQueue->base_address))[index & queueMask]);
 
     // Copy mostly-finished AQL packet into the queue
@@ -3597,7 +3597,7 @@ HSADispatch::dispatchKernel(hsa_queue_t* lockedHsaQueue, const void *hostKernarg
     DBOUT(DB_AQL, "queue:" << lockedHsaQueue  <<  " dispatch kernel " << (kernel ? kernel->kernelName : "<unknown>") << "\n");
     DBOUT(DB_AQL, "dispatch_aql:" << *q_aql << "\n");
 
-    if (DBFLAG(DB_KERNARG)) { 
+    if (DBFLAG(DB_KERNARG)) {
         // TODO, perhaps someday we could determine size of kernarg block here:
         printKernarg(q_aql->kernarg_address, 128);
     }
@@ -3838,7 +3838,7 @@ HSADispatch::setLaunchConfiguration(int dims, size_t *globalDims, size_t *localD
 
     aql.setup = dims << HSA_KERNEL_DISPATCH_PACKET_SETUP_DIMENSIONS;
 
-    aql.header = HCC_OPT_FLUSH ? 
+    aql.header = HCC_OPT_FLUSH ?
         ((HSA_FENCE_SCOPE_AGENT) << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
         ((HSA_FENCE_SCOPE_AGENT) << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE)
         :
@@ -4073,17 +4073,17 @@ hsa_status_t HSACopy::hcc_memory_async_copy(Kalmar::hcCommandKind copyKind, cons
 
     hsa_agent_t srcAgent, dstAgent;
     switch (copyKind) {
-        case Kalmar::hcMemcpyHostToHost: 
+        case Kalmar::hcMemcpyHostToHost:
             srcAgent=hostAgent; dstAgent=hostAgent;
             //throw Kalmar::runtime_exception("HCC should not use hsa_memory_async_copy for host-to-host copy");
             break;
-        case Kalmar::hcMemcpyHostToDevice: 
+        case Kalmar::hcMemcpyHostToDevice:
             srcAgent=hostAgent; dstAgent=copyAgent;
             break;
-        case Kalmar::hcMemcpyDeviceToHost: 
+        case Kalmar::hcMemcpyDeviceToHost:
             srcAgent=copyAgent; dstAgent=hostAgent;
             break;
-        case Kalmar::hcMemcpyDeviceToDevice: 
+        case Kalmar::hcMemcpyDeviceToDevice:
             srcAgent=copyAgent; dstAgent=copyAgent;
             break;
         default:
@@ -4092,17 +4092,17 @@ hsa_status_t HSACopy::hcc_memory_async_copy(Kalmar::hcCommandKind copyKind, cons
 
 
     /* ROCR logic to select the copy agent:
-     *  
-     *  Decide which copy agent to use : 
-     *   
+     *
+     *  Decide which copy agent to use :
+     *
      *   1. Pick source agent if src agent is a GPU (regardless of the dst agent).
-     *   2. Pick destination agent if src argent is not a GPU, and the dst agent is a GPU. 
+     *   2. Pick destination agent if src argent is not a GPU, and the dst agent is a GPU.
      *   3. If both src and dst agents are CPUs, launch a CPU thread to perform memcpy. Will wait on host for dependent signals to resolve.
-     *    
+     *
      *    Decide which DMA engine on the copy agent to use :
-     *     
+     *
      *     1.   Use SDMA, if the src agent is a CPU AND dst agent is a GPU.
-     *     2.   Use SDMA, if the src agent is a GPU AND dst agent is a CPU. 
+     *     2.   Use SDMA, if the src agent is a GPU AND dst agent is a CPU.
      *     3.   Launch a Blit kernel if the src agent is a GPU AND dst agent is a GPU.
      */
 

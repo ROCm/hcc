@@ -1,7 +1,7 @@
-// RUN: %hc %s %S/statutils.CPP -O3  %S/hsacodelib.CPP  -o %t.out -I/opt/rocm/include -L/opt/rocm/lib -lhsa-runtime64 
+// RUN: %hc %s %S/statutils.CPP -O3  %S/hsacodelib.CPP  -o %t.out -I/opt/rocm/include -L/opt/rocm/lib -lhsa-runtime64
 // RUN: %t.out -d 10000 -h %T
 // // This runs burst of 100 kernels to measure kernel-to-kernel overhead:
-// RUN: %t.out -d 1000 -b 100 -h %T 
+// RUN: %t.out -d 1000 -b 100 -h %T
 // // Run again with --execute_any_order:
 // RUN: %t.out -d 10000 -h %T --execute_any_order
 // RUN: %t.out -d 1000 -b 100 -h %T  --execute_any_order
@@ -61,7 +61,7 @@ int p_dispatch_count = DISPATCH_COUNT;
 int p_burst_count = 1;
 int p_execute_any_order = 0;
 
-__attribute__((hc_grid_launch)) 
+__attribute__((hc_grid_launch))
 void nullkernel(const grid_launch_parm lp, float* A) {
     if (A) {
         A[0] = 0x13;
@@ -123,7 +123,7 @@ void time_dispatch_hsa_kernel(std::string testName, const grid_launch_parm *lp, 
   std::vector<std::chrono::duration<double>> outliers;
   remove_outliers(elapsed_timer, outliers);
   plot(testName, elapsed_timer);
-  std::cout << std::setw(TW-2) << std::left << testName << ": " 
+  std::cout << std::setw(TW-2) << std::left << testName << ": "
             << std::setw(8) << std::setprecision(8) << average(elapsed_timer)*1000000.0 << "\n";
 };
 
@@ -248,7 +248,7 @@ int main(int argc, char* argv[]) {
       }
       remove_outliers(elapsed_pfe, outliers_pfe);
       plot("pfe", elapsed_pfe);
-      std::cout << std::setw(TW) << "pfe time, active (us):                  " 
+      std::cout << std::setw(TW) << "pfe time, active (us):                  "
                 << std::setprecision(8) << average(elapsed_pfe)*1000000.0 << "\n";
   }
 
@@ -270,7 +270,7 @@ int main(int argc, char* argv[]) {
       }
       remove_outliers(elapsed_pfe, outliers_pfe);
       plot("pfe", elapsed_pfe);
-      std::cout << std::setw(TW) << "pfe time, blocked (us):                 " 
+      std::cout << std::setw(TW) << "pfe time, blocked (us):                 "
                 << std::setprecision(8) << average(elapsed_pfe)*1000000.0 << "\n";
   }
 
@@ -279,7 +279,7 @@ int main(int argc, char* argv[]) {
       // Timing null grid_launch call, active wait
       for(int i = 0; i < p_dispatch_count; ++i) {
         start = std::chrono::high_resolution_clock::now();
-        hc::completion_future cf; // create new completion-future 
+        hc::completion_future cf; // create new completion-future
         lp.cf = &cf;
 
         for (int j=0; j<p_burst_count ;j++) {
@@ -294,7 +294,7 @@ int main(int argc, char* argv[]) {
       }
       remove_outliers(elapsed_grid_launch, outliers_gl);
       plot("grid_launch", elapsed_grid_launch);
-      std::cout << std::setw(TW) << "grid_launch time, active (us):          " 
+      std::cout << std::setw(TW) << "grid_launch time, active (us):          "
                 << std::setprecision(8) << average(elapsed_grid_launch)*1000000.0 << "\n";
   }
 
@@ -303,7 +303,7 @@ int main(int argc, char* argv[]) {
       // Timing null grid_launch call, blocked wait
       for(int i = 0; i < p_dispatch_count; ++i) {
         start = std::chrono::high_resolution_clock::now();
-        hc::completion_future cf; // create new completion-future 
+        hc::completion_future cf; // create new completion-future
         lp.cf = &cf;
 
         for (int j=0; j<p_burst_count ;j++) {
@@ -318,14 +318,14 @@ int main(int argc, char* argv[]) {
       }
       remove_outliers(elapsed_grid_launch, outliers_gl);
       plot("grid_launch", elapsed_grid_launch);
-      std::cout << std::setw(TW) << "grid_launch time, blocked (us):         " 
+      std::cout << std::setw(TW) << "grid_launch time, blocked (us):         "
                 << std::setprecision(8) << average(elapsed_grid_launch)*1000000.0 << "\n";
   }
 
 
   if (nullkernel_hsaco_dir) {
       if (p_tests & DISPATCH_HSA_KERNEL_CF) {
-          hc::completion_future cf; // create new completion-future 
+          hc::completion_future cf; // create new completion-future
           lp.cf = &cf;
           time_dispatch_hsa_kernel("dispatch_hsa_kernel+withcompletion+activewait", &lp, nullkernel_hsaco_dir);
       }
