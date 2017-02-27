@@ -106,7 +106,6 @@ void ldflags(void) {
         std::cout << " -lmcwamp_atomic";
 
     std::cout << " -Wl,--whole-archive -lmcwamp -Wl,--no-whole-archive";
-    std::cout << " -lclang_rt.builtins-x86_64";
 
 #ifdef CODEXL_ACTIVITY_LOGGER_ENABLED
     // CodeXL Activity Logger
