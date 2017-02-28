@@ -29,8 +29,14 @@ Device libraries
 HCC device library is a part of [ROCm-Device-Libs][3]. When compiling device 
 code with hcc, the rocm-device-libs package needs to be installed.
 
-In case rocm-device-libs package is not present, you are required to build it
-from source. Please refer to 
+You can install its binary package via:
+
+```
+    sudo apt-get install rocm-device-libs libc6-dev-i386
+```
+
+In case rocm-device-libs package is not present, or you want to build it
+from source, please refer to 
 [ROCm-Device-Libs build procedure][4] for more details.
 
 Once it's built, run `make install` and config ToT HCC like:
