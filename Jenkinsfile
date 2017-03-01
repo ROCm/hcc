@@ -32,6 +32,7 @@ node ('rocmtest')
         git clone --depth 1 -b clang_tot_upgrade https://github.com/RadeonOpenCompute/hcc-clang-upgrade.git clang
         git clone --depth 1 -b amd-hcc https://github.com/RadeonOpenCompute/llvm.git compiler
         git clone --depth 1 -b amd-hcc https://github.com/RadeonOpenCompute/lld.git lld
+        git clone --depth 1 -b amd-hcc https://github.com/RadeonOpenCompute/compiler-rt.git compiler-rt
         git clone --depth 1 -b clang_tot_upgrade https://github.com/RadeonOpenCompute/clang-tools-extra.git clang/tools/extra
         '''
   }

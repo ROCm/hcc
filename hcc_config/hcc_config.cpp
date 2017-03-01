@@ -72,18 +72,19 @@ void cxxflags(void) {
 }
 
 void ldflags(void) {
+
     if (hcc_mode) {
         std::cout << " -hc";
     }
-
     // Common options
     std::cout << " -std=c++amp";
 
     if (build_mode) {
         std::cout << " -L" CMAKE_BUILD_LIB_DIR;
+        std::cout << " -Wl,--rpath=" CMAKE_BUILD_LIB_DIR;
 
-        std::cout << " -Wl,--rpath="
-            CMAKE_BUILD_LIB_DIR;
+        std::cout << " -L" CMAKE_BUILD_COMPILER_RT_LIB_DIR;
+        std::cout << " -Wl,--rpath=" CMAKE_BUILD_COMPILER_RT_LIB_DIR;
     } else if (install_mode) {
         if (const char *p = getenv("HCC_HOME")) {
             std::cout << " -L" << p << "/lib";
@@ -98,12 +99,12 @@ void ldflags(void) {
 #ifdef USE_LIBCXX
     std::cout << " -lc++ -lc++abi";
 #endif
-
     std::cout << " -ldl -lm -lpthread";
 
     if (const char *p = getenv("TEST_CPU"))
         if (p == std::string("ON"))
         std::cout << " -lmcwamp_atomic";
+
     std::cout << " -Wl,--whole-archive -lmcwamp -Wl,--no-whole-archive";
 
 #ifdef CODEXL_ACTIVITY_LOGGER_ENABLED

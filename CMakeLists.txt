@@ -43,6 +43,7 @@ include (MCWAMP)
 
 execute_process(COMMAND ln -sf ../../lld WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/compiler/tools)
 execute_process(COMMAND ln -sf ../../clang WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/compiler/tools)
+execute_process(COMMAND ln -sf ../../compiler-rt WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/compiler/projects)
 
 # Regression test
 set(LLVM_SRC "${PROJECT_SOURCE_DIR}/compiler")
@@ -349,6 +350,11 @@ add_custom_command(TARGET clang POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E create_symlink ../compiler/bin/lld ${PROJECT_BINARY_DIR}/bin/lld
   WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/bin
 )
+
+add_custom_command(TARGET clang POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ${CLANG_BIN_DIR}/lib/clang/5.0.0/lib/linux/libclang_rt.builtins-x86_64.a ${PROJECT_BINARY_DIR}/lib/libclang_rt.builtins-x86_64.a
+)
+
 install(FILES ${PROJECT_BINARY_DIR}/bin/hcc
               ${PROJECT_BINARY_DIR}/bin/clang++
               ${PROJECT_BINARY_DIR}/bin/clang
@@ -376,6 +382,10 @@ install(DIRECTORY ${CLANG_BIN_DIR}/lib
         PATTERN lib*
         PATTERN LLVM*
         PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+
+install(FILES ${CLANG_BIN_DIR}/lib/clang/5.0.0/lib/linux/libclang_rt.builtins-x86_64.a
+        DESTINATION  lib
+        COMPONENT compiler)
 
 install(DIRECTORY ${CLANG_BIN_DIR}/include
         DESTINATION compiler
