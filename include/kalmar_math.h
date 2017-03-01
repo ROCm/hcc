@@ -92,10 +92,8 @@
 
   /* FIXME missing fpclassify */
 
-  /* SPIR pass will deduce the address space of the pointer and emit correct
-     call instruction */
-  extern "C" float __hc_frexpf(float x, int *exp) restrict(amp);
-  extern "C" double __hc_frexp(double x, int *exp) restrict(amp);
+  extern "C" float __hc_frexp(float x, int *exp) restrict(amp);
+  extern "C" double __hc_frexp_double(double x, int *exp) restrict(amp);
 
   extern "C" float __hc_hypot(float x, float y) restrict(amp);
   extern "C" double __hc_hypot_double(double x, double y) restrict(amp);
@@ -118,10 +116,8 @@
   extern "C" float __hc_ldexp(float x, int exp) restrict(amp);
   extern "C" double __hc_ldexp_double(double x, int exp) restrict(amp);
 
-  /* SPIR pass will deduce the address space of the pointer and emit correct
-     call instruction */
-  extern "C" float __hc_lgammaf(float x, int *exp) restrict(amp);
-  extern "C" double __hc_lgamma(double x, int *exp) restrict(amp);
+  extern "C" float __hc_lgamma_r(float x, int *exp) restrict(amp);
+  extern "C" double __hc_lgamma_r_double(double x, int *exp) restrict(amp);
 
   extern "C" float __hc_log(float x) restrict(amp);
   extern "C" double __hc_log_double(double x) restrict(amp);
@@ -138,10 +134,8 @@
   extern "C" float __hc_logb(float x) restrict(amp);
   extern "C" double __hc_logb_double(double x) restrict(amp);
 
-  /* SPIR pass will deduce the address space of the pointer and emit correct
-     call instruction */
-  extern "C" float __hc_modff(float x, float *iptr) restrict(amp);
-  extern "C" double __hc_modf(double x, double *iptr) restrict(amp);
+  extern "C" float __hc_modf(float x, float *iptr) restrict(amp);
+  extern "C" double __hc_modf_double(double x, double *iptr) restrict(amp);
 
   extern "C" float __hc_nan(int tagp) restrict(amp);
   extern "C" double __hc_nan_double(unsigned long tagp) restrict(amp);
@@ -158,10 +152,8 @@
   extern "C" float __hc_remainder(float x, float y) restrict(amp);
   extern "C" double __hc_remainder_double(double x, double y) restrict(amp);
 
-  /* SPIR pass will deduce the address space of the pointer and emit correct
-     call instruction */
-  extern "C" float __hc_remquof(float x, float y, int *quo) restrict(amp);
-  extern "C" double __hc_remquo(double x, double y, int *quo) restrict(amp);
+  extern "C" float __hc_remquo(float x, float y, int *quo) restrict(amp);
+  extern "C" double __hc_remquo_double(double x, double y, int *quo) restrict(amp);
 
   extern "C" float __hc_round(float x) restrict(amp);
   extern "C" double __hc_round_double(double x) restrict(amp);
@@ -178,10 +170,8 @@
   extern "C" float __hc_sin(float x) restrict(amp);
   extern "C" double __hc_sin_double(double x) restrict(amp);
 
-  /* SPIR pass will deduce the address space of the pointer and emit correct
-     call instruction */
-  extern "C" void __hc_sincosf(float x, float *s, float *c) restrict(amp);
-  extern "C" void __hc_sincos(double x, double *s, double *c) restrict(amp);
+  extern "C" float __hc_sincos(float x, float *c) restrict(amp);
+  extern "C" double __hc_sincos_double(double x, double *c) restrict(amp);
 
   extern "C" float __hc_sinh(float x) restrict(amp);
   extern "C" double __hc_sinh_double(double x) restrict(amp);
@@ -487,7 +477,7 @@ namespace fast_math {
   inline float host_frexpf(float x, int *exp) restrict(cpu) { return ::frexpf(x, exp); }
   inline float frexpf(float x, int *exp) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_frexpf(x, exp);
+      return __hc_frexp(x, exp);
     #else
       return host_frexpf(x, exp);
     #endif
@@ -496,7 +486,7 @@ namespace fast_math {
   inline float host_frexp(float x, int *exp) restrict(cpu) { return ::frexpf(x, exp); }
   inline float frexp(float x, int *exp) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_frexpf(x, exp);
+      return __hc_frexp(x, exp);
     #else
       return host_frexp(x, exp);
     #endif
@@ -606,7 +596,7 @@ namespace fast_math {
   inline float host_modff(float x, float *iptr) restrict(cpu) { return ::modff(x, iptr); }
   inline float modff(float x, float *iptr) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_modff(x, iptr);
+      return __hc_modf(x, iptr);
     #else
       return host_modff(x, iptr);
     #endif
@@ -615,7 +605,7 @@ namespace fast_math {
   inline float host_modf(float x, float *iptr) restrict(cpu) { return ::modff(x, iptr); }
   inline float modf(float x, float *iptr) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_modff(x, iptr);
+      return __hc_modf(x, iptr);
     #else
       return host_modf(x, iptr);
     #endif
@@ -714,7 +704,7 @@ namespace fast_math {
   inline void host_sincosf(float x, float *s, float *c) restrict(cpu) { ::sincosf(x, s, c); }
   inline void sincosf(float x, float *s, float *c) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      __hc_sincosf(x, s, c);
+      *s = __hc_sincos(x, c);
     #else
       host_sincosf(x, s, c);
     #endif
@@ -723,7 +713,7 @@ namespace fast_math {
   inline void host_sincos(float x, float *s, float *c) restrict(cpu) { ::sincosf(x, s, c); }
   inline void sincos(float x, float *s, float *c) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      __hc_sincosf(x, s, c);
+      *s = __hc_sincos(x, c);
     #else
       host_sincos(x, s, c);
     #endif
@@ -1579,7 +1569,7 @@ namespace fast_math {
   inline float host_frexpf(float x, int *exp) restrict(cpu) { return ::frexpf(x, exp); }
   inline float frexpf(float x, int *exp) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_frexpf(x, exp);
+      return __hc_frexp(x, exp);
     #else
       return host_frexpf(x, exp);
     #endif
@@ -1601,7 +1591,7 @@ namespace fast_math {
   inline double host_frexp(double x, int *exp) restrict(cpu) { return ::frexp(x, exp); }
   inline double frexp(double x, int *exp) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_frexp(x, exp);
+      return __hc_frexp_double(x, exp);
     #else
       return host_frexp(x, exp);
     #endif
@@ -1763,7 +1753,7 @@ namespace fast_math {
   inline float host_lgammaf(float x, int *sign) restrict(cpu) { return ::lgammaf_r(x, sign); }
   inline float lgammaf(float x, int *sign) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_lgammaf(x, sign);
+      return __hc_lgamma_r(x, sign);
     #else
       return host_lgammaf(x, sign);
     #endif
@@ -1772,7 +1762,7 @@ namespace fast_math {
   inline float host_lgamma(float x, int *sign) restrict(cpu) { return ::lgammaf_r(x, sign); }
   inline float lgamma(float x, int *sign) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_lgammaf(x, sign);
+      return __hc_lgamma_r(x, sign);
     #else
       return host_lgamma(x, sign);
     #endif
@@ -1781,7 +1771,7 @@ namespace fast_math {
   inline double host_lgamma(double x, int *sign) restrict(cpu) { return ::lgamma_r(x, sign); }
   inline double lgamma(double x, int *sign) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_lgamma(x, sign);
+      return __hc_lgamma_r_double(x, sign);
     #else
       return host_lgamma(x, sign);
     #endif
@@ -1929,7 +1919,7 @@ namespace fast_math {
 #endif
   inline float modff(float x, float *iptr) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_modff(x, iptr);
+      return __hc_modf(x, iptr);
     #else
       return host_modff(x, iptr);
     #endif
@@ -1942,7 +1932,7 @@ namespace fast_math {
 #endif
   inline float modf(float x, float *iptr) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_modff(x, iptr);
+      return __hc_modf(x, iptr);
     #else
       return host_modf(x, iptr);
     #endif
@@ -1951,7 +1941,7 @@ namespace fast_math {
   inline double host_modf(double x, double *iptr) restrict(cpu) { return ::modf(x, iptr); }
   inline double modf(double x, double *iptr) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_modf(x, iptr);
+      return __hc_modf_double(x, iptr);
     #else
       return host_modf(x, iptr);
     #endif
@@ -2113,7 +2103,7 @@ namespace fast_math {
   inline float host_remquof(float x, float y, int *quo) restrict(cpu) { return ::remquof(x, y, quo); }
   inline float remquof(float x, float y, int *quo) restrict(amp,cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_remquof(x, y, quo);
+      return __hc_remquo(x, y, quo);
     #else
       return host_remquof(x, y, quo);
     #endif
@@ -2122,7 +2112,7 @@ namespace fast_math {
   inline float host_remquo(float x, float y, int *quo) restrict(cpu) { return ::remquof(x, y, quo); }
   inline float remquo(float x, float y, int *quo) restrict(amp,cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_remquof(x, y, quo);
+      return __hc_remquo(x, y, quo);
     #else
       return host_remquo(x, y, quo);
     #endif
@@ -2131,7 +2121,7 @@ namespace fast_math {
   inline double host_remquo(double x, double y, int *quo) restrict(cpu) { return ::remquo(x, y, quo); }
   inline double remquo(double x, double y, int *quo) restrict(amp,cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_remquo(x, y, quo);
+      return __hc_remquo_double(x, y, quo);
     #else
       return host_remquo(x, y, quo);
     #endif
@@ -2329,7 +2319,7 @@ namespace fast_math {
   inline void host_sincosf(float x, float *s, float *c) restrict(cpu) { ::sincosf(x, s, c); }
   inline void sincosf(float x, float *s, float *c) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      __hc_sincosf(x, s, c);
+      *s = __hc_sincos(x, c);
     #else
       host_sincosf(x, s, c);
     #endif
@@ -2338,7 +2328,7 @@ namespace fast_math {
   inline void host_sincos(float x, float *s, float *c) restrict(cpu) { ::sincosf(x, s, c); }
   inline void sincos(float x, float *s, float *c) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      __hc_sincosf(x, s, c);
+      *s = __hc_sincos(x, c);
     #else
       host_sincos(x, s, c);
     #endif
@@ -2347,7 +2337,7 @@ namespace fast_math {
   inline void host_sincos(double x, double *s, double *c) restrict(cpu) { ::sincos(x, s, c); }
   inline void sincos(double x, double *s, double *c) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      __hc_sincos(x, s, c);
+      *s = __hc_sincos_double(x, c);
     #else
       host_sincos(x, s, c);
     #endif
