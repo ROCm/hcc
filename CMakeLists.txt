@@ -263,7 +263,6 @@ endif (HAS_ROCM EQUAL 0)
 #################
 
 set(HSA_AMDGPU_GPU_TARGET "gfx803" CACHE STRING "Target AMDGPU ISA version")
-#set(HSA_AMDGPU_GPU_TARGET "gfx900" CACHE STRING "Target AMDGPU ISA version")
 
 # Tokenize HSA_AMDGPU_GPU_TARGET
 
@@ -272,7 +271,7 @@ set(HSA_AMDGPU_GPU_TARGET "gfx803" CACHE STRING "Target AMDGPU ISA version")
 #string(REGEX MATCHALL "AMD:AMDGPU:(7:0:0|7:0:1|8:0:1|8:0:2|8:0:3)"
 #                      tmp
 #                      ${HSA_AMDGPU_GPU_TARGET})
-string(REGEX MATCHALL "AMD:AMDGPU:(7:0:0|7:0:1|8:0:1|8:0:2|8:0:3|9:0:0)"
+string(REGEX MATCHALL "AMD:AMDGPU:(7:0:0|7:0:1|8:0:1|8:0:2|8:0:3|9:0:0|9:0:1)"
                       tmp
                       ${HSA_AMDGPU_GPU_TARGET})
 foreach(long_form IN LISTS tmp)
@@ -300,6 +299,8 @@ foreach(AMDGPU_GPU_TARGET IN LISTS HSA_AMDGPU_GPU_TARGET)
     list(APPEND AMDGPU_TARGET_LIST "fiji")
   elseif (AMDGPU_GPU_TARGET STREQUAL "gfx900")
     list(APPEND AMDGPU_TARGET_LIST "gfx900")
+  elseif (AMDGPU_GPU_TARGET STREQUAL "gfx901")
+    list(APPEND AMDGPU_TARGET_LIST "gfx901")
   else ()
     message(FATAL_ERROR "${AMDGPU_GPU_TARGET} is not a valid AMDPU target!")
   endif ()
