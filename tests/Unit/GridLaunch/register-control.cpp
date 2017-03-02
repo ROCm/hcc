@@ -1,3 +1,4 @@
+// XFAIL: *
 // RUN: %hc -lhc_am %s -o %t.out -Xlinker -dump-llvm -Xlinker -dump-dir=%T
 // RUN: %llvm-dis %T/dump*.opt.bc
 // RUN: cat %T/dump*.opt.ll | %FileCheck %s
