@@ -39,7 +39,7 @@ bool test(void) {
 
 
 
-  auto pred = [](const T& v) { return static_cast<int>(v) % 3 == 0; };
+  auto pred = [](const T& v) [[hc,cpu]] { return static_cast<int>(v) % 3 == 0; };
 
   ret &= run_and_compare<T, SIZE, stdVector>([&eq, pred](stdVector &input, stdVector &output1,
                                                                            stdVector &output2) {
