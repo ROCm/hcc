@@ -268,9 +268,6 @@ set(HSA_AMDGPU_GPU_TARGET "gfx803" CACHE STRING "Target AMDGPU ISA version")
 
 # Temporary workaround for use of old long-form GFX_ip names, to be removed once
 # we fully deprecate them.
-#string(REGEX MATCHALL "AMD:AMDGPU:(7:0:0|7:0:1|8:0:1|8:0:2|8:0:3)"
-#                      tmp
-#                      ${HSA_AMDGPU_GPU_TARGET})
 string(REGEX MATCHALL "AMD:AMDGPU:(7:0:0|7:0:1|8:0:1|8:0:2|8:0:3|9:0:0|9:0:1)"
                       tmp
                       ${HSA_AMDGPU_GPU_TARGET})
