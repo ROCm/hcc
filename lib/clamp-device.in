@@ -176,7 +176,7 @@ fi
 
 # Optimization notes:
 #  -disable-simplify-libcalls:  prevents transforming loops into library calls such as memset, memcopy on GPU
-$OPT $KMOPTOPT -inline -mtriple amdgcn--amdhsa -mcpu=$AMDGPU_TARGET -disable-simplify-libcalls -verify $2.linked.bc -o $2.opt.bc
+$OPT $KMOPTOPT -inline -mtriple amdgcn--amdhsa -mcpu=$AMDGPU_TARGET -amdgpu-internalize-symbols -disable-simplify-libcalls -verify $2.linked.bc -o $2.opt.bc
 
 # error handling for opt
 RETVAL=$?
