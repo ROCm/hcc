@@ -149,6 +149,12 @@ elif [ $AMDGPU_TARGET == "tonga" ]; then
 elif [ $AMDGPU_TARGET == "fiji" ]; then
   OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_803.amdgcn.bc"
   HCC_EXTRA_ARCH_FILE=$HCC_EXTRA_LIBRARIES_GFX803
+elif [ $AMDGPU_TARGET == "gfx900" ]; then
+  OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_900.amdgcn.bc"
+  HCC_EXTRA_ARCH_FILE=$HCC_EXTRA_LIBRARIES_GFX900
+elif [ $AMDGPU_TARGET == "gfx901" ]; then
+  OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_901.amdgcn.bc"
+  HCC_EXTRA_ARCH_FILE=$HCC_EXTRA_LIBRARIES_GFX901
 fi
 HCC_BC_LIBS="$ROCM_LIB/hc.amdgcn.bc $ROCM_LIB/opencl.amdgcn.bc $ROCM_LIB/ocml.amdgcn.bc $ROCM_LIB/ockl.amdgcn.bc $ROCM_LIB/irif.amdgcn.bc $OCLC_ISA_VERSION_LIB $ROCM_LIB/oclc_finite_only_off.amdgcn.bc $ROCM_LIB/oclc_daz_opt_off.amdgcn.bc $ROCM_LIB/oclc_correctly_rounded_sqrt_on.amdgcn.bc $ROCM_LIB/oclc_unsafe_math_off.amdgcn.bc"
 
