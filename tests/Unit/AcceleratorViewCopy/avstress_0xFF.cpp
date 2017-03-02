@@ -1,4 +1,4 @@
-// RUN: %hc %s -o %t.out -lhc_am -DRUNMASK=0xFF && %t.out
+// RUN: %hc %s -o %t.out -lhc_am -DRUNMASK=0xFF && HCC_SERIALIZE_KERNEL=0x3 HCC_SERIALIZE_COPY=0x3 %t.out
 #include<stdlib.h>
 #include<iostream>
 
