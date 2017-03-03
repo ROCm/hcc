@@ -34,6 +34,8 @@
 
 #include <hc_am.hpp>
 
+#include <hc_profile.hpp>
+
 #include "unpinned_copy_engine.h"
 
 #include <time.h>
@@ -2790,6 +2792,10 @@ class HSAContext final : public KalmarContext
     HSADevice class to assign it the host memory pool to GPU agent.
     */
     hsa_agent_t host;
+
+    cxlProfiler profiler;
+
+    cxlMarker contextMarker = CXL_MARKER_CLASS;
 
     /// Determines if the given agent is of type HSA_DEVICE_TYPE_GPU
     /// If so, cache to input data

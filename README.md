@@ -159,7 +159,6 @@ To enable the [CodeXL Activity Logger][7], use the `USE_CODEXL_ACTIVITY_LOGGER`
 environment variable.
 
 Configure the build in the following way: 
-
 ```bash
 cmake \
     -DCMAKE_BUILD_TYPE=Release \
@@ -169,9 +168,24 @@ cmake \
     <ToT HCC checkout directory>
 ```
 
-In your application compiled using hcc, include the CodeXL Activiy Logger header:
+Define the macro `USE_CODEXL_ACTIVITY_LOGGER` when compiling your application:
+```bash
+~/hcc/build/bin/hcc `~/hcc/build/bin/hcc-config --build --cxxflags --ldflags` saxpy.cpp -std=c++11 -DUSE_CODEXL_ACTIVITY_LOGGER -o saxpy
 ```
-#include <CXLActivityLogger.h>
+
+In your application include the following header file:
+```
+#include <hc_profile.hpp>
+```
+
+To add a marker for profiling, create a marker object in any function:
+```
+cxlMarker <marker name> = CXL_MARKER;
+```
+
+To profile the application, use the following command:
+```bash
+CodeXLGpuProfiler --hsatrace --outputfile ./saxpy.atp saxpy
 ```
 
 For information about the usage of the Activity Logger for profiling, please 

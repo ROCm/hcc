@@ -65,7 +65,7 @@ void cxxflags(void) {
         assert(0 && "Unreacheable!");
     }
 
-#ifdef CODEXL_ACTIVITY_LOGGER_ENABLED
+#ifdef USE_CODEXL_ACTIVITY_LOGGER
     // CodeXL Activity Logger
     std::cout << " -I" XSTR(CODEXL_ACTIVITY_LOGGER_HEADER);
 #endif
@@ -107,7 +107,7 @@ void ldflags(void) {
 
     std::cout << " -Wl,--whole-archive -lmcwamp -Wl,--no-whole-archive";
 
-#ifdef CODEXL_ACTIVITY_LOGGER_ENABLED
+#ifdef USE_CODEXL_ACTIVITY_LOGGER
     // CodeXL Activity Logger
     std::cout << " -L" XSTR(CODEXL_ACTIVITY_LOGGER_LIBRARY);
     std::cout << " -lCXLActivityLogger";
