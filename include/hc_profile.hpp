@@ -9,14 +9,12 @@
 class cxlProfiler {
 public:
         cxlProfiler() {
-		std::cout << "CXL PROFILER INTIALIZE" << std::endl;
 #ifdef USE_CODEXL_ACTIVITY_LOGGER
                 amdtInitializeActivityLogger();
 #endif
 	}
 
         ~cxlProfiler() {
-		std::cout << "CXL PROFILER FINALIZE" << std::endl;
 #ifdef USE_CODEXL_ACTIVITY_LOGGER
                	amdtFinalizeActivityLogger();
 #endif
@@ -27,16 +25,13 @@ class cxlMarker {
 public:
 	cxlMarker(const char* szMarkerName, const char* szGroupName, const char* szUserString) {
 #ifdef USE_CODEXL_ACTIVITY_LOGGER
-		//amdtScopedMarker fmarker = amdtScopedMarker(szMarkerName, szGroupName, szUserString);
 		int err = amdtBeginMarker(szMarkerName, szGroupName, szUserString);
-		std::cout << "CXL MARKER BEGIN: " << err << std::endl;
 #endif
 	}
 
 	~cxlMarker() {
 #ifdef USE_CODEXL_ACTIVITY_LOGGER
                 int err = amdtEndMarker();
-		std::cout << "CXL MARKER END: " << err << std::endl;
 #endif
 	}
 };
