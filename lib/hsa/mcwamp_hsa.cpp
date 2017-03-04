@@ -2026,7 +2026,6 @@ public:
 
             // Check that the queue size is valid, these assumptions are used in hsa_queue_create.
             assert (__builtin_popcount(MAX_INFLIGHT_COMMANDS_PER_QUEUE) == 1); // make sure this is power of 2.
-            assert(this->queue_size > MAX_INFLIGHT_COMMANDS_PER_QUEUE*2);
         }
 
 
