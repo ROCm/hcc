@@ -7,10 +7,10 @@
 #include <hc.hpp>
 
 // file-scope global variable
-__device int g_d = 100;
+[[hc]] int g_d = 100;
 
 // static file-scope global variable
-static __device int g_e = 100;
+[[hc]] static int g_e = 100;
 
 [[hc]] void kfunc(int* a, int* b, int* c, int idx) {
   c[idx] = a[idx] + b[idx] + g_d + g_e;

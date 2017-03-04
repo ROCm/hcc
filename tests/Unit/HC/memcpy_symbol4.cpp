@@ -9,7 +9,7 @@
 
 // globalVar would be agent-allocated global variable with program linkage
 // add an initial value to prevent a bug in HLC
-__device float tableGlobal[GRID_SIZE] = { 0.1 };
+[[hc]] float tableGlobal[GRID_SIZE] = { 0.1 };
 
 using namespace hc;
 

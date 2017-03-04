@@ -4,7 +4,7 @@
 #include <iostream>
 #include <amp.h>
 
-__device int flag;
+[[hc]] int flag;
 
 void foo(bool set) restrict(amp, cpu)
 {

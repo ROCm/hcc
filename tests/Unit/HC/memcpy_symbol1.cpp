@@ -8,7 +8,7 @@
 #define GRID_SIZE (16)
 
 // globalVar would be agent-allocated global variable with program linkage
-__device int tableGlobal[GRID_SIZE];
+[[hc]] int tableGlobal[GRID_SIZE];
 
 using namespace hc;
 
