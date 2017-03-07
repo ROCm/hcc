@@ -68,25 +68,33 @@ int main(){
         }
     }
 
+// Create a vector of hc::completion_future for async copy synconization
+    std::vector<hc::completion_future> cfs;
+    
     if (testsToRun & 0x18) {
         for(uint32_t i=0;i<testIters;i++){
             if ((i%1000 == 0)) {
                 printf ("info: running Test4 %5d/%5d\n", i, testIters);
             }
-            Test4(av);
+            cfs.push_back(Test4(av));
         }
+        for(uint32_t i=0;i<testIters;i++)
+	    cfs[i].wait();
     }
 
+    cfs.clear(); 
     if (testsToRun & 0xFF) {
         for(uint32_t i=0;i<testIters;i++){
             if ((i%1000 == 0)) {
                 printf ("info: running Test5 %5d/%5d\n", i, testIters);
             }
-            Test5(av);
+            cfs.push_back(Test5(av));
         }
+        for(uint32_t i=0;i<testIters;i++)
+	    cfs[i].wait();
     }
 
-// To release all allocated resources from Init
+ // To release all allocated resources from Init
      Destroy();
 
 }
