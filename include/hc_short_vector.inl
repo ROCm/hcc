@@ -52,6 +52,9 @@ DECLARE_VECTOR_TYPE_CLASS(unsigned long, ulong);
 DECLARE_VECTOR_TYPE_CLASS(long, long);
 DECLARE_VECTOR_TYPE_CLASS(unsigned long long, ulonglong);
 DECLARE_VECTOR_TYPE_CLASS(long long, longlong);
+#if !__HCC_AMP__
+DECLARE_VECTOR_TYPE_CLASS(hc::half, half);
+#endif
 DECLARE_VECTOR_TYPE_CLASS(float, float);
 DECLARE_VECTOR_TYPE_CLASS(double, double);
 DECLARE_VECTOR_TYPE_CLASS(norm, norm);
@@ -127,6 +130,15 @@ typedef longlong4 longlong_4;
 typedef longlong8 longlong_8;
 typedef longlong16 longlong_16;
 
+#if !__HCC_AMP__
+typedef half1 half_1;
+typedef half2 half_2;
+typedef half3 half_3;
+typedef half4 half_4;
+typedef half8 half_8;
+typedef half16 half_16;
+#endif
+
 typedef float1 float_1;
 typedef float2 float_2;
 typedef float3 float_3;
@@ -173,7 +185,11 @@ struct short_vector_traits {
   static_assert((std::is_integral<SCALAR_TYPE>::value
                 || std::is_floating_point<SCALAR_TYPE>::value
                 || std::is_same<SCALAR_TYPE, norm>::value
-                || std::is_same<SCALAR_TYPE, unorm>::value)
+                || std::is_same<SCALAR_TYPE, unorm>::value
+#if !__HCC_AMP__
+                || std::is_same<SCALAR_TYPE,hc::half>::value
+#endif
+                )
                 , "short_vector of this data type is not supported");
   typedef SCALAR_TYPE value_type;
   static int const size = 1;
@@ -428,7 +444,11 @@ template <typename SCALAR_TYPE, unsigned int VECTOR_LENGTH>
 class __vector : public __vector_data_container<SCALAR_TYPE, VECTOR_LENGTH>   {
 
   static_assert((std::is_integral<SCALAR_TYPE>::value
-                || std::is_floating_point<SCALAR_TYPE>::value)
+                || std::is_floating_point<SCALAR_TYPE>::value
+#if !__HCC_AMP__
+                || std::is_same<SCALAR_TYPE,hc::half>::value
+#endif
+                )
                 , "short_vector of this data type is not supported");
 
   static_assert((VECTOR_LENGTH==1 || VECTOR_LENGTH==2 || VECTOR_LENGTH==3 

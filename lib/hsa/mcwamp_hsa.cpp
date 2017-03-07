@@ -958,7 +958,7 @@ public:
         hsa_signal_value_t oldv=0;
         s << "Queue: " << this << "  : " << asyncOps.size() << " op entries\n";
         for (int i=0; i<asyncOps.size(); i++) {
-            const std::shared_ptr<KalmarAsyncOp::KalmarAsyncOp> &op = asyncOps[i];
+            const std::shared_ptr<Kalmar::KalmarAsyncOp> &op = asyncOps[i];
             s << "index:" << std::setw(4) << i ;
             if (op != nullptr) {
                 s << " op#"<< op->getSeqNum() ;
@@ -2026,7 +2026,6 @@ public:
 
             // Check that the queue size is valid, these assumptions are used in hsa_queue_create.
             assert (__builtin_popcount(MAX_INFLIGHT_COMMANDS_PER_QUEUE) == 1); // make sure this is power of 2.
-            assert(this->queue_size > MAX_INFLIGHT_COMMANDS_PER_QUEUE*2);
         }
 
 
