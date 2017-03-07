@@ -39,14 +39,14 @@ void Test1(hc::accelerator_view &Av){
 
 void Test4(hc::accelerator_view &Av){
     MemcpyAsync(Av, Ah, Ad, size);
-    // hc::completion_future cpfuture_x = MemcpyAsync(Av, Ah, Ad, size);
-    // cpfuture_x.wait();
+    hc::completion_future cpfuture_x = MemcpyAsync(Av, Ah, Ad, size);
+    cpfuture_x.wait();
 }
 
 void Test5(hc::accelerator_view &Av){
     MemcpyAsync(Av, Bd, Bh, size);
-    // hc::completion_future cpfuture_y = MemcpyAsync(Av, Bd, Bh, size);
-    // cpfuture_y.wait();
+    hc::completion_future cpfuture_y = MemcpyAsync(Av, Bd, Bh, size);
+    cpfuture_y.wait();
 }
 
 

@@ -68,7 +68,7 @@ int main(){
         }
     }
 
-    if (testsToRun & 0x8) {
+    if (testsToRun & 0x18) {
         for(uint32_t i=0;i<testIters;i++){
             if ((i%1000 == 0)) {
                 printf ("info: running Test4 %5d/%5d\n", i, testIters);
@@ -77,7 +77,7 @@ int main(){
         }
     }
 
-    if (testsToRun & 0x10) {
+    if (testsToRun & 0xFF) {
         for(uint32_t i=0;i<testIters;i++){
             if ((i%1000 == 0)) {
                 printf ("info: running Test5 %5d/%5d\n", i, testIters);
