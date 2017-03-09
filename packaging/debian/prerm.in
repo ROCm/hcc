@@ -4,6 +4,7 @@ set -e
 
 PACKAGE_NAME=@PACKAGE_NAME@
 INSTALL_PATH=@INSTALL_PATH@
+LIBRARY_DIR=@LIBRARY_DIR@
 
 ROCM_PATH="/opt/rocm"
 
@@ -14,12 +15,12 @@ SOFTLINKS=(
   "bin" "extractkernel"
   "bin" "hcc"
   "bin" "hcc-config"
-  "lib" "libhc_am.so"
-  "lib" "libmcwamp.a"
-  "lib" "libmcwamp_atomic.a"
-  "lib" "libmcwamp_cpu.so"
-  "lib" "libmcwamp_hsa.so"
-  "lib" "libclang_rt.builtins-x86_64.a"
+  "$LIBRARY_DIR" "libhc_am.so"
+  "$LIBRARY_DIR" "libmcwamp.a"
+  "$LIBRARY_DIR" "libmcwamp_atomic.a"
+  "$LIBRARY_DIR" "libmcwamp_cpu.so"
+  "$LIBRARY_DIR" "libmcwamp_hsa.so"
+  "$LIBRARY_DIR" "libclang_rt.builtins-x86_64.a"
 )
 
 do_softlinks() {
