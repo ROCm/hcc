@@ -1,6 +1,8 @@
 cmake_minimum_required( VERSION 3.0 )
 project (HCC)
 
+include(GNUInstallDirs)
+
 SET(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/scripts/cmake")
 MESSAGE("Module path: ${CMAKE_MODULE_PATH}")
 
@@ -388,7 +390,7 @@ install(DIRECTORY ${CLANG_BIN_DIR}/lib
         PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 
 install(FILES ${CLANG_BIN_DIR}/lib/clang/5.0.0/lib/linux/libclang_rt.builtins-x86_64.a
-        DESTINATION  lib
+        DESTINATION  ${CMAKE_INSTALL_LIBDIR}
         COMPONENT compiler)
 
 install(DIRECTORY ${CLANG_BIN_DIR}/include
