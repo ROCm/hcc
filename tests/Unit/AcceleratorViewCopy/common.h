@@ -14,8 +14,8 @@
 #define HostToDeviceCopyTest 0x1
 #define DeviceToDeviceCopyTest 0x2
 #define DeviceToHostCopyTest 0x4
-#define HostToDeviceAsyncCopyTest 0x18
-#define DeviceToHostAsyncCopyTest 0xFF
+#define HostToDeviceAsyncCopyTest 0x8	
+#define DeviceToHostAsyncCopyTest 0x10
 
 template <typename T>
 void freeArraysForHost(T *A_h, T *B_h, T *C_h, bool usePinnedHost)
