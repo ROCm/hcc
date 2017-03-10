@@ -511,7 +511,7 @@ elseif ("${DISTRO_ID}" MATCHES "fedora")
   # disable automatic shared libraries dependency detection
   set(CPACK_RPM_PACKAGE_AUTOREQ 0)
 
-  set(HCC_GENERAL_RPM_DEP "libstdc++-devel, findutils, elfutils-libelf, pciutils-libs, file, rocm-device-libs, pth")
+  set(HCC_GENERAL_RPM_DEP "libstdc++-devel, findutils, elfutils-libelf, pciutils-libs, file, pth")
 
   if (OFFICIAL_RELEASE_BUILD)
     set(HCC_ROCR_RPM_DEP ", hsa-rocr-dev, hsa-ext-rocr-dev, rocm-device-libs")
