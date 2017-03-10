@@ -13,6 +13,7 @@ IF (NOT NUM_BUILD_THREADS)
   include(ProcessorCount)
   ProcessorCount(NUM_BUILD_THREADS)
 ENDIF(NOT NUM_BUILD_THREADS)
+include(GNUInstallDirs)
 
 # Use two different methods to determine host distribution: lsb_release and if that fails grep /etc/os-release
 find_program( lsb_executable lsb_release )
@@ -388,7 +389,7 @@ install(DIRECTORY ${CLANG_BIN_DIR}/lib
         PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 
 install(FILES ${CLANG_BIN_DIR}/lib/clang/5.0.0/lib/linux/libclang_rt.builtins-x86_64.a
-        DESTINATION  lib
+	DESTINATION  ${CMAKE_INSTALL_LIBDIR}
         COMPONENT compiler)
 
 install(DIRECTORY ${CLANG_BIN_DIR}/include
