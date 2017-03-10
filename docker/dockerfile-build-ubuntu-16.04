@@ -26,10 +26,12 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
     python \
     rpm \
     g++-multilib \
+    gcc-multilib \
+    findutils \
     libncurses5-dev \
     libelf-dev \
-    libc++abi-dev \
-    libc++-dev \
+    libelf1 \
+    libpci3 \
     hsa-rocr-dev && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
