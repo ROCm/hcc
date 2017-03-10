@@ -482,8 +482,10 @@ if( "${DISTRO_ID}" MATCHES "ubuntu" )
   set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA
     "${PROJECT_BINARY_DIR}/packaging/debian/postinst;${PROJECT_BINARY_DIR}/packaging/debian/prerm")
 
+  set(HCC_GENERAL_DEBIAN_DEP "g++-multilib, gcc-multilib, libstdc++-dev, findutils, libelf1, libpci3, file")
+
   if ( USE_LIBCXX )
-    set(HCC_LIBCXX_DEBIAN_DEP "libc++1, libc++-dev, libc++abi1, libc++abi-dev")
+    set(HCC_LIBCXX_DEBIAN_DEP ", libc++1, libc++-dev, libc++abi1, libc++abi-dev")
   else ( USE_LIBCXX )
     set(HCC_LIBCXX_DEBIAN_DEP "")
   endif( USE_LIBCXX )
@@ -491,13 +493,12 @@ if( "${DISTRO_ID}" MATCHES "ubuntu" )
   # control the list of package dependency depending on whether this is an official release build.
   # for non-official release build, we want to relax the dependency on rocr runtime
   if (OFFICIAL_RELEASE_BUILD)
-    set(HCC_ROCR_DEBIAN_DEP "hsa-rocr-dev, hsa-ext-rocr-dev, rocm-device-libs")
+    set(HCC_ROCR_DEBIAN_DEP ", hsa-rocr-dev, hsa-ext-rocr-dev, rocm-device-libs")
   else (OFFICIAL_RELEASE_BUILD)
     set(HCC_ROCR_DEBIAN_DEP "")
   endif (OFFICIAL_RELEASE_BUILD)
 
-  set(HCC_GENERAL_DEBIAN_DEP "g++-multilib, gcc-multilib, libstdc++-dev, findutils, libelf1, libpci3, file")
-  set(CPACK_DEBIAN_PACKAGE_DEPENDS "${HCC_GENERAL_DEBIAN_DEP}, ${HCC_ROCR_DEBIAN_DEP}, ${HCC_LIBCXX_DEBIAN_DEP}")
+  set(CPACK_DEBIAN_PACKAGE_DEPENDS "${HCC_GENERAL_DEBIAN_DEP} ${HCC_ROCR_DEBIAN_DEP} ${HCC_LIBCXX_DEBIAN_DEP}")
 
   set(CPACK_GENERATOR "DEB")
   set(CPACK_BINARY_DEB "ON")
@@ -510,14 +511,15 @@ elseif ("${DISTRO_ID}" MATCHES "fedora")
   # disable automatic shared libraries dependency detection
   set(CPACK_RPM_PACKAGE_AUTOREQ 0)
 
+  set(HCC_GENERAL_RPM_DEP "libstdc++-devel, findutils, elfutils-libelf, pciutils-libs, file, rocm-device-libs, pth")
+
   if (OFFICIAL_RELEASE_BUILD)
-    set(HCC_ROCR_RPM_DEP "hsa-rocr-dev, hsa-ext-rocr-dev, rocm-device-libs")
+    set(HCC_ROCR_RPM_DEP ", hsa-rocr-dev, hsa-ext-rocr-dev, rocm-device-libs")
   else (OFFICIAL_RELEASE_BUILD)
     set(HCC_ROCR_RPM_DEP "")
   endif (OFFICIAL_RELEASE_BUILD)
 
-  set(HCC_GENERAL_RPM_DEP "libstdc++-devel, findutils, elfutils-libelf, pciutils-libs, file, rocm-device-libs, pth")
-  set(CPACK_RPM_PACKAGE_REQUIRES "${HCC_ROCR_RPM_DEP}, ${HCC_GENERAL_RPM_DEP}")
+    set(CPACK_RPM_PACKAGE_REQUIRES "${HCC_GENERAL_RPM_DEP} ${HCC_ROCR_RPM_DEP}" )
 
   set(CPACK_GENERATOR "RPM")
 else()
