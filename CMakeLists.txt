@@ -484,7 +484,7 @@ if( "${DISTRO_ID}" MATCHES "ubuntu" )
 
   if ( USE_LIBCXX )
     set(HCC_LIBCXX_DEBIAN_DEP "libc++1, libc++-dev, libc++abi1, libc++abi-dev")
-  else
+  else ( USE_LIBCXX )
     set(HCC_LIBCXX_DEBIAN_DEP "")
   endif( USE_LIBCXX )
 
