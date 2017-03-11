@@ -482,7 +482,7 @@ if( "${DISTRO_ID}" MATCHES "ubuntu" )
   set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA
     "${PROJECT_BINARY_DIR}/packaging/debian/postinst;${PROJECT_BINARY_DIR}/packaging/debian/prerm")
 
-  set(HCC_GENERAL_DEBIAN_DEP "g++-multilib, gcc-multilib, libstdc++-dev, findutils, libelf1, libpci3, file")
+  set(HCC_GENERAL_DEBIAN_DEP "g++-multilib, gcc-multilib, findutils, libelf1, libpci3, file")
 
   if ( USE_LIBCXX )
     set(HCC_LIBCXX_DEBIAN_DEP ", libc++1, libc++-dev, libc++abi1, libc++abi-dev")
@@ -511,7 +511,7 @@ elseif ("${DISTRO_ID}" MATCHES "fedora")
   # disable automatic shared libraries dependency detection
   set(CPACK_RPM_PACKAGE_AUTOREQ 0)
 
-  set(HCC_GENERAL_RPM_DEP "libstdc++-devel, findutils, elfutils-libelf, pciutils-libs, file, pth")
+  set(HCC_GENERAL_RPM_DEP "findutils, elfutils-libelf, pciutils-libs, file, pth")
 
   if (OFFICIAL_RELEASE_BUILD)
     set(HCC_ROCR_RPM_DEP ", hsa-rocr-dev, hsa-ext-rocr-dev, rocm-device-libs")
