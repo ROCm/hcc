@@ -31,7 +31,7 @@ typename std::enable_if<std::is_floating_point <T>::value,T>::type \
   return hc::precise_math::function(arg1); \
 }
 
-#define KALMAR_MATH_WRAPPER_FP_OVERLOAD_1(function, arg1) HC_MATH_WRAPPER_FP_OVERLOAD_1(function, arg1) 
+#define KALMAR_MATH_WRAPPER_FP_OVERLOAD_1(function, arg1) HC_MATH_WRAPPER_FP_OVERLOAD_1(function, arg1)
 
 #define HC_MATH_WRAPPER_2(function, arg1, arg2) \
 template<typename T> \
@@ -131,7 +131,7 @@ inline \
 typename std::enable_if<std::is_floating_point <T>::value,T>::type \
  function(T arg1) __attribute__((hc,cpu)) { \
   return ::function(arg1); \
-} 
+}
 
 #define KALMAR_MATH_WRAPPER_FP_OVERLOAD_1(function, arg1) \
 template<typename T> \
@@ -242,7 +242,7 @@ namespace {
 // erfinv
 // erfcinv
 // fpclassify
-// 
+//
 // following math functions are NOT available because they don't have a CPU implementation
 //
 // cospif
@@ -291,8 +291,8 @@ HC_MATH_WRAPPER_1(atanf, x)
 HC_MATH_WRAPPER_FP_OVERLOAD_1(atan, x)
 HC_MATH_WRAPPER_1(atanhf, x)
 HC_MATH_WRAPPER_FP_OVERLOAD_1(atanh, x)
-HC_MATH_WRAPPER_2(atan2f, x, y)
-HC_MATH_WRAPPER_2(atan2, x, y)
+HC_MATH_WRAPPER_2(atan2f, y, x)
+HC_MATH_WRAPPER_2(atan2, y, x)
 HC_MATH_WRAPPER_1(cbrtf, x)
 HC_MATH_WRAPPER_FP_OVERLOAD_1(cbrt, x)
 HC_MATH_WRAPPER_1(ceilf, x)
@@ -380,4 +380,3 @@ HC_MATH_ALIAS_2(min, fmin, x, y)
 HC_MATH_ALIAS_2(max, fmax, x, y)
 
 } // namespace
-

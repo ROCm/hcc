@@ -26,8 +26,8 @@
   extern "C" float __hc_atanh(float x) restrict(amp);
   extern "C" double __hc_atanh_double(double x) restrict(amp);
 
-  extern "C" float __hc_atan2(float x, float y) restrict(amp);
-  extern "C" double __hc_atan2_double(double x, double y) restrict(amp);
+  extern "C" float __hc_atan2(float y, float x) restrict(amp);
+  extern "C" double __hc_atan2_double(double y, double x) restrict(amp);
 
   extern "C" float __hc_cbrt(float x) restrict(amp);
   extern "C" double __hc_cbrt_double(double x) restrict(amp);
@@ -264,21 +264,21 @@ namespace fast_math {
     #endif
   }
 
-  inline float host_atan2f(float x, float y) restrict(cpu) { return ::atan2f(x, y); }
-  inline float atan2f(float x, float y) restrict(amp,cpu) {
+  inline float host_atan2f(float y, float x) restrict(cpu) { return ::atan2f(y, x); }
+  inline float atan2f(float y, float x) restrict(amp,cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_atan2(x, y);
+      return __hc_atan2(y, x);
     #else
-      return host_atan2f(x, y);
+      return host_atan2f(y, x);
     #endif
   }
 
-  inline float host_atan2(float x, float y) restrict(cpu) { return ::atan2f(x, y); }
-  inline float atan2(float x, float y) restrict(amp,cpu) {
+  inline float host_atan2(float y, float x) restrict(cpu) { return ::atan2f(y, x); }
+  inline float atan2(float y, float x) restrict(amp,cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_atan2(x, y);
+      return __hc_atan2(y, x);
     #else
-      return host_atan2(x, y);
+      return host_atan2(y, x);
     #endif
   }
 
@@ -985,30 +985,30 @@ namespace fast_math {
     #endif
   }
 
-  inline float host_atan2f(float x, float y) restrict(cpu) { return ::atan2f(x, y); }
-  inline float atan2f(float x, float y) restrict(amp,cpu) {
+  inline float host_atan2f(float y, float x) restrict(cpu) { return ::atan2f(y, x); }
+  inline float atan2f(float y, float x) restrict(amp,cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_atan2(x, y);
+      return __hc_atan2(y, x);
     #else
-      return host_atan2f(x, y);
+      return host_atan2f(y, x);
     #endif
   }
 
-  inline float host_atan2(float x, float y) restrict(cpu) { return ::atan2f(x, y); }
-  inline float atan2(float x, float y) restrict(amp,cpu) {
+  inline float host_atan2(float y, float x) restrict(cpu) { return ::atan2f(y, x); }
+  inline float atan2(float y, float x) restrict(amp,cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_atan2(x, y);
+      return __hc_atan2(y, x);
     #else
-      return host_atan2(x, y);
+      return host_atan2(y, x);
     #endif
   }
 
-  inline double host_atan2(double x, double y) restrict(cpu) { return ::atan2(x, y); }
-  inline double atan2(double x, double y) restrict(amp,cpu) {
+  inline double host_atan2(double y, double x) restrict(cpu) { return ::atan2(y, x); }
+  inline double atan2(double y, double x) restrict(amp,cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_atan2_double(x, y);
+      return __hc_atan2_double(y, x);
     #else
-      return host_atan2(x, y);
+      return host_atan2(y, x);
     #endif
   }
 
