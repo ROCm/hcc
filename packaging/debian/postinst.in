@@ -51,7 +51,7 @@ do_softlinks() {
     DEST_DIR=${SOFTLINKS[i+1]}
     FILE=${SOFTLINKS[i+2]}
 
-    if [ ! -e $ROCM_PATH/$DIR/$FILE ] ; then
+    if [ ! -e $ROCM_PATH/$DEST_DIR/$FILE ] ; then
       ln -sf $ROCM_PATH/hcc/$SOURCE_DIR/$FILE $ROCM_PATH/$DEST_DIR/$FILE
     fi
   done
