@@ -14,7 +14,7 @@ const size_t size = sizeof(float) * N;
 #include "common2.h"
 
 #if not defined (RUNMASK)
-#define RUNMASK 0xFF
+#define RUNMASK 0x18
 #endif
 
 #if not defined (ITERS)
@@ -41,7 +41,7 @@ int main(){
     int testIters = ITERS;
 
 
-    if (testsToRun & 0x1) {
+    if (testsToRun & HostToDeviceCopyTest) {
         for(uint32_t i=0;i<testIters;i++){
             if ((i%1000 == 0)) {
                 printf ("info: running Test1 %5d/%5d\n", i, testIters);
@@ -50,7 +50,7 @@ int main(){
         }
     }
 
-    if (testsToRun & 0x2) {
+    if (testsToRun & DeviceToDeviceCopyTest) {
         for(uint32_t i=0;i<testIters;i++){
             if ((i%1000 == 0)) {
                 printf ("info: running Test2 %5d/%5d\n", i, testIters);
@@ -59,7 +59,7 @@ int main(){
         }
     }
 
-    if (testsToRun & 0x4) {
+    if (testsToRun & DeviceToHostCopyTest) {
         for(uint32_t i=0;i<testIters;i++){
             if ((i%1000 == 0)) {
                 printf ("info: running Test3 %5d/%5d\n", i, testIters);
@@ -68,25 +68,33 @@ int main(){
         }
     }
 
-    if (testsToRun & 0x8) {
+// Create a vector of hc::completion_future for async copy synconization
+    std::vector<hc::completion_future> cfs;
+    
+    if (testsToRun & HostToDeviceAsyncCopyTest) {
         for(uint32_t i=0;i<testIters;i++){
             if ((i%1000 == 0)) {
                 printf ("info: running Test4 %5d/%5d\n", i, testIters);
             }
-            Test4(av);
+            cfs.push_back(Test4(av));
         }
+        for(uint32_t i=0;i<testIters;i++)
+	    cfs[i].wait();
     }
 
-    if (testsToRun & 0x10) {
+    cfs.clear(); 
+    if (testsToRun & DeviceToHostAsyncCopyTest) {
         for(uint32_t i=0;i<testIters;i++){
             if ((i%1000 == 0)) {
                 printf ("info: running Test5 %5d/%5d\n", i, testIters);
             }
-            Test5(av);
+            cfs.push_back(Test5(av));
         }
+        for(uint32_t i=0;i<testIters;i++)
+	    cfs[i].wait();
     }
-
-
     
+// Release all allocated resources from Init
+    Destroy();
 }
 

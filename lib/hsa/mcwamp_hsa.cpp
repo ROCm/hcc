@@ -505,8 +505,9 @@ public:
 
 
 private:
-  hsa_status_t hcc_memory_async_copy(Kalmar::hcCommandKind copyKind, const Kalmar::HSADevice *copyDevice, void *dst, const void *src, size_t sizeBytes,
-                                      int depSignalCnt, const hsa_signal_t *depSignals,
+  hsa_status_t hcc_memory_async_copy(Kalmar::hcCommandKind copyKind, const Kalmar::HSADevice *copyDevice, 
+                                      const hc::AmPointerInfo &dstPtrInfo, const hc::AmPointerInfo &srcPtrInfo,
+                                      size_t sizeBytes, int depSignalCnt, const hsa_signal_t *depSignals,
                                       hsa_signal_t completion_signal);
 
 }; // end of HSACopy
@@ -2026,7 +2027,6 @@ public:
 
             // Check that the queue size is valid, these assumptions are used in hsa_queue_create.
             assert (__builtin_popcount(MAX_INFLIGHT_COMMANDS_PER_QUEUE) == 1); // make sure this is power of 2.
-            assert(this->queue_size > MAX_INFLIGHT_COMMANDS_PER_QUEUE*2);
         }
 
 
@@ -4050,7 +4050,8 @@ HSACopy::waitComplete() {
 
 // Small wrapper that calls hsa_amd_memory_async_copy.
 // HCC knows exactly which copy-engine it wants to perfom the copy and has already made.
-hsa_status_t HSACopy::hcc_memory_async_copy(Kalmar::hcCommandKind copyKind, const Kalmar::HSADevice *copyDeviceArg, void *dst, const void *src, size_t sizeBytes,
+hsa_status_t HSACopy::hcc_memory_async_copy(Kalmar::hcCommandKind copyKind, const Kalmar::HSADevice *copyDeviceArg, 
+                      const hc::AmPointerInfo &dstPtrInfo, const hc::AmPointerInfo &srcPtrInfo, size_t sizeBytes,
                       int depSignalCnt, const hsa_signal_t *depSignals,
                       hsa_signal_t completion_signal)
 {
@@ -4070,11 +4071,19 @@ hsa_status_t HSACopy::hcc_memory_async_copy(Kalmar::hcCommandKind copyKind, cons
 
     hsa_agent_t hostAgent = const_cast<Kalmar::HSADevice *> (copyDeviceArg)->getHostAgent();
 
+    void *dstPtr = dstPtrInfo._devicePointer;
+    void *srcPtr = srcPtrInfo._devicePointer;
 
     hsa_agent_t srcAgent, dstAgent;
     switch (copyKind) {
         case Kalmar::hcMemcpyHostToHost: 
             srcAgent=hostAgent; dstAgent=hostAgent;
+
+            // Use host pointers since this copy will be performed with CPU.
+            // If pointers are registered, then devicePointer may not match host pointer.
+            dstPtr = dstPtrInfo._hostPointer;
+            srcPtr = srcPtrInfo._hostPointer;
+            
             //throw Kalmar::runtime_exception("HCC should not use hsa_memory_async_copy for host-to-host copy");
             break;
         case Kalmar::hcMemcpyHostToDevice: 
@@ -4107,7 +4116,7 @@ hsa_status_t HSACopy::hcc_memory_async_copy(Kalmar::hcCommandKind copyKind, cons
      */
 
 
-    status = hsa_amd_memory_async_copy(dst, dstAgent, src, srcAgent, sizeBytes, depSignalCnt, depSignals, completion_signal);
+    status = hsa_amd_memory_async_copy(dstPtr, dstAgent, srcPtr, srcAgent, sizeBytes, depSignalCnt, depSignals, completion_signal);
     if (status != HSA_STATUS_SUCCESS) {
         throw Kalmar::runtime_exception("hsa_amd_memory_async_copy error", status);
     }
@@ -4181,7 +4190,7 @@ HSACopy::enqueueAsyncCopyCommand(Kalmar::HSAQueue* hsaQueue, const Kalmar::HSADe
                       << "\n");
         }
 
-        hcc_memory_async_copy(getCommandKind(), copyDevice, dst, src, sizeBytes, depSignalCnt, depSignalCnt ? &depSignal:NULL, signal);
+        hcc_memory_async_copy(getCommandKind(), copyDevice, dstPtrInfo, srcPtrInfo, sizeBytes, depSignalCnt, depSignalCnt ? &depSignal:NULL, signal);
     }
 
     isSubmitted = true;
@@ -4349,7 +4358,7 @@ HSACopy::syncCopyExt(Kalmar::HSAQueue *hsaQueue, hc::hcCommandKind copyDir, cons
         }
 
 
-        hsa_status_t hsa_status = hcc_memory_async_copy(copyDir, copyDevice, dst, src, sizeBytes, depSignalCnt, depSignalCnt ? &depSignal:NULL, signal);
+        hsa_status_t hsa_status = hcc_memory_async_copy(copyDir, copyDevice, dstPtrInfo, srcPtrInfo, sizeBytes, depSignalCnt, depSignalCnt ? &depSignal:NULL, signal);
 
         if (hsa_status == HSA_STATUS_SUCCESS) {
 #if KALMAR_DEBUG

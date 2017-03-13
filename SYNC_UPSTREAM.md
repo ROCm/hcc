@@ -20,14 +20,17 @@ Generally speaking, the process goes like this:
 
  1. Merge amd-common LLVM commits
  2. Merge amd-common LLD commits
- 3. Add git remote for amd-common Clang
- 4. Fetch amd-common Clang commits
- 5. Merge amd-common Clang with ToT HCC Clang
- 6. Build merged ToT HCC
- 7. Quick sanity tests on merged ToT HCC
- 8. Push ToT HCC Clang submodules
- 9. Push amd-hcc LLVM submodule
-10. Update submodules configuration
+ 3. Merge master COMPILER-RT commits from llvm-mirror
+ 4. Add git remote for amd-common Clang
+ 5. Fetch amd-common Clang commits
+ 6. Merge amd-common Clang with ToT HCC Clang
+ 7. Build merged ToT HCC
+ 8. Quick sanity tests on merged ToT HCC
+ 9. Push ToT HCC Clang submodules
+10. Push amd-hcc LLVM submodule
+11. Push amd-hcc LLD submodule
+12. Push amd-hcc COMPILER-RT submodule
+13. Update submodules configuration
 
 Detailed step-by-step instructions are in following sections.
 
@@ -40,9 +43,12 @@ git locations of repositories used in the merge process are:
 - amd-common LLD
   - URL: git@github.com:RadeonOpenCompute/lld.git
   - branch : amd-common
+- amd-common COMPILER-RT
+  - URL: git@github.com:llvm-mirror/compiler-rt.git
+  - branch : master
 - amd-common Clang
   - URL: git@github.com:RadeonOpenCompute/clang.git
-  - branch : master
+  - branch : amd-common
 
 Set SSH URL for git push
 ------------------------------------
@@ -58,6 +64,8 @@ following commands to setup SSH URL.
 - `git remote set-url --push origin git@github.com:RadeonOpenCompute/llvm.git`
 - `cd ../lld`
 - `git remote set-url --push origin git@github.com:RadeonOpenCompute/lld.git`
+- `cd ../compiler-rt`
+- `git remote set-url --push origin git@github.com:RadeonOpenCompute/compiler-rt.git`
 
 This only needs to be done once.
 
@@ -79,6 +87,22 @@ Resolve any merge conflicts encountered here. Commit to amd-hcc branch.
 - `git checkout amd-hcc`
 - `git pull`
 - `git merge origin/amd-common --no-edit`
+
+Resolve any merge conflicts encountered here. Commit to amd-hcc branch.
+
+### Add git remote for master COMPILER-RT
+
+- `cd ../compiler-rt`
+- `git remote -v` to check if there is a git remote pointing to:
+  `git@github.com:llvm-mirror/compiler-rt.git`
+- If there is not, add it by:
+  `git remote add compiler-rt https://github.com/llvm-mirror/compiler-rt`
+
+### Merge amd-common COMPILER-RT commits
+
+- `git checkout amd-hcc`
+- `git fetch compiler-rt`
+- `git merge --no-ff compiler-rt/master --no-edit`
 
 Resolve any merge conflicts encountered here. Commit to amd-hcc branch.
 
@@ -162,10 +186,16 @@ Finally switch back to "clang_tot_upgrade" branch.
 - `git checkout amd-hcc`
 - `git push`
 
+### Push amd-hcc COMPILER-RT submodule
+
+- `cd ../compiler-rt`
+- `git checkout amd-hcc`
+- `git push`
+
 ### Update submodules configuration
 
 - `cd ..`
-- `git add clang compiler lld`
+- `git add clang compiler lld compiler-rt`
 - `git commit -m "[Config] revise submodule configuration"`, or provide custom
   commit log
 - `git push` to push submodules configuration online

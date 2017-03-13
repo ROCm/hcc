@@ -14,16 +14,36 @@ IF (NOT NUM_BUILD_THREADS)
   ProcessorCount(NUM_BUILD_THREADS)
 ENDIF(NOT NUM_BUILD_THREADS)
 
-# Accepted values for DISTRO: trusty (Ubuntu 14.04), xenial (Ubuntu 16.06), fd23 (Fedora 23)
-IF (NOT DISTRO)
-  SET(DISTRO "trusty")
-ENDIF(NOT DISTRO)
-MESSAGE("Distro: ${DISTRO}")
+# Use two different methods to determine host distribution: lsb_release and if that fails grep /etc/os-release
+find_program( lsb_executable lsb_release )
+
+if( lsb_executable )
+  execute_process( COMMAND ${lsb_executable} -is OUTPUT_VARIABLE DISTRO_ID OUTPUT_STRIP_TRAILING_WHITESPACE )
+  execute_process( COMMAND ${lsb_executable} -rs OUTPUT_VARIABLE DISTRO_RELEASE OUTPUT_STRIP_TRAILING_WHITESPACE )
+else()
+  if( EXISTS "/etc/os-release" )
+    file( STRINGS "/etc/os-release" DISTRO_ID REGEX "^ID=" )
+    file( STRINGS "/etc/os-release" DISTRO_RELEASE REGEX "^VERSION_ID=" )
+    string( REPLACE "ID=" "" DISTRO_ID ${DISTRO_ID} )
+    string( REPLACE "VERSION_ID=" "" DISTRO_RELEASE ${DISTRO_RELEASE} )
+  endif( )
+endif( )
+
+# Accepted values for DISTRO_ID: trusty (Ubuntu 14.04), xenial (Ubuntu 16.06), fd23 (Fedora 23)
+string(TOLOWER "${DISTRO_ID}" DISTRO_ID )
+if( DISTRO_ID MATCHES "ubuntu" OR DISTRO_ID MATCHES "fedora" )
+  message( STATUS "Detected distribution: ${DISTRO_ID}:${DISTRO_RELEASE}" )
+else()
+  message( "This cmakefile does not natively support ${DISTRO_ID}:${DISTRO_RELEASE}.  Continuing with Ubuntu logic" )
+  set( DISTRO_ID "ubuntu" )
+  set( DISTRO_RELEASE "16.04" )
+endif()
 
 include (MCWAMP)
 
 execute_process(COMMAND ln -sf ../../lld WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/compiler/tools)
 execute_process(COMMAND ln -sf ../../clang WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/compiler/tools)
+execute_process(COMMAND ln -sf ../../compiler-rt WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/compiler/projects)
 
 # Regression test
 set(LLVM_SRC "${PROJECT_SOURCE_DIR}/compiler")
@@ -64,9 +84,9 @@ LINK_DIRECTORIES( ${LLVM_LIB_DIR} )
 # ROCm external dependencies
 set (ROCM_ROOT "/opt/rocm" CACHE PATH "ROCM runtime path")
 
-find_path(HSA_HEADER hsa/hsa.h 
-  HINTS 
-    ${HSA_HEADER_DIR} 
+find_path(HSA_HEADER hsa/hsa.h
+  HINTS
+    ${HSA_HEADER_DIR}
   PATHS
     ${ROCM_ROOT}/include
 )
@@ -75,9 +95,9 @@ if (NOT HSA_HEADER)
   MESSAGE("HSA header not found. Use -DHSA_HEADER=<path_to_hsa.h>.")
 endif (NOT HSA_HEADER)
 
-find_library(HSA_LIBRARY hsa-runtime64 
-  HINTS 
-    ${HSA_LIBRARY_DIR} 
+find_library(HSA_LIBRARY hsa-runtime64
+  HINTS
+    ${HSA_LIBRARY_DIR}
   PATHS
     ${ROCM_ROOT}/lib
 )
@@ -94,8 +114,8 @@ endif (NOT HSA_LIBRARY)
 find_path(ROCM_DEVICE_LIB ocml.amdgcn.bc
   PATH_SUFFIXES
     lib
-  HINTS 
-    ${ROCM_DEVICE_LIB_DIR} 
+  HINTS
+    ${ROCM_DEVICE_LIB_DIR}
   PATHS
     ${ROCM_ROOT}/lib
 )
@@ -147,21 +167,28 @@ endif (USE_CODEXL_ACTIVITY_LOGGER EQUAL 1)
 # hcc will use libc++ if USE_LIBCXX is set to ON; otherwise, it will use libstdc++
 #################
 
-# if USE_LIBCXX is not set, then pick the C++ runtime based on the distro
-IF (NOT USE_LIBCXX)
-  IF (DISTRO STREQUAL "trusty")
-    SET(USE_LIBCXX "ON")
-  ELSE()
-    SET(USE_LIBCXX "OFF")
-  ENDIF()
-ENDIF(NOT USE_LIBCXX)
+# if USE_LIBCXX is not expicitely set
+if( NOT DEFINED USE_LIBCXX )
+  # default to libstdc++
+  set( USE_LIBCXX "OFF" )
+
+  if( CMAKE_COMPILER_IS_GNUCXX AND (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 5.0) )
+    # If host compiler is g++, use libc++ if version is less than 5.0
+    set( USE_LIBCXX "ON" )
+  elseif( CMAKE_CXX_COMPILER_ID MATCHES "Clang" )
+    # If host compiler is clang, detect version of system g++ and use libc++ if less than 5.0
+    execute_process( COMMAND g++ -dumpversion OUTPUT_VARIABLE gplusplus_version )
+    if( gplusplus_version VERSION_LESS 5.0 )
+      set( USE_LIBCXX "ON" )
+    endif( )
+  endif( )
+endif( )
 
 # Detect libc++
 if (USE_LIBCXX)
   find_path(LIBCXX_HEADER random PATHS /usr/local/include/c++/v1 /usr/include/c++/v1 NO_DEFAULT_PATH)
-  MESSAGE("libc++ headers found at ${LIBCXX_HEADER}")
-endif (USE_LIBCXX)
-
+  message( "libc++ headers found at ${LIBCXX_HEADER}" )
+endif( )
 
 #################
 # Set up version information
@@ -241,7 +268,7 @@ set(HSA_AMDGPU_GPU_TARGET "gfx803" CACHE STRING "Target AMDGPU ISA version")
 
 # Temporary workaround for use of old long-form GFX_ip names, to be removed once
 # we fully deprecate them.
-string(REGEX MATCHALL "AMD:AMDGPU:(7:0:0|7:0:1|8:0:1|8:0:2|8:0:3)"
+string(REGEX MATCHALL "AMD:AMDGPU:(7:0:0|7:0:1|8:0:1|8:0:2|8:0:3|9:0:0|9:0:1)"
                       tmp
                       ${HSA_AMDGPU_GPU_TARGET})
 foreach(long_form IN LISTS tmp)
@@ -267,6 +294,10 @@ foreach(AMDGPU_GPU_TARGET IN LISTS HSA_AMDGPU_GPU_TARGET)
     list(APPEND AMDGPU_TARGET_LIST "tonga")
   elseif (AMDGPU_GPU_TARGET STREQUAL "gfx803")
     list(APPEND AMDGPU_TARGET_LIST "fiji")
+  elseif (AMDGPU_GPU_TARGET STREQUAL "gfx900")
+    list(APPEND AMDGPU_TARGET_LIST "gfx900")
+  elseif (AMDGPU_GPU_TARGET STREQUAL "gfx901")
+    list(APPEND AMDGPU_TARGET_LIST "gfx901")
   else ()
     message(FATAL_ERROR "${AMDGPU_GPU_TARGET} is not a valid AMDPU target!")
   endif ()
@@ -323,6 +354,11 @@ add_custom_command(TARGET clang POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E create_symlink ../compiler/bin/lld ${PROJECT_BINARY_DIR}/bin/lld
   WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/bin
 )
+
+add_custom_command(TARGET clang POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ${CLANG_BIN_DIR}/lib/clang/5.0.0/lib/linux/libclang_rt.builtins-x86_64.a ${PROJECT_BINARY_DIR}/lib/libclang_rt.builtins-x86_64.a
+)
+
 install(FILES ${PROJECT_BINARY_DIR}/bin/hcc
               ${PROJECT_BINARY_DIR}/bin/clang++
               ${PROJECT_BINARY_DIR}/bin/clang
@@ -350,6 +386,10 @@ install(DIRECTORY ${CLANG_BIN_DIR}/lib
         PATTERN lib*
         PATTERN LLVM*
         PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+
+install(FILES ${CLANG_BIN_DIR}/lib/clang/5.0.0/lib/linux/libclang_rt.builtins-x86_64.a
+        DESTINATION  lib
+        COMPONENT compiler)
 
 install(DIRECTORY ${CLANG_BIN_DIR}/include
         DESTINATION compiler
@@ -419,15 +459,19 @@ set(CPACK_PACKAGE_VERSION "${KALMAR_VERSION_MAJOR}.${KALMAR_VERSION_MINOR}.${KAL
 set(CPACK_PACKAGE_VERSION_MAJOR ${KALMAR_VERSION_MAJOR})
 set(CPACK_PACKAGE_VERSION_MINOR ${KALMAR_VERSION_MINOR})
 set(CPACK_PACKAGE_VERSION_PATCH ${KALMAR_VERSION_PATCH})
-set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${DISTRO})
+set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${DISTRO_ID})
 
+if( USE_LIBCXX )
+  set( CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_FILE_NAME}-libc++" )
+else( )
+  set( CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_FILE_NAME}-libstdc++" )
+endif( )
 
 set(PACKAGE_DESCRIPTION "HCC: An Open Source, Optimizing C++ Compiler for Heterogeneous Compute")
 
 set(OFFICIAL_RELEASE_BUILD 0)
 
-if ("${DISTRO}" STREQUAL "trusty"
-  OR "${DISTRO}" STREQUAL "xenial")
+if( "${DISTRO_ID}" MATCHES "ubuntu" )
 
   set(CPACK_DEBIAN_PACKAGE_DESCRIPTION ${PACKAGE_DESCRIPTION})
   set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Siu Chi Chan <siuchi.chan@amd.com>")
@@ -450,7 +494,7 @@ if ("${DISTRO}" STREQUAL "trusty"
 
   set(CPACK_GENERATOR "DEB")
   set(CPACK_BINARY_DEB "ON")
-elseif ("${DISTRO}" STREQUAL "fd23")
+elseif ("${DISTRO_ID}" MATCHES "fedora")
 
   set(CPACK_RPM_PACKAGE_DESCRIPTION ${PACKAGE_DESCRIPTION})
   set(CPACK_RPM_POST_INSTALL_SCRIPT_FILE "${PROJECT_BINARY_DIR}/packaging/debian/postinst")
@@ -461,7 +505,7 @@ elseif ("${DISTRO}" STREQUAL "fd23")
   set(CPACK_RPM_PACKAGE_REQUIRES "hsakmt-roct-dev, hsa-rocr-dev, rocm-device-libs, libstdc++-devel, elfutils-libelf-devel, glibc-devel")
   set(CPACK_GENERATOR "RPM")
 else()
-  # generate a tarball for unknown distro
+  # generate a tarball for unknown DISTRO_ID
   set(CPACK_GENERATOR "TGZ")
 endif ()
 
