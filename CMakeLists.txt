@@ -1,6 +1,8 @@
 cmake_minimum_required( VERSION 3.0 )
 project (HCC)
 
+include(GNUInstallDirs)
+
 SET(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/scripts/cmake")
 MESSAGE("Module path: ${CMAKE_MODULE_PATH}")
 
@@ -388,7 +390,7 @@ install(DIRECTORY ${CLANG_BIN_DIR}/lib
         PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 
 install(FILES ${CLANG_BIN_DIR}/lib/clang/5.0.0/lib/linux/libclang_rt.builtins-x86_64.a
-        DESTINATION  lib
+        DESTINATION  ${CMAKE_INSTALL_LIBDIR}
         COMPONENT compiler)
 
 install(DIRECTORY ${CLANG_BIN_DIR}/include
@@ -446,10 +448,10 @@ set(DEBIAN_EXTRA_SCRIPT_SOURCE_DIR "${PROJECT_SOURCE_DIR}/packaging/debian")
 set(DEBIAN_EXTRA_SCRIPT_DEST_DIR "${PROJECT_BINARY_DIR}/packaging/debian")
 file(MAKE_DIRECTORY ${DEBIAN_EXTRA_SCRIPT_DEST_DIR})
 
-execute_process(COMMAND ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/process_packaging_script.bsh ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/postinst.in  ${DEBIAN_EXTRA_SCRIPT_DEST_DIR}/postinst ${CPACK_PACKAGE_NAME} ${CMAKE_INSTALL_PREFIX}
+execute_process(COMMAND ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/process_packaging_script.bsh ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/postinst.in  ${DEBIAN_EXTRA_SCRIPT_DEST_DIR}/postinst ${CPACK_PACKAGE_NAME} ${CMAKE_INSTALL_PREFIX} ${CMAKE_INSTALL_LIBDIR}
                 WORKING_DIRECTORY ${PROJECT_BINARY_DIR})
 
-execute_process(COMMAND ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/process_packaging_script.bsh ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/prerm.in  ${DEBIAN_EXTRA_SCRIPT_DEST_DIR}/prerm ${CPACK_PACKAGE_NAME} ${CMAKE_INSTALL_PREFIX}
+execute_process(COMMAND ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/process_packaging_script.bsh ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/prerm.in  ${DEBIAN_EXTRA_SCRIPT_DEST_DIR}/prerm ${CPACK_PACKAGE_NAME} ${CMAKE_INSTALL_PREFIX} ${CMAKE_INSTALL_LIBDIR}
                 WORKING_DIRECTORY ${PROJECT_BINARY_DIR})
 
 set(CPACK_SET_DESTDIR TRUE)
@@ -480,17 +482,23 @@ if( "${DISTRO_ID}" MATCHES "ubuntu" )
   set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA
     "${PROJECT_BINARY_DIR}/packaging/debian/postinst;${PROJECT_BINARY_DIR}/packaging/debian/prerm")
 
-  #set(HCC_GENERAL_DEBIAN_DEP "libstdc++-dev, libc++1, libc++-dev, libc++abi1, libc++abi-dev, elfutils")
+  set(HCC_GENERAL_DEBIAN_DEP "g++-multilib, gcc-multilib, findutils, libelf1, libpci3, file")
+
+  if ( USE_LIBCXX )
+    set(HCC_LIBCXX_DEBIAN_DEP ", libc++1, libc++-dev, libc++abi1, libc++abi-dev")
+  else ( USE_LIBCXX )
+    set(HCC_LIBCXX_DEBIAN_DEP "")
+  endif( USE_LIBCXX )
 
   # control the list of package dependency depending on whether this is an official release build.
   # for non-official release build, we want to relax the dependency on rocr runtime
   if (OFFICIAL_RELEASE_BUILD)
-    set(HCC_ROCR_DEBIAN_DEP "hsa-rocr-dev, hsa-ext-rocr-dev, rocm-device-libs")
-    set(CPACK_DEBIAN_PACKAGE_DEPENDS "${HCC_ROCR_DEBIAN_DEP}, ${HCC_GENERAL_DEBIAN_DEP}")
+    set(HCC_ROCR_DEBIAN_DEP ", hsa-rocr-dev, hsa-ext-rocr-dev, rocm-device-libs")
   else (OFFICIAL_RELEASE_BUILD)
-    # dependencies for any local build
-    set(CPACK_DEBIAN_PACKAGE_DEPENDS "${HCC_GENERAL_DEBIAN_DEP}")
+    set(HCC_ROCR_DEBIAN_DEP "")
   endif (OFFICIAL_RELEASE_BUILD)
+
+  set(CPACK_DEBIAN_PACKAGE_DEPENDS "${HCC_GENERAL_DEBIAN_DEP} ${HCC_ROCR_DEBIAN_DEP} ${HCC_LIBCXX_DEBIAN_DEP}")
 
   set(CPACK_GENERATOR "DEB")
   set(CPACK_BINARY_DEB "ON")
@@ -502,7 +510,17 @@ elseif ("${DISTRO_ID}" MATCHES "fedora")
 
   # disable automatic shared libraries dependency detection
   set(CPACK_RPM_PACKAGE_AUTOREQ 0)
-  set(CPACK_RPM_PACKAGE_REQUIRES "hsakmt-roct-dev, hsa-rocr-dev, rocm-device-libs, libstdc++-devel, elfutils-libelf-devel, glibc-devel")
+
+  set(HCC_GENERAL_RPM_DEP "findutils, elfutils-libelf, pciutils-libs, file, pth")
+
+  if (OFFICIAL_RELEASE_BUILD)
+    set(HCC_ROCR_RPM_DEP ", hsa-rocr-dev, hsa-ext-rocr-dev, rocm-device-libs")
+  else (OFFICIAL_RELEASE_BUILD)
+    set(HCC_ROCR_RPM_DEP "")
+  endif (OFFICIAL_RELEASE_BUILD)
+
+    set(CPACK_RPM_PACKAGE_REQUIRES "${HCC_GENERAL_RPM_DEP} ${HCC_ROCR_RPM_DEP}" )
+
   set(CPACK_GENERATOR "RPM")
 else()
   # generate a tarball for unknown DISTRO_ID
