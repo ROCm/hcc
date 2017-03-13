@@ -14,7 +14,7 @@ using namespace std;
 
 class restrict
 {
-   int size;
+   unsigned int size;
 
 public:
     restrict() __GPU
