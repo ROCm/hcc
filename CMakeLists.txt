@@ -283,30 +283,8 @@ foreach(long_form IN LISTS tmp)
   list(APPEND HSA_AMDGPU_GPU_TARGET ${short_form})
 endforeach()
 
-# Map to LC-consumable name.
-foreach(AMDGPU_GPU_TARGET IN LISTS HSA_AMDGPU_GPU_TARGET)
-  # AMDGPU_TARGET_LIST holds the values which are used by the compiler scripts.
-  if (AMDGPU_GPU_TARGET STREQUAL "gfx700")
-    list(APPEND AMDGPU_TARGET_LIST "kaveri")
-  elseif (AMDGPU_GPU_TARGET STREQUAL "gfx701")
-    list(APPEND AMDGPU_TARGET_LIST "hawaii")
-  elseif (AMDGPU_GPU_TARGET STREQUAL "gfx801")
-    list(APPEND AMDGPU_TARGET_LIST "carrizo")
-  elseif (AMDGPU_GPU_TARGET STREQUAL "gfx802")
-    list(APPEND AMDGPU_TARGET_LIST "tonga")
-  elseif (AMDGPU_GPU_TARGET STREQUAL "gfx803")
-    list(APPEND AMDGPU_TARGET_LIST "fiji")
-  elseif (AMDGPU_GPU_TARGET STREQUAL "gfx900")
-    list(APPEND AMDGPU_TARGET_LIST "gfx900")
-  elseif (AMDGPU_GPU_TARGET STREQUAL "gfx901")
-    list(APPEND AMDGPU_TARGET_LIST "gfx901")
-  else ()
-    message(FATAL_ERROR "${AMDGPU_GPU_TARGET} is not a valid AMDPU target!")
-  endif ()
-endforeach(AMDGPU_GPU_TARGET)
-
 # join list
-string(REPLACE ";" " " AMDGPU_TARGET "${AMDGPU_TARGET_LIST}")
+string(REPLACE ";" " " AMDGPU_TARGET "${HSA_AMDGPU_GPU_TARGET}")
 MESSAGE(STATUS "HCC configured with AMDGPU targets: ${AMDGPU_TARGET}")
 
 #################
