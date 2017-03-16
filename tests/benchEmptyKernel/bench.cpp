@@ -97,7 +97,7 @@ void explicit_launch_null_kernel(const grid_launch_parm *lp, const Kernel &k)
 void time_dispatch_hsa_kernel(std::string testName, const grid_launch_parm *lp, const char *nullkernel_hsaco_dir)
 {
   std::string nullkernel_hsaco(nullkernel_hsaco_dir);
-  nullkernel_hsaco += "/nullkernel-fiji.hsaco";
+  nullkernel_hsaco += "/nullkernel-gfx803.hsaco";
   Kernel k = load_hsaco(lp->av, nullkernel_hsaco.c_str(), KERNEL_NAME);
   std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
 
