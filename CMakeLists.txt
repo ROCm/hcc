@@ -448,7 +448,7 @@ set(CPACK_PACKAGE_VERSION "${KALMAR_VERSION_MAJOR}.${KALMAR_VERSION_MINOR}.${KAL
 set(CPACK_PACKAGE_VERSION_MAJOR ${KALMAR_VERSION_MAJOR})
 set(CPACK_PACKAGE_VERSION_MINOR ${KALMAR_VERSION_MINOR})
 set(CPACK_PACKAGE_VERSION_PATCH ${KALMAR_VERSION_PATCH})
-set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${DISTRO_ID})
+set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION})
 
 if( USE_LIBCXX )
   set( CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_FILE_NAME}-libc++" )
@@ -460,66 +460,67 @@ set(PACKAGE_DESCRIPTION "HCC: An Open Source, Optimizing C++ Compiler for Hetero
 
 set(OFFICIAL_RELEASE_BUILD 0)
 
-if( "${DISTRO_ID}" MATCHES "ubuntu" )
 
-  set(CPACK_DEBIAN_PACKAGE_DESCRIPTION ${PACKAGE_DESCRIPTION})
-  set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Siu Chi Chan <siuchi.chan@amd.com>")
-  set(CPACK_DEBIAN_PACKAGE_SECTION "devel")
+option(CPACK_GENERATOR "Specify the installer package generator")
 
-  set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA
-    "${PROJECT_BINARY_DIR}/packaging/debian/postinst;${PROJECT_BINARY_DIR}/packaging/debian/prerm")
+# If no CPACK generator was specified, then set the default generator according to the distro 
+if (NOT CPACK_GENERATOR)
+    if ( "${DISTRO_ID}" MATCHES "ubuntu" )
+    set(CPACK_GENERATOR "DEB")
+  elseif ("${DISTRO_ID}" MATCHES "fedora")
+    set(CPACK_GENERATOR "RPM")
+  else ()
+    # generate a tarball for unknown DISTRO_ID
+    set(CPACK_GENERATOR "TGZ")
+  endif ()
+endif (NOT CPACK_GENERATOR)
 
-  set(HCC_GENERAL_DEBIAN_DEP "g++-multilib, gcc-multilib, findutils, libelf1, libpci3, file")
 
-  if ( USE_LIBCXX )
-    set(HCC_LIBCXX_DEBIAN_DEP ", libc++1, libc++-dev, libc++abi1, libc++abi-dev")
-  else ( USE_LIBCXX )
-    set(HCC_LIBCXX_DEBIAN_DEP "")
-  endif( USE_LIBCXX )
+# DEB package settings
+set(CPACK_DEBIAN_PACKAGE_DESCRIPTION ${PACKAGE_DESCRIPTION})
+set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Siu Chi Chan <siuchi.chan@amd.com>")
+set(CPACK_DEBIAN_PACKAGE_SECTION "devel")
 
-  # control the list of package dependency depending on whether this is an official release build.
-  # for non-official release build, we want to relax the dependency on rocr runtime
-  if (OFFICIAL_RELEASE_BUILD)
-    set(HCC_ROCR_DEBIAN_DEP ", hsa-rocr-dev, hsa-ext-rocr-dev, rocm-device-libs")
-  else (OFFICIAL_RELEASE_BUILD)
-    set(HCC_ROCR_DEBIAN_DEP "")
-  endif (OFFICIAL_RELEASE_BUILD)
+set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA
+  "${PROJECT_BINARY_DIR}/packaging/debian/postinst;${PROJECT_BINARY_DIR}/packaging/debian/prerm")
 
-  set(CPACK_DEBIAN_PACKAGE_DEPENDS "${HCC_GENERAL_DEBIAN_DEP} ${HCC_ROCR_DEBIAN_DEP} ${HCC_LIBCXX_DEBIAN_DEP}")
+set(HCC_GENERAL_DEBIAN_DEP "g++-multilib, gcc-multilib, findutils, libelf1, libpci3, file")
 
-  set(CPACK_GENERATOR "DEB")
-  set(CPACK_BINARY_DEB "ON")
-elseif ("${DISTRO_ID}" MATCHES "fedora")
+if ( USE_LIBCXX )
+  set(HCC_LIBCXX_DEBIAN_DEP ", libc++1, libc++-dev, libc++abi1, libc++abi-dev")
+else ( USE_LIBCXX )
+  set(HCC_LIBCXX_DEBIAN_DEP "")
+endif( USE_LIBCXX )
 
-  set(CPACK_RPM_PACKAGE_DESCRIPTION ${PACKAGE_DESCRIPTION})
-  set(CPACK_RPM_POST_INSTALL_SCRIPT_FILE "${PROJECT_BINARY_DIR}/packaging/debian/postinst")
-  set(CPACK_RPM_PRE_UNINSTALL_SCRIPT_FILE "${PROJECT_BINARY_DIR}/packaging/debian/prerm")
+# control the list of package dependency depending on whether this is an official release build.
+# for non-official release build, we want to relax the dependency on rocr runtime
+if (OFFICIAL_RELEASE_BUILD)
+  set(HCC_ROCR_DEBIAN_DEP ", hsa-rocr-dev, hsa-ext-rocr-dev, rocm-device-libs")
+else (OFFICIAL_RELEASE_BUILD)
+  set(HCC_ROCR_DEBIAN_DEP "")
+endif (OFFICIAL_RELEASE_BUILD)
 
-  # disable automatic shared libraries dependency detection
-  set(CPACK_RPM_PACKAGE_AUTOREQ 0)
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "${HCC_GENERAL_DEBIAN_DEP} ${HCC_ROCR_DEBIAN_DEP} ${HCC_LIBCXX_DEBIAN_DEP}")
 
-  set(HCC_GENERAL_RPM_DEP "findutils, elfutils-libelf, pciutils-libs, file, pth")
 
-  if (OFFICIAL_RELEASE_BUILD)
-    set(HCC_ROCR_RPM_DEP ", hsa-rocr-dev, hsa-ext-rocr-dev, rocm-device-libs")
-  else (OFFICIAL_RELEASE_BUILD)
-    set(HCC_ROCR_RPM_DEP "")
-  endif (OFFICIAL_RELEASE_BUILD)
+# RPM package settings
+set(CPACK_RPM_PACKAGE_DESCRIPTION ${PACKAGE_DESCRIPTION})
+set(CPACK_RPM_POST_INSTALL_SCRIPT_FILE "${PROJECT_BINARY_DIR}/packaging/debian/postinst")
+set(CPACK_RPM_PRE_UNINSTALL_SCRIPT_FILE "${PROJECT_BINARY_DIR}/packaging/debian/prerm")
 
-    set(CPACK_RPM_PACKAGE_REQUIRES "${HCC_GENERAL_RPM_DEP} ${HCC_ROCR_RPM_DEP}" )
+# disable automatic shared libraries dependency detection
+set(CPACK_RPM_PACKAGE_AUTOREQ 0)
 
-  set(CPACK_GENERATOR "RPM")
-else()
-  # generate a tarball for unknown DISTRO_ID
-  set(CPACK_GENERATOR "TGZ")
-endif ()
+set(HCC_GENERAL_RPM_DEP "findutils, elfutils-libelf, pciutils-libs, file, pth")
 
-set(CPACK_SOURCE_GENERATOR "TGZ")
-set(CPACK_BINARY_STGZ "OFF")
-set(CPACK_SOURCE_TGZ "OFF")
-set(CPACK_SOURCE_TZ "OFF")
-set(CPACK_SOURCE_TBZ2 "OFF")
-set(CPACK_BINARY_TZ "OFF")
+if (OFFICIAL_RELEASE_BUILD)
+  set(HCC_ROCR_RPM_DEP ", hsa-rocr-dev, hsa-ext-rocr-dev, rocm-device-libs")
+else (OFFICIAL_RELEASE_BUILD)
+  set(HCC_ROCR_RPM_DEP "")
+endif (OFFICIAL_RELEASE_BUILD)
+
+set(CPACK_RPM_PACKAGE_REQUIRES "${HCC_GENERAL_RPM_DEP} ${HCC_ROCR_RPM_DEP}" )
+
 
 set(CPACK_COMPONENTS_ALL compiler)
 
