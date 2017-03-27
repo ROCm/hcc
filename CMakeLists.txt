@@ -361,10 +361,19 @@ install(DIRECTORY ${CLANG_BIN_DIR}/lib
         PATTERN *tmp EXCLUDE
         PATTERN *inc EXCLUDE
         PATTERN Makefile EXCLUDE
-        PATTERN *.cmake EXCLUDE
         PATTERN *.a EXCLUDE
         PATTERN lib*
         PATTERN LLVM*
+        PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+
+# install certain LLVM libraries needed by HIP
+install(FILES  ${CLANG_BIN_DIR}/lib/libLLVMAMDGPUDesc.a
+               ${CLANG_BIN_DIR}/lib/libLLVMAMDGPUUtils.a
+               ${CLANG_BIN_DIR}/lib/libLLVMMC.a
+               ${CLANG_BIN_DIR}/lib/libLLVMCore.a
+               ${CLANG_BIN_DIR}/lib/libLLVMSupport.a
+        DESTINATION compiler/lib
+        COMPONENT compiler
         PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 
 install(FILES ${CLANG_BIN_DIR}/lib/clang/5.0.0/lib/linux/libclang_rt.builtins-x86_64.a
