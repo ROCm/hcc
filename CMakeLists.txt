@@ -11,11 +11,6 @@ IF (NOT CMAKE_BUILD_TYPE)
   SET(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build, options are: Release Debug" FORCE)
 ENDIF(NOT CMAKE_BUILD_TYPE)
 
-IF (NOT NUM_BUILD_THREADS)
-  include(ProcessorCount)
-  ProcessorCount(NUM_BUILD_THREADS)
-ENDIF(NOT NUM_BUILD_THREADS)
-
 # Use two different methods to determine host distribution: lsb_release and if that fails grep /etc/os-release
 find_program( lsb_executable lsb_release )
 
@@ -55,23 +50,8 @@ set(LLVM_ROOT "${PROJECT_BINARY_DIR}/compiler")
 SET(LOCAL_LLVM_INCLUDE compiler/include)
 
 # setup compilation environment
-if (UNIX)
-SET(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}/bin" )
-SET(LIBRARY_OUTPUT_PATH "${CMAKE_BINARY_DIR}/lib" )
-else (UNIX)
-SET(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}/bin" )
-SET(LIBRARY_OUTPUT_PATH "${CMAKE_BINARY_DIR}/lib" )
-SET( CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${EXECUTABLE_OUTPUT_PATH})
-SET( CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${EXECUTABLE_OUTPUT_PATH})
-
-SET( CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG ${EXECUTABLE_OUTPUT_PATH})
-SET( CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE ${EXECUTABLE_OUTPUT_PATH})
-
-SET( CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${LIBRARY_OUTPUT_PATH})
-SET( CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${LIBRARY_OUTPUT_PATH})
-MESSAGE("(DEBUG|RELEASE) output changed to path:" "${EXECUTABLE_OUTPUT_PATH}")
-
-endif (UNIX)
+set(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}/bin" )
+set(LIBRARY_OUTPUT_PATH "${CMAKE_BINARY_DIR}/lib" )
 
 SET(PROJ_SEARCH_PATH "${PROJECT_BINARY_DIR}/include" "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/${LOCAL_LLVM_INCLUDE}" "${PROJECT_BINARY_DIR}/${LOCAL_LLVM_INCLUDE}") #  "${PROJECT_SOURCE_DIR}/compiler/utils/unittest/googletest/include")
 include_directories( ${PROJ_SEARCH_PATH} )
@@ -169,7 +149,7 @@ endif (USE_CODEXL_ACTIVITY_LOGGER EQUAL 1)
 # hcc will use libc++ if USE_LIBCXX is set to ON; otherwise, it will use libstdc++
 #################
 
-# if USE_LIBCXX is not expicitely set
+# if USE_LIBCXX is not explicitly set
 if( NOT DEFINED USE_LIBCXX )
   # default to libstdc++
   set( USE_LIBCXX "OFF" )
@@ -200,34 +180,16 @@ endif( )
 SET(KALMAR_VERSION_MAJOR "1")
 SET(KALMAR_VERSION_MINOR "0")
 
-# get date information based on UTC
-# use the last two digits of year + week number + day in the week as KALMAR_VERSION_PATCH
-# use the commit date, instead of build date
-# add xargs to remove strange trailing newline character
-execute_process(COMMAND git show -s --format=@%ct
-                COMMAND xargs
-                COMMAND date -f - --utc +%y%U%w
-                WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-                OUTPUT_VARIABLE KALMAR_VERSION_PATCH
-                OUTPUT_STRIP_TRAILING_WHITESPACE)
+include(GenerateVersionFromGit)
 
-# get commit information
-execute_process(COMMAND git rev-parse --short HEAD
-                WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-                OUTPUT_VARIABLE KALMAR_SDK_COMMIT
-                OUTPUT_STRIP_TRAILING_WHITESPACE)
-execute_process(COMMAND git rev-parse --short HEAD
-                WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/clang
-                OUTPUT_VARIABLE KALMAR_FRONTEND_COMMIT
-                OUTPUT_STRIP_TRAILING_WHITESPACE)
-execute_process(COMMAND git rev-parse --short HEAD
-                WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/compiler
-                OUTPUT_VARIABLE KALMAR_BACKEND_COMMIT
-                OUTPUT_STRIP_TRAILING_WHITESPACE)
-
+if (NOT KALMAR_VERSION_STRING)
+  set(KALMAR_VERSION_STRING
+    "${KALMAR_VERSION_MAJOR}.${KALMAR_VERSION_MINOR}")
+endif()
 # Set HCC version string. The rule for version string is:
 # KALMAR_VERSION_MAJOR . KALMAR_VERSION_MINOR . KALMAR_VERSION_PATCH-KALMAR_SDK_COMIT-KALMAR_FRONTEND_COMMIT-KALMAR_BACKEND_COMMIT
-set(KALMAR_VERSION_STRING "${KALMAR_VERSION_MAJOR}.${KALMAR_VERSION_MINOR}.${KALMAR_VERSION_PATCH}-${KALMAR_SDK_COMMIT}-${KALMAR_FRONTEND_COMMIT}-${KALMAR_BACKEND_COMMIT}")
+add_version_info_from_git(KALMAR_VERSION_STRING
+  KALMAR_VERSION_PATCH KALMAR_SDK_COMMIT KALMAR_FRONTEND_COMMIT KALMAR_BACKEND_COMMIT)
 
 # set default installation path
 if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT AND CMAKE_INSTALL_PREFIX MATCHES "/usr/local")
@@ -303,29 +265,19 @@ set(KALMAR_BACKEND "HCC_BACKEND_AMDGPU")
 set(CLANG_SRC_DIR "${PROJECT_SOURCE_DIR}/compiler")
 set(CLANG_BIN_DIR "${PROJECT_BINARY_DIR}/compiler")
 file(MAKE_DIRECTORY ${CLANG_BIN_DIR})
-add_custom_target(clang
-  COMMAND ${CMAKE_COMMAND} ${CLANG_SRC_DIR}
-          -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-          -DKALMAR_VERSION_STRING=${KALMAR_VERSION_STRING}
-          -DKALMAR_VERSION_MAJOR=${KALMAR_VERSION_MAJOR}
-          -DKALMAR_VERSION_MINOR=${KALMAR_VERSION_MINOR}
-          -DKALMAR_VERSION_PATCH=${KALMAR_VERSION_PATCH}
-          -DKALMAR_SDK_COMMIT=${KALMAR_SDK_COMMIT}
-          -DKALMAR_FRONTEND_COMMIT=${KALMAR_FRONTEND_COMMIT}
-          -DKALMAR_BACKEND_COMMIT=${KALMAR_BACKEND_COMMIT}
-          -DKALMAR_BACKEND=${KALMAR_BACKEND}
-          -DLLVM_TARGETS_TO_BUILD="AMDGPU\;X86"
-          -DLLVM_INCLUDE_EXAMPLES=off
-  COMMAND make -j ${NUM_BUILD_THREADS} # not portable, but we need it this way
-  WORKING_DIRECTORY ${CLANG_BIN_DIR}
-)
+
+set(LLVM_TARGETS_TO_BUILD "AMDGPU" "X86"
+    CACHE STRING "Semicolon-separated list of targets to build, or \"all\".")
+option(LLVM_INCLUDE_EXAMPLES "Generate build targets for the LLVM examples" OFF)
+option(LLVM_ENABLE_OCAMLDOC "Build OCaml bindings documentation." OFF)
+add_subdirectory(${CLANG_SRC_DIR} ${CLANG_BIN_DIR})
 
 # create symlink of mostly used commands in clang to bin/
 # - hcc
 # - clang++
 # - clang
-
-add_custom_command(TARGET clang POST_BUILD
+add_custom_target(clang_links DEPENDS clang)
+add_custom_command(TARGET clang_links POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E create_symlink ../compiler/bin/hcc ${PROJECT_BINARY_DIR}/bin/hcc
   COMMAND ${CMAKE_COMMAND} -E create_symlink ../compiler/bin/clang++ ${PROJECT_BINARY_DIR}/bin/clang++
   COMMAND ${CMAKE_COMMAND} -E create_symlink ../compiler/bin/clang ${PROJECT_BINARY_DIR}/bin/clang
@@ -335,7 +287,7 @@ add_custom_command(TARGET clang POST_BUILD
   WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/bin
 )
 
-add_custom_command(TARGET clang POST_BUILD
+add_custom_command(TARGET clang_links POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E create_symlink ${CLANG_BIN_DIR}/lib/clang/5.0.0/lib/linux/libclang_rt.builtins-x86_64.a ${PROJECT_BINARY_DIR}/lib/libclang_rt.builtins-x86_64.a
 )
 
@@ -393,7 +345,7 @@ install(DIRECTORY ${CLANG_SRC_DIR}/include
         PATTERN CMakeLists* EXCLUDE
         PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
 
-add_custom_target(world DEPENDS clang)
+add_custom_target(world DEPENDS clang_links)
 
 add_subdirectory(hcc_config)
 add_subdirectory(lib)
@@ -526,8 +478,7 @@ set(CPACK_COMPONENTS_ALL compiler)
 include (CPack)
 MESSAGE("")
 MESSAGE("** For the first time:")
-MESSAGE("   'make world' to build HCC Clang, and library for testing.")
-MESSAGE("   'make' to build the rest of LLVM tools")
+MESSAGE("   'make' to build all")
 MESSAGE("   'make docs' to build the HTML API reference")
 MESSAGE("")
 
