@@ -24,30 +24,6 @@ configure_file(
   ${CMAKE_CURRENT_BINARY_DIR}/../hcc_config/hcc_config.hxx ESCAPE_QUOTES)
 
 configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/../lib/clamp-device.in
-  ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-device @ONLY)
-
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/../lib/clamp-embed.in
-  ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-embed @ONLY)
-
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/../lib/clamp-assemble.in
-  ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-assemble @ONLY)
-
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/../lib/hc-kernel-assemble.in
-  ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/hc-kernel-assemble @ONLY)
-
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/../lib/hc-host-assemble.in
-  ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/hc-host-assemble @ONLY)
-
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/../lib/clamp-link.in
-  ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-link @ONLY)
-
-configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/../lib/extractkernel.in
   ${CMAKE_CURRENT_BINARY_DIR}/../bin/extractkernel @ONLY)
 
@@ -61,7 +37,7 @@ ProcessorCount(N)
 
 add_custom_target(test
   COMMAND python ${LLVM_ROOT}/bin/llvm-lit -j ${N} --path ${LLVM_TOOLS_DIR} -sv ${CMAKE_CURRENT_BINARY_DIR}
-  # DEPENDS ${CPPAMP_GTEST_LIB}
+  DEPENDS clamp-scripts
   COMMENT "Running HCC regression tests")
 
 if(POLICY CMP0037)
