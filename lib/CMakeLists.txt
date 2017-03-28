@@ -31,45 +31,6 @@ endif (USE_LIBCXX)
 ####################
 # C++AMP tools
 ####################
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/../lib/clamp-assemble.in
-  ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-assemble @ONLY)
-
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/../lib/clamp-device.in
-  ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-device @ONLY)
-
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/../lib/clamp-embed.in
-  ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-embed @ONLY)
-
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/../lib/hc-kernel-assemble.in
-  ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/hc-kernel-assemble @ONLY)
-
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/../lib/hc-host-assemble.in
-  ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/hc-host-assemble @ONLY)
-
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/../lib/clamp-link.in
-  ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-link @ONLY)
-
-# clamp scripts explicit dependencies: generated scripts from .in files,
-# dynamically loaded or custom LLVM libraries, LLVM tools used in scripts
-add_custom_target (
-  clamp-scripts ALL DEPENDS
-  ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-device
-  ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-embed
-  ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-assemble
-  ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-link
-  ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/hc-kernel-assemble
-  ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/hc-host-assemble
-  LLVMCpuRename LLVMDirectFuncCall LLVMWrapperGen LLVMPromote
-  LLVMEraseNonkernel LLVMTileUniform LLVMRemoveSpecialSection
-  llc opt lld clang llvm-dis llvm-as
-)
-
 install(PROGRAMS ${PROJECT_BINARY_DIR}/compiler/bin/clamp-device
     ${PROJECT_BINARY_DIR}/compiler/bin/clamp-embed
     ${PROJECT_BINARY_DIR}/compiler/bin/clamp-assemble
