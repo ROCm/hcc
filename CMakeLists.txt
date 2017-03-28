@@ -267,7 +267,7 @@ set(CLANG_BIN_DIR "${PROJECT_BINARY_DIR}/compiler")
 file(MAKE_DIRECTORY ${CLANG_BIN_DIR})
 
 set(LLVM_TARGETS_TO_BUILD "AMDGPU" "X86"
-    CACHE STRING "Semicolon-separated list of targets to build, or \"all\".")
+    CACHE STRING "Semicolon-separated list of targets to build, or \"all\"." FORCE)
 option(LLVM_INCLUDE_EXAMPLES "Generate build targets for the LLVM examples" OFF)
 option(LLVM_ENABLE_OCAMLDOC "Build OCaml bindings documentation." OFF)
 add_subdirectory(${CLANG_SRC_DIR} ${CLANG_BIN_DIR})
@@ -478,7 +478,7 @@ set(CPACK_COMPONENTS_ALL compiler)
 include (CPack)
 MESSAGE("")
 MESSAGE("** For the first time:")
-MESSAGE("   'make' to build all")
+MESSAGE("   'make' to build the rest of LLVM tools")
 MESSAGE("   'make docs' to build the HTML API reference")
 MESSAGE("")
 
