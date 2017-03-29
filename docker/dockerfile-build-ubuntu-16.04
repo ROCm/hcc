@@ -25,11 +25,13 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
     wget \
     python \
     rpm \
+    gcc-multilib \
     g++-multilib \
     libncurses5-dev \
     libelf-dev \
-    libc++abi-dev \
-    libc++-dev \
+    findutils \
+    libpci3 \
+    debianutils \
     hsa-rocr-dev && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
@@ -51,7 +53,7 @@ RUN curl http://commondatastorage.googleapis.com/git-repo-downloads/repo > /usr/
 
 RUN mkdir -p ${rocm_build_path} && \
     cd ${rocm_build_path} && \
-    repo init --depth=1 -u https://github.com/RadeonOpenCompute/HCC-Native-GCN-ISA.git -b clang_tot_upgrade && \
+    repo init --depth=1 -u https://github.com/RadeonOpenCompute/HCC-Native-GCN-ISA.git -b remove-promote-change-addr-space && \
     repo sync && \
 
     # build amd-common LLVM/LLD/Clang

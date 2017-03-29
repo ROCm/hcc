@@ -68,7 +68,6 @@ node ('rocmtest')
             -DCMAKE_BUILD_TYPE=${build_config} \
             -DHSA_AMDGPU_GPU_TARGET="gfx701;gfx803" \
             ../..
-          make -j\$(nproc) world
           make -j\$(nproc)
         """
 
