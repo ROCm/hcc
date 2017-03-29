@@ -32,20 +32,10 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
     findutils \
     libpci3 \
     debianutils \
+    cmake \
     hsa-rocr-dev && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
-
-# This installs the new cmake side-by-side with the old cmake using update-alternatives
-RUN cd /usr/local/src && \
-    curl -L https://cmake.org/files/v${cmake_ver_major}/cmake-${cmake_ver_minor}.tar.gz -o cmake-${cmake_ver_minor}.tar.gz && \
-    tar -xf cmake-${cmake_ver_minor}.tar.gz && \
-    cd cmake-${cmake_ver_minor} && \
-    ./bootstrap --prefix=${cmake_prefix} && \
-    make -j $(nproc) && \
-    make install && \
-    cd .. && rm -rf cmake-${cmake_ver_minor} && \
-    update-alternatives --install /usr/local/bin/cmake cmake ${cmake_prefix}/bin/cmake 80 --slave /usr/local/bin/ccmake ccmake ${cmake_prefix}/bin/ccmake --slave /usr/local/bin/cpack cpack ${cmake_prefix}/bin/cpack --slave /usr/local/bin/ctest ctest ${cmake_prefix}/bin/ctest --slave /usr/local/share/cmake-${cmake_ver_major} share-cmake-${cmake_ver_major} ${cmake_prefix}/share/cmake-${cmake_ver_major} # --slave /usr/local/bin/cmake-gui cmake-gui ${cmake_prefix}/bin/cmake-gui
 
 # Compiling hcc-lc requires a custom build tool
 RUN curl http://commondatastorage.googleapis.com/git-repo-downloads/repo > /usr/local/bin/repo && \
@@ -68,7 +58,7 @@ RUN mkdir -p ${rocm_build_path} && \
     make -j $(nproc) && \
 
     # build ROCm-Device-Libs with amd-common Clang
-    cd ${rocm_build_path}/ocml/ && \
+    cd ${rocm_build_path}/rocdl/ && \
     mkdir -p build && \
     cd build && \
     CC=${rocm_build_path}/llvm/build/bin/clang cmake \
