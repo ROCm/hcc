@@ -2622,7 +2622,7 @@ public:
                 // get symbol
                 hsa_executable_symbol_t symbol;
                 status = hsa_executable_get_symbol(executable->hsaExecutable, NULL, symbolName, agent, 0, &symbol);
-                STATUS_CHECK_SYMBOL(status, symbolName, __LINE__);
+                //STATUS_CHECK_SYMBOL(status, symbolName, __LINE__);
 
                 if (status == HSA_STATUS_SUCCESS) {
                     // get address of symbol
