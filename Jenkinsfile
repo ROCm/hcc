@@ -41,10 +41,12 @@ node ('rocmtest')
   stage('ubuntu-16.04 image')
   {
     def build_org = "hcc-lc"
-    def build_image_name = "build-ubuntu-16.04"
+    def build_type_name = "build-ubuntu-16.04"
+    def dockerfile_name = "dockerfile-${build_type_name}"
+    def build_image_name = "${build_type_name}-${env.BRANCH_NAME}"
     dir('docker')
     {
-      hcc_build_image = docker.build( "${build_org}/${build_image_name}:latest", "-f dockerfile-${build_image_name} --build-arg build_type=Release --build-arg rocm_install_path=/opt/rocm ." )
+      hcc_build_image = docker.build( "${build_org}/${build_image_name}:latest", "-f ${dockerfile_name} --build-arg build_type=Release --build-arg rocm_install_path=/opt/rocm ." )
     }
   }
 
@@ -89,7 +91,6 @@ node ('rocmtest')
       {
         sh "cd ${build_dir_release_abs}; make package"
         archiveArtifacts artifacts: "${build_dir_release_rel}/*.deb", fingerprint: true
-        archiveArtifacts artifacts: "${workspace_dir_abs}/../rocdl/build/*.deb", fingerprint: true
       }
     }
   }
