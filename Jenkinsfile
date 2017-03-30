@@ -68,7 +68,6 @@ node ('rocmtest')
             -DCMAKE_BUILD_TYPE=${build_config} \
             -DHSA_AMDGPU_GPU_TARGET="gfx701;gfx803" \
             ../..
-          make -j\$(nproc) world
           make -j\$(nproc)
         """
 
@@ -90,6 +89,7 @@ node ('rocmtest')
       {
         sh "cd ${build_dir_release_abs}; make package"
         archiveArtifacts artifacts: "${build_dir_release_rel}/*.deb", fingerprint: true
+        archiveArtifacts artifacts: "${workspace_dir_abs}/../rocdl/build/*.deb", fingerprint: true
       }
     }
   }
