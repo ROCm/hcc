@@ -108,6 +108,13 @@ if (NOT HSA_LIBRARY)
   MESSAGE("HSA runtime library not found. Use -DHSA_LIBRARY=<path_to_libhsa-runtime64.so>.")
 endif (NOT HSA_LIBRARY)
 
+add_library(hsa-runtime64 SHARED IMPORTED GLOBAL)
+
+set_target_properties(hsa-runtime64 PROPERTIES
+  INTERFACE_INCLUDE_DIRECTORIES "${HSA_HEADER}"
+  IMPORTED_LOCATION "${HSA_LIBRARY}"
+  INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${HSA_HEADER}"
+)
 
 ################
 # Detect ROCm Device Libs
