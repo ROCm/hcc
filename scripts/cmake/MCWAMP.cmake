@@ -70,12 +70,11 @@ macro(add_mcwamp_library_hsa name )
   add_compile_options(-std=c++11)
   # add HSA headers
   add_library( ${name} SHARED ${ARGN} )
-  target_include_directories(${name} SYSTEM PUBLIC ${HSA_HEADER})
   amp_target(${name})
   # LLVM and Clang shall be compiled beforehand
   add_dependencies(${name} llvm-link opt clang hc_am)
   # add HSA libraries
-  target_link_libraries(${name} ${HSA_LIBRARY})
+  target_link_libraries(${name} hsa-runtime64)
   target_link_libraries(${name} pthread)
 
   if (USE_LIBCXX)
@@ -91,12 +90,11 @@ macro(add_mcwamp_library_hc_am name )
   CMAKE_FORCE_CXX_COMPILER("${PROJECT_BINARY_DIR}/compiler/bin/clang++" MCWAMPCC)
   # add HSA headers
   add_library( ${name} SHARED ${ARGN} )
-  target_include_directories(${name} PRIVATE ${HSA_HEADER})
   amp_target(${name})
   # LLVM and Clang shall be compiled beforehand
   add_dependencies(${name} llvm-link opt clang)
   # add HSA libraries
-  target_link_libraries(${name} ${HSA_LIBRARY})
+  target_link_libraries(${name} hsa-runtime64)
   target_link_libraries(${name} pthread)
 
   if (USE_LIBCXX)
