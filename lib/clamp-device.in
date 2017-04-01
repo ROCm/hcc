@@ -189,7 +189,7 @@ fi
 
 # Optimization notes:
 #  -disable-simplify-libcalls:  prevents transforming loops into library calls such as memset, memcopy on GPU
-$OPT -inline -mtriple amdgcn--amdhsa -mcpu=$AMDGPU_TARGET -infer-address-spaces -amdgpu-internalize-symbols -disable-simplify-libcalls $KMOPTOPT -verify $2.linked.bc -o $2.opt.bc
+$OPT -inline -mtriple amdgcn--amdhsa-amdgiz -mcpu=$AMDGPU_TARGET -infer-address-spaces -amdgpu-internalize-symbols -disable-simplify-libcalls $KMOPTOPT -verify $2.linked.bc -o $2.opt.bc
 
 # error handling for opt
 RETVAL=$?
@@ -211,7 +211,7 @@ if [ $KMDUMPLLVM == "1" ]; then
   cp $2.opt.bc ${KMDUMPDIR}/dump-$AMDGPU_TARGET.opt.bc
 fi
 
-$LLC $KMOPTLLC -mtriple amdgcn--amdhsa -mcpu=$AMDGPU_TARGET -filetype=obj -o $2.isabin $2.opt.bc
+$LLC $KMOPTLLC -mtriple amdgcn--amdhsa-amdgiz -mcpu=$AMDGPU_TARGET -filetype=obj -o $2.isabin $2.opt.bc
 
 # error handling for llc
 RETVAL=$?
@@ -222,7 +222,7 @@ fi
 
 if [ $KMDUMPISA == "1" ]; then
   cp $2.isabin ./dump-$AMDGPU_TARGET.isabin
-  $LLC $KMOPTLLC -mtriple amdgcn--amdhsa -mcpu=$AMDGPU_TARGET -filetype=asm -o $2.isa $2.opt.bc
+  $LLC $KMOPTLLC -mtriple amdgcn--amdhsa-amdgiz -mcpu=$AMDGPU_TARGET -filetype=asm -o $2.isa $2.opt.bc
   mv $2.isa ${KMDUMPDIR}/dump-$AMDGPU_TARGET.isa
 fi
 
