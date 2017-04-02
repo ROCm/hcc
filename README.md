@@ -24,43 +24,6 @@ git clone --recursive -b clang_tot_upgrade https://github.com/RadeonOpenCompute/
 
 For more information about git submodules, please refer to [git documentation][2].
 
-Device libraries
-================
-HCC device library is a part of [ROCm-Device-Libs][3]. When compiling device 
-code with hcc, the rocm-device-libs package needs to be installed.
-
-You can install its binary package via:
-
-```
-    sudo apt-get install rocm-device-libs libc6-dev-i386
-```
-
-In case rocm-device-libs package is not present, or you want to build it
-from source, please refer to 
-[ROCm-Device-Libs build procedure][4] for more details.
-
-Once it's built, run `make install` and config ToT HCC like:
-
-```bash
-cmake \
-    -DCMAKE_BUILD_TYPE=Release \
-    -DHSA_AMDGPU_GPU_TARGET=<AMD GPU ISA version string> \
-    -DROCM_DEVICE_LIB_DIR=<location of the ROCm-Device-Libs bitcode> \
-    <ToT HCC checkout directory>
-```
-
-An example would be:
-```bash
-# Use gfx803 AMD GPU ISA
-# ROCm-Device-Libs is built at ~/ocml/build , bitcodes are at
-# ~/ocml/build/dist/lib
-cmake \
-    -DCMAKE_BUILD_TYPE=Release \
-    -DHSA_AMDGPU_GPU_TARGET=gfx803 \
-    -DROCM_DEVICE_LIB_DIR=~/ocml/build/dist/lib \
-    ..
-```
-
 Multiple ISA
 ============
 
@@ -137,9 +100,5 @@ refer to its [documentation][8].
 [//]: # (References)
 [1]: https://github.com/RadeonOpenCompute/hcc/wiki
 [2]: https://git-scm.com/book/en/v2/Git-Tools-Submodules
-[3]: https://github.com/RadeonOpenCompute/ROCm-Device-Libs
-[4]: https://github.com/RadeonOpenCompute/ROCm-Device-Libs#building
-[5]: https://packages.debian.org/sid/libc++1
-[6]: https://packages.debian.org/sid/libc++-dev
 [7]: https://github.com/RadeonOpenCompute/ROCm-Profiler/tree/master/CXLActivityLogger
 [8]: https://github.com/RadeonOpenCompute/ROCm-Profiler/blob/master/CXLActivityLogger/doc/AMDTActivityLogger.pdf
