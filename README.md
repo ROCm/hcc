@@ -10,8 +10,8 @@ The project is based on LLVM+CLANG. For more information, please visit the
 
 [https://github.com/RadeonOpenCompute/hcc/wiki][1]
 
-Git submodules
-==============
+Download HCC
+============
 The project now employs git submodules to manage external components it depends 
 upon. It it advised to add `--recursive` when you clone the project so all 
 submodules are fetched automatically.
@@ -23,6 +23,52 @@ git clone --recursive -b clang_tot_upgrade https://github.com/RadeonOpenCompute/
 ```
 
 For more information about git submodules, please refer to [git documentation][2].
+
+Build HCC from source
+=====================
+To configure and build HCC from source, use the following steps:
+```bash
+mkdir -p build; cd build
+# NUM_BUILD_THREADS is optional
+# set the number to your CPU core numbers time 2 is recommended
+# in this example we set it to 96
+cmake -DNUM_BUILD_THREADS=96 \
+      -DCMAKE_BUILD_TYPE=Release \
+      ..
+make
+```
+
+To install it, use the following steps:
+```bash
+sudo make install
+```
+
+Use HCC
+=======
+For C++AMP source codes:
+```bash
+hcc `clamp-config --cxxflags --ldflags` foo.cpp
+```
+
+For HC source codes:
+```bash
+hcc `hcc-config --cxxflags --ldflags` foo.cpp
+```
+
+In case you build HCC from source and want to use the compiled binaries
+directly in the build directory:
+
+For C++AMP source codes:
+```bash
+# notice the --build flag
+bin/hcc `bin/clamp-config --build --cxxflags --ldflags` foo.cpp
+```
+
+For HC source codes:
+```bash
+# notice the --build flag
+bin/hcc `bin/hcc-config --build --cxxflags --ldflags` foo.cpp
+```
 
 Multiple ISA
 ============
