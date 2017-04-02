@@ -40,7 +40,7 @@ macro(add_mcwamp_library name )
   add_library( ${name} ${ARGN} )
   amp_target(${name})
   # LLVM and Clang shall be compiled beforehand
-  add_dependencies(${name} llvm-link opt clang)
+  add_dependencies(${name} llvm-link opt clang rocdl)
 endmacro(add_mcwamp_library name )
 
 ####################
@@ -52,7 +52,7 @@ macro(add_mcwamp_library_cpu name )
   add_library( ${name} SHARED ${ARGN} )
   amp_target(${name})
   # LLVM and Clang shall be compiled beforehand
-  add_dependencies(${name} llvm-link opt clang)
+  add_dependencies(${name} llvm-link opt clang rocdl)
 
   if (USE_LIBCXX)  
     target_include_directories(${name} SYSTEM PUBLIC ${LIBCXX_HEADER})
@@ -73,7 +73,7 @@ macro(add_mcwamp_library_hsa name )
   target_include_directories(${name} SYSTEM PUBLIC ${HSA_HEADER})
   amp_target(${name})
   # LLVM and Clang shall be compiled beforehand
-  add_dependencies(${name} llvm-link opt clang hc_am)
+  add_dependencies(${name} llvm-link opt clang hc_am rocdl)
   # add HSA libraries
   target_link_libraries(${name} ${HSA_LIBRARY})
   target_link_libraries(${name} pthread)
@@ -94,7 +94,7 @@ macro(add_mcwamp_library_hc_am name )
   target_include_directories(${name} PRIVATE ${HSA_HEADER})
   amp_target(${name})
   # LLVM and Clang shall be compiled beforehand
-  add_dependencies(${name} llvm-link opt clang)
+  add_dependencies(${name} llvm-link opt clang rocdl)
   # add HSA libraries
   target_link_libraries(${name} ${HSA_LIBRARY})
   target_link_libraries(${name} pthread)

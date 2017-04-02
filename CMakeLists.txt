@@ -111,28 +111,28 @@ endif (NOT HSA_LIBRARY)
 # Detect ROCm Device Libs
 ################
 
-find_path(ROCM_DEVICE_LIB ocml.amdgcn.bc
-  PATH_SUFFIXES
-    lib
-  HINTS
-    ${ROCM_DEVICE_LIB_DIR}
-  PATHS
-    ${ROCM_ROOT}/lib
-)
+#find_path(ROCM_DEVICE_LIB ocml.amdgcn.bc
+# PATH_SUFFIXES
+#    lib
+#  HINTS
+#    ${ROCM_DEVICE_LIB_DIR}
+#  PATHS
+#    ${ROCM_ROOT}/lib
+#)
 
-if (NOT ROCM_DEVICE_LIB)
-  MESSAGE(FATAL_ERROR "ROCm Device Libs not found. Use -DROCM_DEVICE_LIB=<path_to_ocml.amdgcn.bc>.")
-endif (NOT ROCM_DEVICE_LIB)
+#if (NOT ROCM_DEVICE_LIB)
+#  MESSAGE(FATAL_ERROR "ROCm Device Libs not found. Use -DROCM_DEVICE_LIB=<path_to_ocml.amdgcn.bc>.")
+#endif (NOT ROCM_DEVICE_LIB)
 
-set(ROCM_DEVICE_LIB_PATHS ${ROCM_DEVICE_LIB})
-list(APPEND ROCM_DEVICE_LIB_PATHS ${ROCM_DEVICE_LIB_DIR} ${ROCM_ROOT}/lib)
+#set(ROCM_DEVICE_LIB_PATHS ${ROCM_DEVICE_LIB})
+#list(APPEND ROCM_DEVICE_LIB_PATHS ${ROCM_DEVICE_LIB_DIR} ${ROCM_ROOT}/lib)
 
 # display ROCm information
 MESSAGE("")
 MESSAGE("ROCm INFORMATION:")
 MESSAGE("HSA_HEADER_DIR = ${HSA_HEADER_DIR}, actually found at: ${HSA_HEADER}")
 MESSAGE("HSA_LIBRARY_DIR = ${HSA_LIBRARY_DIR}, actually found at: ${HSA_LIBRARY}")
-MESSAGE("ROCM_DEVICE_LIB_DIR = ${ROCM_DEVICE_LIB_DIR}, actually found at: ${ROCM_DEVICE_LIB}")
+#MESSAGE("ROCM_DEVICE_LIB_DIR = ${ROCM_DEVICE_LIB_DIR}, actually found at: ${ROCM_DEVICE_LIB}")
 
 ################
 # Detect CodeXL Activity Logger
@@ -248,11 +248,11 @@ MESSAGE("=============================================")
 # - HSA headers (installed by HSA runtime)
 # - HSA runtime libraries (installed by HSA runtime)
 # - ROCm Device Library
-if ((NOT HSA_HEADER) OR (NOT HSA_LIBRARY) OR (NOT ROCM_DEVICE_LIB))
+if ((NOT HSA_HEADER) OR (NOT HSA_LIBRARY))
   set(HAS_ROCM 0)
-else ((NOT HSA_HEADER) OR (NOT HSA_LIBRARY) OR (NOT ROCM_DEVICE_LIB))
+else ((NOT HSA_HEADER) OR (NOT HSA_LIBRARY))
   set(HAS_ROCM 1)
-endif ((NOT HSA_HEADER) OR (NOT HSA_LIBRARY) OR (NOT ROCM_DEVICE_LIB))
+endif ((NOT HSA_HEADER) OR (NOT HSA_LIBRARY))
 
 if (HAS_ROCM EQUAL 0)
   MESSAGE(FATAL_ERROR "ROCm is NOT available on the system!")
@@ -405,6 +405,81 @@ install(DIRECTORY ${CLANG_SRC_DIR}/include
         PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
 
 add_custom_target(world DEPENDS clang)
+
+
+# build ROCm Device Library
+set(ROCDL_SRC_DIR "${PROJECT_SOURCE_DIR}/rocdl")
+set(ROCDL_BUILD_DIR "${PROJECT_BINARY_DIR}/rocdl")
+file(MAKE_DIRECTORY ${ROCDL_BUILD_DIR})
+add_custom_target(rocdl
+  COMMAND CC=${CLANG_BIN_DIR}/bin/clang  ${CMAKE_COMMAND} ${ROCDL_SRC_DIR}
+          -DLLVM_DIR=${CLANG_BIN_DIR}
+          -DAMDHSACOD=${ROCM_ROOT}/bin/amdhsacod
+          -DGENERIC_IS_ZERO=ON
+  COMMAND make -j ${NUM_BUILD_THREADS} # not portable, but we need it this way
+  WORKING_DIRECTORY ${ROCDL_BUILD_DIR}
+  DEPENDS clang
+)
+
+# FIXME: We have to reset the state of the ROCDL before building
+add_custom_command(TARGET rocdl PRE_BUILD
+  COMMAND git checkout -- .
+  WORKING_DIRECTORY ${ROCDL_SRC_DIR}
+)
+
+file(MAKE_DIRECTORY ${ROCDL_BUILD_DIR}/lib)
+add_custom_command(TARGET rocdl POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ../irif/irif.amdgcn.bc                              irif.amdgcn.bc
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ../opencl/opencl.amdgcn.bc                          opencl.amdgcn.bc
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ../ockl/ockl.amdgcn.bc                              ockl.amdgcn.bc
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ../hc/hc.amdgcn.bc                                  hc.amdgcn.bc
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_isa_version_701.amdgcn.bc              oclc_isa_version_701.amdgcn.bc
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_isa_version_802.amdgcn.bc              oclc_isa_version_802.amdgcn.bc
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_isa_version_810.amdgcn.bc              oclc_isa_version_810.amdgcn.bc
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_finite_only_on.amdgcn.bc               oclc_finite_only_on.amdgcn.bc
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_isa_version_900.amdgcn.bc              oclc_isa_version_900.amdgcn.bc
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_finite_only_off.amdgcn.bc              oclc_finite_only_off.amdgcn.bc
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_isa_version_801.amdgcn.bc              oclc_isa_version_801.amdgcn.bc
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_isa_version_700.amdgcn.bc              oclc_isa_version_700.amdgcn.bc
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_daz_opt_on.amdgcn.bc                   oclc_daz_opt_on.amdgcn.bc
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_unsafe_math_off.amdgcn.bc              oclc_unsafe_math_off.amdgcn.bc
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_isa_version_800.amdgcn.bc              oclc_isa_version_800.amdgcn.bc
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_daz_opt_off.amdgcn.bc                  oclc_daz_opt_off.amdgcn.bc
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_unsafe_math_on.amdgcn.bc               oclc_unsafe_math_on.amdgcn.bc
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_correctly_rounded_sqrt_off.amdgcn.bc   oclc_correctly_rounded_sqrt_off.amdgcn.bc
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_isa_version_803.amdgcn.bc              oclc_isa_version_803.amdgcn.bc
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_correctly_rounded_sqrt_on.amdgcn.bc    oclc_correctly_rounded_sqrt_on.amdgcn.bc
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_isa_version_901.amdgcn.bc              oclc_isa_version_901.amdgcn.bc
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_isa_version_804.amdgcn.bc              oclc_isa_version_804.amdgcn.bc
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ../ocml/ocml.amdgcn.bc                              ocml.amdgcn.bc
+  WORKING_DIRECTORY ${ROCDL_BUILD_DIR}/lib
+)
+
+# install ROCm Device Library in hcc
+install(DIRECTORY ${ROCDL_BUILD_DIR}
+        COMPONENT rocdl
+        DESTINATION ${CMAKE_INSTALL_PREFIX}
+        PATTERN CMake* EXCLUDE
+        PATTERN CPack* EXCLUDE
+        PATTERN *.cmake EXCLUDE
+        PATTERN Makefile EXCLUDE
+        PATTERN test EXCLUDE
+        PATTERN cuda2gcn EXCLUDE
+        PATTERN *.lib.bc EXCLUDE
+        PATTERN src EXCLUDE
+        PATTERN CMakeFiles EXCLUDE
+        PATTERN utils EXCLUDE
+        #PATTERN * PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
+        )
+
+
+# create search paths for ROCDL
+list(APPEND ROCM_DEVICE_LIB_PATHS ${ROCDL_BUILD_DIR}/lib)
+IF (NOT CPACK_SET_DESTDIR)
+  list(APPEND ROCM_DEVICE_LIB_PATHS ${CPACK_PACKAGING_INSTALL_PREFIX}/rocdl/lib)
+ENDIF(NOT CPACK_SET_DESTDIR)
+list(APPEND ROCM_DEVICE_LIB_PATHS ${CMAKE_INSTALL_PREFIX}/rocdl/lib)
+
 
 add_subdirectory(hcc_config)
 add_subdirectory(lib)
