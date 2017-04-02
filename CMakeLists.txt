@@ -1,6 +1,8 @@
 cmake_minimum_required( VERSION 3.0 )
 project (HCC)
 
+include(GNUInstallDirs)
+
 SET(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/scripts/cmake")
 MESSAGE("Module path: ${CMAKE_MODULE_PATH}")
 
@@ -106,33 +108,53 @@ if (NOT HSA_LIBRARY)
   MESSAGE("HSA runtime library not found. Use -DHSA_LIBRARY=<path_to_libhsa-runtime64.so>.")
 endif (NOT HSA_LIBRARY)
 
+add_library(hsa-runtime64 SHARED IMPORTED GLOBAL)
+
+set_target_properties(hsa-runtime64 PROPERTIES
+  INTERFACE_INCLUDE_DIRECTORIES "${HSA_HEADER}"
+  IMPORTED_LOCATION "${HSA_LIBRARY}"
+  INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${HSA_HEADER}"
+)
 
 ################
 # Detect ROCm Device Libs
 ################
 
-#find_path(ROCM_DEVICE_LIB ocml.amdgcn.bc
-# PATH_SUFFIXES
-#    lib
-#  HINTS
-#    ${ROCM_DEVICE_LIB_DIR}
-#  PATHS
-#    ${ROCM_ROOT}/lib
-#)
+option(HCC_INTEGRATE_ROCDL "Build and use the ROCm Device Library integrated into HCC (Recommended)" ON)
 
-#if (NOT ROCM_DEVICE_LIB)
-#  MESSAGE(FATAL_ERROR "ROCm Device Libs not found. Use -DROCM_DEVICE_LIB=<path_to_ocml.amdgcn.bc>.")
-#endif (NOT ROCM_DEVICE_LIB)
+if (NOT HCC_INTEGRATE_ROCDL)
 
-#set(ROCM_DEVICE_LIB_PATHS ${ROCM_DEVICE_LIB})
-#list(APPEND ROCM_DEVICE_LIB_PATHS ${ROCM_DEVICE_LIB_DIR} ${ROCM_ROOT}/lib)
+  # If not using the integrated ROCm Device Library,
+  # then the one installed on the system
+  # or provided by a user
+  find_path(ROCM_DEVICE_LIB ocml.amdgcn.bc
+    PATH_SUFFIXES
+      lib
+    HINTS
+      ${ROCM_DEVICE_LIB_DIR}
+    PATHS
+      ${ROCM_ROOT}/lib
+  )
+
+  if (NOT ROCM_DEVICE_LIB)
+    MESSAGE(FATAL_ERROR "ROCm Device Libs not found. Use -DROCM_DEVICE_LIB=<path_to_ocml.amdgcn.bc>.")
+  endif (NOT ROCM_DEVICE_LIB)
+
+  set(ROCM_DEVICE_LIB_PATHS ${ROCM_DEVICE_LIB})
+  list(APPEND ROCM_DEVICE_LIB_PATHS ${ROCM_DEVICE_LIB_DIR} ${ROCM_ROOT}/lib)
+endif(NOT HCC_INTEGRATE_ROCDL)
 
 # display ROCm information
 MESSAGE("")
 MESSAGE("ROCm INFORMATION:")
 MESSAGE("HSA_HEADER_DIR = ${HSA_HEADER_DIR}, actually found at: ${HSA_HEADER}")
 MESSAGE("HSA_LIBRARY_DIR = ${HSA_LIBRARY_DIR}, actually found at: ${HSA_LIBRARY}")
-#MESSAGE("ROCM_DEVICE_LIB_DIR = ${ROCM_DEVICE_LIB_DIR}, actually found at: ${ROCM_DEVICE_LIB}")
+
+if (HCC_INTEGRATE_ROCDL)
+  MESSAGE("ROCM_DEVICE_LIB_DIR = ${PROJECT_SOURCE_DIR}/rocdl")
+else (HCC_INTEGRATE_ROCDL)
+  MESSAGE("ROCM_DEVICE_LIB_DIR = ${ROCM_DEVICE_LIB_DIR}, actually found at: ${ROCM_DEVICE_LIB}")
+endif (HCC_INTEGRATE_ROCDL)
 
 ################
 # Detect CodeXL Activity Logger
@@ -232,8 +254,16 @@ if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT AND CMAKE_INSTALL_PREFIX MATCHES
   set(INSTALL_DIR_NAME "hcc-${KALMAR_VERSION_MAJOR}.${KALMAR_VERSION_MINOR}")
   set(CMAKE_INSTALL_PREFIX "/opt/rocm/${INSTALL_DIR_NAME}" CACHE PATH "Default installation path of hcc" FORCE)
 endif ()
-MESSAGE("Package installation path: ${CMAKE_INSTALL_PREFIX}")
+MESSAGE("Installation path: ${CMAKE_INSTALL_PREFIX}")
 
+# set the installation path for the installer package
+set(CPACK_SET_DESTDIR ON CACHE BOOL "Installer package will install hcc to CMAKE_INSTALL_PREFIX instead of CPACK_PACKAGING_INSTALL_PREFIX")
+if (CPACK_SET_DESTDIR)
+  set(HCC_PACKAGE_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX})
+else (CPACK_SET_DESTDIR)
+  set(HCC_PACKAGE_INSTALL_PREFIX ${CPACK_PACKAGING_INSTALL_PREFIX})
+endif (CPACK_SET_DESTDIR)
+MESSAGE("Installer package installation path: ${HCC_PACKAGE_INSTALL_PREFIX}")
 
 # show HCC version string
 MESSAGE("=============================================")
@@ -281,30 +311,8 @@ foreach(long_form IN LISTS tmp)
   list(APPEND HSA_AMDGPU_GPU_TARGET ${short_form})
 endforeach()
 
-# Map to LC-consumable name.
-foreach(AMDGPU_GPU_TARGET IN LISTS HSA_AMDGPU_GPU_TARGET)
-  # AMDGPU_TARGET_LIST holds the values which are used by the compiler scripts.
-  if (AMDGPU_GPU_TARGET STREQUAL "gfx700")
-    list(APPEND AMDGPU_TARGET_LIST "kaveri")
-  elseif (AMDGPU_GPU_TARGET STREQUAL "gfx701")
-    list(APPEND AMDGPU_TARGET_LIST "hawaii")
-  elseif (AMDGPU_GPU_TARGET STREQUAL "gfx801")
-    list(APPEND AMDGPU_TARGET_LIST "carrizo")
-  elseif (AMDGPU_GPU_TARGET STREQUAL "gfx802")
-    list(APPEND AMDGPU_TARGET_LIST "tonga")
-  elseif (AMDGPU_GPU_TARGET STREQUAL "gfx803")
-    list(APPEND AMDGPU_TARGET_LIST "fiji")
-  elseif (AMDGPU_GPU_TARGET STREQUAL "gfx900")
-    list(APPEND AMDGPU_TARGET_LIST "gfx900")
-  elseif (AMDGPU_GPU_TARGET STREQUAL "gfx901")
-    list(APPEND AMDGPU_TARGET_LIST "gfx901")
-  else ()
-    message(FATAL_ERROR "${AMDGPU_GPU_TARGET} is not a valid AMDPU target!")
-  endif ()
-endforeach(AMDGPU_GPU_TARGET)
-
 # join list
-string(REPLACE ";" " " AMDGPU_TARGET "${AMDGPU_TARGET_LIST}")
+string(REPLACE ";" " " AMDGPU_TARGET "${HSA_AMDGPU_GPU_TARGET}")
 MESSAGE(STATUS "HCC configured with AMDGPU targets: ${AMDGPU_TARGET}")
 
 #################
@@ -381,14 +389,23 @@ install(DIRECTORY ${CLANG_BIN_DIR}/lib
         PATTERN *tmp EXCLUDE
         PATTERN *inc EXCLUDE
         PATTERN Makefile EXCLUDE
-        PATTERN *.cmake EXCLUDE
         PATTERN *.a EXCLUDE
         PATTERN lib*
         PATTERN LLVM*
         PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 
+# install certain LLVM libraries needed by HIP
+install(FILES  ${CLANG_BIN_DIR}/lib/libLLVMAMDGPUDesc.a
+               ${CLANG_BIN_DIR}/lib/libLLVMAMDGPUUtils.a
+               ${CLANG_BIN_DIR}/lib/libLLVMMC.a
+               ${CLANG_BIN_DIR}/lib/libLLVMCore.a
+               ${CLANG_BIN_DIR}/lib/libLLVMSupport.a
+        DESTINATION compiler/lib
+        COMPONENT compiler
+        PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+
 install(FILES ${CLANG_BIN_DIR}/lib/clang/5.0.0/lib/linux/libclang_rt.builtins-x86_64.a
-        DESTINATION  lib
+        DESTINATION  ${CMAKE_INSTALL_LIBDIR}
         COMPONENT compiler)
 
 install(DIRECTORY ${CLANG_BIN_DIR}/include
@@ -407,79 +424,83 @@ install(DIRECTORY ${CLANG_SRC_DIR}/include
 add_custom_target(world DEPENDS clang)
 
 
-# build ROCm Device Library
-set(ROCDL_SRC_DIR "${PROJECT_SOURCE_DIR}/rocdl")
-set(ROCDL_BUILD_DIR "${PROJECT_BINARY_DIR}/rocdl")
-file(MAKE_DIRECTORY ${ROCDL_BUILD_DIR})
-add_custom_target(rocdl
-  COMMAND CC=${CLANG_BIN_DIR}/bin/clang  ${CMAKE_COMMAND} ${ROCDL_SRC_DIR}
-          -DLLVM_DIR=${CLANG_BIN_DIR}
-          -DAMDHSACOD=${ROCM_ROOT}/bin/amdhsacod
-          -DGENERIC_IS_ZERO=ON
-  COMMAND make -j ${NUM_BUILD_THREADS} # not portable, but we need it this way
-  WORKING_DIRECTORY ${ROCDL_BUILD_DIR}
-  DEPENDS clang
-)
+# build the integrated ROCm Device Library
 
-# FIXME: We have to reset the state of the ROCDL before building
-add_custom_command(TARGET rocdl PRE_BUILD
-  COMMAND git checkout -- .
-  WORKING_DIRECTORY ${ROCDL_SRC_DIR}
-)
+if (HCC_INTEGRATE_ROCDL)
 
-file(MAKE_DIRECTORY ${ROCDL_BUILD_DIR}/lib)
-add_custom_command(TARGET rocdl POST_BUILD
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ../irif/irif.amdgcn.bc                              irif.amdgcn.bc
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ../opencl/opencl.amdgcn.bc                          opencl.amdgcn.bc
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ../ockl/ockl.amdgcn.bc                              ockl.amdgcn.bc
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ../hc/hc.amdgcn.bc                                  hc.amdgcn.bc
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_isa_version_701.amdgcn.bc              oclc_isa_version_701.amdgcn.bc
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_isa_version_802.amdgcn.bc              oclc_isa_version_802.amdgcn.bc
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_isa_version_810.amdgcn.bc              oclc_isa_version_810.amdgcn.bc
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_finite_only_on.amdgcn.bc               oclc_finite_only_on.amdgcn.bc
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_isa_version_900.amdgcn.bc              oclc_isa_version_900.amdgcn.bc
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_finite_only_off.amdgcn.bc              oclc_finite_only_off.amdgcn.bc
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_isa_version_801.amdgcn.bc              oclc_isa_version_801.amdgcn.bc
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_isa_version_700.amdgcn.bc              oclc_isa_version_700.amdgcn.bc
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_daz_opt_on.amdgcn.bc                   oclc_daz_opt_on.amdgcn.bc
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_unsafe_math_off.amdgcn.bc              oclc_unsafe_math_off.amdgcn.bc
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_isa_version_800.amdgcn.bc              oclc_isa_version_800.amdgcn.bc
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_daz_opt_off.amdgcn.bc                  oclc_daz_opt_off.amdgcn.bc
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_unsafe_math_on.amdgcn.bc               oclc_unsafe_math_on.amdgcn.bc
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_correctly_rounded_sqrt_off.amdgcn.bc   oclc_correctly_rounded_sqrt_off.amdgcn.bc
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_isa_version_803.amdgcn.bc              oclc_isa_version_803.amdgcn.bc
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_correctly_rounded_sqrt_on.amdgcn.bc    oclc_correctly_rounded_sqrt_on.amdgcn.bc
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_isa_version_901.amdgcn.bc              oclc_isa_version_901.amdgcn.bc
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_isa_version_804.amdgcn.bc              oclc_isa_version_804.amdgcn.bc
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ../ocml/ocml.amdgcn.bc                              ocml.amdgcn.bc
-  WORKING_DIRECTORY ${ROCDL_BUILD_DIR}/lib
-)
+  set(ROCDL_SRC_DIR "${PROJECT_SOURCE_DIR}/rocdl")
+  set(ROCDL_BUILD_DIR "${PROJECT_BINARY_DIR}/rocdl")
+  file(MAKE_DIRECTORY ${ROCDL_BUILD_DIR})
 
-# install ROCm Device Library in hcc
-install(DIRECTORY ${ROCDL_BUILD_DIR}
-        COMPONENT rocdl
-        DESTINATION ${CMAKE_INSTALL_PREFIX}
-        PATTERN CMake* EXCLUDE
-        PATTERN CPack* EXCLUDE
-        PATTERN *.cmake EXCLUDE
-        PATTERN Makefile EXCLUDE
-        PATTERN test EXCLUDE
-        PATTERN cuda2gcn EXCLUDE
-        PATTERN *.lib.bc EXCLUDE
-        PATTERN src EXCLUDE
-        PATTERN CMakeFiles EXCLUDE
-        PATTERN utils EXCLUDE
-        #PATTERN * PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
-        )
+  # custom commands to build rocdl
+  add_custom_target(rocdl
+    COMMAND CC=${CLANG_BIN_DIR}/bin/clang  ${CMAKE_COMMAND} ${ROCDL_SRC_DIR}
+            -DLLVM_DIR=${CLANG_BIN_DIR}
+            -DAMDHSACOD=${ROCM_ROOT}/bin/amdhsacod
+            -DGENERIC_IS_ZERO=ON
+    COMMAND make -j ${NUM_BUILD_THREADS} # not portable, but we need it this way
+    WORKING_DIRECTORY ${ROCDL_BUILD_DIR}
+    DEPENDS clang
+  )
 
+  # FIXME: We have to reset the state of the ROCDL before building
+  add_custom_command(TARGET rocdl PRE_BUILD
+    COMMAND git checkout -- .
+    WORKING_DIRECTORY ${ROCDL_SRC_DIR}
+  )
 
-# create search paths for ROCDL
-list(APPEND ROCM_DEVICE_LIB_PATHS ${ROCDL_BUILD_DIR}/lib)
-IF (NOT CPACK_SET_DESTDIR)
-  list(APPEND ROCM_DEVICE_LIB_PATHS ${CPACK_PACKAGING_INSTALL_PREFIX}/rocdl/lib)
-ENDIF(NOT CPACK_SET_DESTDIR)
-list(APPEND ROCM_DEVICE_LIB_PATHS ${CMAKE_INSTALL_PREFIX}/rocdl/lib)
+  file(MAKE_DIRECTORY ${ROCDL_BUILD_DIR}/lib)
+  add_custom_command(TARGET rocdl POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E create_symlink ../irif/irif.amdgcn.bc                              irif.amdgcn.bc
+    COMMAND ${CMAKE_COMMAND} -E create_symlink ../opencl/opencl.amdgcn.bc                          opencl.amdgcn.bc
+    COMMAND ${CMAKE_COMMAND} -E create_symlink ../ockl/ockl.amdgcn.bc                              ockl.amdgcn.bc
+    COMMAND ${CMAKE_COMMAND} -E create_symlink ../hc/hc.amdgcn.bc                                  hc.amdgcn.bc
+    COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_isa_version_701.amdgcn.bc              oclc_isa_version_701.amdgcn.bc
+    COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_isa_version_802.amdgcn.bc              oclc_isa_version_802.amdgcn.bc
+    COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_isa_version_810.amdgcn.bc              oclc_isa_version_810.amdgcn.bc
+    COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_finite_only_on.amdgcn.bc               oclc_finite_only_on.amdgcn.bc
+    COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_isa_version_900.amdgcn.bc              oclc_isa_version_900.amdgcn.bc
+    COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_finite_only_off.amdgcn.bc              oclc_finite_only_off.amdgcn.bc
+    COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_isa_version_801.amdgcn.bc              oclc_isa_version_801.amdgcn.bc
+    COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_isa_version_700.amdgcn.bc              oclc_isa_version_700.amdgcn.bc
+    COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_daz_opt_on.amdgcn.bc                   oclc_daz_opt_on.amdgcn.bc
+    COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_unsafe_math_off.amdgcn.bc              oclc_unsafe_math_off.amdgcn.bc
+    COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_isa_version_800.amdgcn.bc              oclc_isa_version_800.amdgcn.bc
+    COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_daz_opt_off.amdgcn.bc                  oclc_daz_opt_off.amdgcn.bc
+    COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_unsafe_math_on.amdgcn.bc               oclc_unsafe_math_on.amdgcn.bc
+    COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_correctly_rounded_sqrt_off.amdgcn.bc   oclc_correctly_rounded_sqrt_off.amdgcn.bc
+    COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_isa_version_803.amdgcn.bc              oclc_isa_version_803.amdgcn.bc
+    COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_correctly_rounded_sqrt_on.amdgcn.bc    oclc_correctly_rounded_sqrt_on.amdgcn.bc
+    COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_isa_version_901.amdgcn.bc              oclc_isa_version_901.amdgcn.bc
+    COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_isa_version_804.amdgcn.bc              oclc_isa_version_804.amdgcn.bc
+    COMMAND ${CMAKE_COMMAND} -E create_symlink ../ocml/ocml.amdgcn.bc                              ocml.amdgcn.bc
+    WORKING_DIRECTORY ${ROCDL_BUILD_DIR}/lib
+  )
 
+  # install ROCm Device Library in hcc
+  install(DIRECTORY ${ROCDL_BUILD_DIR}
+          COMPONENT rocdl
+          DESTINATION ${CMAKE_INSTALL_PREFIX}
+          PATTERN CMake* EXCLUDE
+          PATTERN CPack* EXCLUDE
+          PATTERN *.cmake EXCLUDE
+          PATTERN Makefile EXCLUDE
+          PATTERN test EXCLUDE
+          PATTERN cuda2gcn EXCLUDE
+          PATTERN *.lib.bc EXCLUDE
+          PATTERN src EXCLUDE
+          PATTERN CMakeFiles EXCLUDE
+          PATTERN utils EXCLUDE
+          )
+
+  # create search paths for ROCDL
+  list(APPEND ROCM_DEVICE_LIB_PATHS ${ROCDL_BUILD_DIR}/lib)
+  if (NOT CPACK_SET_DESTDIR)
+    list(APPEND ROCM_DEVICE_LIB_PATHS ${CPACK_PACKAGING_INSTALL_PREFIX}/rocdl/lib)
+  endif(NOT CPACK_SET_DESTDIR)
+  list(APPEND ROCM_DEVICE_LIB_PATHS ${CMAKE_INSTALL_PREFIX}/rocdl/lib)
+
+endif(HCC_INTEGRATE_ROCDL)
 
 add_subdirectory(hcc_config)
 add_subdirectory(lib)
@@ -521,20 +542,18 @@ set(DEBIAN_EXTRA_SCRIPT_SOURCE_DIR "${PROJECT_SOURCE_DIR}/packaging/debian")
 set(DEBIAN_EXTRA_SCRIPT_DEST_DIR "${PROJECT_BINARY_DIR}/packaging/debian")
 file(MAKE_DIRECTORY ${DEBIAN_EXTRA_SCRIPT_DEST_DIR})
 
-execute_process(COMMAND ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/process_packaging_script.bsh ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/postinst.in  ${DEBIAN_EXTRA_SCRIPT_DEST_DIR}/postinst ${CPACK_PACKAGE_NAME} ${CMAKE_INSTALL_PREFIX}
+execute_process(COMMAND ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/process_packaging_script.bsh ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/postinst.in  ${DEBIAN_EXTRA_SCRIPT_DEST_DIR}/postinst ${CPACK_PACKAGE_NAME} ${HCC_PACKAGE_INSTALL_PREFIX} ${CMAKE_INSTALL_LIBDIR}
                 WORKING_DIRECTORY ${PROJECT_BINARY_DIR})
 
-execute_process(COMMAND ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/process_packaging_script.bsh ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/prerm.in  ${DEBIAN_EXTRA_SCRIPT_DEST_DIR}/prerm ${CPACK_PACKAGE_NAME} ${CMAKE_INSTALL_PREFIX}
+execute_process(COMMAND ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/process_packaging_script.bsh ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/prerm.in  ${DEBIAN_EXTRA_SCRIPT_DEST_DIR}/prerm ${CPACK_PACKAGE_NAME} ${HCC_PACKAGE_INSTALL_PREFIX} ${CMAKE_INSTALL_LIBDIR}
                 WORKING_DIRECTORY ${PROJECT_BINARY_DIR})
 
-set(CPACK_SET_DESTDIR TRUE)
-set(CPACK_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX})
 set(CPACK_PACKAGE_VENDOR "Advanced Micro Devices, Inc")
 set(CPACK_PACKAGE_VERSION "${KALMAR_VERSION_MAJOR}.${KALMAR_VERSION_MINOR}.${KALMAR_VERSION_PATCH}")
 set(CPACK_PACKAGE_VERSION_MAJOR ${KALMAR_VERSION_MAJOR})
 set(CPACK_PACKAGE_VERSION_MINOR ${KALMAR_VERSION_MINOR})
 set(CPACK_PACKAGE_VERSION_PATCH ${KALMAR_VERSION_PATCH})
-set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${DISTRO_ID})
+set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION})
 
 if( USE_LIBCXX )
   set( CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_FILE_NAME}-libc++" )
@@ -546,50 +565,66 @@ set(PACKAGE_DESCRIPTION "HCC: An Open Source, Optimizing C++ Compiler for Hetero
 
 set(OFFICIAL_RELEASE_BUILD 0)
 
-if( "${DISTRO_ID}" MATCHES "ubuntu" )
+option(CPACK_GENERATOR "Specify the installer package generator")
 
-  set(CPACK_DEBIAN_PACKAGE_DESCRIPTION ${PACKAGE_DESCRIPTION})
-  set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Siu Chi Chan <siuchi.chan@amd.com>")
-  set(CPACK_DEBIAN_PACKAGE_SECTION "devel")
+# If no CPACK generator was specified, then set the default generator according to the distro 
+if (NOT CPACK_GENERATOR)
+    if ( "${DISTRO_ID}" MATCHES "ubuntu" )
+    set(CPACK_GENERATOR "DEB")
+  elseif ("${DISTRO_ID}" MATCHES "fedora")
+    set(CPACK_GENERATOR "RPM")
+  else ()
+    # generate a tarball for unknown DISTRO_ID
+    set(CPACK_GENERATOR "TGZ")
+  endif ()
+endif (NOT CPACK_GENERATOR)
 
-  set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA
-    "${PROJECT_BINARY_DIR}/packaging/debian/postinst;${PROJECT_BINARY_DIR}/packaging/debian/prerm")
 
-  #set(HCC_GENERAL_DEBIAN_DEP "libstdc++-dev, libc++1, libc++-dev, libc++abi1, libc++abi-dev, elfutils")
+# DEB package settings
+set(CPACK_DEBIAN_PACKAGE_DESCRIPTION ${PACKAGE_DESCRIPTION})
+set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Siu Chi Chan <siuchi.chan@amd.com>")
+set(CPACK_DEBIAN_PACKAGE_SECTION "devel")
 
-  # control the list of package dependency depending on whether this is an official release build.
-  # for non-official release build, we want to relax the dependency on rocr runtime
-  if (OFFICIAL_RELEASE_BUILD)
-    set(HCC_ROCR_DEBIAN_DEP "hsa-rocr-dev, hsa-ext-rocr-dev, rocm-device-libs")
-    set(CPACK_DEBIAN_PACKAGE_DEPENDS "${HCC_ROCR_DEBIAN_DEP}, ${HCC_GENERAL_DEBIAN_DEP}")
-  else (OFFICIAL_RELEASE_BUILD)
-    # dependencies for any local build
-    set(CPACK_DEBIAN_PACKAGE_DEPENDS "${HCC_GENERAL_DEBIAN_DEP}")
-  endif (OFFICIAL_RELEASE_BUILD)
+set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA
+  "${PROJECT_BINARY_DIR}/packaging/debian/postinst;${PROJECT_BINARY_DIR}/packaging/debian/prerm")
 
-  set(CPACK_GENERATOR "DEB")
-  set(CPACK_BINARY_DEB "ON")
-elseif ("${DISTRO_ID}" MATCHES "fedora")
+set(HCC_GENERAL_DEBIAN_DEP "g++-multilib, gcc-multilib, findutils, libelf1, libpci3, file")
 
-  set(CPACK_RPM_PACKAGE_DESCRIPTION ${PACKAGE_DESCRIPTION})
-  set(CPACK_RPM_POST_INSTALL_SCRIPT_FILE "${PROJECT_BINARY_DIR}/packaging/debian/postinst")
-  set(CPACK_RPM_PRE_UNINSTALL_SCRIPT_FILE "${PROJECT_BINARY_DIR}/packaging/debian/prerm")
+if ( USE_LIBCXX )
+  set(HCC_LIBCXX_DEBIAN_DEP ", libc++1, libc++-dev, libc++abi1, libc++abi-dev")
+else ( USE_LIBCXX )
+  set(HCC_LIBCXX_DEBIAN_DEP "")
+endif( USE_LIBCXX )
 
-  # disable automatic shared libraries dependency detection
-  set(CPACK_RPM_PACKAGE_AUTOREQ 0)
-  set(CPACK_RPM_PACKAGE_REQUIRES "hsakmt-roct-dev, hsa-rocr-dev, rocm-device-libs, libstdc++-devel, elfutils-libelf-devel, glibc-devel")
-  set(CPACK_GENERATOR "RPM")
-else()
-  # generate a tarball for unknown DISTRO_ID
-  set(CPACK_GENERATOR "TGZ")
-endif ()
+# control the list of package dependency depending on whether this is an official release build.
+# for non-official release build, we want to relax the dependency on rocr runtime
+if (OFFICIAL_RELEASE_BUILD)
+  set(HCC_ROCR_DEBIAN_DEP ", hsa-rocr-dev, hsa-ext-rocr-dev, rocm-device-libs")
+else (OFFICIAL_RELEASE_BUILD)
+  set(HCC_ROCR_DEBIAN_DEP "")
+endif (OFFICIAL_RELEASE_BUILD)
 
-set(CPACK_SOURCE_GENERATOR "TGZ")
-set(CPACK_BINARY_STGZ "OFF")
-set(CPACK_SOURCE_TGZ "OFF")
-set(CPACK_SOURCE_TZ "OFF")
-set(CPACK_SOURCE_TBZ2 "OFF")
-set(CPACK_BINARY_TZ "OFF")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "${HCC_GENERAL_DEBIAN_DEP} ${HCC_ROCR_DEBIAN_DEP} ${HCC_LIBCXX_DEBIAN_DEP}")
+
+
+# RPM package settings
+set(CPACK_RPM_PACKAGE_DESCRIPTION ${PACKAGE_DESCRIPTION})
+set(CPACK_RPM_POST_INSTALL_SCRIPT_FILE "${PROJECT_BINARY_DIR}/packaging/debian/postinst")
+set(CPACK_RPM_PRE_UNINSTALL_SCRIPT_FILE "${PROJECT_BINARY_DIR}/packaging/debian/prerm")
+
+# disable automatic shared libraries dependency detection
+set(CPACK_RPM_PACKAGE_AUTOREQ 0)
+
+set(HCC_GENERAL_RPM_DEP "findutils, elfutils-libelf, pciutils-libs, file, pth")
+
+if (OFFICIAL_RELEASE_BUILD)
+  set(HCC_ROCR_RPM_DEP ", hsa-rocr-dev, hsa-ext-rocr-dev, rocm-device-libs")
+else (OFFICIAL_RELEASE_BUILD)
+  set(HCC_ROCR_RPM_DEP "")
+endif (OFFICIAL_RELEASE_BUILD)
+
+set(CPACK_RPM_PACKAGE_REQUIRES "${HCC_GENERAL_RPM_DEP} ${HCC_ROCR_RPM_DEP}" )
+
 
 set(CPACK_COMPONENTS_ALL compiler)
 
