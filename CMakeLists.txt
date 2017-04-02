@@ -599,13 +599,16 @@ endif( USE_LIBCXX )
 # control the list of package dependency depending on whether this is an official release build.
 # for non-official release build, we want to relax the dependency on rocr runtime
 if (OFFICIAL_RELEASE_BUILD)
-  set(HCC_ROCR_DEBIAN_DEP ", hsa-rocr-dev, hsa-ext-rocr-dev, rocm-device-libs")
+  if (HCC_INTEGRATE_ROCDL)
+    set(HCC_ROCR_DEP ", hsa-rocr-dev, hsa-ext-rocr-dev")
+  else (NOT HCC_INTEGRATE_ROCDL)
+    set(HCC_ROCR_DEP ", hsa-rocr-dev, hsa-ext-rocr-dev, rocm-device-libs")
+  endif(NOT HCC_INTEGRATE_ROCDL)
 else (OFFICIAL_RELEASE_BUILD)
-  set(HCC_ROCR_DEBIAN_DEP "")
+  set(HCC_ROCR_DEP "")
 endif (OFFICIAL_RELEASE_BUILD)
 
-set(CPACK_DEBIAN_PACKAGE_DEPENDS "${HCC_GENERAL_DEBIAN_DEP} ${HCC_ROCR_DEBIAN_DEP} ${HCC_LIBCXX_DEBIAN_DEP}")
-
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "${HCC_GENERAL_DEBIAN_DEP} ${HCC_ROCR_DEP} ${HCC_LIBCXX_DEBIAN_DEP}")
 
 # RPM package settings
 set(CPACK_RPM_PACKAGE_DESCRIPTION ${PACKAGE_DESCRIPTION})
@@ -616,15 +619,7 @@ set(CPACK_RPM_PRE_UNINSTALL_SCRIPT_FILE "${PROJECT_BINARY_DIR}/packaging/debian/
 set(CPACK_RPM_PACKAGE_AUTOREQ 0)
 
 set(HCC_GENERAL_RPM_DEP "findutils, elfutils-libelf, pciutils-libs, file, pth")
-
-if (OFFICIAL_RELEASE_BUILD)
-  set(HCC_ROCR_RPM_DEP ", hsa-rocr-dev, hsa-ext-rocr-dev, rocm-device-libs")
-else (OFFICIAL_RELEASE_BUILD)
-  set(HCC_ROCR_RPM_DEP "")
-endif (OFFICIAL_RELEASE_BUILD)
-
-set(CPACK_RPM_PACKAGE_REQUIRES "${HCC_GENERAL_RPM_DEP} ${HCC_ROCR_RPM_DEP}" )
-
+set(CPACK_RPM_PACKAGE_REQUIRES "${HCC_GENERAL_RPM_DEP} ${HCC_ROCR_DEP}" )
 
 set(CPACK_COMPONENTS_ALL compiler)
 
