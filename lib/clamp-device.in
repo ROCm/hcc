@@ -147,19 +147,19 @@ fi
 HCC_EXTRA_ARCH_FILE=""
 
 # select appropriate ROCm-Device-Libs per AMDGPU_TARGET
-if [ $AMDGPU_TARGET == "kaveri" ]; then
+if [ $AMDGPU_TARGET == "gfx700" ]; then
   OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_700.amdgcn.bc"
   HCC_EXTRA_ARCH_FILE=$HCC_EXTRA_LIBRARIES_GFX700
-elif [ $AMDGPU_TARGET == "hawaii" ]; then
+elif [ $AMDGPU_TARGET == "gfx701" ]; then
   OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_701.amdgcn.bc"
   HCC_EXTRA_ARCH_FILE=$HCC_EXTRA_LIBRARIES_GFX701
-elif [ $AMDGPU_TARGET == "carrizo" ]; then
+elif [ $AMDGPU_TARGET == "gfx801" ]; then
   OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_801.amdgcn.bc"
   HCC_EXTRA_ARCH_FILE=$HCC_EXTRA_LIBRARIES_GFX801
-elif [ $AMDGPU_TARGET == "tonga" ]; then
+elif [ $AMDGPU_TARGET == "gfx802" ]; then
   OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_802.amdgcn.bc"
   HCC_EXTRA_ARCH_FILE=$HCC_EXTRA_LIBRARIES_GFX802
-elif [ $AMDGPU_TARGET == "fiji" ]; then
+elif [ $AMDGPU_TARGET == "gfx803" ]; then
   OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_803.amdgcn.bc"
   HCC_EXTRA_ARCH_FILE=$HCC_EXTRA_LIBRARIES_GFX803
 elif [ $AMDGPU_TARGET == "gfx900" ]; then

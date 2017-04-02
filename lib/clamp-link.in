@@ -327,23 +327,10 @@ if [ -n "$HCC_AMDGPU_TARGET" ]; then
   IFS=','
   HCC_AMDGPU_TARGET_TOKENS=($HCC_AMDGPU_TARGET)
   unset IFS
-
   # parse individual token, override AMDGPU_TARGET_ARRAY
   iter=0
   for HCC_AMDGPU_TARGET_TOKEN in ${HCC_AMDGPU_TARGET_TOKENS[@]}; do
-    # map ISA version string to GPU family
-    if [ "$HCC_AMDGPU_TARGET_TOKEN" = "gfx701" ]; then
-      AMDGPU_TARGET_ARRAY[$iter]="hawaii"
-    elif [ "$HCC_AMDGPU_TARGET_TOKEN" = "gfx801" ]; then
-      AMDGPU_TARGET_ARRAY[$iter]="carrizo"
-    elif [ "$HCC_AMDGPU_TARGET_TOKEN" = "gfx802" ]; then
-      AMDGPU_TARGET_ARRAY[$iter]="tonga"
-    elif [ "$HCC_AMDGPU_TARGET_TOKEN" = "gfx803" ]; then
-      AMDGPU_TARGET_ARRAY[$iter]="fiji"
-    else
-      # not mappable, simply pass to backend and wish it accepts
-      AMDGPU_TARGET_ARRAY[$iter]=$HCC_AMDGPU_TARGET
-    fi
+    AMDGPU_TARGET_ARRAY[$iter]=$HCC_AMDGPU_TARGET
     ((iter++))
   done
 fi

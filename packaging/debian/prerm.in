@@ -4,22 +4,23 @@ set -e
 
 PACKAGE_NAME=@PACKAGE_NAME@
 INSTALL_PATH=@INSTALL_PATH@
+LIBRARY_DIR=@LIBRARY_DIR@
 
 ROCM_PATH="/opt/rocm"
 
 # NOTE: if you modify this table, also update the same table in postinst
 SOFTLINKS=(
-# <DIRECTORY>  <FILE>
-  "bin" "clamp-config"
-  "bin" "extractkernel"
-  "bin" "hcc"
-  "bin" "hcc-config"
-  "lib" "libhc_am.so"
-  "lib" "libmcwamp.a"
-  "lib" "libmcwamp_atomic.a"
-  "lib" "libmcwamp_cpu.so"
-  "lib" "libmcwamp_hsa.so"
-  "lib" "libclang_rt.builtins-x86_64.a"
+# <SOURCE DIRECTORY> <DESTINATION DIRECTORY> <FILE>
+  "bin" "bin" "clamp-config"
+  "bin" "bin" "extractkernel"
+  "bin" "bin" "hcc"
+  "bin" "bin" "hcc-config"
+  "$LIBRARY_DIR" "lib" "libhc_am.so"
+  "$LIBRARY_DIR" "lib" "libmcwamp.a"
+  "$LIBRARY_DIR" "lib" "libmcwamp_atomic.a"
+  "$LIBRARY_DIR" "lib" "libmcwamp_cpu.so"
+  "$LIBRARY_DIR" "lib" "libmcwamp_hsa.so"
+  "$LIBRARY_DIR" "lib" "libclang_rt.builtins-x86_64.a"
 )
 
 do_softlinks() {
@@ -30,11 +31,13 @@ do_softlinks() {
       return
   fi
 
-  for (( i=0; i<${#SOFTLINKS[@]}; i+=2 ))
+  for (( i=0; i<${#SOFTLINKS[@]}; i+=3 ))
   do
-    DIR=${SOFTLINKS[i]}
-    FILE=${SOFTLINKS[i+1]}
-    rm -f  $ROCM_PATH/$DIR/$FILE
+    SOURCE_DIR=${SOFTLINKS[i]}
+    DEST_DIR=${SOFTLINKS[i+1]}
+    FILE=${SOFTLINKS[i+2]}
+
+    rm -f  $ROCM_PATH/$DEST_DIR/$FILE
   done
   rm -f $ROCM_PATH/include/hcc
   rm -f $ROCM_PATH/hcc
