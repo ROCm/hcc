@@ -14,3 +14,6 @@
 	path = compiler-rt
 	url = https://github.com/RadeonOpenCompute/compiler-rt
   branch = amd-hcc
+[submodule "rocdl"]
+	path = rocdl
+	url = git@github.com:RadeonOpenCompute/ROCm-Device-Libs.git
