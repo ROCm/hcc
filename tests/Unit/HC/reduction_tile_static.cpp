@@ -3,7 +3,7 @@
 
 //----------------------------------------------------------------------------
 // File: Reduction.cpp
-// 
+//
 // Implements several different versions of reduction algorithm in C++ AMP.
 // Each consequent version demonstrates optimization techniques to speed up
 // the execution. All of the algorithms are tailored to 4-byte wide data and
@@ -15,10 +15,13 @@
 //----------------------------------------------------------------------------
 
 #define NOMINMAX
+
 #include <hc.hpp>
+
+#include <cassert>
+#include <climits>
 #include <iostream>
 #include <numeric>
-#include <assert.h>
 
 using namespace hc;
 
@@ -53,7 +56,7 @@ float sequential_reduction(const std::vector<float>& source)
 }
 
 //----------------------------------------------------------------------------
-// This is an implementation of the reduction algorithm which uses tiling and 
+// This is an implementation of the reduction algorithm which uses tiling and
 // the shared memory.
 //----------------------------------------------------------------------------
 template <unsigned _tile_size>
@@ -73,7 +76,7 @@ float reduction_tiled_1(const std::vector<float>& source)
     // Using arrays as temporary memory.
     array<float, 1> arr_1(element_count, source.begin());
     array<float, 1> arr_2((element_count / _tile_size) ? (element_count / _tile_size) : 1);
-    
+
     // array_views may be swapped after each iteration.
     array_view<float, 1> av_src(arr_1);
     array_view<float, 1> av_dst(arr_2);
@@ -99,7 +102,7 @@ float reduction_tiled_1(const std::vector<float>& source)
                 {
                     tile_data[local_idx] += tile_data[local_idx + s];
                 }
-                
+
                 tidx.barrier.wait();
             }
 
@@ -284,7 +287,7 @@ float reduction_tiled_4(const std::vector<float>& source)
     // Using arrays as temporary memory.
     array<float, 1> arr_1(element_count, source.begin());
     array<float, 1> arr_2((element_count / _tile_size) ? (element_count / _tile_size) : 1);
-    
+
     // array_views may be swapped after each iteration.
     array_view<float, 1> av_src(arr_1);
     array_view<float, 1> av_dst(arr_2);
@@ -384,7 +387,7 @@ float reduction_cascade(const std::vector<float>& source)
         tile_data[local_idx] = 0;
         do
         {
-            tile_data[local_idx] += a[input_idx] + a[input_idx + _tile_size]; 
+            tile_data[local_idx] += a[input_idx] + a[input_idx + _tile_size];
             input_idx += stride;
         } while (input_idx < element_count);
 
