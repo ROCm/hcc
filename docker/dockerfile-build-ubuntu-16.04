@@ -39,35 +39,4 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# Compiling hcc-lc requires a custom build tool
-RUN curl http://commondatastorage.googleapis.com/git-repo-downloads/repo > /usr/local/bin/repo && \
-    chmod a+x /usr/local/bin/repo
 
-RUN mkdir -p ${rocm_build_path} && \
-    cd ${rocm_build_path} && \
-    repo init --depth=1 -u https://github.com/RadeonOpenCompute/HCC-Native-GCN-ISA.git -b remove-promote-change-addr-space && \
-    repo sync && \
-
-    # build amd-common LLVM/LLD/Clang
-    cd ${rocm_build_path}/llvm && \
-    mkdir -p build && \
-    cd build && \
-    cmake \
-      -DCMAKE_INSTALL_PREFIX=${rocm_install_path} \
-      -DCMAKE_BUILD_TYPE=${build_type} \
-      -DLLVM_TARGETS_TO_BUILD="AMDGPU;X86" \
-      -DLLVM_APPEND_VC_REV=ON .. && \
-    make -j $(nproc) && \
-
-    # build ROCm-Device-Libs with amd-common Clang
-    cd ${rocm_build_path}/rocdl/ && \
-    mkdir -p build && \
-    cd build && \
-    CC=${rocm_build_path}/llvm/build/bin/clang cmake \
-      -DCMAKE_INSTALL_PREFIX=${rocm_install_path} \
-      -DCMAKE_BUILD_TYPE=${build_type} \
-      -DAMDHSACOD=/opt/rocm/bin/amdhsacod \
-      -DLLVM_DIR="${rocm_build_path}/llvm/build" \
-      .. && \
-    make -j $(nproc) package && \
-    dpkg -i rocm-device-libs-*.deb
