@@ -13,8 +13,8 @@
 [submodule "compiler-rt"]
 	path = compiler-rt
 	url = https://github.com/RadeonOpenCompute/compiler-rt
-  branch = amd-hcc
+        branch = amd-hcc
 [submodule "rocdl"]
 	path = rocdl
-	url = git@github.com:RadeonOpenCompute/ROCm-Device-Libs.git
-  branch = remove-promote-change-addr-space
+	url = http://github.com/RadeonOpenCompute/ROCm-Device-Libs.git
+        branch = remove-promote-change-addr-space
