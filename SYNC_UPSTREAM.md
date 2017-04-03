@@ -67,17 +67,17 @@ to clone it anonymously. But it would be hard for committing changes. Use the
 following commands to setup SSH URL.
 
 - change to HCC directory
-- `git remote set-url --push origin git@github.com:RadeonOpenCompute/hcc.git`
+- `git remote set-url --push github git@github.com:RadeonOpenCompute/hcc.git`
 - `cd clang`
-- `git remote set-url --push origin git@github.com:RadeonOpenCompute/hcc-clang-upgrade.git`
+- `git remote set-url --push github git@github.com:RadeonOpenCompute/hcc-clang-upgrade.git`
 - `cd ../compiler`
-- `git remote set-url --push origin git@github.com:RadeonOpenCompute/llvm.git`
+- `git remote set-url --push github git@github.com:RadeonOpenCompute/llvm.git`
 - `cd ../lld`
-- `git remote set-url --push origin git@github.com:RadeonOpenCompute/lld.git`
+- `git remote set-url --push github git@github.com:RadeonOpenCompute/lld.git`
 - `cd ../compiler-rt`
-- `git remote set-url --push origin git@github.com:RadeonOpenCompute/compiler-rt.git`
+- `git remote set-url --push github git@github.com:RadeonOpenCompute/compiler-rt.git`
 - `cd ../rocdl`
-- `git remote set-url --push origin git@github.com:RadeonOpenComoute/ROCm-Device-Libs.git`
+- `git remote set-url --push github git@github.com:RadeonOpenComoute/ROCm-Device-Libs.git`
 
 This only needs to be done once.
 
@@ -112,7 +112,7 @@ This directory would be referred as *HCC manifest directory* hereafter.
 - `cd rocdl`
 - `git checkout remove-promote-change-addr-space`
 - `git pull`
-- `git merge origin/master --no-edit`
+- `git merge github/master --no-edit`
 
 Resolve any merge conflicts encountered here. Commit to remove-promote-change-addr-space branch.
 
@@ -122,7 +122,7 @@ Resolve any merge conflicts encountered here. Commit to remove-promote-change-ad
 - `cd compiler`
 - `git checkout amd-hcc`
 - `git pull`
-- `git merge origin/amd-common --no-edit`
+- `git merge github/amd-common --no-edit`
 
 Resolve any merge conflicts encountered here. Commit to amd-hcc branch.
 
@@ -132,7 +132,7 @@ Resolve any merge conflicts encountered here. Commit to amd-hcc branch.
 - `cd lld`
 - `git checkout amd-hcc`
 - `git pull`
-- `git merge origin/amd-common --no-edit`
+- `git merge github/amd-common --no-edit`
 
 Resolve any merge conflicts encountered here. Commit to amd-hcc branch.
 
