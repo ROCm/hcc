@@ -96,13 +96,14 @@ There will be an `hcc` directory inside the repo. It would be referred as
 
 A manifest directory is created to track working commits for all components.
 
-- `git clone git@github.com/RadeonOpenCompute/HCC-Native-GCN-HSA.git manifest`
+- `git clone git@github.com:RadeonOpenCompute/HCC-Native-GCN-ISA.git manifest`
 
 This directory would be referred as *HCC manifest directory* hereafter.
 
 ### Initialize git submodules
 
 - change to HCC directory
+- `git checkout clang_tot_upgrade`
 - `git submodule update --init`
 
 ### Merge master ROCm-Device-Libs commits
@@ -251,6 +252,7 @@ Finally switch back to "clang_tot_upgrade" branch.
 ### Update HCC git submodules configuration
 
 - change to HCC directory
+- `git checkout clang_tot_upgrade`
 - `git add clang compiler lld compiler-rt rocdl`
 - `git commit -m "[Config] revise submodule configuration"`, or provide custom
   commit log
