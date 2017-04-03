@@ -908,9 +908,23 @@ __vector<SCALAR_TYPE,VECTOR_LENGTH> operator/(const __vector<SCALAR_TYPE,VECTOR_
   return r;
 }
 
+// scalar * vector
+template <typename SCALAR_TYPE1, typename SCALAR_TYPE2, unsigned int VECTOR_LENGTH>
+typename std::enable_if<std::is_scalar<SCALAR_TYPE1>::value, __vector<SCALAR_TYPE2,VECTOR_LENGTH> >::type
+operator*(const SCALAR_TYPE1& lhs,
+          const __vector<SCALAR_TYPE2,VECTOR_LENGTH>& rhs) __CPU_GPU__ {
+  __vector<SCALAR_TYPE2,VECTOR_LENGTH> r(rhs.get_vector() * static_cast<SCALAR_TYPE2>(lhs));
+  return r;
+}
 
-
-
+// vector * scalar
+template <typename SCALAR_TYPE1, typename SCALAR_TYPE2, unsigned int VECTOR_LENGTH>
+typename std::enable_if<std::is_scalar<SCALAR_TYPE2>::value, __vector<SCALAR_TYPE1,VECTOR_LENGTH> >::type
+operator*(const __vector<SCALAR_TYPE1,VECTOR_LENGTH>& lhs,
+          const SCALAR_TYPE2& rhs) __CPU_GPU__ {
+  __vector<SCALAR_TYPE1,VECTOR_LENGTH> r(lhs.get_vector() * static_cast<SCALAR_TYPE1>(rhs));
+  return r;
+}
 
 // Specialization for norm, unorm
 template <bool normIsSigned, unsigned int VECTOR_LENGTH>
