@@ -478,9 +478,14 @@ if (HCC_INTEGRATE_ROCDL)
   )
 
   # install ROCm Device Library in hcc
-  install(DIRECTORY ${ROCDL_BUILD_DIR}
-          COMPONENT rocdl
-          DESTINATION ${CMAKE_INSTALL_PREFIX}
+  install(DIRECTORY ${ROCDL_BUILD_DIR}/hc
+                    ${ROCDL_BUILD_DIR}/irif
+                    ${ROCDL_BUILD_DIR}/lib
+                    ${ROCDL_BUILD_DIR}/ockl
+                    ${ROCDL_BUILD_DIR}/oclc
+                    ${ROCDL_BUILD_DIR}/ocml
+                    ${ROCDL_BUILD_DIR}/opencl
+          DESTINATION rocdl
           PATTERN CMake* EXCLUDE
           PATTERN CPack* EXCLUDE
           PATTERN *.cmake EXCLUDE
