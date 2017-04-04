@@ -10,6 +10,11 @@
 #include <getopt.h>
 #include <iostream>
 #include <cassert>
+#include <unistd.h>
+#include <libgen.h>
+#include <limits.h>
+#include <string>
+#include <cstring>
 #include "hcc_config.hxx"
 
 // macro for stringification 
@@ -29,6 +34,55 @@ void replace(std::string& str,
         str.replace(start_pos, from.length(), to);
         start_pos = str.find(from);
     }
+}
+
+enum path_kind {
+  path_hcc_config,
+  path_hcc_lib,
+  path_hcc_include
+};
+
+std::string get_path(path_kind kind) {
+    const char* proc_self_exe = "/proc/self/exe";
+    char path_buffer[PATH_MAX];
+    memset(path_buffer, 0, PATH_MAX);
+    if (readlink(proc_self_exe, path_buffer, sizeof(path_buffer)) == -1) {
+      std::cerr << "Error reading the hcc-config path!" << std::endl;
+      exit(1);
+    }
+
+    // strip the executable name
+    dirname(path_buffer);
+    std::string hcc_config_path(path_buffer);
+
+    std::string return_path;
+    switch(kind) {
+      case path_hcc_config:
+        return_path = hcc_config_path;
+        break;
+      case path_hcc_lib:
+      case path_hcc_include:
+        {
+          std::string path = hcc_config_path + "/../";
+
+          if (kind == path_hcc_lib)
+            path += CMAKE_INSTALL_LIB;
+          else if (kind == path_hcc_include)
+            path += "include";
+
+          if (realpath(path.c_str(), path_buffer) == NULL) {
+            std::cerr << "Error when creating canonical path!" << std::endl;
+            exit(1);
+          }
+          return_path = std::string(path_buffer);
+        }
+        break;
+      default:
+        std::cerr << "Unknown path kind!" << std::endl;
+        exit(1);
+        break;
+    };
+    return return_path;
 }
 
 void cxxflags(void) {
@@ -59,7 +113,7 @@ void cxxflags(void) {
         if (const char *p = getenv("HCC_HOME")) {
             std::cout << " -I" << p << "/include";
         } else {
-            std::cout << " -I" CMAKE_INSTALL_INC;
+            std::cout << " -I" << get_path(path_hcc_include);
         }
     } else {
         assert(0 && "Unreacheable!");
@@ -90,8 +144,8 @@ void ldflags(void) {
             std::cout << " -L" << p << "/lib";
             std::cout << " -Wl,--rpath=" << p << "/lib";
         } else {
-            std::cout << " -L" CMAKE_INSTALL_LIB;
-            std::cout << " -Wl,--rpath=" CMAKE_INSTALL_LIB;
+            std::cout << " -L" << get_path(path_hcc_lib);
+            std::cout << " -Wl,--rpath=" << get_path(path_hcc_lib);
         }
     }
 
@@ -118,7 +172,7 @@ void prefix(void) {
     if (const char *p = getenv("HCC_HOME")) {
         std::cout << p;
     } else {
-        std::cout << CMAKE_INSTALL_PREFIX;
+        std::cout << get_path(path_hcc_config);
     }
 }
 
@@ -183,6 +237,7 @@ Environment:
 }
 
 int main (int argc, char **argv) {
+
     if (std::string(argv[0]).find("hcc-config") != std::string::npos) {
         hcc_mode = true; amp_mode = false;
     } else {
