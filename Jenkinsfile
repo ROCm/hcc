@@ -44,7 +44,7 @@ node ('rocmtest')
     def build_org = "hcc-lc"
     def build_type_name = "build-ubuntu-16.04"
     def dockerfile_name = "dockerfile-${build_type_name}"
-    def build_image_name = "${build_type_name}-${env.BRANCH_NAME}"
+    def build_image_name = "${build_type_name}"
     dir('docker')
     {
       hcc_build_image = docker.build( "${build_org}/${build_image_name}:latest", "-f ${dockerfile_name} --build-arg build_type=Release --build-arg rocm_install_path=/opt/rocm ." )
