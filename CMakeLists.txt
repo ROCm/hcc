@@ -425,7 +425,7 @@ add_custom_target(world DEPENDS clang)
 
 
 # build the integrated ROCm Device Library
-
+set(AMDHSACOD ${ROCM_ROOT}/bin/amdhsacod CACHE FILEPATH "Specify the amdhsacod tool")
 if (HCC_INTEGRATE_ROCDL)
 
   set(ROCDL_SRC_DIR "${PROJECT_SOURCE_DIR}/rocdl")
@@ -436,7 +436,7 @@ if (HCC_INTEGRATE_ROCDL)
   add_custom_target(rocdl
     COMMAND CC=${CLANG_BIN_DIR}/bin/clang  ${CMAKE_COMMAND} ${ROCDL_SRC_DIR}
             -DLLVM_DIR=${CLANG_BIN_DIR}
-            -DAMDHSACOD=${ROCM_ROOT}/bin/amdhsacod
+            -DAMDHSACOD=${AMDHSACOD}
             -DGENERIC_IS_ZERO=ON
     COMMAND make -j ${NUM_BUILD_THREADS} # not portable, but we need it this way
     WORKING_DIRECTORY ${ROCDL_BUILD_DIR}
