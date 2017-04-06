@@ -225,7 +225,7 @@ void UnpinnedCopyEngine::CopyHostToDevice(UnpinnedCopyEngine::CopyMode copyMode,
         THROW_ERROR(hipErrorInvalidValue, HSA_STATUS_ERROR_INVALID_ARGUMENT);
     }
     tprintf (DB_COPY2, "Unpinned H2D: pointer type =%d\n", info.type);
-    if((info.type == 1) || (info.type == 2)) {
+    if((info.type == HSA_EXT_POINTER_TYPE_HSA) || (info.type == HSA_EXT_POINTER_TYPE_LOCKED)) {
         isLocked = true;
     }
     if (copyMode == ChooseBest) {
