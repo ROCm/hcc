@@ -2115,7 +2115,6 @@ public:
         }
 
         //---
-        this->copy_mode = static_cast<UnpinnedCopyEngine::CopyMode> (HCC_UNPINNED_COPY_MODE);
         //Provide an environment variable to select the mode used to perform the copy operaton
         switch (this->copy_mode) {
             case UnpinnedCopyEngine::ChooseBest:    //0

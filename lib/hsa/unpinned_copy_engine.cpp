@@ -216,22 +216,10 @@ void UnpinnedCopyEngine::CopyHostToDeviceMemcpy(void* dst, const void* src, size
 
 void UnpinnedCopyEngine::CopyHostToDevice(UnpinnedCopyEngine::CopyMode copyMode, void* dst, const void* src, size_t sizeBytes, hsa_signal_t *waitFor)
 {
-    hsa_amd_pointer_info_t info;
-    hsa_status_t hsa_status;
-    bool isLocked = false;
-    const char *srcp = static_cast<const char*> (src);
-    hsa_status = hsa_amd_pointer_info(const_cast<char*> (srcp), &info, nullptr, nullptr, nullptr);
-    if(hsa_status != HSA_STATUS_SUCCESS) {
-        THROW_ERROR(hipErrorInvalidValue, HSA_STATUS_ERROR_INVALID_ARGUMENT);
-    }
-    tprintf (DB_COPY2, "Unpinned H2D: pointer type =%d\n", info.type);
-    if((info.type == HSA_EXT_POINTER_TYPE_HSA) || (info.type == HSA_EXT_POINTER_TYPE_LOCKED)) {
-        isLocked = true;
-    }
     if (copyMode == ChooseBest) {
         if (_isLargeBar && (sizeBytes < _hipH2DTransferThresholdDirectOrStaging)) {
             copyMode = UseMemcpy;
-        } else if ((sizeBytes > _hipH2DTransferThresholdStagingOrPininplace)&& (!isLocked)) {
+        } else if (sizeBytes > _hipH2DTransferThresholdStagingOrPininplace) {
             copyMode = UsePinInPlace;
         } else {
             copyMode = UseStaging;
@@ -241,7 +229,7 @@ void UnpinnedCopyEngine::CopyHostToDevice(UnpinnedCopyEngine::CopyMode copyMode,
     if (copyMode == UseMemcpy) {
         CopyHostToDeviceMemcpy(dst, src, sizeBytes, waitFor);
 
-	} else if ((copyMode == UsePinInPlace)&& (!isLocked)) {
+	} else if (copyMode == UsePinInPlace) {
         CopyHostToDevicePinInPlace(dst, src, sizeBytes, waitFor);
 
 	} else if (copyMode == UseStaging) {
