@@ -22,6 +22,7 @@
 #include <utility>
 #include <vector>
 #include <algorithm>
+#include <cxxabi.h>
 
 #include <hsa/hsa.h>
 #include <hsa/hsa_ext_finalize.h>
@@ -2358,7 +2359,13 @@ public:
             }
 
             if (!kernel) {
-                std::cerr << "HSADevice::CreateKernel(): Unable to create kernel\n";
+                int status = 0;
+                const char *demangled = abi::__cxa_demangle(fun, nullptr, nullptr, &status);
+                std::cerr << "HSADevice::CreateKernel(): Unable to create kernel '" <<  (status ? fun : demangled) << "'\n";
+
+                if (demangled) {
+                    free((void*)demangled); // cxa_dmangle mallocs memory.
+                }
                 abort();
             } else {
                 //std::cerr << "HSADevice::CreateKernel(): Created kernel\n";
