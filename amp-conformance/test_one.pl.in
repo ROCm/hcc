@@ -122,6 +122,9 @@ foreach my $def_set (@{$Test::config{'definitions'}})
                 $CLANG_AMP $SHARED_CXXFLAGS $include_main $test $AMPTESTLIB $cflags_defs $CLAMP_LDFLAGS -o $tmpdir/test.out";
     }
 
+    # append HCC_TILECHECK=ON in front of $command
+    $command = "HCC_TILECHECK=ON " . $command;
+
     log_message("Command: $command\n"
         ."Build output:\n"
         ."<<<");
