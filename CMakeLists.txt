@@ -35,6 +35,13 @@ endif( )
 string(TOLOWER "${DISTRO_ID}" DISTRO_ID )
 if( DISTRO_ID MATCHES "ubuntu" OR DISTRO_ID MATCHES "fedora" )
   message( STATUS "Detected distribution: ${DISTRO_ID}:${DISTRO_RELEASE}" )
+  if (${DISTRO_ID} STREQUAL "ubuntu" AND ${DISTRO_RELEASE} STREQUAL "14.04")
+    message(
+        DEPRECATION
+        "Be advised that support for version 14.04 of the Ubuntu OS is \
+        deprecated. Please consider upgrading to a supported version (e.g. \
+        16.04) as soon as possible")
+  endif (${DISTRO_ID} STREQUAL "ubuntu" AND ${DISTRO_RELEASE} STREQUAL "14.04")
 else()
   message( "This cmakefile does not natively support ${DISTRO_ID}:${DISTRO_RELEASE}.  Continuing with Ubuntu logic" )
   set( DISTRO_ID "ubuntu" )
