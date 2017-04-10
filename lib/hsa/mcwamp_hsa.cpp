@@ -2359,11 +2359,13 @@ public:
             }
 
             if (!kernel) {
-		int status = 0;
-		const char *demangled = abi::__cxa_demangle(fun, nullptr, nullptr, &status);
+                int status = 0;
+                const char *demangled = abi::__cxa_demangle(fun, nullptr, nullptr, &status);
                 std::cerr << "HSADevice::CreateKernel(): Unable to create kernel '" <<  (status ? fun : demangled) << "'\n";
 
-		free((void*)demangled); // cxa_dmangle mallocs memory.
+                if (demangled) {
+                    free((void*)demangled); // cxa_dmangle mallocs memory.
+                }
                 abort();
             } else {
                 //std::cerr << "HSADevice::CreateKernel(): Created kernel\n";
