@@ -254,7 +254,7 @@ if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT AND CMAKE_INSTALL_PREFIX MATCHES
   set(INSTALL_DIR_NAME "hcc-${KALMAR_VERSION_MAJOR}.${KALMAR_VERSION_MINOR}")
   set(CMAKE_INSTALL_PREFIX "/opt/rocm/${INSTALL_DIR_NAME}" CACHE PATH "Default installation path of hcc" FORCE)
 endif ()
-MESSAGE("Installation path: ${CMAKE_INSTALL_PREFIX}")
+message("Installation path: ${CMAKE_INSTALL_PREFIX}")
 
 # set the installation path for the installer package
 set(CPACK_SET_DESTDIR ON CACHE BOOL "Installer package will install hcc to CMAKE_INSTALL_PREFIX instead of CPACK_PACKAGING_INSTALL_PREFIX")
@@ -285,35 +285,75 @@ else ((NOT HSA_HEADER) OR (NOT HSA_LIBRARY))
 endif ((NOT HSA_HEADER) OR (NOT HSA_LIBRARY))
 
 if (HAS_ROCM EQUAL 0)
-  MESSAGE(FATAL_ERROR "ROCm is NOT available on the system!")
+  message(FATAL_ERROR "ROCm is NOT available on the system!")
 endif (HAS_ROCM EQUAL 0)
 
 #################
 # Detect AMDGPU backend for native codegen
 #################
 
-set(HSA_AMDGPU_GPU_TARGET "gfx803" CACHE STRING "Target AMDGPU ISA version")
+set(default_target "gfx803")
+
+# Attempt to detect any available HSA Agents, picking the highest ISA they
+# expose as the default.
+find_program(
+    rocm_agent_enumerator
+    NAMES rocm_agent_enumerator
+    HINTS /home/alexv/Programming/rocm_agent_enumerator/cmake-build-release)
+if (EXISTS ${rocm_agent_enumerator})
+  execute_process(
+      COMMAND ${rocm_agent_enumerator} -t GPU
+      RESULT_VARIABLE ret
+      OUTPUT_VARIABLE agents
+      OUTPUT_STRIP_TRAILING_WHITESPACE)
+  if (ret EQUAL 0)
+    string(REGEX REPLACE "[\r\n\t ]" ";" agents ${agents})
+    list(SORT agents)
+    list(REVERSE agents)
+    list(GET agents 0 target)
+    if (NOT ${target} STREQUAL "gfx000")
+      set(default_target ${target})
+    else (NOT ${target} STREQUAL "gfx000")
+      message(
+          WARNING
+          "No valid Agent is present in the system, falling back to default!")
+    endif (NOT ${target} STREQUAL "gfx000")
+  else (ret EQUAL 0)
+    message(WARNING "ROCm Agent Enumerator failed, falling back to default!")
+  endif (ret EQUAL 0)
+endif (EXISTS ${rocm_agent_enumerator})
+set(HSA_AMDGPU_GPU_TARGET ${default_target}
+    CACHE STRING "Target AMDGPU ISA version")
 
 # Tokenize HSA_AMDGPU_GPU_TARGET
 
 # Temporary workaround for use of old long-form GFX_ip names, to be removed once
 # we fully deprecate them.
-string(REGEX MATCHALL "AMD:AMDGPU:(7:0:0|7:0:1|8:0:1|8:0:2|8:0:3|9:0:0|9:0:1)"
-                      tmp
-                      ${HSA_AMDGPU_GPU_TARGET})
+string(
+    REGEX MATCHALL "AMD:AMDGPU:(7:0:0|7:0:1|8:0:1|8:0:2|8:0:3|9:0:0|9:0:1)"
+    tmp
+    ${HSA_AMDGPU_GPU_TARGET})
 foreach(long_form IN LISTS tmp)
   string(REPLACE "AMD:AMDGPU:" "gfx" short_form ${long_form})
   string(REPLACE ":" "" short_form ${short_form})
-  message(DEPRECATION "Be advised that use of long-form GFX_ip names, such as \
-                       ${long_form}, is deprecated. Please use the short-form: \
-                       ${short_form}.")
+  message(
+      DEPRECATION
+      "Be advised that use of long-form GFX_ip names, such as ${long_form}, is \
+      deprecated. Please use the short-form: ${short_form}.")
+  if (${short_form} STREQUAL "gfx700")
+    message(
+        DEPRECATION
+        "Be advised that support for the Kaveri family of APUs (gfx700) is \
+         deprecated. Please consider upgrading to supported hardware as soon as\
+         possible")
+  endif (${short_form} STREQUAL "gfx700")
   list(REMOVE_ITEM HSA_AMDGPU_GPU_TARGET ${long_form})
   list(APPEND HSA_AMDGPU_GPU_TARGET ${short_form})
 endforeach()
 
 # join list
 string(REPLACE ";" " " AMDGPU_TARGET "${HSA_AMDGPU_GPU_TARGET}")
-MESSAGE(STATUS "HCC configured with AMDGPU targets: ${AMDGPU_TARGET}")
+message(STATUS "HCC configured with AMDGPU targets: ${AMDGPU_TARGET}")
 
 #################
 # Setup HCC backend macro string
@@ -580,7 +620,7 @@ set(OFFICIAL_RELEASE_BUILD 0)
 
 option(CPACK_GENERATOR "Specify the installer package generator")
 
-# If no CPACK generator was specified, then set the default generator according to the distro 
+# If no CPACK generator was specified, then set the default generator according to the distro
 if (NOT CPACK_GENERATOR)
     if ( "${DISTRO_ID}" MATCHES "ubuntu" )
     set(CPACK_GENERATOR "DEB")
