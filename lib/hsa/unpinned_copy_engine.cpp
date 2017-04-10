@@ -220,6 +220,7 @@ void UnpinnedCopyEngine::CopyHostToDevice(UnpinnedCopyEngine::CopyMode copyMode,
     hsa_status_t hsa_status;
     bool isLocked = false;
     const char *srcp = static_cast<const char*> (src);
+    info.size = sizeof(info);
     hsa_status = hsa_amd_pointer_info(const_cast<char*> (srcp), &info, nullptr, nullptr, nullptr);
     if(hsa_status != HSA_STATUS_SUCCESS) {
         THROW_ERROR(hipErrorInvalidValue, HSA_STATUS_ERROR_INVALID_ARGUMENT);
