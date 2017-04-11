@@ -306,7 +306,7 @@ set(default_target "gfx803")
 find_program(
     rocm_agent_enumerator
     NAMES rocm_agent_enumerator
-    HINTS /home/alexv/Programming/rocm_agent_enumerator/cmake-build-release)
+    HINTS /opt/rocm/bin)
 if (EXISTS ${rocm_agent_enumerator})
   execute_process(
       COMMAND ${rocm_agent_enumerator} -t GPU
