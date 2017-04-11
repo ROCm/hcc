@@ -215,6 +215,9 @@ sub run_test {
                 $CLANG_AMP $SHARED_CXXFLAGS $include_main $test $AMPTESTLIB $cflags_defs $CLAMP_LDFLAGS -o $test_exec 2>&1";
         }
 
+        # append HCC_TILECHECK=ON in front of $command
+        $command = "HCC_TILECHECK=ON " . $command;
+
         log_message("Command: $command\n"
             ."Build output:\n"
             ."<<<");
