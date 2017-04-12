@@ -36,6 +36,7 @@
 #include <hc_am.hpp>
 
 #include "unpinned_copy_engine.h"
+#include "hc_stack_unwind.h"
 
 #include <time.h>
 #include <iomanip>
@@ -2360,6 +2361,7 @@ public:
             }
 
             if (!kernel) {
+                hc::print_backtrace();
                 int status = 0;
                 const char *demangled = abi::__cxa_demangle(fun, nullptr, nullptr, &status);
                 std::cerr << "HSADevice::CreateKernel(): Unable to create kernel '" <<  (status ? fun : demangled) << "'\n";
