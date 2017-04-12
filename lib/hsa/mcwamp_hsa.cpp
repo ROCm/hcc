@@ -203,6 +203,7 @@ static const char* getHSAErrorString(hsa_status_t s) {
 }
 
 #define STATUS_CHECK(s,line) if (s != HSA_STATUS_SUCCESS && s != HSA_STATUS_INFO_BREAK) {\
+    hc::print_backtrace(); \
     const char* error_string = getHSAErrorString(s);\
 		printf("### HCC STATUS_CHECK Error: %s (0x%x) at file:%s line:%d\n", error_string, s, __FILE__, line);\
                 assert(HSA_STATUS_SUCCESS == hsa_shut_down());\
@@ -210,6 +211,7 @@ static const char* getHSAErrorString(hsa_status_t s) {
 	}
 
 #define STATUS_CHECK_SYMBOL(s,symbol,line) if (s != HSA_STATUS_SUCCESS && s != HSA_STATUS_INFO_BREAK) {\
+    hc::print_backtrace(); \
     const char* error_string = getHSAErrorString(s);\
 		printf("### HCC STATUS_CHECK_SYMBOL Error: %s (0x%x), symbol name:%s at file:%s line:%d\n", error_string, s, (symbol)!=nullptr?symbol:(const char*)"is a nullptr", __FILE__, line);\
                 assert(HSA_STATUS_SUCCESS == hsa_shut_down());\
@@ -1408,6 +1410,7 @@ public:
                 std::cerr << ": map() copy done\n";
 #endif
             } else {
+              hc::print_backtrace();
 #if KALMAR_DEBUG
               std::cerr << "host buffer allocation failed!\n";
 #endif
