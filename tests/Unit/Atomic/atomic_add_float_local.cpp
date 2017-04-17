@@ -1,5 +1,3 @@
-// NOTE: This is an invalid test.  C++ atomic_fetch_add does not support floating point types.
-// XFAIL: *
 // RUN: %cxxamp %s -o %t.out && %t.out
 #include <amp.h>
 #include <stdlib.h>
