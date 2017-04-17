@@ -1,5 +1,3 @@
-include (CMakeForceCompiler)
-
 if(POLICY CMP0046)
   cmake_policy(PUSH)
   cmake_policy(SET CMP0046 OLD)
@@ -35,7 +33,7 @@ endmacro(amp_target name )
 # C++AMP runtime interface (mcwamp) 
 ####################
 macro(add_mcwamp_library name )
-  CMAKE_FORCE_CXX_COMPILER("${PROJECT_BINARY_DIR}/compiler/bin/clang++" MCWAMPCC)
+  set(CMAKE_CXX_COMPILER "${PROJECT_BINARY_DIR}/compiler/bin/clang++")
   add_compile_options(-std=c++11)
   add_library( ${name} ${ARGN} )
   amp_target(${name})
@@ -47,7 +45,7 @@ endmacro(add_mcwamp_library name )
 # C++AMP runtime (CPU implementation)
 ####################
 macro(add_mcwamp_library_cpu name )
-  CMAKE_FORCE_CXX_COMPILER("${PROJECT_BINARY_DIR}/compiler/bin/clang++" MCWAMPCC)
+  set(CMAKE_CXX_COMPILER "${PROJECT_BINARY_DIR}/compiler/bin/clang++")
   add_compile_options(-std=c++11)
   add_library( ${name} SHARED ${ARGN} )
   amp_target(${name})
@@ -66,7 +64,7 @@ endmacro(add_mcwamp_library_cpu name )
 # C++AMP runtime (HSA implementation) 
 ####################
 macro(add_mcwamp_library_hsa name )
-  CMAKE_FORCE_CXX_COMPILER("${PROJECT_BINARY_DIR}/compiler/bin/clang++" MCWAMPCC)
+  set(CMAKE_CXX_COMPILER "${PROJECT_BINARY_DIR}/compiler/bin/clang++")
   add_compile_options(-std=c++11)
   # add HSA headers
   add_library( ${name} SHARED ${ARGN} )
@@ -87,7 +85,7 @@ macro(add_mcwamp_library_hsa name )
 endmacro(add_mcwamp_library_hsa name )
 
 macro(add_mcwamp_library_hc_am name )
-  CMAKE_FORCE_CXX_COMPILER("${PROJECT_BINARY_DIR}/compiler/bin/clang++" MCWAMPCC)
+  set(CMAKE_CXX_COMPILER "${PROJECT_BINARY_DIR}/compiler/bin/clang++")
   # add HSA headers
   add_library( ${name} SHARED ${ARGN} )
   amp_target(${name})
