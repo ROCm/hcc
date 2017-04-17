@@ -16,15 +16,13 @@ OPT=$BINDIR/opt
 LLC=$BINDIR/llc
 LIB=$BINDIR/../lib
 
-if [[ $OSTYPE == linux-gnu ]]; then
-    FILE=`basename "$1"`
-    FILENAME=${FILE%cpu}
-    if [[ "$FILE" != "$FILENAME" ]]; then
-        $OPT -load $LIB/LLVMCpuRename@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-                -cpu-rename "$1" -S -o "$1.S"
-        $LLC -O=2 "$1.S" -relocation-model=pic -filetype=obj -o "$2"
-        rm "$1.S"
-    else
-        objcopy -B i386:x86-64 -I binary -O elf64-x86-64 --rename-section .data=.kernel "$1" "$2"
-    fi
+FILE=`basename "$1"`
+FILENAME=${FILE%cpu}
+if [[ "$FILE" != "$FILENAME" ]]; then
+  $OPT -load $LIB/LLVMCpuRename@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+       -cpu-rename "$1" -S -o "$1.S"
+  $LLC -O=2 "$1.S" -relocation-model=pic -filetype=obj -o "$2"
+  rm "$1.S"
+else
+  objcopy -B i386:x86-64 -I binary -O elf64-x86-64 --rename-section .data=.kernel "$1" "$2"
 fi
