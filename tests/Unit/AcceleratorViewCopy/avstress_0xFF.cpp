@@ -1,101 +1,157 @@
-// RUN: %hc %s -o %t.out -lhc_am -DRUNMASK=0xFF && HCC_SERIALIZE_KERNEL=0x3 HCC_SERIALIZE_COPY=0x3 %t.out
-#include<stdlib.h>
-#include<iostream>
+// RUN: %hc %s -o %t.out -lhc_am -L/opt/rocm/lib -lhsa-runtime64 -DRUNMASK=0xff && HCC_SERIALIZE_KERNEL=0x3 HCC_SERIALIZE_COPY=0x3 %t.out
+#include <hc.hpp>
+#include <hc_am.hpp>
 
-#include<hc.hpp>
-#include<hc_am.hpp>
+#include "/opt/rocm/include/hsa/hsa.h"
 
-#include"common.h"
+#include <algorithm>
+#include <cstddef>
+#include <cstdlib>
+#include <iostream>
+#include <memory>
+#include <vector>
 
-#define N 1024*1024
-
-const size_t size = sizeof(float) * N;
-
-#include "common2.h"
-
-#if not defined (RUNMASK)
-#define RUNMASK 0xFF
+#if !defined(RUNMASK)
+    #define RUNMASK 0xff
 #endif
 
-#if not defined (ITERS)
-#define ITERS 2000
+#if !defined(ITERS)
+    #define ITERS 2000
 #endif
 
+#define HostToDeviceCopyTest 0x1
+#define DeviceToDeviceCopyTest 0x2
+#define DeviceToHostCopyTest 0x4
+#define HostToDeviceAsyncCopyTest 0x8
+#define DeviceToHostAsyncCopyTest 0x10
 
-int main(){
-    std::vector<hc::accelerator> accs = hc::accelerator::get_all();
-    hc::accelerator gpu_acc;
-    for(auto& it:accs){
-        if(!it.get_is_emulated()){
-            gpu_acc = it;
-            break;
-        }
-    }
+int main()
+{
+    constexpr std::size_t N = 1024 * 1024;
 
-    Init(gpu_acc);
-    hc::accelerator_view av = gpu_acc.get_default_view();
+    std::vector <hc::accelerator> accs = hc::accelerator::get_all();
+    auto acc = std::find_if(
+        accs.cbegin(),
+        accs.cend(),
+        [](const hc::accelerator& a) { return !a.get_is_emulated(); });
+    if (acc == accs.cend()) return EXIT_FAILURE;
 
+    const auto pinned_mem = static_cast<hsa_region_t*>(
+        const_cast<hc::accelerator&>(*acc).get_hsa_am_system_region());
+
+    bool can_allocate = false;
+    hsa_region_get_info(
+        *pinned_mem, HSA_REGION_INFO_RUNTIME_ALLOC_ALLOWED, &can_allocate);
+
+    if (!can_allocate) return EXIT_FAILURE;
+
+    std::size_t max_pinned_alloc_sz = 0u;
+    hsa_region_get_info(
+        *pinned_mem, HSA_REGION_INFO_ALLOC_MAX_SIZE, &max_pinned_alloc_sz);
+
+    std::size_t max_pinned_cnt = std::min(max_pinned_alloc_sz / sizeof(int), N);
+    std::size_t max_pinned_sz = max_pinned_cnt * sizeof(int);
+
+    std::vector<int> A(max_pinned_cnt, 3);
+    std::vector<int> B(max_pinned_cnt, 1);
+    std::vector<int> C;
+
+    std::unique_ptr<int[], decltype(hc::am_free) * > A_h{
+        hc::am_alloc(
+            max_pinned_sz, const_cast<hc::accelerator&>(*acc), amHostPinned),
+        hc::am_free};
+    std::copy_n(A.cbegin(), A.size(), A_h.get());
+
+    std::unique_ptr<int[], decltype(hc::am_free) * > B_h{
+        hc::am_alloc(
+            max_pinned_sz, const_cast<hc::accelerator&>(*acc), amHostPinned),
+        hc::am_free};
+    std::copy_n(B.begin(), B.size(), B_h.get());
+
+    std::unique_ptr<int[], decltype(hc::am_free) * > C_h{
+        hc::am_alloc(
+            max_pinned_sz, const_cast<hc::accelerator&>(*acc), amHostPinned),
+        hc::am_free};
+
+    std::unique_ptr<int[], decltype(hc::am_free) * > A_d{
+        hc::am_alloc(max_pinned_sz, const_cast<hc::accelerator&>(*acc), 0x0),
+        hc::am_free};
+    std::unique_ptr<int[], decltype(hc::am_free) * > B_d{
+        hc::am_alloc(max_pinned_sz, const_cast<hc::accelerator&>(*acc), 0x0),
+        hc::am_free};
+    std::unique_ptr<int[], decltype(hc::am_free) * > C_d{
+        hc::am_alloc(max_pinned_sz, const_cast<hc::accelerator&>(*acc), 0x0),
+        hc::am_free};
 
     // RUNMASK should be #defined as input to compilation:
-    unsigned testsToRun = RUNMASK;
-    int testIters = ITERS;
+    constexpr auto tests_to_run = RUNMASK;
+    constexpr auto iter_cnt = ITERS;
 
-
-    if (testsToRun & HostToDeviceCopyTest) {
-        for(uint32_t i=0;i<testIters;i++){
-            if ((i%1000 == 0)) {
-                printf ("info: running Test1 %5d/%5d\n", i, testIters);
-            }
-            Test1(av);
+    if (tests_to_run & HostToDeviceCopyTest) {
+        for (auto i = 0u; i != iter_cnt; ++i) {
+            acc->get_default_view().copy(A.data(), A_d.get(), max_pinned_sz);
+        }
+        acc->get_default_view().copy(A_d.get(), A_h.get(), max_pinned_sz);
+        if (!std::equal(A.cbegin(), A.cend(), A_h.get())) {
+            return EXIT_FAILURE;
         }
     }
 
-    if (testsToRun & DeviceToDeviceCopyTest) {
-        for(uint32_t i=0;i<testIters;i++){
-            if ((i%1000 == 0)) {
-                printf ("info: running Test2 %5d/%5d\n", i, testIters);
-            }
-            Test2(av);
+    if (tests_to_run & DeviceToDeviceCopyTest) {
+        acc->get_default_view().copy(B.data(), B_d.get(), max_pinned_sz);
+        for (auto i = 0u; i != iter_cnt; ++i) {
+            hc::parallel_for_each(
+                hc::extent<1>(max_pinned_cnt),
+                [A_d = A_d.get(),
+                 B_d = B_d.get(),
+                 C_d = C_d.get()](hc::index<1> idx) [[hc]] {
+                    C_d[idx[0]] = A_d[idx[0]] + B_d[idx[0]];
+                });
+        }
+        acc->get_default_view().copy(C_d.get(), C_h.get(), max_pinned_sz);
+        for (auto i = 0u; i != max_pinned_cnt; ++i) {
+            if (C_h[i] != A[i] + B[i]) return EXIT_FAILURE;
         }
     }
 
-    if (testsToRun & DeviceToHostCopyTest) {
-        for(uint32_t i=0;i<testIters;i++){
-            if ((i%1000 == 0)) {
-                printf ("info: running Test3 %5d/%5d\n", i, testIters);
-            }
-            Test3(av);
+    if (tests_to_run & DeviceToHostCopyTest) {
+        acc->get_default_view().copy(B.data(), B_d.get(), max_pinned_sz);
+        for (auto i = 0u; i != iter_cnt; ++i) {
+            acc->get_default_view().copy(B_d.get(), B_h.get(), max_pinned_sz);
+        }
+        if (!std::equal(B.cbegin(), B.cend(), B_h.get())) {
+            return EXIT_FAILURE;
         }
     }
 
-// Create a vector of hc::completion_future for async copy synconization
-    std::vector<hc::completion_future> cfs;
-    
-    if (testsToRun & HostToDeviceAsyncCopyTest) {
-        for(uint32_t i=0;i<testIters;i++){
-            if ((i%1000 == 0)) {
-                printf ("info: running Test4 %5d/%5d\n", i, testIters);
-            }
-            cfs.push_back(Test4(av));
+    std::vector <hc::completion_future> cfs;
+
+    if (tests_to_run & HostToDeviceAsyncCopyTest) {
+        for (decltype(cfs.size()) i = 0; i != iter_cnt; ++i) {
+            cfs.push_back(acc->get_default_view().copy_async(
+                A_h.get(), A_d.get(), max_pinned_sz));
         }
-        for(uint32_t i=0;i<testIters;i++)
-	    cfs[i].wait();
+        for (auto&& cf : cfs) cf.wait();
+
+        acc->get_default_view().copy(A_d.get(), A_h.get(), max_pinned_sz);
+        if (!std::equal(A.cbegin(), A.cend(), A_h.get())) {
+            return EXIT_FAILURE;
+        }
     }
 
-    cfs.clear(); 
-    if (testsToRun & DeviceToHostAsyncCopyTest) {
-        for(uint32_t i=0;i<testIters;i++){
-            if ((i%1000 == 0)) {
-                printf ("info: running Test5 %5d/%5d\n", i, testIters);
-            }
-            cfs.push_back(Test5(av));
+    if (tests_to_run & DeviceToHostAsyncCopyTest) {
+        acc->get_default_view().copy(B.data(), B_d.get(), max_pinned_sz);
+        for (decltype(cfs.size()) i = 0; i != iter_cnt; ++i) {
+            cfs.push_back(acc->get_default_view().copy_async(
+                B_d.get(), B_h.get(), max_pinned_sz));
         }
-        for(uint32_t i=0;i<testIters;i++)
-	    cfs[i].wait();
+        for (auto&& cf : cfs) cf.wait();
+
+        if (!std::equal(B.cbegin(), B.cend(), B_h.get())) {
+            return EXIT_FAILURE;
+        }
     }
 
- // To release all allocated resources from Init
-     Destroy();
-
+    return EXIT_SUCCESS;
 }
 
