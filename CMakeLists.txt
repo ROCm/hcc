@@ -299,38 +299,7 @@ endif (HAS_ROCM EQUAL 0)
 # Detect AMDGPU backend for native codegen
 #################
 
-set(default_target "gfx803")
-
-# Attempt to detect any available HSA Agents, picking the highest ISA they
-# expose as the default.
-find_program(
-    rocm_agent_enumerator
-    NAMES rocm_agent_enumerator
-    HINTS /opt/rocm/bin)
-if (EXISTS ${rocm_agent_enumerator})
-  execute_process(
-      COMMAND ${rocm_agent_enumerator} -t GPU
-      RESULT_VARIABLE ret
-      OUTPUT_VARIABLE agents
-      OUTPUT_STRIP_TRAILING_WHITESPACE)
-  if (ret EQUAL 0)
-    string(REGEX REPLACE "[\r\n\t ]" ";" agents ${agents})
-    list(SORT agents)
-    list(REVERSE agents)
-    list(GET agents 0 target)
-    if (NOT ${target} STREQUAL "gfx000")
-      set(default_target ${target})
-    else (NOT ${target} STREQUAL "gfx000")
-      message(
-          WARNING
-          "No valid Agent is present in the system, falling back to default!")
-    endif (NOT ${target} STREQUAL "gfx000")
-  else (ret EQUAL 0)
-    message(WARNING "ROCm Agent Enumerator failed, falling back to default!")
-  endif (ret EQUAL 0)
-endif (EXISTS ${rocm_agent_enumerator})
-set(HSA_AMDGPU_GPU_TARGET ${default_target}
-    CACHE STRING "Target AMDGPU ISA version")
+set(HSA_AMDGPU_GPU_TARGET "gfx803" CACHE STRING "Target AMDGPU ISA version")
 
 # Tokenize HSA_AMDGPU_GPU_TARGET
 
