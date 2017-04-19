@@ -5,15 +5,22 @@
 #define UNW_LOCAL_ONLY
 #include <libunwind.h>
 #include <cxxabi.h>
+#include <string>
 
 namespace hc {
-  static void print_backtrace() {
+
+
+  static std::string get_backtrace() {
+    constexpr int buffer_size = 512;
+
+    std::string bt("");
+
     unw_cursor_t cursor;
     unw_context_t context;
     unw_getcontext(&context);
     unw_init_local(&cursor, &context);
 
-    std::fprintf(stderr, "\nBacktrace:\n");
+    bt += std::string("Backtrace:\n");
 
     while(unw_step(&cursor) > 0) {
       // get the program counter
@@ -23,7 +30,7 @@ namespace hc {
         break;
 
       // get the function name
-      char func[512];
+      char func[buffer_size];
       char* demangled = nullptr;
       const char* print_func_name;
       unw_word_t offp;
@@ -35,10 +42,20 @@ namespace hc {
       else {
         print_func_name = "<unknown function>";
       }
-      std::fprintf(stderr, "0x%016lx:\t%s + 0x%lx\n", pc, print_func_name, offp);
+
+      char loc[buffer_size];
+      std::sprintf(loc, "0x%016lx:\t%s + 0x%lx\n", pc, print_func_name, offp);
+      bt += std::string(loc);
+
       if (demangled)
         free(demangled);
     }
-    std::fprintf(stderr, "\n");
+    return bt;
   }
+
+  static void print_backtrace() {
+    std::string bt = get_backtrace();
+    std::printf("\n%s\n", bt.c_str());
+  }
+
 } // namespace hc
