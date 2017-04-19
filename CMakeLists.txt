@@ -469,6 +469,7 @@ if (HCC_INTEGRATE_ROCDL)
           PATTERN test EXCLUDE
           PATTERN cuda2gcn EXCLUDE
           PATTERN *.lib.bc EXCLUDE
+          PATTERN *.optout.bc EXCLUDE
           PATTERN src EXCLUDE
           PATTERN CMakeFiles EXCLUDE
           PATTERN utils EXCLUDE
