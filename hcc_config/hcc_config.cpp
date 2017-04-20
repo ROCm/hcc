@@ -17,7 +17,7 @@
 #include <cstring>
 #include "hcc_config.hxx"
 
-// macro for stringification 
+// macro for stringification
 #define XSTR(S) STR(S)
 #define STR(S) #S
 
@@ -149,7 +149,7 @@ void ldflags(void) {
         }
     }
 
-    // extra libraries if using libc++ for C++ runtime   
+    // extra libraries if using libc++ for C++ runtime
 #ifdef USE_LIBCXX
     std::cout << " -lc++ -lc++abi";
 #endif
@@ -166,6 +166,8 @@ void ldflags(void) {
     std::cout << " -L" XSTR(CODEXL_ACTIVITY_LOGGER_LIBRARY);
     std::cout << " -lCXLActivityLogger";
 #endif
+
+    std::cout << " -lhc_profile";
 }
 
 void prefix(void) {
