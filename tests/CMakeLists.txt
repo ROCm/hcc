@@ -56,9 +56,6 @@ if(POLICY CMP0037)
   cmake_policy(SET CMP0037 OLD)
 endif()
 
-include(ProcessorCount)
-ProcessorCount(N)
-
 add_custom_target(test
   COMMAND python ${LLVM_ROOT}/bin/llvm-lit --path ${LLVM_TOOLS_DIR} -sv ${CMAKE_CURRENT_BINARY_DIR}
   # DEPENDS ${CPPAMP_GTEST_LIB}
