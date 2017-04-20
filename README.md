@@ -130,12 +130,12 @@ In your application compiled using HCC, include the profiling header file:
 
 To profile a function, place the following marker in the function:
 ```cpp
-cxlMarker f1 = CXL_MARKER
+cxlMarker f1 = CXL_MARKER;
 ```
 
 To profile a class, place the following marker as a data member of that class:
 ```cpp
-cxlMarker c1 = CXL_MARKER_CLASS
+cxlMarker c1 = CXL_MARKER_CLASS;
 ```
 
 For information about the usage of the Activity Logger for profiling, please refer to its [documentation][8].
