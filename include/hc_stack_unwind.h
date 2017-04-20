@@ -44,7 +44,7 @@ namespace hc {
       }
 
       char loc[buffer_size];
-      std::sprintf(loc, "0x%016lx:\t%s + 0x%lx\n", pc, print_func_name, offp);
+      std::snprintf(loc, buffer_size, "0x%016lx:\t%s + 0x%lx\n", pc, print_func_name, offp);
       bt += std::string(loc);
 
       if (demangled)
