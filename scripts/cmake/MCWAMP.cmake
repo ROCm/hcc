@@ -27,7 +27,7 @@ macro(amp_target name )
     target_include_directories(${name} SYSTEM PUBLIC ${LIBCXX_HEADER})
     target_compile_options(${name} PUBLIC -stdlib=libc++)
   endif (USE_LIBCXX)
-	target_compile_options(${name} PUBLIC -std=c++amp -fPIC)
+	target_compile_options(${name} PUBLIC -std=c++amp -fPIC -gline-tables-only)
 endmacro(amp_target name )
 
 ####################
