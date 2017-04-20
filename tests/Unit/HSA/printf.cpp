@@ -35,3 +35,5 @@ int main() {
 
 // CHECK: Hello HC from thread: 0
 // CHECK: Hello again from thread: 0
+// CHECK: Hello HC from thread: 64
+// CHECK: Hello again from thread: 64
