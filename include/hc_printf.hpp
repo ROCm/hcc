@@ -108,11 +108,7 @@ static inline PrintfError printf(PrintfPacket* queue, All... all) [[hc,cpu]] {
     error = PRINTF_BUFFER_OVERFLOW;
   } else {
 
-#if 0
-    /*** FIXME: hcc didn't promote the address of the atomic type into global address space ***/
     unsigned int offset = queue[1].data.ai.fetch_add(count + 1);
-#endif
-    unsigned int offset = __hsail_atomic_fetch_add_unsigned(&(queue[1].data.ui),count + 1);
     if (offset + count + 1 < queue[0].data.ui) {
       set_batch(queue, offset, count, all...);
     }
