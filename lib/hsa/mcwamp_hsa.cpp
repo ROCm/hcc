@@ -2379,15 +2379,6 @@ public:
         // or it will be created as a shared_ptr<KalmarAsyncOp> in:
         // HSAQueue::LaunchKernelAsync()
         HSADispatch *dispatch = new HSADispatch(this, kernel);
-
-        // HLC Stable would need 3 additional arguments
-        // HLC Development would not need any additional arguments
-#define HSAIL_HLC_DEVELOPMENT_COMPILER 1
-#ifndef HSAIL_HLC_DEVELOPMENT_COMPILER
-        dispatch->pushLongArg(0);
-        dispatch->pushLongArg(0);
-        dispatch->pushLongArg(0);
-#endif
         return dispatch;
     }
 
