@@ -40,9 +40,11 @@ do_softlinks() {
     rm -f  $ROCM_PATH/$DEST_DIR/$FILE
   done
   rm -f $ROCM_PATH/include/hcc
+  rm -f $ROCM_PATH/lib/cmake/hcc
   rm -f $ROCM_PATH/hcc
 
   rmdir --ignore-fail-on-non-empty /opt/rocm/lib 
+  rmdir --ignore-fail-on-non-empty /opt/rocm/lib/cmake
   rmdir --ignore-fail-on-non-empty /opt/rocm/include
   rmdir --ignore-fail-on-non-empty /opt/rocm/bin 
   rmdir --ignore-fail-on-non-empty /opt/rocm     
