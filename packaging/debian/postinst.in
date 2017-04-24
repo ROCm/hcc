@@ -41,7 +41,7 @@ do_softlinks() {
     rm -f "$ROCM_PATH/hcc" 
   fi
   ln -sf $INSTALL_PATH $ROCM_PATH/hcc
-  ln -sf $ROCM_PATH/hcc/lib/cmake/hcc $ROCM_PATH/lib/cmake/hcc
+  ln -sf $ROCM_PATH/hcc/$LIBRARY_DIR/cmake/hcc $ROCM_PATH/lib/cmake/hcc
 
   if [ ! -e $ROCM_PATH/include/hcc ] ; then
     ln -sf $ROCM_PATH/hcc/include $ROCM_PATH/include/hcc
