@@ -576,7 +576,7 @@ endif( )
 
 set(PACKAGE_DESCRIPTION "HCC: An Open Source, Optimizing C++ Compiler for Heterogeneous Compute")
 
-set(OFFICIAL_RELEASE_BUILD 0)
+set(OFFICIAL_RELEASE_BUILD 1)
 
 option(CPACK_GENERATOR "Specify the installer package generator")
 
