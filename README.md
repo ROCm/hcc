@@ -121,7 +121,17 @@ cmake \
 
 CodeXL Activity Logger Profiling
 ================================
-To enable [CodeXL Activity Logger][7] profiling, enable the `HCC_CODEXL_PROFILING` environment variable.
+To enable [CodeXL Activity Logger][7] profiling, enable the `HCC_CODEXL_PROFILING` environment variable and the `CODEXL_PROFILING` CMake flag.
+
+Configure the build in the following way:
+```bash
+mkdir -p build; cd build
+cmake \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCODEXL_PROFILING=ON \
+    ..
+make
+```
 
 In your application compiled using HCC, include the profiling header file:
 ```cpp

@@ -12,15 +12,21 @@ if (USE_LIBCXX)
 endif (USE_LIBCXX)
 
 ####################
-# CodeXL Activity Logger
+# CodeXL Activity Logger Profiling
 ####################
-add_definitions(-DCODEXL_ACTIVITY_LOGGER_ENABLED)
+if (CODEXL_PROFILING)
+
+add_definitions(-DCODEXL_PROFILING_ENABLED)
+
 if (CODEXL_ACTIVITY_LOGGER_HEADER)
   add_definitions(-DCODEXL_ACTIVITY_LOGGER_HEADER=${CODEXL_ACTIVITY_LOGGER_HEADER})
 endif (CODEXL_ACTIVITY_LOGGER_HEADER)
+
 if (CODEXL_ACTIVITY_LOGGER_LIBRARY)
   add_definitions(-DCODEXL_ACTIVITY_LOGGER_LIBRARY=${CODEXL_ACTIVITY_LOGGER_LIBRARY})
 endif (CODEXL_ACTIVITY_LOGGER_LIBRARY)
+
+endif (CODEXL_PROFILING)
 
 add_executable(hcc-config hcc_config.cpp)
 

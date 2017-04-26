@@ -5,7 +5,7 @@
 
 class cxlProfiler {
 private:
-    int enabled;
+    bool enabled;
 public:
     cxlProfiler();
     ~cxlProfiler();
@@ -13,7 +13,7 @@ public:
 
 class cxlMarker {
 public:
-    static int enabled;
+    static bool enabled;
     cxlMarker(const char* szMarkerName, const char* szGroupName, const char* szUserString);
     ~cxlMarker();
 };
