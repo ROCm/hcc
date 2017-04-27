@@ -5,7 +5,6 @@
 #include <iostream>
 #include <random>
 #include <cmath>
-#include <cassert>
 
 using namespace concurrency;
 
@@ -36,11 +35,11 @@ bool test() {
   parallel_for_each(
     e,
     [=](index<1> idx) restrict(amp) {
-    gc[idx] = precise_math::exp(ga[idx]);
+    gc[idx] = precise_math::expf(ga[idx]);
   });
 
   for(unsigned i = 0; i < vecSize; i++) {
-    gb[i] = precise_math::exp(ga[i]);
+    gb[i] = precise_math::expf(ga[i]);
   }
 
   _Tp sum = 0.0;
@@ -58,8 +57,7 @@ bool test() {
 int main(void) {
   bool ret = true;
 
-  //ret &= test<float>();
-  ret &= test<double>();
+  ret &= test<float>();
 
   return !(ret == true);
 }
