@@ -609,6 +609,12 @@ else ( USE_LIBCXX )
   set(HCC_LIBCXX_DEBIAN_DEP "")
 endif( USE_LIBCXX )
 
+if (CODEXL_PROFILING)
+  set(HCC_CXL_ACTIVITY_LOGGER_DEP ", cxlactivitylogger")
+else (CODEXL_PROFILING)
+  set(HCC_CXL_ACTIVITY_LOGGER_DEP "")
+endif(CODEXL_PROFILING)
+
 # control the list of package dependency depending on whether this is an official release build.
 # for non-official release build, we want to relax the dependency on rocr runtime
 if (OFFICIAL_RELEASE_BUILD)
@@ -621,7 +627,7 @@ else (OFFICIAL_RELEASE_BUILD)
   set(HCC_ROCR_DEP "")
 endif (OFFICIAL_RELEASE_BUILD)
 
-set(CPACK_DEBIAN_PACKAGE_DEPENDS "${HCC_GENERAL_DEBIAN_DEP} ${HCC_ROCR_DEP} ${HCC_LIBCXX_DEBIAN_DEP}")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "${HCC_GENERAL_DEBIAN_DEP} ${HCC_ROCR_DEP} ${HCC_LIBCXX_DEBIAN_DEP} ${HCC_CXL_ACTIVITY_LOGGER_DEP}")
 
 # RPM package settings
 set(CPACK_RPM_PACKAGE_DESCRIPTION ${PACKAGE_DESCRIPTION})
@@ -632,7 +638,7 @@ set(CPACK_RPM_PRE_UNINSTALL_SCRIPT_FILE "${PROJECT_BINARY_DIR}/packaging/debian/
 set(CPACK_RPM_PACKAGE_AUTOREQ 0)
 
 set(HCC_GENERAL_RPM_DEP "findutils, elfutils-libelf, pciutils-libs, file, pth")
-set(CPACK_RPM_PACKAGE_REQUIRES "${HCC_GENERAL_RPM_DEP} ${HCC_ROCR_DEP}" )
+set(CPACK_RPM_PACKAGE_REQUIRES "${HCC_GENERAL_RPM_DEP} ${HCC_ROCR_DEP} ${HCC_CXL_ACTIVITY_LOGGER_DEP}" )
 
 set(CPACK_COMPONENTS_ALL compiler)
 

@@ -9,6 +9,7 @@ add_mcwamp_library_hc_am(hc_am hc_am.cpp)
 # CodeXL Activity Logger Profiling
 ####################
 add_library(hc_profile SHARED hc_profile.cpp)
+add_dependencies(hc_profile clang)
 target_link_libraries(mcwamp_hsa hc_profile)
 target_link_libraries(hc_am hc_profile)
 
