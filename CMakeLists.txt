@@ -414,6 +414,7 @@ if (HCC_INTEGRATE_ROCDL)
             -DLLVM_DIR=${CLANG_BIN_DIR}
             -DAMDHSACOD=${AMDHSACOD}
             -DGENERIC_IS_ZERO=ON
+            -DBUILD_HC_LIB=ON
     COMMAND make -j ${NUM_BUILD_THREADS} # not portable, but we need it this way
     WORKING_DIRECTORY ${ROCDL_BUILD_DIR}
     DEPENDS clang
