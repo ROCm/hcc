@@ -54,38 +54,43 @@ int main() {
   int dataCursor = 0;
   for (auto acc = accelerators.begin(); acc != accelerators.end(); acc++) {
     for (int i = 0; i < numViewPerAcc; i++) {
-
       // create a new accelerator_view
       acc_views.push_back(acc->create_view());
 
+      // create array_views that only covers the data portion needed by this accelerator_view
+      x_arrays.push_back(hc::array<float,1>(numSaxpyPerView, acc_views.back()));
+      y_arrays.push_back(hc::array<float,1>(numSaxpyPerView, acc_views.back()));
+    }
+    for (int i = 0; i != numViewPerAcc; ++i) {
       int newDataCursor = dataCursor+numSaxpyPerView;
 
       // create array_views that only covers the data portion needed by this accelerator_view
-      x_arrays.push_back(hc::array<float,1>(numSaxpyPerView, acc_views.back()));
-      auto& x_array = x_arrays.back();
+      auto& x_array = x_arrays[i];
 
-      hc::completion_future cpfuture_x = hc::copy_async(host_x.begin() + dataCursor
-                                                        , host_x.begin() + newDataCursor
-                                                        , x_array);
+      hc::completion_future cpfuture_x =
+          hc::copy_async(
+              host_x.begin() + dataCursor,
+              host_x.begin() + newDataCursor,
+              x_array);
 
-      y_arrays.push_back(hc::array<float,1>(numSaxpyPerView, acc_views.back()));
-      auto& y_array = y_arrays.back();
+      auto& y_array = y_arrays[i];
 
-      hc::completion_future cpfuture_y = hc::copy_async(host_y.begin() + dataCursor
-                                                        , host_y.begin() + newDataCursor
-                                                        , y_array);
+      hc::completion_future cpfuture_y =
+          hc::copy_async(
+              host_y.begin() + dataCursor,
+              host_y.begin() + newDataCursor,
+              y_array);
       dataCursor = newDataCursor;
+
       cpfuture_x.wait();
       cpfuture_y.wait();
 
       hc::completion_future f;
       f = hc::parallel_for_each(acc_views.back(), x_array.get_extent()
-                            , [&,a](hc::index<1> i) [[hc]] {
-        y_array[i] = a * x_array[i] + y_array[i];
-      });
+          , [&,a](hc::index<1> i) [[hc]] {
+              y_array[i] = a * x_array[i] + y_array[i];
+          });
       futures.push_back(f);
-
-      //printf("dataCursor: %d\n",dataCursor);
     }
   }
 
