@@ -513,6 +513,10 @@ am_status_t am_memory_host_unlock(hc::accelerator &ac, void *hostPtr)
     {
         hsa_status_t hsa_status = hsa_amd_memory_unlock(hostPtr);
     }
+    am_status_t remove_status = am_memtracker_remove(hostPtr);
+    if(remove_status != AM_SUCCESS){
+         return remove_status;
+    }
     return am_status;
 }
 
