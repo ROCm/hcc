@@ -518,10 +518,6 @@ am_status_t am_memory_host_unlock(hc::accelerator &ac, void *hostPtr)
             am_status = AM_ERROR_MISC;
         }
     }
-    am_status_t remove_status = am_memtracker_remove(hostPtr);
-    if(remove_status != AM_SUCCESS){
-         return remove_status;
-    }
     return am_status;
 }
 
