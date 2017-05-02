@@ -83,6 +83,8 @@ int HCC_PRINT_ENV=0;
 
 int HCC_UNPINNED_COPY_MODE = UnpinnedCopyEngine::ChooseBest;
 
+int HCC_CHECK_COPY=0;
+
 // Copy thresholds, in KB.  These are used for "choose-best" copy mode.
 long int HCC_H2D_STAGING_THRESHOLD    = 64;
 long int HCC_H2D_PININPLACE_THRESHOLD = 4096;
@@ -558,15 +560,24 @@ public:
     HSABarrier() : KalmarAsyncOp(Kalmar::hcCommandMarker), isDispatched(false), future(nullptr), hsaQueue(nullptr), waitMode(HSA_WAIT_STATE_BLOCKED), depCount(0) {}
 
     // constructor with 1 prior depedency
-    HSABarrier(std::shared_ptr <Kalmar::KalmarAsyncOp> dependent_op) : KalmarAsyncOp(Kalmar::hcCommandMarker), isDispatched(false), future(nullptr), hsaQueue(nullptr), waitMode(HSA_WAIT_STATE_BLOCKED), depCount(1) {
-        depAsyncOps[0] = dependent_op;
+    HSABarrier(std::shared_ptr <Kalmar::KalmarAsyncOp> dependent_op) : KalmarAsyncOp(Kalmar::hcCommandMarker), isDispatched(false), future(nullptr), hsaQueue(nullptr), waitMode(HSA_WAIT_STATE_BLOCKED) {
+        if (dependent_op != nullptr) {
+            depAsyncOps[0] = dependent_op;
+            depCount = 1;
+        } else {
+            depCount = 0;
+        }
     }
 
     // constructor with at most 5 prior dependencies
-    HSABarrier(int count, std::shared_ptr <Kalmar::KalmarAsyncOp> *dependent_op_array) : KalmarAsyncOp(Kalmar::hcCommandMarker), isDispatched(false), future(nullptr), hsaQueue(nullptr), waitMode(HSA_WAIT_STATE_BLOCKED), depCount(count) {
+    HSABarrier(int count, std::shared_ptr <Kalmar::KalmarAsyncOp> *dependent_op_array) : KalmarAsyncOp(Kalmar::hcCommandMarker), isDispatched(false), future(nullptr), hsaQueue(nullptr), waitMode(HSA_WAIT_STATE_BLOCKED), depCount(0) {
         if ((count > 0) && (count <= 5)) {
             for (int i = 0; i < count; ++i) {
-                depAsyncOps[i] = dependent_op_array[i];
+                if (dependent_op_array[i]) {
+                    // squish null ops 
+                    depAsyncOps[depCount] = dependent_op_array[i];
+                    depCount++;
+                }
             }
         } else {
             // throw an exception
@@ -2148,6 +2159,10 @@ public:
                                                 HCC_D2H_PININPLACE_THRESHOLD);
 
 
+        if (HCC_CHECK_COPY && !this->cpu_accessible_am) {
+            throw Kalmar::runtime_exception("HCC_CHECK_COPY can only be used on machines where accelerator memory is visible to CPU (ie large-bar systems)", 0);
+        }
+
     }
 
     ~HSADevice() {
@@ -2767,6 +2782,9 @@ void ReadHccEnv()
 
 
     GET_ENV_INT(HCC_UNPINNED_COPY_MODE, "Select algorithm for unpinned copies. 0=ChooseBest(see thresholds), 1=PinInPlace, 2=StagingBuffer, 3=Memcpy");
+
+    GET_ENV_INT(HCC_CHECK_COPY, "Check dst == src after each copy operation.  Only works on large-bar systems.");
+
    
     // Select thresholds to use for unpinned copies
     GET_ENV_INT (HCC_H2D_STAGING_THRESHOLD,    "Min size (in KB) to use staging buffer algorithm for H2D copy if ChooseBest algorithm selected");
@@ -4047,6 +4065,15 @@ HSACopy::waitComplete() {
 }
 
 
+void checkCopy(const void *s1, const void *s2, size_t sizeBytes)
+{
+    if (memcmp(s1, s2, sizeBytes) != 0) {
+        throw Kalmar::runtime_exception("HCC_CHECK_COPY mismatch detected", 0);
+    }
+}
+
+
+
 // Small wrapper that calls hsa_amd_memory_async_copy.
 // HCC knows exactly which copy-engine it wants to perfom the copy and has already made.
 hsa_status_t HSACopy::hcc_memory_async_copy(Kalmar::hcCommandKind copyKind, const Kalmar::HSADevice *copyDeviceArg, 
@@ -4118,6 +4145,11 @@ hsa_status_t HSACopy::hcc_memory_async_copy(Kalmar::hcCommandKind copyKind, cons
     status = hsa_amd_memory_async_copy(dstPtr, dstAgent, srcPtr, srcAgent, sizeBytes, depSignalCnt, depSignals, completion_signal);
     if (status != HSA_STATUS_SUCCESS) {
         throw Kalmar::runtime_exception("hsa_amd_memory_async_copy error", status);
+    }
+
+    if (HCC_CHECK_COPY) {
+        hsa_signal_wait_acquire(completion_signal, HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX, HSA_WAIT_STATE_BLOCKED);
+        checkCopy(dstPtr, srcPtr, sizeBytes);
     }
 
     return status;
@@ -4376,6 +4408,10 @@ HSACopy::syncCopyExt(Kalmar::HSAQueue *hsaQueue, hc::hcCommandKind copyDir, cons
         }
         Kalmar::ctx.releaseSignal(signal, signalIndex);
         signalIndex = -1;
+    }
+
+    if (HCC_CHECK_COPY) {
+        checkCopy(dst, src, sizeBytes);
     }
 }
 
