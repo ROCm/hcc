@@ -403,6 +403,9 @@ public:
         }
     }
 
+    //TODO - fix this so all Kernels set the _kernelName to something sensible.
+    std::string getKernelName() const { return !kernelName.empty() ? kernelName : "<unknown>";}
+
     ~HSAKernel() {
 #if KALMAR_DEBUG
       std::cerr << "HSAKernel::~HSAKernel\n";
@@ -3616,7 +3619,7 @@ HSADispatch::dispatchKernel(hsa_queue_t* lockedHsaQueue, const void *hostKernarg
 
     hsa_queue_store_write_index_relaxed(lockedHsaQueue, index + 1);
 
-    DBOUT(DB_AQL, "queue:" << lockedHsaQueue  <<  " dispatch kernel " << (kernel ? kernel->kernelName : "<unknown>") << "\n");
+    DBOUT(DB_AQL, "queue:" << lockedHsaQueue  <<  " dispatch kernel " << (kernel ? kernel->getKernelName():"<unknown>") << "\n");
     DBOUT(DB_AQL, "dispatch_aql:" << *q_aql << "\n");
 
     if (DBFLAG(DB_KERNARG)) { 
@@ -3854,7 +3857,11 @@ HSADispatch::setLaunchConfiguration(int dims, size_t *globalDims, size_t *localD
       workitem_vgpr_count = 1;
     size_t max_num_work_items_per_cu = (max_num_vgprs_per_work_item / workitem_vgpr_count) * num_work_items_per_simd * num_simds_per_cu;
     if (max_num_work_items_per_cu < workgroup_total_size) {
-        throw Kalmar::runtime_exception("The number of VGPRs needed by this launch exceeds HW limit due to big work group size!", 0);
+        std::string msg;
+        msg = "The number of VGPRs (" + std::to_string(kernel->workitem_vgpr_count) + ") needed by this launch (" + 
+              (kernel?kernel->getKernelName():"<unknown>") + ") exceeds HW limit due to big work group size (" + 
+              std::to_string(workgroup_total_size) + ") workitems!";
+        throw Kalmar::runtime_exception(msg.c_str(), 0);
     }
 
     aql.workgroup_size_x = workgroup_size[0];
