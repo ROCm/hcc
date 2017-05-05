@@ -512,6 +512,11 @@ am_status_t am_memory_host_unlock(hc::accelerator &ac, void *hostPtr)
     if(am_status == AM_SUCCESS)
     {
         hsa_status_t hsa_status = hsa_amd_memory_unlock(hostPtr);
+        if (hsa_status == HSA_STATUS_SUCCESS) {
+            am_status = am_memtracker_remove(hostPtr);
+        } else {
+            am_status = AM_ERROR_MISC;
+        }
     }
     return am_status;
 }

@@ -1433,13 +1433,16 @@ accelerator_view::create_marker(memory_scope scope) const {
 inline unsigned int accelerator_view::get_version() const { return get_accelerator().get_version(); }
 
 inline completion_future accelerator_view::create_blocking_marker(completion_future& dependent_future, memory_scope scope) const {
-    return completion_future(pQueue->EnqueueMarkerWithDependency(dependent_future.__asyncOp, scope));
+    if (dependent_future.__asyncOp) {
+        return completion_future(pQueue->EnqueueMarkerWithDependency(dependent_future.__asyncOp, scope));
+    } else {
+        return completion_future();
+    }
 }
 
 template<typename InputIterator>
 inline completion_future
 accelerator_view::create_blocking_marker(InputIterator first, InputIterator last, memory_scope scope) const {
-    bool atLeastOne = false; // have we sent at least one marker
     int cnt = 0;
     std::shared_ptr<Kalmar::KalmarAsyncOp> deps[5]; // array of 5 pointers to the native handle of async ops. 5 is the max supported by barrier packet
     hc::completion_future lastMarker;
@@ -1449,15 +1452,16 @@ accelerator_view::create_blocking_marker(InputIterator first, InputIterator last
     // since HC sets the barrier bit in each AND barrier packet, we know
     // the barriers will execute in-order
     for (auto iter = first; iter != last; ++iter) {
-        deps[cnt++] = iter->__asyncOp; // retrieve async op associated with completion_future
-        if (cnt == 5) {
-            atLeastOne = true;
-            lastMarker = completion_future(pQueue->EnqueueMarkerWithDependency(cnt, deps, scope));
-            cnt = 0;
+        if (iter->__asyncOp) {
+            deps[cnt++] = iter->__asyncOp; // retrieve async op associated with completion_future
+            if (cnt == 5) {
+                lastMarker = completion_future(pQueue->EnqueueMarkerWithDependency(cnt, deps, scope));
+                cnt = 0;
+            }
         }
     }
 
-    if (cnt || !atLeastOne) {
+    if (cnt) {
         lastMarker = completion_future(pQueue->EnqueueMarkerWithDependency(cnt, deps, scope));
     }
 

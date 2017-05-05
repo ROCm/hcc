@@ -330,7 +330,7 @@ if [ -n "$HCC_AMDGPU_TARGET" ]; then
   # parse individual token, override AMDGPU_TARGET_ARRAY
   iter=0
   for HCC_AMDGPU_TARGET_TOKEN in ${HCC_AMDGPU_TARGET_TOKENS[@]}; do
-    AMDGPU_TARGET_ARRAY[$iter]=$HCC_AMDGPU_TARGET
+    AMDGPU_TARGET_ARRAY[$iter]=$HCC_AMDGPU_TARGET_TOKEN
     ((iter++))
   done
 fi
