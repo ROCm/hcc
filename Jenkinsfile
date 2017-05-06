@@ -72,6 +72,7 @@ node ('rocmtest')
             -DHSA_AMDGPU_GPU_TARGET="gfx701;gfx803" \
             ../..
           make -j\$(nproc)
+          make test
         """
 
       // Cap the maximum amount of testing, in case of hangs
