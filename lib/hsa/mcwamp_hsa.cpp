@@ -3835,7 +3835,10 @@ HSADispatch::setLaunchConfiguration(int dims, size_t *globalDims, size_t *localD
     static const size_t max_num_vgprs_per_work_item = 256;
     static const size_t num_work_items_per_simd = 64;
     static const size_t num_simds_per_cu = 4;
-    size_t max_num_work_items_per_cu = (max_num_vgprs_per_work_item / kernel->workitem_vgpr_count) * num_work_items_per_simd * num_simds_per_cu;
+    unsigned workitem_vgpr_count = kernel->workitem_vgpr_count;
+    if (workitem_vgpr_count == 0)
+      workitem_vgpr_count = 1;
+    size_t max_num_work_items_per_cu = (max_num_vgprs_per_work_item / workitem_vgpr_count) * num_work_items_per_simd * num_simds_per_cu;
     if (max_num_work_items_per_cu < workgroup_total_size) {
         throw Kalmar::runtime_exception("The number of VGPRs needed by this launch exceeds HW limit due to big work group size!", 0);
     }
