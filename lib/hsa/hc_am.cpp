@@ -1,6 +1,7 @@
 #include "hc_am.hpp"
 
 #include <cstdint>
+#include <iomanip>
 #include <hsa/hsa.h>
 #include <hsa/hsa_ext_amd.h>
 
@@ -56,15 +57,61 @@ struct AmMemoryRangeCompare {
 };
 
 
+
+// width to use when printing pointers:
+const int PTRW=14;
+
+void printShortPointerInfo(std::ostream &os, const hc::AmPointerInfo &ap)
+{
+    using namespace std;
+    os << "#" << setw(6)  << ap._allocSeqNum
+       << " " << setw(PTRW) << ap._hostPointer 
+       << " " << setw(PTRW) << ap._devicePointer
+       << " " << setw(12) <<  ap._sizeBytes
+       << " " << setw(8) << fixed << setprecision(2) << (double)ap._sizeBytes/1024.0/1024.0
+       << (ap._isInDeviceMem ? " DEV " : " HOST")
+       << (ap._isAmManaged ? " ALLOC" : " REGIS")
+       << " " << setw(5) << ap._appId 
+       << " " << hex << setw(8) << ap._appAllocationFlags << dec
+       ;
+}
+
+
+void printRocrPointerInfo(std::ostream &os, const void *ptr)
+{
+    hsa_amd_pointer_info_t info;
+    hsa_status_t hsa_status;
+    bool isLocked = false;
+    info.size = sizeof(info);
+
+    uint32_t peerAgentCnt=0;
+    hsa_agent_t * peerAgents = nullptr;
+    hsa_status = hsa_amd_pointer_info(const_cast<void*> (ptr), &info, malloc, &peerAgentCnt, &peerAgents);
+    if(hsa_status == HSA_STATUS_SUCCESS) {
+
+        for (uint32_t i=0; i<peerAgentCnt; i++) {
+            os << " " << peerAgents[i].handle ;
+        }
+
+        if (peerAgents) {
+            free (peerAgents);
+        }
+    }
+}
+
+
 std::ostream &operator<<(std::ostream &os, const hc::AmPointerInfo &ap)
 {
     os << "allocSeqNum:" << ap._allocSeqNum
        << " hostPointer:" << ap._hostPointer << " devicePointer:"<< ap._devicePointer << " sizeBytes:" << ap._sizeBytes
        << " isInDeviceMem:" << ap._isInDeviceMem  << " isAmManaged:" << ap._isAmManaged 
-       << " appId:" << ap._appId << " appAllocFlags:" << ap._appAllocationFlags;
+       << " appId:" << ap._appId << " appAllocFlags:" << ap._appAllocationFlags
+       << std::left << " peers:" << std::right
+       ;
+
+    printRocrPointerInfo(os, ap._isInDeviceMem ? ap._devicePointer : ap._hostPointer);
     return os;
 }
-
 
 //-------------------------------------------------------------------------------------------------
 // This structure tracks information for each pointer.
@@ -322,7 +369,7 @@ am_status_t am_memtracker_remove(void* ptr)
 //---
 void am_memtracker_print(void *targetAddress)
 {
-    const char *targetAddressP = static_cast<const char *> (targetAddressP);
+    const char *targetAddressP = static_cast<const char *> (targetAddress);
     std::ostream &os = std::cerr;
 
     uint64_t beforeD = std::numeric_limits<uint64_t>::max() ;
@@ -331,34 +378,60 @@ void am_memtracker_print(void *targetAddress)
     auto closestAfter  = g_amPointerTracker.end();
     bool foundMatch = false;
 
-    //g_amPointerTracker.print(std::cerr);
-    for (auto iter = g_amPointerTracker.readerLockBegin() ; iter != g_amPointerTracker.end(); iter++) {
-        const auto basePointer = static_cast<const char*> (iter->first._basePointer);
-        const auto endPointer = static_cast<const char*> (iter->first._endPointer);
-        if ((targetAddressP != nullptr) && (targetAddressP >= basePointer) && (targetAddressP < endPointer)) {
-            foundMatch = true;
-            os << "-->" ;
-        } else {
-            os << "   " ;
-            if ((targetAddressP < basePointer) && (basePointer - targetAddressP < beforeD)) {
-                beforeD = (basePointer - targetAddressP);
-                closestBefore = iter;
-            }
-            if ((endPointer > targetAddressP) && (targetAddressP - endPointer < afterD)) {
-                afterD = (targetAddressP - endPointer);
-                closestAfter = iter;
-            }
-        };
-        os << iter->first._basePointer << "-" << iter->first._endPointer << "::  ";
-        os << iter->second << std::endl;
-    }
 
-    if (!foundMatch) { 
-        if (closestBefore != g_amPointerTracker.end()) {
-            os << "closest before: " << beforeD << " bytes before base of: " << closestBefore->second << std::endl;
+    if (targetAddress) {
+        for (auto iter = g_amPointerTracker.readerLockBegin() ; iter != g_amPointerTracker.end(); iter++) {
+            const auto basePointer = static_cast<const char*> (iter->first._basePointer);
+            const auto endPointer = static_cast<const char*> (iter->first._endPointer);
+            if ((targetAddressP >= basePointer) && (targetAddressP < endPointer)) {
+                ptrdiff_t offset = targetAddressP - basePointer;
+                os << "db: memtracker found pointer:" << targetAddress << " offset:" << offset << " bytes inside this allocation:\n";
+                os << "   " << iter->first._basePointer << "-" << iter->first._endPointer << "::  ";
+                os << iter->second << std::endl;
+                foundMatch = true;
+                break;
+            } else {
+                if ((targetAddressP < basePointer) && (basePointer - targetAddressP < beforeD)) {
+                    beforeD = (basePointer - targetAddressP);
+                    closestBefore = iter;
+                }
+                if ((targetAddressP > endPointer) && (targetAddressP - endPointer < afterD)) {
+                    afterD = (targetAddressP - endPointer);
+                    closestAfter = iter;
+                }
+            };
+
         }
-        if (closestAfter != g_amPointerTracker.end()) {
-            os << "closest after: " << afterD << "bytes after end of " << closestAfter->second << std::endl ;
+
+        if (!foundMatch) {
+            os << "db: memtracker did not find pointer:" << targetAddress << ".  However, it is closest to the following allocations:\n";
+            if (closestBefore != g_amPointerTracker.end()) {
+                os << "db: closest before: " << beforeD << " bytes before base of: " << closestBefore->second << std::endl;
+            }
+            if (closestAfter != g_amPointerTracker.end()) {
+                os << "db: closest after: " << afterD << " bytes after end of " << closestAfter->second << std::endl ;
+            }
+        }
+    } else {
+        using namespace std;
+        os <<  setw(PTRW) << "base" << "-" << setw(PTRW) << "end" << ": ";
+        os  << setw(6+1) << "#SeqNum"
+            << setw(PTRW+1) << "HostPtr"
+            << setw(PTRW+1) << "DevPtr"
+            << setw(12+1) << "SizeBytes"
+            << setw(8+1) << "SizeMB"
+            << setw(5) << "Dev?"
+            << setw(6) << "Reg?"
+            << setw(6) << " AppId"
+            << setw(7) << " AppFlags"
+            << setw(12) << left << " Peers" << right
+            << "\n";
+
+        for (auto iter = g_amPointerTracker.readerLockBegin() ; iter != g_amPointerTracker.end(); iter++) {
+            os << setw(PTRW) << iter->first._basePointer << "-" << setw(PTRW) << iter->first._endPointer << ": ";
+            printShortPointerInfo(os, iter->second);
+            printRocrPointerInfo(os, iter->first._basePointer);
+            os << "\n";
         }
     }
 
