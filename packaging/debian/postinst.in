@@ -34,12 +34,14 @@ do_softlinks() {
   fi
 
   mkdir -p "$ROCM_PATH/lib"
+  mkdir -p "$ROCM_PATH/lib/cmake"
   mkdir -p "$ROCM_PATH/bin"
 
   if [ -L "$ROCM_PATH/hcc" ] ; then
     rm -f "$ROCM_PATH/hcc" 
   fi
   ln -sf $INSTALL_PATH $ROCM_PATH/hcc
+  ln -sf $ROCM_PATH/hcc/$LIBRARY_DIR/cmake/hcc $ROCM_PATH/lib/cmake/hcc
 
   if [ ! -e $ROCM_PATH/include/hcc ] ; then
     ln -sf $ROCM_PATH/hcc/include $ROCM_PATH/include/hcc
