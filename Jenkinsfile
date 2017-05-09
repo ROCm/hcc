@@ -33,16 +33,16 @@ node ('rocmtest')
 
     sh  """
         git clone --depth ${clone_depth} -b ${hcc_branch} https://github.com/RadeonOpenCompute/hcc-clang-upgrade.git clang
-        cd clang; git checkout $(cd ..; git ls-tree ${hcc_branch} clang  | awk '{print $3}'); cd ..
+        cd clang; git checkout \$(cd ..; git ls-tree ${hcc_branch} clang  | awk '{print \$3}'); cd ..
         git clone --depth ${clone_depth} -b amd-hcc https://github.com/RadeonOpenCompute/llvm.git compiler
-        cd compiler; git checkout $(cd ..; git ls-tree ${hcc_branch} compiler  | awk '{print $3}'); cd ..
+        cd compiler; git checkout \$(cd ..; git ls-tree ${hcc_branch} compiler  | awk '{print \$3}'); cd ..
         git clone --depth ${clone_depth} -b amd-hcc https://github.com/RadeonOpenCompute/lld.git lld
-        cd lld; git checkout $(cd ..; git ls-tree ${hcc_branch} lld  | awk '{print $3}'); cd ..
+        cd lld; git checkout \$(cd ..; git ls-tree ${hcc_branch} lld  | awk '{print \$3}'); cd ..
         git clone --depth ${clone_depth} -b amd-hcc https://github.com/RadeonOpenCompute/compiler-rt.git compiler-rt
-        cd compiler-rt; git checkout $(cd ..; git ls-tree ${hcc_branch} compiler-rt  | awk '{print $3}'); cd ..
+        cd compiler-rt; git checkout \$(cd ..; git ls-tree ${hcc_branch} compiler-rt  | awk '{print \$3}'); cd ..
         git clone --depth ${clone_depth} -b clang_tot_upgrade https://github.com/RadeonOpenCompute/clang-tools-extra.git clang/tools/extra
         git clone --depth ${clone_depth} -b remove-promote-change-addr-space https://github.com/RadeonOpenCompute/ROCm-Device-Libs.git rocdl
-        cd rocdl; git checkout $(cd ..; git ls-tree ${hcc_branch} rocdl  | awk '{print $3}'); cd ..
+        cd rocdl; git checkout \$(cd ..; git ls-tree ${hcc_branch} rocdl  | awk '{print \$3}'); cd ..
         """
   }
 
