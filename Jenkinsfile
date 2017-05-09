@@ -24,8 +24,8 @@ node ('rocmtest')
     deleteDir( )
     checkout scm
 
-    // submodule update may not be updating fresh files from submodules
-    // sh 'git submodule update --init'
+    // init submodule
+    sh 'git submodule init'
 
     // Manually clone all submodules to get shallow copies to speed up checkout time
     def clone_depth = "10"
