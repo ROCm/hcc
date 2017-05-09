@@ -34,7 +34,7 @@ node ('rocmtest')
         git clone --depth 1 -b amd-hcc https://github.com/RadeonOpenCompute/lld.git lld
         git clone --depth 1 -b amd-hcc https://github.com/RadeonOpenCompute/compiler-rt.git compiler-rt
         git clone --depth 1 -b clang_tot_upgrade https://github.com/RadeonOpenCompute/clang-tools-extra.git clang/tools/extra
-        git clone --depth 1 -b remove-promote-change-addr-space https://github.com/RadeonOpenCompute/ROCm-Device-Libs.git rocdl
+        git clone --depth 1 -b 5caf7c6 https://github.com/RadeonOpenCompute/ROCm-Device-Libs.git rocdl
         '''
   }
 
