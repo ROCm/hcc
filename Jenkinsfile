@@ -31,7 +31,7 @@ node ('rocmtest')
     def clone_depth = "10"
     def hcc_branch = "clang_tot_upgrade"
 
-    sh  '''
+    sh  """
         git clone --depth ${clone_depth} -b ${hcc_branch} https://github.com/RadeonOpenCompute/hcc-clang-upgrade.git clang
         cd clang; git checkout $(cd ..; git ls-tree ${hcc_branch} clang  | awk '{print $3}'); cd ..
         git clone --depth ${clone_depth} -b amd-hcc https://github.com/RadeonOpenCompute/llvm.git compiler
@@ -43,7 +43,7 @@ node ('rocmtest')
         git clone --depth ${clone_depth} -b clang_tot_upgrade https://github.com/RadeonOpenCompute/clang-tools-extra.git clang/tools/extra
         git clone --depth ${clone_depth} -b remove-promote-change-addr-space https://github.com/RadeonOpenCompute/ROCm-Device-Libs.git rocdl
         cd rocdl; git checkout $(cd ..; git ls-tree ${hcc_branch} rocdl  | awk '{print $3}'); cd ..
-        '''
+        """
   }
 
   def hcc_build_image = null
