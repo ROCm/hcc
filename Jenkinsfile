@@ -28,13 +28,21 @@ node ('rocmtest')
     // sh 'git submodule update --init'
 
     // Manually clone all submodules to get shallow copies to speed up checkout time
+    def clone_depth = "10"
+    def hcc_branch = "clang_tot_upgrade"
+
     sh  '''
-        git clone --depth 1 -b clang_tot_upgrade https://github.com/RadeonOpenCompute/hcc-clang-upgrade.git clang
-        git clone --depth 1 -b amd-hcc https://github.com/RadeonOpenCompute/llvm.git compiler
-        git clone --depth 1 -b amd-hcc https://github.com/RadeonOpenCompute/lld.git lld
-        git clone --depth 1 -b amd-hcc https://github.com/RadeonOpenCompute/compiler-rt.git compiler-rt
-        git clone --depth 1 -b clang_tot_upgrade https://github.com/RadeonOpenCompute/clang-tools-extra.git clang/tools/extra
-        git clone --depth 1 -b 5caf7c6 https://github.com/RadeonOpenCompute/ROCm-Device-Libs.git rocdl
+        git clone --depth ${clone_depth} -b ${hcc_branch} https://github.com/RadeonOpenCompute/hcc-clang-upgrade.git clang
+        cd clang; git checkout $(cd ..; git ls-tree ${hcc_branch} clang  | awk '{print $3}'); cd ..
+        git clone --depth ${clone_depth} -b amd-hcc https://github.com/RadeonOpenCompute/llvm.git compiler
+        cd compiler; git checkout $(cd ..; git ls-tree ${hcc_branch} compiler  | awk '{print $3}'); cd ..
+        git clone --depth ${clone_depth} -b amd-hcc https://github.com/RadeonOpenCompute/lld.git lld
+        cd lld; git checkout $(cd ..; git ls-tree ${hcc_branch} lld  | awk '{print $3}'); cd ..
+        git clone --depth ${clone_depth} -b amd-hcc https://github.com/RadeonOpenCompute/compiler-rt.git compiler-rt
+        cd compiler-rt; git checkout $(cd ..; git ls-tree ${hcc_branch} compiler-rt  | awk '{print $3}'); cd ..
+        git clone --depth ${clone_depth} -b clang_tot_upgrade https://github.com/RadeonOpenCompute/clang-tools-extra.git clang/tools/extra
+        git clone --depth ${clone_depth} -b remove-promote-change-addr-space https://github.com/RadeonOpenCompute/ROCm-Device-Libs.git rocdl
+        cd rocdl; git checkout $(cd ..; git ls-tree ${hcc_branch} rocdl  | awk '{print $3}'); cd ..
         '''
   }
 
