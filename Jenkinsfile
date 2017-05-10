@@ -37,7 +37,7 @@ node ('rocmtest')
         clang_hash=`git ls-tree HEAD clang | awk \'{print \$3}\'`
         llvm_hash=`git ls-tree HEAD compiler | awk \'{print \$3}\'`
         lld_hash=`git ls-tree HEAD lld | awk \'{print \$3}\'`
-        compiler-rt_hash=`git ls-tree HEAD compiler-rt | awk \'{print \$3}\'`
+        compiler_rt_hash=`git ls-tree HEAD compiler-rt | awk \'{print \$3}\'`
         rocdl_hash=`git ls-tree HEAD rocdl | awk \'{print \$3}\'`
 
         git clone --depth ${clone_depth} -b ${hcc_branch} https://github.com/RadeonOpenCompute/hcc-clang-upgrade.git clang
@@ -51,7 +51,7 @@ node ('rocmtest')
 
 
         git clone --depth ${clone_depth} -b amd-hcc https://github.com/RadeonOpenCompute/compiler-rt.git compiler-rt
-        cd compiler-rt; git checkout \$(compiler-rt_hash); cd ..
+        cd compiler-rt; git checkout \$(compiler_rt_hash); cd ..
 
         git clone --depth ${clone_depth} -b remove-promote-change-addr-space https://github.com/RadeonOpenCompute/ROCm-Device-Libs.git rocdl
         cd rocdl; git checkout \$(rocdl_hash); cd ..
