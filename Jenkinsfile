@@ -34,11 +34,11 @@ node ('rocmtest')
 
     sh  """
 
-        clang_hash = `git ls-tree HEAD clang | awk \'{print \$3}\'`
-        llvm_hash = `git ls-tree HEAD compiler | awk \'{print \$3}\'`
-        lld_hash = `git ls-tree HEAD lld | awk \'{print \$3}\'`
-        compiler-rt_hash = `git ls-tree HEAD compiler-rt | awk \'{print \$3}\'`
-        rocdl_hash = `git ls-tree HEAD rocdl | awk \'{print \$3}\'`
+        clang_hash=`git ls-tree HEAD clang | awk \'{print \$3}\'`
+        llvm_hash=`git ls-tree HEAD compiler | awk \'{print \$3}\'`
+        lld_hash=`git ls-tree HEAD lld | awk \'{print \$3}\'`
+        compiler-rt_hash=`git ls-tree HEAD compiler-rt | awk \'{print \$3}\'`
+        rocdl_hash=`git ls-tree HEAD rocdl | awk \'{print \$3}\'`
 
         git clone --depth ${clone_depth} -b ${hcc_branch} https://github.com/RadeonOpenCompute/hcc-clang-upgrade.git clang
         cd clang; git checkout \$(clang_hash); cd ..
