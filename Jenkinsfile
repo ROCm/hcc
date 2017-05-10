@@ -41,20 +41,20 @@ node ('rocmtest')
         rocdl_hash=`git ls-tree HEAD rocdl | awk \'{print \$3}\'`
 
         git clone --depth ${clone_depth} -b ${hcc_branch} https://github.com/RadeonOpenCompute/hcc-clang-upgrade.git clang
-        cd clang; git checkout \$(clang_hash); cd ..
+        cd clang; git checkout \$clang_hash; cd ..
 
         git clone --depth ${clone_depth} -b amd-hcc https://github.com/RadeonOpenCompute/llvm.git compiler
-        cd compiler; git checkout \$(llvm_hash); cd ..
+        cd compiler; git checkout \$llvm_hash; cd ..
 
         git clone --depth ${clone_depth} -b amd-hcc https://github.com/RadeonOpenCompute/lld.git lld
-        cd lld; git checkout \$(lld_hash); cd ..
+        cd lld; git checkout \$lld_hash; cd ..
 
 
         git clone --depth ${clone_depth} -b amd-hcc https://github.com/RadeonOpenCompute/compiler-rt.git compiler-rt
-        cd compiler-rt; git checkout \$(compiler_rt_hash); cd ..
+        cd compiler-rt; git checkout \$compiler_rt_hash; cd ..
 
         git clone --depth ${clone_depth} -b remove-promote-change-addr-space https://github.com/RadeonOpenCompute/ROCm-Device-Libs.git rocdl
-        cd rocdl; git checkout \$(rocdl_hash); cd ..
+        cd rocdl; git checkout \$rocdl_hash; cd ..
 
         git clone --depth ${clone_depth} -b clang_tot_upgrade https://github.com/RadeonOpenCompute/clang-tools-extra.git clang/tools/extra
         """
