@@ -3898,7 +3898,7 @@ HSABarrier::waitComplete() {
 }
 
 inline hsa_status_t
-HSABarrier::enqueueAsync(Kalmar::HSAQueue* hsaQueue, hc::memory_scope scope) {
+HSABarrier::enqueueAsync(Kalmar::HSAQueue* hsaQueue, hc::memory_scope releaseScope) {
 
     // record HSAQueue association
     this->hsaQueue = hsaQueue;
@@ -3907,13 +3907,17 @@ HSABarrier::enqueueAsync(Kalmar::HSAQueue* hsaQueue, hc::memory_scope scope) {
     // enqueue barrier packet
     // TODO - can we remove acquire fence, this is barrier:
     unsigned fenceBits;
-    if (scope == hc::accelerator_scope) {
+    if (releaseScope == hc::no_scope) {
         fenceBits =
             ((HSA_FENCE_SCOPE_NONE) << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
+            ((HSA_FENCE_SCOPE_NONE) << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
+    } else if (releaseScope == hc::accelerator_scope) {
+        fenceBits =
+            ((HSA_FENCE_SCOPE_NONE)  << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
             ((HSA_FENCE_SCOPE_AGENT) << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
-    } else if (scope == hc::system_scope) {
+    } else if (releaseScope == hc::system_scope) {
         fenceBits =
-            ((HSA_FENCE_SCOPE_NONE) << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
+            ((HSA_FENCE_SCOPE_NONE)   << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
             ((HSA_FENCE_SCOPE_SYSTEM) << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
     } else {
         STATUS_CHECK(HSA_STATUS_ERROR_INVALID_ARGUMENT, __LINE__);
