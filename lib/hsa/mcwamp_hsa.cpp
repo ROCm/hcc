@@ -59,12 +59,12 @@
 #define KERNARG_BUFFER_SIZE (128)
 
 // number of pre-allocated kernarg buffers in HSAContext
-// default set as 64 (pre-allocating 64 of kernarg buffers in the pool)
-#define KERNARG_POOL_SIZE (64)
+// Should match SIGNAL_POOL_SIZE
+#define KERNARG_POOL_SIZE (512)
 
 // number of pre-allocated HSA signals in HSAContext
-// default set as 64 (pre-allocating 64 HSA signals)
-#define SIGNAL_POOL_SIZE (64) //
+// Should match KERNARG_POOL_SIZE
+#define SIGNAL_POOL_SIZE (512) //
 
 // Maximum number of inflight commands sent to a single queue.
 // If limit is exceeded, HCC will force a queue wait to reclaim
