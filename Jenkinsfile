@@ -24,18 +24,40 @@ node ('rocmtest')
     deleteDir( )
     checkout scm
 
-    // submodule update may not be updating fresh files from submodules
-    // sh 'git submodule update --init'
+    // init submodule
+    sh 'git submodule init'
 
     // Manually clone all submodules to get shallow copies to speed up checkout time
-    sh  '''
-        git clone --depth 1 -b clang_tot_upgrade https://github.com/RadeonOpenCompute/hcc-clang-upgrade.git clang
-        git clone --depth 1 -b amd-hcc https://github.com/RadeonOpenCompute/llvm.git compiler
-        git clone --depth 1 -b amd-hcc https://github.com/RadeonOpenCompute/lld.git lld
-        git clone --depth 1 -b amd-hcc https://github.com/RadeonOpenCompute/compiler-rt.git compiler-rt
-        git clone --depth 1 -b clang_tot_upgrade https://github.com/RadeonOpenCompute/clang-tools-extra.git clang/tools/extra
-        git clone --depth 1 -b remove-promote-change-addr-space https://github.com/RadeonOpenCompute/ROCm-Device-Libs.git rocdl
-        '''
+    def clone_depth = "10"
+    def hcc_branch = "clang_tot_upgrade"
+
+
+    sh  """
+
+        clang_hash=`git ls-tree HEAD clang | awk \'{print \$3}\'`
+        llvm_hash=`git ls-tree HEAD compiler | awk \'{print \$3}\'`
+        lld_hash=`git ls-tree HEAD lld | awk \'{print \$3}\'`
+        compiler_rt_hash=`git ls-tree HEAD compiler-rt | awk \'{print \$3}\'`
+        rocdl_hash=`git ls-tree HEAD rocdl | awk \'{print \$3}\'`
+
+        git clone --depth ${clone_depth} -b ${hcc_branch} https://github.com/RadeonOpenCompute/hcc-clang-upgrade.git clang
+        cd clang; git checkout \$clang_hash; cd ..
+
+        git clone --depth ${clone_depth} -b amd-hcc https://github.com/RadeonOpenCompute/llvm.git compiler
+        cd compiler; git checkout \$llvm_hash; cd ..
+
+        git clone --depth ${clone_depth} -b amd-hcc https://github.com/RadeonOpenCompute/lld.git lld
+        cd lld; git checkout \$lld_hash; cd ..
+
+
+        git clone --depth ${clone_depth} -b amd-hcc https://github.com/RadeonOpenCompute/compiler-rt.git compiler-rt
+        cd compiler-rt; git checkout \$compiler_rt_hash; cd ..
+
+        git clone --depth ${clone_depth} -b remove-promote-change-addr-space https://github.com/RadeonOpenCompute/ROCm-Device-Libs.git rocdl
+        cd rocdl; git checkout \$rocdl_hash; cd ..
+
+        git clone --depth ${clone_depth} -b clang_tot_upgrade https://github.com/RadeonOpenCompute/clang-tools-extra.git clang/tools/extra
+        """
   }
 
   def hcc_build_image = null
