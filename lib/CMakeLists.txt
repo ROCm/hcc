@@ -46,9 +46,9 @@ install(PROGRAMS ${PROJECT_BINARY_DIR}/bin/extractkernel
     DESTINATION bin)
 
 ####################
-# CodeXL Activity Logger
+# CodeXL Activity Logger Profiling
 ####################
-if (USE_CODEXL_ACTIVITY_LOGGER EQUAL 1)
+if (CODEXL_PROFILING)
 
 if (CODEXL_ACTIVITY_LOGGER_HEADER)
   include_directories(${CODEXL_ACTIVITY_LOGGER_HEADER})
@@ -58,7 +58,7 @@ if (CODEXL_ACTIVITY_LOGGER_LIBRARY)
   include_directories(${CODEXL_ACTIVITY_LOGGER_LIBRARY})
 endif (CODEXL_ACTIVITY_LOGGER_LIBRARY)
 
-endif (USE_CODEXL_ACTIVITY_LOGGER EQUAL 1)
+endif (CODEXL_PROFILING)
 
 ####################
 # add subdirectories

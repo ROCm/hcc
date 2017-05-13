@@ -119,29 +119,36 @@ cmake \
     ../hcc
 ```
 
-CodeXL Activity Logger
-======================
-To enable the [CodeXL Activity Logger][7], use the `USE_CODEXL_ACTIVITY_LOGGER` 
-environment variable.
+CodeXL Activity Logger Profiling
+================================
+To enable [CodeXL Activity Logger][7] profiling, enable the `HCC_CODEXL_PROFILING` environment variable and the `CODEXL_PROFILING` CMake flag.
 
-Configure the build in the following way: 
-
+Configure the build in the following way:
 ```bash
+mkdir -p build; cd build
 cmake \
     -DCMAKE_BUILD_TYPE=Release \
-    -DHSA_AMDGPU_GPU_TARGET=<AMD GPU ISA version string> \
-    -DROCM_DEVICE_LIB_DIR=<location of the ROCm-Device-Libs bitcode> \
-    -DUSE_CODEXL_ACTIVITY_LOGGER=1 \
-    <ToT HCC checkout directory>
+    -DCODEXL_PROFILING=ON \
+    ..
+make
 ```
 
-In your application compiled using hcc, include the CodeXL Activiy Logger header:
-```
-#include <CXLActivityLogger.h>
+In your application compiled using HCC, include the profiling header file:
+```cpp
+#include <hc_profile.hpp>
 ```
 
-For information about the usage of the Activity Logger for profiling, please 
-refer to its [documentation][8].
+To profile a function, place the following marker in the function:
+```cpp
+cxlMarker f1 = CXL_MARKER;
+```
+
+To profile a class, place the following marker as a data member of that class:
+```cpp
+cxlMarker c1 = CXL_MARKER_CLASS;
+```
+
+For information about the usage of the Activity Logger for profiling, please refer to its [documentation][8].
 
 [//]: # (References)
 [1]: https://github.com/RadeonOpenCompute/hcc/wiki
