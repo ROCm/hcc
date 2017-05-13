@@ -59,12 +59,12 @@
 #define KERNARG_BUFFER_SIZE (128)
 
 // number of pre-allocated kernarg buffers in HSAContext
-// default set as 64 (pre-allocating 64 of kernarg buffers in the pool)
-#define KERNARG_POOL_SIZE (64)
+// Should match SIGNAL_POOL_SIZE
+#define KERNARG_POOL_SIZE (512)
 
 // number of pre-allocated HSA signals in HSAContext
-// default set as 64 (pre-allocating 64 HSA signals)
-#define SIGNAL_POOL_SIZE (64) //
+// Should match KERNARG_POOL_SIZE
+#define SIGNAL_POOL_SIZE (512) //
 
 // Maximum number of inflight commands sent to a single queue.
 // If limit is exceeded, HCC will force a queue wait to reclaim
@@ -3898,7 +3898,7 @@ HSABarrier::waitComplete() {
 }
 
 inline hsa_status_t
-HSABarrier::enqueueAsync(Kalmar::HSAQueue* hsaQueue, hc::memory_scope scope) {
+HSABarrier::enqueueAsync(Kalmar::HSAQueue* hsaQueue, hc::memory_scope releaseScope) {
 
     // record HSAQueue association
     this->hsaQueue = hsaQueue;
@@ -3907,13 +3907,17 @@ HSABarrier::enqueueAsync(Kalmar::HSAQueue* hsaQueue, hc::memory_scope scope) {
     // enqueue barrier packet
     // TODO - can we remove acquire fence, this is barrier:
     unsigned fenceBits;
-    if (scope == hc::accelerator_scope) {
+    if (releaseScope == hc::no_scope) {
         fenceBits =
             ((HSA_FENCE_SCOPE_NONE) << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
+            ((HSA_FENCE_SCOPE_NONE) << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
+    } else if (releaseScope == hc::accelerator_scope) {
+        fenceBits =
+            ((HSA_FENCE_SCOPE_NONE)  << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
             ((HSA_FENCE_SCOPE_AGENT) << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
-    } else if (scope == hc::system_scope) {
+    } else if (releaseScope == hc::system_scope) {
         fenceBits =
-            ((HSA_FENCE_SCOPE_NONE) << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
+            ((HSA_FENCE_SCOPE_NONE)   << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
             ((HSA_FENCE_SCOPE_SYSTEM) << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
     } else {
         STATUS_CHECK(HSA_STATUS_ERROR_INVALID_ARGUMENT, __LINE__);
