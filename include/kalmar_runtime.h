@@ -41,8 +41,9 @@ enum execute_order
 // Flags to specify visibility of previous commands after a marker is executed.
 enum memory_scope
 {
-    accelerator_scope,  // One accelerator scope 
-    system_scope,       // CPU + All accelerators
+    no_scope,           // No release operation applied
+    accelerator_scope,  // Release to current accelerator
+    system_scope,       // Release to system (CPU + all accelerators)
 };
 
 
