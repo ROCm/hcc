@@ -244,7 +244,8 @@ public:
 
   /// enqueue marker with prior dependency
   virtual std::shared_ptr<KalmarAsyncOp> EnqueueMarkerWithDependency(int count, std::shared_ptr <KalmarAsyncOp> *depOps, memory_scope scope) { return nullptr; }
-  virtual std::shared_ptr<KalmarAsyncOp> EnqueueMarkerWithDependency(std::shared_ptr <KalmarAsyncOp> depOp, memory_scope scope) { return EnqueueMarkerWithDependency(1, &depOp, scope); };
+
+  virtual std::shared_ptr<KalmarAsyncOp> detectStreamDeps(hcCommandKind commandKind, KalmarAsyncOp *newCopyOp) { return nullptr; };
 
 
   /// copy src to dst asynchronously
