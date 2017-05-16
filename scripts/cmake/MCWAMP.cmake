@@ -10,6 +10,9 @@ set(GTEST_INC_DIR "${PROJECT_SOURCE_DIR}/utils")
 # MCWAMP
 set(MCWAMP_INC_DIR "${PROJECT_SOURCE_DIR}/include")
 
+# Imported targets
+include(ImportedTargets)
+
 # Additional compile-time options for HCC runtime could be set via:
 # - HCC_RUNTIME_CFLAGS
 #
@@ -75,6 +78,7 @@ macro(add_mcwamp_library_hsa name )
   # add HSA libraries
   target_link_libraries(${name} hsa-runtime64)
   target_link_libraries(${name} pthread)
+  target_link_libraries(${name} unwind)
 
   if (USE_LIBCXX)
     target_include_directories(${name} SYSTEM PUBLIC ${LIBCXX_HEADER})
