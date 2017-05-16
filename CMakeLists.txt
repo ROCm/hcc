@@ -539,7 +539,7 @@ set(CPACK_PACKAGE_VERSION_PATCH ${KALMAR_VERSION_PATCH})
 
 set(PACKAGE_DESCRIPTION "HCC: An Open Source, Optimizing C++ Compiler for Heterogeneous Compute")
 
-set(OFFICIAL_RELEASE_BUILD 0)
+set(OFFICIAL_RELEASE_BUILD 1)
 
 option(CPACK_GENERATOR "Specify the installer package generator")
 
@@ -564,7 +564,7 @@ set(CPACK_DEBIAN_PACKAGE_SECTION "devel")
 set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA
   "${PROJECT_BINARY_DIR}/packaging/debian/postinst;${PROJECT_BINARY_DIR}/packaging/debian/prerm")
 
-set(HCC_GENERAL_DEBIAN_DEP "g++-multilib, gcc-multilib, findutils, libelf1, libpci3, file")
+set(HCC_GENERAL_DEBIAN_DEP "g++-multilib, gcc-multilib, findutils, libelf1, libpci3, file, libunwind8")
 
 if ( USE_LIBCXX )
   set(HCC_LIBCXX_DEBIAN_DEP ", libc++1, libc++-dev, libc++abi1, libc++abi-dev")
@@ -594,7 +594,7 @@ set(CPACK_RPM_PRE_UNINSTALL_SCRIPT_FILE "${PROJECT_BINARY_DIR}/packaging/debian/
 # disable automatic shared libraries dependency detection
 set(CPACK_RPM_PACKAGE_AUTOREQ 0)
 
-set(HCC_GENERAL_RPM_DEP "findutils, elfutils-libelf, pciutils-libs, file, pth")
+set(HCC_GENERAL_RPM_DEP "findutils, elfutils-libelf, pciutils-libs, file, pth, libunwind")
 set(CPACK_RPM_PACKAGE_REQUIRES "${HCC_GENERAL_RPM_DEP} ${HCC_ROCR_DEP}" )
 
 set(CPACK_COMPONENTS_ALL compiler)

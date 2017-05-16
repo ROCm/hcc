@@ -15,6 +15,7 @@
 #include <mutex>
 
 #include "mcwamp_impl.hpp"
+#include "hc_stack_unwind.h"
 
 #include <dlfcn.h>
 
@@ -257,6 +258,7 @@ static inline uint64_t Read8byteIntegerFromBuffer(const char *data, size_t pos) 
 }
 
 #define RUNTIME_ERROR(val, error_string, line) { \
+  hc::print_backtrace(); \
   printf("### HCC RUNTIME ERROR: %s at file:%s line:%d\n", error_string, __FILE__, line); \
   exit(val); \
 }

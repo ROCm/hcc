@@ -22,8 +22,9 @@ THE SOFTWARE.
 #include <hsa/hsa_ext_amd.h>
 
 #include "unpinned_copy_engine.h"
+#include "hc_stack_unwind.h"
 
-#define THROW_ERROR(err, hsaErr) throw (Kalmar::runtime_exception("HCC unpinned copy engine error", hsaErr))
+#define THROW_ERROR(err, hsaErr) { hc::print_backtrace(); throw (Kalmar::runtime_exception("HCC unpinned copy engine error", hsaErr)); }
 #ifdef KALMAR_DEBUG_COPY
 #include <stdio.h>
 #define tprintf(trace_level, ...) printf(__VA_ARGS__)
