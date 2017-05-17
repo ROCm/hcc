@@ -1510,7 +1510,7 @@ public:
 
     void* getHSAAMRegion() override;
 
-    void* getHSACoherentHostRegion() override;
+    void* getHSACoherentAMHostRegion() override;
 
     void* getHSAAMHostRegion() override;
 
@@ -2438,7 +2438,7 @@ public:
         return ri._am_host_memory_pool;
     }
 
-    hsa_amd_memory_pool_t& getHSACoherentHostRegion() {
+    hsa_amd_memory_pool_t& getHSACoherentAMHostRegion() {
         return ri._am_host_coherent_memory_pool;
     }
 
@@ -3242,8 +3242,8 @@ HSAQueue::getHSAAMRegion() override {
     return static_cast<void*>(&(static_cast<HSADevice*>(getDev())->getHSAAMRegion()));
 }
 inline void*
-HSAQueue::getHSACoherentHostRegion() override {
-    return static_cast<void*>(&(static_cast<HSADevice*>(getDev())->getHSACoherentHostRegion()));
+HSAQueue::getHSACoherentAMHostRegion() override {
+    return static_cast<void*>(&(static_cast<HSADevice*>(getDev())->getHSACoherentAMHostRegion()));
 }
 inline void*
 HSAQueue::getHSAAMHostRegion() override {

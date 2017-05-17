@@ -205,7 +205,7 @@ auto_voidp am_alloc(size_t sizeBytes, hc::accelerator &acc, unsigned flags)
                alloc_region = static_cast<hsa_amd_memory_pool_t*>(acc.get_hsa_am_region());
             }
 
-            if (alloc_region->handle != -1) {
+            if (alloc_region && alloc_region->handle != -1) {
 
                 hsa_status_t s1 = hsa_amd_memory_pool_allocate(*alloc_region, sizeBytes, 0, &ptr);
 
