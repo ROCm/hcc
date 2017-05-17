@@ -26,6 +26,13 @@ int main()
     assert(b);
     assert(c);
 
+    assert (hc::am_free(a) == AM_SUCCESS);
+    assert (hc::am_free(b) == AM_SUCCESS);
+    assert (hc::am_free(c) == AM_SUCCESS);
+
+    //  Try duplicate free, should return error:
+    assert (hc::am_free(c) != AM_SUCCESS);
+
 
     return 0; // passed!
 }
