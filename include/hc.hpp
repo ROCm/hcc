@@ -1078,6 +1078,14 @@ public:
         return pDev->get_compute_unit_count();
     }
 
+    /**
+     * Return the unique integer sequence-number for the accelerator.
+     * Sequence-numbers are assigned in monotonically increasing order starting with 0.
+     */
+    int get_seqnum() const {
+        return pDev->get_seqnum();
+    }
+
 
     /**
      * Return true if the accelerator's memory can be mapped into the CPU's address space,

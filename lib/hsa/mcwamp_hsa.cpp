@@ -299,6 +299,12 @@ class HSAQueue;
 class HSADevice;
 } // namespace Kalmar
 
+
+// Global trackers for all HSA agents:
+// Possible these should move as member static in the future.
+static std::vector<hsa_agent_t > g_hsaAgents; // Array of the CPU + all GPU agents. 
+static std::map<uint64_t, Kalmar::HSADevice *> g_agentToDeviceMap;
+
 ///
 /// kernel compilation / kernel launching
 ///
@@ -945,6 +951,7 @@ private:
 
     // signal used by sync copy only
     hsa_signal_t  sync_copy_signal;
+
 
 
 public:
@@ -1729,6 +1736,7 @@ private:
     int      accSeqNum;     // unique accelerator seq num 
     uint64_t queueSeqNums;  // used to assign queue seqnums.
 
+
 public:
     // Structures to manage unpinnned memory copies
     class UnpinnedCopyEngine      *copy_engine[2]; // one for each direction.
@@ -2167,6 +2175,9 @@ public:
             throw Kalmar::runtime_exception("HCC_CHECK_COPY can only be used on machines where accelerator memory is visible to CPU (ie large-bar systems)", 0);
         }
 
+        g_agentToDeviceMap.insert(std::pair<uint64_t, HSADevice*> (agent.handle, this));
+        g_hsaAgents.push_back(agent);
+
     }
 
     ~HSADevice() {
@@ -2493,6 +2504,10 @@ public:
             return 0;
     }
 
+    int get_seqnum() const override {
+        return this->accSeqNum;
+    }
+
     bool has_cpu_accessible_am() override {
         return cpu_accessible_am;
     };
@@ -2742,6 +2757,16 @@ private:
             executables[index] = new HSAExecutable(hsaExecutable, code_object);
         }
     }
+
+    static int get_seqnum_from_agent (hsa_agent_t hsaAgent) 
+    {
+        auto i = g_agentToDeviceMap.find(hsaAgent.handle);
+        if (i != g_agentToDeviceMap.end()) {
+            return i->second->get_seqnum();
+        } else {
+            return -1;
+        }
+    }
 };
 
 
@@ -2895,6 +2920,9 @@ public:
         // Iterate over agents to find out the first cpu device as host
         status = hsa_iterate_agents(&HSAContext::find_host, &host);
         STATUS_CHECK(status, __LINE__);
+
+        // First agent is always CPU:
+        g_hsaAgents.push_back(host); 
 
         for (int i = 0; i < agents.size(); ++i) {
             hsa_agent_t agent = agents[i];

@@ -399,6 +399,8 @@ public:
     /// get device's compute unit count
     virtual unsigned int get_compute_unit_count() {return 0;}
 
+    virtual int get_seqnum() const {return -1;}
+
     virtual bool has_cpu_accessible_am() {return false;}
 
 };
