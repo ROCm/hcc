@@ -574,7 +574,7 @@ public:
 
     // constructor with at most 5 prior dependencies
     HSABarrier(int count, std::shared_ptr <Kalmar::KalmarAsyncOp> *dependent_op_array) : KalmarAsyncOp(Kalmar::hcCommandMarker), isDispatched(false), future(nullptr), hsaQueue(nullptr), waitMode(HSA_WAIT_STATE_BLOCKED), depCount(0) {
-        if ((count > 0) && (count <= 5)) {
+        if ((count >= 0) && (count <= 5)) {
             for (int i = 0; i < count; ++i) {
                 if (dependent_op_array[i]) {
                     // squish null ops 
@@ -1021,8 +1021,7 @@ public:
     // are often implicitly synchronized so no dependency is required.
     // Also different modes and optimizations can control when dependencies are added.
     // TODO - return reference if possible to avoid shared ptr overhead.
-    std::shared_ptr<KalmarAsyncOp> detectStreamDeps(KalmarAsyncOp *newOp) {
-        hcCommandKind newCommandKind = newOp->getCommandKind();
+    std::shared_ptr<KalmarAsyncOp> detectStreamDeps(hcCommandKind newCommandKind, KalmarAsyncOp *copyOp) {
         assert (newCommandKind != hcCommandInvalid);
 
         if (!asyncOps.empty()) {
@@ -1041,9 +1040,10 @@ public:
                 // No dependency required since Marker and Kernel share same queue and are ordered by AQL barrier bit.
                 needDep = false;
             } else if (isCopyCommand(newCommandKind) && isCopyCommand(youngestCommandKind)) {
-                HSACopy *newCopyOp = static_cast<HSACopy*> (newOp);
+                assert (copyOp);
+                HSACopy *hsaCopyOp = static_cast<HSACopy*> (copyOp);
                 HSACopy *youngestCopyOp = static_cast<HSACopy*> (asyncOps.back().get());
-                if (newCopyOp->getCopyDevice() != youngestCopyOp->getCopyDevice()) {
+                if (hsaCopyOp->getCopyDevice() != youngestCopyOp->getCopyDevice()) {
                     // This covers cases where two copies are back-to-back in the queue but use different copy engines.
                     // In this case there is no implicit dependency between the ops so we need to add one
                     // here.
@@ -1066,7 +1066,7 @@ public:
 
 
     void waitForStreamDeps (KalmarAsyncOp *newOp) {
-        std::shared_ptr<KalmarAsyncOp> depOp = detectStreamDeps(newOp);
+        std::shared_ptr<KalmarAsyncOp> depOp = detectStreamDeps(newOp->getCommandKind(), newOp);
         if (depOp != nullptr) {
             EnqueueMarkerWithDependency(1, &depOp, hc::system_scope);
         }
@@ -1588,7 +1588,7 @@ public:
         hsa_status_t status = HSA_STATUS_SUCCESS;
 
 
-        if ((count > 0) && (count <= HSA_BARRIER_DEP_SIGNAL_CNT)) {
+        if ((count >= 0) && (count <= HSA_BARRIER_DEP_SIGNAL_CNT)) {
 
             // create shared_ptr instance
             std::shared_ptr<HSABarrier> barrier = std::make_shared<HSABarrier>(count, depOps);
@@ -1603,7 +1603,7 @@ public:
             return barrier;
         } else {
             // throw an exception
-            throw Kalmar::runtime_exception("Incorrect number of dependent signals passed to HSABarrier constructor", count);
+            throw Kalmar::runtime_exception("Incorrect number of dependent signals passed to EnqueueMarkerWithDependency", count);
         }
     }
 
@@ -4213,7 +4213,7 @@ HSACopy::enqueueAsyncCopyCommand(Kalmar::HSAQueue* hsaQueue, const Kalmar::HSADe
         int depSignalCnt = 0;
         hsa_signal_t depSignal;
         setCommandKind (resolveMemcpyDirection(srcPtrInfo._isInDeviceMem, dstPtrInfo._isInDeviceMem));
-        depAsyncOp = hsaQueue->detectStreamDeps(this);
+        depAsyncOp = hsaQueue->detectStreamDeps(this->getCommandKind(), this);
 
         if (depAsyncOp) {
             depSignalCnt = 1;
