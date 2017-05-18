@@ -28,6 +28,10 @@ if (USE_LIBCXX)
   target_link_libraries(hccrt INTERFACE c++ c++abi)
 endif (USE_LIBCXX)
 
+# Library interface for building shared libraries
+add_library(hccshared INTERFACE)
+target_link_libraries(hccshared INTERFACE -fPIC -Wl,-Bsymbolic)
+
 ####################
 # C++AMP tools
 ####################
@@ -69,7 +73,7 @@ add_subdirectory(cpu)
 ####################
 # install targets
 ####################
-install(TARGETS mcwamp mcwamp_atomic hccrt
+install(TARGETS mcwamp mcwamp_atomic hccrt hccshared
     EXPORT hcc-targets
     RUNTIME DESTINATION bin
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
