@@ -107,8 +107,8 @@ node ('rocmtest')
           sh  """#!/usr/bin/env bash
               cd ${build_dir_release_abs}
               make install
-              cd ${workspace_dir_abs}/cmake-tests
               mkdir -p ${build_dir_cmake_tests_abs}
+              cd ${build_dir_cmake_tests_abs}
               CXX=${hcc_install_prefix}/bin/hcc cmake ${workspace_dir_abs}/cmake-tests
               make
               ./cmake-test
