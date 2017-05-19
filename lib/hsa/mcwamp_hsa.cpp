@@ -403,6 +403,9 @@ public:
         }
     }
 
+    //TODO - fix this so all Kernels set the _kernelName to something sensible.
+    std::string getKernelName() const { return !kernelName.empty() ? kernelName : "<unknown>";}
+
     ~HSAKernel() {
 #if KALMAR_DEBUG
       std::cerr << "HSAKernel::~HSAKernel\n";
@@ -574,7 +577,7 @@ public:
 
     // constructor with at most 5 prior dependencies
     HSABarrier(int count, std::shared_ptr <Kalmar::KalmarAsyncOp> *dependent_op_array) : KalmarAsyncOp(Kalmar::hcCommandMarker), isDispatched(false), future(nullptr), hsaQueue(nullptr), waitMode(HSA_WAIT_STATE_BLOCKED), depCount(0) {
-        if ((count > 0) && (count <= 5)) {
+        if ((count >= 0) && (count <= 5)) {
             for (int i = 0; i < count; ++i) {
                 if (dependent_op_array[i]) {
                     // squish null ops 
@@ -1021,8 +1024,7 @@ public:
     // are often implicitly synchronized so no dependency is required.
     // Also different modes and optimizations can control when dependencies are added.
     // TODO - return reference if possible to avoid shared ptr overhead.
-    std::shared_ptr<KalmarAsyncOp> detectStreamDeps(KalmarAsyncOp *newOp) {
-        hcCommandKind newCommandKind = newOp->getCommandKind();
+    std::shared_ptr<KalmarAsyncOp> detectStreamDeps(hcCommandKind newCommandKind, KalmarAsyncOp *copyOp) {
         assert (newCommandKind != hcCommandInvalid);
 
         if (!asyncOps.empty()) {
@@ -1041,9 +1043,10 @@ public:
                 // No dependency required since Marker and Kernel share same queue and are ordered by AQL barrier bit.
                 needDep = false;
             } else if (isCopyCommand(newCommandKind) && isCopyCommand(youngestCommandKind)) {
-                HSACopy *newCopyOp = static_cast<HSACopy*> (newOp);
+                assert (copyOp);
+                HSACopy *hsaCopyOp = static_cast<HSACopy*> (copyOp);
                 HSACopy *youngestCopyOp = static_cast<HSACopy*> (asyncOps.back().get());
-                if (newCopyOp->getCopyDevice() != youngestCopyOp->getCopyDevice()) {
+                if (hsaCopyOp->getCopyDevice() != youngestCopyOp->getCopyDevice()) {
                     // This covers cases where two copies are back-to-back in the queue but use different copy engines.
                     // In this case there is no implicit dependency between the ops so we need to add one
                     // here.
@@ -1066,7 +1069,7 @@ public:
 
 
     void waitForStreamDeps (KalmarAsyncOp *newOp) {
-        std::shared_ptr<KalmarAsyncOp> depOp = detectStreamDeps(newOp);
+        std::shared_ptr<KalmarAsyncOp> depOp = detectStreamDeps(newOp->getCommandKind(), newOp);
         if (depOp != nullptr) {
             EnqueueMarkerWithDependency(1, &depOp, hc::system_scope);
         }
@@ -1588,7 +1591,7 @@ public:
         hsa_status_t status = HSA_STATUS_SUCCESS;
 
 
-        if ((count > 0) && (count <= HSA_BARRIER_DEP_SIGNAL_CNT)) {
+        if ((count >= 0) && (count <= HSA_BARRIER_DEP_SIGNAL_CNT)) {
 
             // create shared_ptr instance
             std::shared_ptr<HSABarrier> barrier = std::make_shared<HSABarrier>(count, depOps);
@@ -1603,7 +1606,7 @@ public:
             return barrier;
         } else {
             // throw an exception
-            throw Kalmar::runtime_exception("Incorrect number of dependent signals passed to HSABarrier constructor", count);
+            throw Kalmar::runtime_exception("Incorrect number of dependent signals passed to EnqueueMarkerWithDependency", count);
         }
     }
 
@@ -1982,7 +1985,6 @@ public:
 
     HSADevice(hsa_agent_t a, hsa_agent_t host, int x_accSeqNum);
 
-
     ~HSADevice() {
 #if KALMAR_DEBUG
         std::cerr << "HSADevice::~HSADevice() in\n";
@@ -2044,6 +2046,7 @@ public:
 
     std::wstring path;
     std::wstring description;
+    uint32_t node;
 
     std::wstring get_path() const override { return path; }
     std::wstring get_description() const override { return description; }
@@ -2273,6 +2276,8 @@ public:
     }
 
     bool is_peer(const Kalmar::KalmarDevice* other) override {
+      hsa_status_t status;
+
       if(!hasHSACoarsegrainedRegion())
           return false;
 
@@ -2285,7 +2290,17 @@ public:
       if(nullptr == agent)
           return false;
 
-      hsa_status_t status = hsa_amd_agent_memory_pool_get_info(*agent, self_pool, HSA_AMD_AGENT_MEMORY_POOL_INFO_ACCESS, &access);
+      // If the agent's node is the same as the current device then
+      // it's the same HSA agent and therefore not a peer
+      uint32_t node = 0;
+      status = hsa_agent_get_info(*agent, HSA_AGENT_INFO_NODE, &node);
+      if (status != HSA_STATUS_SUCCESS)
+        return false;
+      if (node == this->node)
+        return false;
+
+
+      status = hsa_amd_agent_memory_pool_get_info(*agent, self_pool, HSA_AMD_AGENT_MEMORY_POOL_INFO_ACCESS, &access);
 
       if(HSA_STATUS_SUCCESS != status)
           return false;
@@ -3645,7 +3660,7 @@ HSADispatch::dispatchKernel(hsa_queue_t* lockedHsaQueue, const void *hostKernarg
 
     hsa_queue_store_write_index_relaxed(lockedHsaQueue, index + 1);
 
-    DBOUT(DB_AQL, "queue:" << lockedHsaQueue  <<  " dispatch kernel " << (kernel ? kernel->kernelName : "<unknown>") << "\n");
+    DBOUT(DB_AQL, "queue:" << lockedHsaQueue  <<  " dispatch kernel " << (kernel ? kernel->getKernelName():"<unknown>") << "\n");
     DBOUT(DB_AQL, "dispatch_aql:" << *q_aql << "\n");
 
     if (DBFLAG(DB_KERNARG)) { 
@@ -3878,9 +3893,16 @@ HSADispatch::setLaunchConfiguration(int dims, size_t *globalDims, size_t *localD
     static const size_t max_num_vgprs_per_work_item = 256;
     static const size_t num_work_items_per_simd = 64;
     static const size_t num_simds_per_cu = 4;
-    size_t max_num_work_items_per_cu = (max_num_vgprs_per_work_item / kernel->workitem_vgpr_count) * num_work_items_per_simd * num_simds_per_cu;
+    unsigned workitem_vgpr_count = kernel->workitem_vgpr_count;
+    if (workitem_vgpr_count == 0)
+      workitem_vgpr_count = 1;
+    size_t max_num_work_items_per_cu = (max_num_vgprs_per_work_item / workitem_vgpr_count) * num_work_items_per_simd * num_simds_per_cu;
     if (max_num_work_items_per_cu < workgroup_total_size) {
-        throw Kalmar::runtime_exception("The number of VGPRs needed by this launch exceeds HW limit due to big work group size!", 0);
+        std::string msg;
+        msg = "The number of VGPRs (" + std::to_string(kernel->workitem_vgpr_count) + ") needed by this launch (" + 
+              (kernel?kernel->getKernelName():"<unknown>") + ") exceeds HW limit due to big work group size (" + 
+              std::to_string(workgroup_total_size) + ") workitems!";
+        throw Kalmar::runtime_exception(msg.c_str(), 0);
     }
 
     aql.workgroup_size_x = workgroup_size[0];
@@ -4242,7 +4264,7 @@ HSACopy::enqueueAsyncCopyCommand(Kalmar::HSAQueue* hsaQueue, const Kalmar::HSADe
         int depSignalCnt = 0;
         hsa_signal_t depSignal;
         setCommandKind (resolveMemcpyDirection(srcPtrInfo._isInDeviceMem, dstPtrInfo._isInDeviceMem));
-        depAsyncOp = hsaQueue->detectStreamDeps(this);
+        depAsyncOp = hsaQueue->detectStreamDeps(this->getCommandKind(), this);
 
         if (depAsyncOp) {
             depSignalCnt = 1;

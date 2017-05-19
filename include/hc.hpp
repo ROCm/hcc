@@ -1456,19 +1456,40 @@ accelerator_view::create_marker(memory_scope scope) const {
 inline unsigned int accelerator_view::get_version() const { return get_accelerator().get_version(); }
 
 inline completion_future accelerator_view::create_blocking_marker(completion_future& dependent_future, memory_scope scope) const {
-    if (dependent_future.__asyncOp) {
-        return completion_future(pQueue->EnqueueMarkerWithDependency(dependent_future.__asyncOp, scope));
-    } else {
-        return completion_future();
+    std::shared_ptr<Kalmar::KalmarAsyncOp> deps[2]; 
+
+    // If necessary create an explicit dependency on previous command
+    // This is necessary for example if copy command is followed by marker - we need the marker to wait for the copy to complete.
+    std::shared_ptr<Kalmar::KalmarAsyncOp> depOp = pQueue->detectStreamDeps(hcCommandMarker, nullptr);
+
+    int cnt = 0;
+    if (depOp) {
+        deps[cnt++] = depOp; // retrieve async op associated with completion_future
     }
+
+    if (dependent_future.__asyncOp) {
+        deps[cnt++] = dependent_future.__asyncOp; // retrieve async op associated with completion_future
+    } 
+    
+    return completion_future(pQueue->EnqueueMarkerWithDependency(cnt, deps, scope));
 }
 
 template<typename InputIterator>
 inline completion_future
 accelerator_view::create_blocking_marker(InputIterator first, InputIterator last, memory_scope scope) const {
-    int cnt = 0;
     std::shared_ptr<Kalmar::KalmarAsyncOp> deps[5]; // array of 5 pointers to the native handle of async ops. 5 is the max supported by barrier packet
     hc::completion_future lastMarker;
+
+
+    // If necessary create an explicit dependency on previous command
+    // This is necessary for example if copy command is followed by marker - we need the marker to wait for the copy to complete.
+    std::shared_ptr<Kalmar::KalmarAsyncOp> depOp = pQueue->detectStreamDeps(hcCommandMarker, nullptr);
+
+    int cnt = 0;
+    if (depOp) {
+        deps[cnt++] = depOp; // retrieve async op associated with completion_future
+    }
+
 
     // loop through signals and group into sections of 5
     // every 5 signals goes into one barrier packet
