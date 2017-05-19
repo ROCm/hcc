@@ -36,7 +36,7 @@
 #include <hc_am.hpp>
 
 #include "unpinned_copy_engine.h"
-#include "hc_stack_unwind.h"
+#include "hc_rt_debug.h"
 
 #include <time.h>
 #include <iomanip>
@@ -96,48 +96,21 @@ int HCC_SERIALIZE_COPY = 0;
 
 int HCC_OPT_FLUSH=0;
 
-#define DB_MISC      0x0  // 0x01  // misc debug, not yet classified.
-#define DB_CMD       0x1  // 0x02  // Kernel and COpy Commands and synchronization
-#define DB_WAIT      0x2  // 0x04  // Synchronization and waiting for commands to finish.
-#define DB_AQL       0x3  // 0x08  // Decode and display AQL packets 
-#define DB_QUEUE     0x4  // 0x10  // Queue creation and desruction commands
-#define DB_SIG       0x5  // 0x20  // Signal creation, allocation, pool
-#define DB_LOCK      0x6  // 0x40  // Locks and HCC thread-safety code
-#define DB_KERNARG   0x7  // 0x80  // Decode and display AQL packets 
-unsigned HCC_DB = 0;
 
-std::vector<std::string> g_DbStr = {"misc", "cmd", "wait", "aql", "queue", "sig", "lock", "kernarg" };
+unsigned HCC_DB = 0;
 
 int HCC_MAX_QUEUES = 24;
 
 
 // Track a short thread-id, for debugging:
-static std::atomic<int> s_lastShortTid(1);
+std::atomic<int> s_lastShortTid(1);
 
-// Class with a constructor that gets called when new thread is created:
-struct ShortTid {
-    ShortTid() {
-        _shortTid = s_lastShortTid.fetch_add(1);
-    }
-    int _shortTid;
-};
+ShortTid::ShortTid() {
+    _shortTid = s_lastShortTid.fetch_add(1);
+}
+
 
 thread_local ShortTid hcc_tlsShortTid;
-
-// Macro for prettier debug messages, use like:
-// DBOUT(" Something happened" << myId() << " i= " << i << "\n");
-#define COMPILE_HCC_DB 1
-
-#define DBFLAG(db_flag) (HCC_DB & (1<<db_flag))
-
-// Use str::stream so output is atomic wrt other threads:
-#define DBOUT(db_flag, msg) \
-if (COMPILE_HCC_DB && (HCC_DB & (1<<(db_flag)))) { \
-    std::stringstream sstream;\
-    sstream << "   hcc-" << g_DbStr[db_flag] << " tid:" << hcc_tlsShortTid._shortTid << " " << msg ; \
-    std::cerr << sstream.str();\
-};
-
 
 
 

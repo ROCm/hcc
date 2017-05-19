@@ -22,7 +22,7 @@ THE SOFTWARE.
 #include <hsa/hsa_ext_amd.h>
 
 #include "unpinned_copy_engine.h"
-#include "hc_stack_unwind.h"
+#include "hc_rt_debug.h"
 
 #define THROW_ERROR(err, hsaErr) { hc::print_backtrace(); throw (Kalmar::runtime_exception("HCC unpinned copy engine error", hsaErr)); }
 #ifdef KALMAR_DEBUG_COPY
@@ -194,7 +194,7 @@ void UnpinnedCopyEngine::CopyHostToDevicePinInPlace(void* dst, const void* src, 
     if (hsa_status != HSA_STATUS_SUCCESS) {
         THROW_ERROR (hipErrorRuntimeMemory, hsa_status);
     }
-    tprintf (DB_COPY2, "H2D: waiting... on completion signal handle=%lu\n", _completionSignal[bufferIndex].handle);
+    DBOUTL (DB_COPY2, "H2D: waiting... on completion signal handle=" << _completionSignal[bufferIndex].handle);
     hsa_signal_wait_acquire(_completionSignal[bufferIndex], HSA_SIGNAL_CONDITION_LT, 1, UINT64_MAX, HSA_WAIT_STATE_ACTIVE);
     hsa_amd_memory_unlock(const_cast<char*> (srcp));
     // Assume subsequent commands are dependent on previous and don't need dependency after first copy submitted, HIP_ONESHOT_COPY_DEP=1
