@@ -2001,7 +2001,7 @@ public:
         /// and version information
         {
             char name[64] {0};
-            uint32_t node = 0;
+            node = 0;
             status = hsa_agent_get_info(agent, HSA_AGENT_INFO_NAME, name);
             STATUS_CHECK(status, __LINE__);
             status = hsa_agent_get_info(agent, HSA_AGENT_INFO_NODE, &node);
@@ -2230,6 +2230,7 @@ public:
 
     std::wstring path;
     std::wstring description;
+    uint32_t node;
 
     std::wstring get_path() const override { return path; }
     std::wstring get_description() const override { return description; }
@@ -2459,6 +2460,8 @@ public:
     }
 
     bool is_peer(const Kalmar::KalmarDevice* other) override {
+      hsa_status_t status;
+
       if(!hasHSACoarsegrainedRegion())
           return false;
 
@@ -2471,7 +2474,17 @@ public:
       if(nullptr == agent)
           return false;
 
-      hsa_status_t status = hsa_amd_agent_memory_pool_get_info(*agent, self_pool, HSA_AMD_AGENT_MEMORY_POOL_INFO_ACCESS, &access);
+      // If the agent's node is the same as the current device then
+      // it's the same HSA agent and therefore not a peer
+      uint32_t node = 0;
+      status = hsa_agent_get_info(*agent, HSA_AGENT_INFO_NODE, &node);
+      if (status != HSA_STATUS_SUCCESS)
+        return false;
+      if (node == this->node)
+        return false;
+
+
+      status = hsa_amd_agent_memory_pool_get_info(*agent, self_pool, HSA_AMD_AGENT_MEMORY_POOL_INFO_ACCESS, &access);
 
       if(HSA_STATUS_SUCCESS != status)
           return false;
