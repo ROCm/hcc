@@ -15,8 +15,10 @@ node ('rocmtest')
   def workspace_dir_abs = pwd()
   def build_dir_debug_rel = "build/debug"
   def build_dir_release_rel = "build/release"
+  def build_dir_cmake_tests_rel = "build/cmake-tests"
   def build_dir_debug_abs = "${workspace_dir_abs}/${build_dir_debug_rel}"
   def build_dir_release_abs = "${workspace_dir_abs}/${build_dir_release_rel}"
+  def build_dir_cmake_tests_abs = "${workspace_dir_abs}/${build_dir_cmake_tests_rel}"
 
   // The client workspace is shared with the docker container
   stage('HCC Checkout')
@@ -104,7 +106,12 @@ node ('rocmtest')
           // install from debian packages because pre/post scripts set up softlinks install targets don't
           sh  """#!/usr/bin/env bash
               cd ${build_dir_release_abs}
-              echo Do reasonable build sanity tests here
+              make install
+              mkdir -p ${build_dir_cmake_tests_abs}
+              cd ${build_dir_cmake_tests_abs}
+              CXX=${hcc_install_prefix}/bin/hcc cmake ${workspace_dir_abs}/cmake-tests
+              make
+              ./cmake-test
               """
           // junit "${build_dir_release_abs}/*.xml"
         }
@@ -131,13 +138,13 @@ node ('rocmtest')
       //  We copy the docker files into the bin directory where the .deb lives so that it's a clean
       //  build everytime
       sh "cp -r ${workspace_dir_abs}/docker/* .; cp ${build_dir_release_abs}/*.deb ."
-      hcc_build_image = docker.build( "${artifactory_org}/${image_name}:${env.BUILD_NUMBER}", "-f dockerfile-${image_name} ." )
+      hcc_install_image = docker.build( "${artifactory_org}/${image_name}:${env.BUILD_NUMBER}", "-f dockerfile-${image_name} ." )
     }
 
     docker.withRegistry('http://compute-artifactory:5001', 'artifactory-cred' )
     {
-      hcc_build_image.push( "${env.BUILD_NUMBER}" )
-      hcc_build_image.push( 'latest' )
+      hcc_install_image.push( "${env.BUILD_NUMBER}" )
+      hcc_install_image.push( 'latest' )
     }
 
     // Lots of images with tags are created above; no apparent way to delete images:tags with docker global variable
