@@ -15,8 +15,10 @@ node ('rocmtest')
   def workspace_dir_abs = pwd()
   def build_dir_debug_rel = "build/debug"
   def build_dir_release_rel = "build/release"
+  def build_dir_cmake_tests_rel = "build/cmake-tests"
   def build_dir_debug_abs = "${workspace_dir_abs}/${build_dir_debug_rel}"
   def build_dir_release_abs = "${workspace_dir_abs}/${build_dir_release_rel}"
+  def build_dir_cmake_tests_abs = "${workspace_dir_abs}/${build_dir_cmake_tests_rel}"
 
   // The client workspace is shared with the docker container
   stage('HCC Checkout')
@@ -104,7 +106,12 @@ node ('rocmtest')
           // install from debian packages because pre/post scripts set up softlinks install targets don't
           sh  """#!/usr/bin/env bash
               cd ${build_dir_release_abs}
-              echo Do reasonable build sanity tests here
+              make install
+              cd ${workspace_dir_abs}/cmake-tests
+              mkdir -p ${build_dir_cmake_tests_abs}
+              CXX=${hcc_install_prefix}/bin/hcc cmake ${workspace_dir_abs}/cmake-tests
+              make
+              ./cmake-test
               """
           // junit "${build_dir_release_abs}/*.xml"
         }
