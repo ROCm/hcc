@@ -1513,7 +1513,7 @@ public:
 
     void* getHSAAMRegion() override;
 
-    void* getHSACoherentHostRegion() override;
+    void* getHSACoherentAMHostRegion() override;
 
     void* getHSAAMHostRegion() override;
 
@@ -1731,6 +1731,7 @@ private:
 
     int      accSeqNum;     // unique accelerator seq num 
     uint64_t queueSeqNums;  // used to assign queue seqnums.
+
 
 public:
     // Structures to manage unpinnned memory copies
@@ -1982,195 +1983,7 @@ public:
 
 
 
-
-    HSADevice(hsa_agent_t a, hsa_agent_t host, int x_accSeqNum) : KalmarDevice(access_type_read_write),
-                               agent(a), programs(), max_tile_static_size(0),
-                               queue_size(0), queues(), queues_mutex(),
-                               rocrQueues(0/*empty*/), rocrQueuesMutex(),
-                               ri(),
-                               useCoarseGrainedRegion(false),
-                               kernargPool(), kernargPoolFlag(), kernargCursor(0), kernargPoolMutex(),
-                               executables(),
-                               profile(hcAgentProfileNone),
-                               path(), description(), hostAgent(host),
-                               versionMajor(0), versionMinor(0), accSeqNum(x_accSeqNum), queueSeqNums(0) {
-#if KALMAR_DEBUG
-        std::cerr << "HSADevice::HSADevice()\n";
-#endif
-
-        hsa_status_t status = HSA_STATUS_SUCCESS;
-
-        /// set up path and description
-        /// and version information
-        {
-            char name[64] {0};
-            node = 0;
-            status = hsa_agent_get_info(agent, HSA_AGENT_INFO_NAME, name);
-            STATUS_CHECK(status, __LINE__);
-            status = hsa_agent_get_info(agent, HSA_AGENT_INFO_NODE, &node);
-            STATUS_CHECK(status, __LINE__);
-
-            wchar_t path_wchar[128] {0};
-            wchar_t description_wchar[128] {0};
-            swprintf(path_wchar, 128, L"%s%u", name, node);
-            swprintf(description_wchar, 128, L"AMD HSA Agent %s%u", name, node);
-
-            path = std::wstring(path_wchar);
-            description = std::wstring(description_wchar);
-
-#if KALMAR_DEBUG
-            std::wcerr << L"Path: " << path << L"\n";
-            std::wcerr << L"Description: " << description << L"\n";
-#endif
-
-            status = hsa_agent_get_info(agent, HSA_AGENT_INFO_VERSION_MAJOR, &versionMajor);
-            STATUS_CHECK(status, __LINE__);
-            status = hsa_agent_get_info(agent, HSA_AGENT_INFO_VERSION_MINOR, &versionMinor);
-            STATUS_CHECK(status, __LINE__);
-
-#if KALMAR_DEBUG
-            std::cout << "Version Major: " << versionMajor << " Minor: " << versionMinor << "\n";
-#endif
-        }
-
-
-        {
-            /// Set the queue size to use when creating hsa queues:
-            this->queue_size = 0;
-            status = hsa_agent_get_info(agent, HSA_AGENT_INFO_QUEUE_MAX_SIZE, &this->queue_size);
-            STATUS_CHECK(status, __LINE__);
-
-            // MAX_INFLIGHT_COMMANDS_PER_QUEUE throttles the number of commands that can be in the queue, so no reason
-            // to allocate a huge HSA queue - size it to it is large enough to handle the inflight commands.
-            this->queue_size = 2*MAX_INFLIGHT_COMMANDS_PER_QUEUE;
-
-            // Check that the queue size is valid, these assumptions are used in hsa_queue_create.
-            assert (__builtin_popcount(MAX_INFLIGHT_COMMANDS_PER_QUEUE) == 1); // make sure this is power of 2.
-        }
-
-
-
-        /// Iterate over memory pool of the device and its host
-        status = hsa_amd_agent_iterate_memory_pools(agent, HSADevice::find_group_memory, &max_tile_static_size);
-        STATUS_CHECK(status, __LINE__);
-
-        status = hsa_amd_agent_iterate_memory_pools(agent, &HSADevice::get_memory_pools, &ri);
-        STATUS_CHECK(status, __LINE__);
-
-        status = hsa_amd_agent_iterate_memory_pools(hostAgent, HSADevice::get_host_pools, &ri);
-        STATUS_CHECK(status, __LINE__);
-
-        /// after iterating memory regions, set if we can use coarse grained regions
-        bool result = false;
-        if (hasHSACoarsegrainedRegion()) {
-            result = true;
-            // environment variable HCC_HSA_USEHOSTMEMORY may be used to change
-            // the default behavior
-            char* hsa_behavior = getenv("HCC_HSA_USEHOSTMEMORY");
-            if (hsa_behavior != nullptr) {
-                if (std::string("ON") == hsa_behavior) {
-                    result = false;
-                }
-            }
-        }
-        useCoarseGrainedRegion = result;
-
-        /// pre-allocate a pool of kernarg buffers in case:
-        /// - kernarg region is available
-        /// - compile-time macro KERNARG_POOL_SIZE is larger than 0
-#if KERNARG_POOL_SIZE > 0
-        hsa_amd_memory_pool_t kernarg_region = getHSAKernargRegion();
-
-        // pre-allocate kernarg buffers
-        void* kernargMemory = nullptr;
-        for (int i = 0; i < KERNARG_POOL_SIZE; ++i) {
-            status = hsa_amd_memory_pool_allocate(kernarg_region, KERNARG_BUFFER_SIZE, 0, &kernargMemory);
-            STATUS_CHECK(status, __LINE__);
-
-            // Allow device to access to it once it is allocated. Normally, this memory pool is on system memory.
-            status = hsa_amd_agents_allow_access(1, &agent, NULL, kernargMemory);
-            STATUS_CHECK(status, __LINE__);
-
-            kernargPool.push_back(kernargMemory);
-            kernargPoolFlag.push_back(false);
-        }
-#endif
-
-        // Setup AM pool.
-        ri._am_memory_pool = (ri._found_local_memory_pool)
-                                 ? ri._local_memory_pool
-                                 : ri._finegrained_system_memory_pool;
-
-        ri._am_host_memory_pool = (ri._found_coarsegrained_system_memory_pool)
-                                      ? ri._coarsegrained_system_memory_pool
-                                      : ri._finegrained_system_memory_pool;
-
-        ri._am_host_coherent_memory_pool = (ri._found_finegrained_system_memory_pool)
-                                      ? ri._finegrained_system_memory_pool
-                                      : ri._coarsegrained_system_memory_pool;
-
-        /// Query the maximum number of work-items in a workgroup
-        status = hsa_agent_get_info(agent, HSA_AGENT_INFO_WORKGROUP_MAX_SIZE, &workgroup_max_size);
-        STATUS_CHECK(status, __LINE__);
-
-        /// Query the maximum number of work-items in each dimension of a workgroup
-        status = hsa_agent_get_info(agent, HSA_AGENT_INFO_WORKGROUP_MAX_DIM, &workgroup_max_dim);
-
-        STATUS_CHECK(status, __LINE__);
-
-        /// Get ISA associated with the agent
-        status = hsa_agent_get_info(agent, HSA_AGENT_INFO_ISA, &agentISA);
-        STATUS_CHECK(status, __LINE__);
-
-        /// Get the profile of the agent
-        hsa_profile_t agentProfile;
-        status = hsa_agent_get_info(agent, HSA_AGENT_INFO_PROFILE, &agentProfile);
-        STATUS_CHECK(status, __LINE__);
-
-        if (agentProfile == HSA_PROFILE_BASE) {
-            profile = hcAgentProfileBase;
-        } else if (agentProfile == HSA_PROFILE_FULL) {
-            profile = hcAgentProfileFull;
-        }
-
-        //---
-        this->copy_mode = static_cast<UnpinnedCopyEngine::CopyMode> (HCC_UNPINNED_COPY_MODE);
-        //Provide an environment variable to select the mode used to perform the copy operaton
-        switch (this->copy_mode) {
-            case UnpinnedCopyEngine::ChooseBest:    //0
-            case UnpinnedCopyEngine::UsePinInPlace: //1
-            case UnpinnedCopyEngine::UseStaging:    //2
-            case UnpinnedCopyEngine::UseMemcpy:     //3
-                break;
-            default:
-                this->copy_mode = UnpinnedCopyEngine::ChooseBest;
-        };
-
-        HCC_H2D_STAGING_THRESHOLD    *= 1024;
-        HCC_H2D_PININPLACE_THRESHOLD *= 1024;
-        HCC_D2H_PININPLACE_THRESHOLD *= 1024;
-
-        static const size_t stagingSize = 64*1024;
-        this->cpu_accessible_am = hasAccess(hostAgent, ri._am_memory_pool);
-        hsa_amd_memory_pool_t hostPool = (getHSAAMHostRegion());
-        copy_engine[0] = new UnpinnedCopyEngine(agent, hostAgent, stagingSize, 2/*staging buffers*/,
-                                                this->cpu_accessible_am,
-                                                HCC_H2D_STAGING_THRESHOLD,
-                                                HCC_H2D_PININPLACE_THRESHOLD,
-                                                HCC_D2H_PININPLACE_THRESHOLD);
-
-        copy_engine[1] = new UnpinnedCopyEngine(agent, hostAgent, stagingSize, 2/*staging Buffers*/,
-                                                this->cpu_accessible_am,
-                                                HCC_H2D_STAGING_THRESHOLD,
-                                                HCC_H2D_PININPLACE_THRESHOLD,
-                                                HCC_D2H_PININPLACE_THRESHOLD);
-
-
-        if (HCC_CHECK_COPY && !this->cpu_accessible_am) {
-            throw Kalmar::runtime_exception("HCC_CHECK_COPY can only be used on machines where accelerator memory is visible to CPU (ie large-bar systems)", 0);
-        }
-
-    }
+    HSADevice(hsa_agent_t a, hsa_agent_t host, int x_accSeqNum);
 
     ~HSADevice() {
 #if KALMAR_DEBUG
@@ -2442,7 +2255,7 @@ public:
         return ri._am_host_memory_pool;
     }
 
-    hsa_amd_memory_pool_t& getHSACoherentHostRegion() {
+    hsa_amd_memory_pool_t& getHSACoherentAMHostRegion() {
         return ri._am_host_coherent_memory_pool;
     }
 
@@ -2508,6 +2321,12 @@ public:
         else
             return 0;
     }
+
+
+    int get_seqnum() const override {
+        return this->accSeqNum;
+    }
+
 
     bool has_cpu_accessible_am() override {
         return cpu_accessible_am;
@@ -2758,6 +2577,9 @@ private:
             executables[index] = new HSAExecutable(hsaExecutable, code_object);
         }
     }
+
+
+    static int get_seqnum_from_agent(hsa_agent_t hsaAgent) ;
 };
 
 
@@ -2815,6 +2637,9 @@ void ReadHccEnv()
 
 class HSAContext final : public KalmarContext
 {
+public:
+    std::map<uint64_t, HSADevice *> agentToDeviceMap_;
+private:
     /// memory pool for signals
     std::vector<hsa_signal_t> signalPool;
     std::vector<bool> signalPoolFlag;
@@ -3122,9 +2947,212 @@ static HSAContext ctx;
 // ----------------------------------------------------------------------
 namespace Kalmar {
 
+
+HSADevice::HSADevice(hsa_agent_t a, hsa_agent_t host, int x_accSeqNum) : KalmarDevice(access_type_read_write),
+                               agent(a), programs(), max_tile_static_size(0),
+                               queue_size(0), queues(), queues_mutex(),
+                               rocrQueues(0/*empty*/), rocrQueuesMutex(),
+                               ri(),
+                               useCoarseGrainedRegion(false),
+                               kernargPool(), kernargPoolFlag(), kernargCursor(0), kernargPoolMutex(),
+                               executables(),
+                               profile(hcAgentProfileNone),
+                               path(), description(), hostAgent(host),
+                               versionMajor(0), versionMinor(0), accSeqNum(x_accSeqNum), queueSeqNums(0) {
+#if KALMAR_DEBUG
+    std::cerr << "HSADevice::HSADevice()\n";
+#endif
+
+    hsa_status_t status = HSA_STATUS_SUCCESS;
+
+    /// set up path and description
+    /// and version information
+    {
+        char name[64] {0};
+        uint32_t node = 0;
+        status = hsa_agent_get_info(agent, HSA_AGENT_INFO_NAME, name);
+        STATUS_CHECK(status, __LINE__);
+        status = hsa_agent_get_info(agent, HSA_AGENT_INFO_NODE, &node);
+        STATUS_CHECK(status, __LINE__);
+
+        wchar_t path_wchar[128] {0};
+        wchar_t description_wchar[128] {0};
+        swprintf(path_wchar, 128, L"%s%u", name, node);
+        swprintf(description_wchar, 128, L"AMD HSA Agent %s%u", name, node);
+
+        path = std::wstring(path_wchar);
+        description = std::wstring(description_wchar);
+
+#if KALMAR_DEBUG
+        std::wcerr << L"Path: " << path << L"\n";
+        std::wcerr << L"Description: " << description << L"\n";
+#endif
+
+        status = hsa_agent_get_info(agent, HSA_AGENT_INFO_VERSION_MAJOR, &versionMajor);
+        STATUS_CHECK(status, __LINE__);
+        status = hsa_agent_get_info(agent, HSA_AGENT_INFO_VERSION_MINOR, &versionMinor);
+        STATUS_CHECK(status, __LINE__);
+
+#if KALMAR_DEBUG
+        std::cout << "Version Major: " << versionMajor << " Minor: " << versionMinor << "\n";
+#endif
+    }
+
+
+    {
+        /// Set the queue size to use when creating hsa queues:
+        this->queue_size = 0;
+        status = hsa_agent_get_info(agent, HSA_AGENT_INFO_QUEUE_MAX_SIZE, &this->queue_size);
+        STATUS_CHECK(status, __LINE__);
+
+        // MAX_INFLIGHT_COMMANDS_PER_QUEUE throttles the number of commands that can be in the queue, so no reason
+        // to allocate a huge HSA queue - size it to it is large enough to handle the inflight commands.
+        this->queue_size = 2*MAX_INFLIGHT_COMMANDS_PER_QUEUE;
+
+        // Check that the queue size is valid, these assumptions are used in hsa_queue_create.
+        assert (__builtin_popcount(MAX_INFLIGHT_COMMANDS_PER_QUEUE) == 1); // make sure this is power of 2.
+    }
+
+
+
+    /// Iterate over memory pool of the device and its host
+    status = hsa_amd_agent_iterate_memory_pools(agent, HSADevice::find_group_memory, &max_tile_static_size);
+    STATUS_CHECK(status, __LINE__);
+
+    status = hsa_amd_agent_iterate_memory_pools(agent, &HSADevice::get_memory_pools, &ri);
+    STATUS_CHECK(status, __LINE__);
+
+    status = hsa_amd_agent_iterate_memory_pools(hostAgent, HSADevice::get_host_pools, &ri);
+    STATUS_CHECK(status, __LINE__);
+
+    /// after iterating memory regions, set if we can use coarse grained regions
+    bool result = false;
+    if (hasHSACoarsegrainedRegion()) {
+        result = true;
+        // environment variable HCC_HSA_USEHOSTMEMORY may be used to change
+        // the default behavior
+        char* hsa_behavior = getenv("HCC_HSA_USEHOSTMEMORY");
+        if (hsa_behavior != nullptr) {
+            if (std::string("ON") == hsa_behavior) {
+                result = false;
+            }
+        }
+    }
+    useCoarseGrainedRegion = result;
+
+    /// pre-allocate a pool of kernarg buffers in case:
+    /// - kernarg region is available
+    /// - compile-time macro KERNARG_POOL_SIZE is larger than 0
+#if KERNARG_POOL_SIZE > 0
+    hsa_amd_memory_pool_t kernarg_region = getHSAKernargRegion();
+
+    // pre-allocate kernarg buffers
+    void* kernargMemory = nullptr;
+    for (int i = 0; i < KERNARG_POOL_SIZE; ++i) {
+        status = hsa_amd_memory_pool_allocate(kernarg_region, KERNARG_BUFFER_SIZE, 0, &kernargMemory);
+        STATUS_CHECK(status, __LINE__);
+
+        // Allow device to access to it once it is allocated. Normally, this memory pool is on system memory.
+        status = hsa_amd_agents_allow_access(1, &agent, NULL, kernargMemory);
+        STATUS_CHECK(status, __LINE__);
+
+        kernargPool.push_back(kernargMemory);
+        kernargPoolFlag.push_back(false);
+    }
+#endif
+
+    // Setup AM pool.
+    ri._am_memory_pool = (ri._found_local_memory_pool)
+                             ? ri._local_memory_pool
+                             : ri._finegrained_system_memory_pool;
+
+    ri._am_host_memory_pool = (ri._found_coarsegrained_system_memory_pool)
+                                  ? ri._coarsegrained_system_memory_pool
+                                  : ri._finegrained_system_memory_pool;
+
+    ri._am_host_coherent_memory_pool = (ri._found_finegrained_system_memory_pool)
+                                  ? ri._finegrained_system_memory_pool
+                                  : ri._coarsegrained_system_memory_pool;
+
+    /// Query the maximum number of work-items in a workgroup
+    status = hsa_agent_get_info(agent, HSA_AGENT_INFO_WORKGROUP_MAX_SIZE, &workgroup_max_size);
+    STATUS_CHECK(status, __LINE__);
+
+    /// Query the maximum number of work-items in each dimension of a workgroup
+    status = hsa_agent_get_info(agent, HSA_AGENT_INFO_WORKGROUP_MAX_DIM, &workgroup_max_dim);
+
+    STATUS_CHECK(status, __LINE__);
+
+    /// Get ISA associated with the agent
+    status = hsa_agent_get_info(agent, HSA_AGENT_INFO_ISA, &agentISA);
+    STATUS_CHECK(status, __LINE__);
+
+    /// Get the profile of the agent
+    hsa_profile_t agentProfile;
+    status = hsa_agent_get_info(agent, HSA_AGENT_INFO_PROFILE, &agentProfile);
+    STATUS_CHECK(status, __LINE__);
+
+    if (agentProfile == HSA_PROFILE_BASE) {
+        profile = hcAgentProfileBase;
+    } else if (agentProfile == HSA_PROFILE_FULL) {
+        profile = hcAgentProfileFull;
+    }
+
+    //---
+    this->copy_mode = static_cast<UnpinnedCopyEngine::CopyMode> (HCC_UNPINNED_COPY_MODE);
+    //Provide an environment variable to select the mode used to perform the copy operaton
+    switch (this->copy_mode) {
+        case UnpinnedCopyEngine::ChooseBest:    //0
+        case UnpinnedCopyEngine::UsePinInPlace: //1
+        case UnpinnedCopyEngine::UseStaging:    //2
+        case UnpinnedCopyEngine::UseMemcpy:     //3
+            break;
+        default:
+            this->copy_mode = UnpinnedCopyEngine::ChooseBest;
+    };
+
+    HCC_H2D_STAGING_THRESHOLD    *= 1024;
+    HCC_H2D_PININPLACE_THRESHOLD *= 1024;
+    HCC_D2H_PININPLACE_THRESHOLD *= 1024;
+
+    static const size_t stagingSize = 64*1024;
+    this->cpu_accessible_am = hasAccess(hostAgent, ri._am_memory_pool);
+    hsa_amd_memory_pool_t hostPool = (getHSAAMHostRegion());
+    copy_engine[0] = new UnpinnedCopyEngine(agent, hostAgent, stagingSize, 2/*staging buffers*/,
+                                            this->cpu_accessible_am,
+                                            HCC_H2D_STAGING_THRESHOLD,
+                                            HCC_H2D_PININPLACE_THRESHOLD,
+                                            HCC_D2H_PININPLACE_THRESHOLD);
+
+    copy_engine[1] = new UnpinnedCopyEngine(agent, hostAgent, stagingSize, 2/*staging Buffers*/,
+                                            this->cpu_accessible_am,
+                                            HCC_H2D_STAGING_THRESHOLD,
+                                            HCC_H2D_PININPLACE_THRESHOLD,
+                                            HCC_D2H_PININPLACE_THRESHOLD);
+
+
+    if (HCC_CHECK_COPY && !this->cpu_accessible_am) {
+        throw Kalmar::runtime_exception("HCC_CHECK_COPY can only be used on machines where accelerator memory is visible to CPU (ie large-bar systems)", 0);
+    }
+
+    
+    ctx.agentToDeviceMap_.insert(std::pair<uint64_t, HSADevice*> (agent.handle, this));
+
+}
+
 inline void*
 HSADevice::getHSAAgent() override {
     return static_cast<void*>(&getAgent());
+}
+
+static int get_seqnum_from_agent(hsa_agent_t hsaAgent) 
+{
+    auto i = ctx.agentToDeviceMap_.find(hsaAgent.handle);
+    if (i != ctx.agentToDeviceMap_.end()) {
+        return i->second->get_seqnum();
+    } else {
+        return -1;
+    }
 }
 
 } // namespace Kalmar
@@ -3258,8 +3286,8 @@ HSAQueue::getHSAAMRegion() override {
     return static_cast<void*>(&(static_cast<HSADevice*>(getDev())->getHSAAMRegion()));
 }
 inline void*
-HSAQueue::getHSACoherentHostRegion() override {
-    return static_cast<void*>(&(static_cast<HSADevice*>(getDev())->getHSACoherentHostRegion()));
+HSAQueue::getHSACoherentAMHostRegion() override {
+    return static_cast<void*>(&(static_cast<HSADevice*>(getDev())->getHSACoherentAMHostRegion()));
 }
 inline void*
 HSAQueue::getHSAAMHostRegion() override {
@@ -4550,3 +4578,5 @@ extern "C" void PushArgPtrImpl(void *ker, int idx, size_t sz, const void *v) {
   void *val = const_cast<void*>(v);
   dispatch->pushPointerArg(val);
 }
+
+

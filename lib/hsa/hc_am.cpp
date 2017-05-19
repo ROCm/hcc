@@ -252,14 +252,14 @@ auto_voidp am_alloc(size_t sizeBytes, hc::accelerator &acc, unsigned flags)
                alloc_region = static_cast<hsa_amd_memory_pool_t*>(acc.get_hsa_am_region());
             }
 
-            if (alloc_region->handle != -1) {
+            if (alloc_region && alloc_region->handle != -1) {
 
                 hsa_status_t s1 = hsa_amd_memory_pool_allocate(*alloc_region, sizeBytes, 0, &ptr);
 
                 if (s1 != HSA_STATUS_SUCCESS) {
                     ptr = NULL;
                 } else {
-                    if (flags & amHostPinned) {
+                    if (flags & (amHostPinned|amHostCoherent)) {
                       s1 = hsa_amd_agents_allow_access(1, hsa_agent, NULL, ptr);
                       if (s1 != HSA_STATUS_SUCCESS) {
                         hsa_amd_memory_pool_free(ptr);
@@ -288,12 +288,13 @@ am_status_t am_free(void* ptr)
     am_status_t status = AM_SUCCESS;
 
     if (ptr != NULL) {
-        // See also tracker::reset which can free memory.
-        hsa_amd_memory_pool_free(ptr);
 
         int numRemoved = g_amPointerTracker.remove(ptr) ;
         if (numRemoved == 0) {
             status = AM_ERROR_MISC;
+        } else {
+            // See also tracker::reset which can free memory.
+            hsa_amd_memory_pool_free(ptr);
         }
     }
     return status;
