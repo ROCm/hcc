@@ -138,13 +138,13 @@ node ('rocmtest')
       //  We copy the docker files into the bin directory where the .deb lives so that it's a clean
       //  build everytime
       sh "cp -r ${workspace_dir_abs}/docker/* .; cp ${build_dir_release_abs}/*.deb ."
-      hcc_build_image = docker.build( "${artifactory_org}/${image_name}:${env.BUILD_NUMBER}", "-f dockerfile-${image_name} ." )
+      hcc_install_image = docker.build( "${artifactory_org}/${image_name}:${env.BUILD_NUMBER}", "-f dockerfile-${image_name} ." )
     }
 
     docker.withRegistry('http://compute-artifactory:5001', 'artifactory-cred' )
     {
-      hcc_build_image.push( "${env.BUILD_NUMBER}" )
-      hcc_build_image.push( 'latest' )
+      hcc_install_image.push( "${env.BUILD_NUMBER}" )
+      hcc_install_image.push( 'latest' )
     }
 
     // Lots of images with tags are created above; no apparent way to delete images:tags with docker global variable
