@@ -108,7 +108,7 @@ unsigned HCC_DB = 0;
 
 std::vector<std::string> g_DbStr = {"misc", "cmd", "wait", "aql", "queue", "sig", "lock", "kernarg" };
 
-int HCC_MAX_QUEUES = 24;
+int HCC_MAX_QUEUES = 20;
 
 
 // Track a short thread-id, for debugging:
