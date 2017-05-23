@@ -21,7 +21,6 @@ node ('rocmtest')
   // The client workspace is shared with the docker container
   stage('HCC Checkout')
   {
-    deleteDir( )
     checkout scm
 
     // list the commit hash of the submodules
