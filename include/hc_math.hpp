@@ -128,7 +128,7 @@ typename std::enable_if<std::is_integral<T>::value,HC_IMPLICIT_FLOAT_CONV>::type
 } \
 template<typename T> \
 inline \
-typename std::enable_if<std::is_floating_point <T>::value,T>::type \
+typename std::enable_if<std::is_floating_point<T>::value,T>::type \
  function(T arg1) __attribute__((hc,cpu)) { \
   return ::function(arg1); \
 }
@@ -268,8 +268,6 @@ HC_MATH_WRAPPER_TTQ(frexpf, x, exp)
 HC_MATH_WRAPPER_TTQ(frexp, x, exp)
 HC_MATH_WRAPPER_TTQ(ldexpf, x, exp)
 HC_MATH_WRAPPER_TTQ(ldexp, x, exp)
-HC_MATH_WRAPPER_TTQ(lgammaf, x, exp)
-HC_MATH_WRAPPER_TTQ(lgamma, x, exp)
 HC_MATH_WRAPPER_TTQ(modff, x, exp)
 HC_MATH_WRAPPER_TTQ(modf, x, exp)
 HC_MATH_WRAPPER_TTQ(scalbnf, x, exp)
@@ -309,6 +307,10 @@ HC_MATH_WRAPPER_1(erff, x)
 HC_MATH_WRAPPER_FP_OVERLOAD_1(erf, x)
 HC_MATH_WRAPPER_1(erfcf, x)
 HC_MATH_WRAPPER_FP_OVERLOAD_1(erfc, x)
+HC_MATH_WRAPPER_1(erfcinvf, x)
+HC_MATH_WRAPPER_FP_OVERLOAD_1(erfcinv, x)
+HC_MATH_WRAPPER_1(erfinvf, x)
+HC_MATH_WRAPPER_FP_OVERLOAD_1(erfinv, x)
 HC_MATH_WRAPPER_1(expf, x)
 HC_MATH_WRAPPER_FP_OVERLOAD_1(exp, x)
 HC_MATH_WRAPPER_1(exp2f, x)
@@ -333,6 +335,8 @@ HC_MATH_WRAPPER_2(fmodf, x, y)
 HC_MATH_WRAPPER_2(fmod, x, y)
 HC_MATH_WRAPPER_2(hypotf, x, y)
 HC_MATH_WRAPPER_2(hypot, x, y)
+HC_MATH_WRAPPER_1(lgammaf, x)
+HC_MATH_WRAPPER_FP_OVERLOAD_1(lgamma, x)
 HC_MATH_WRAPPER_1(logf, x)
 HC_MATH_WRAPPER_FP_OVERLOAD_1(log, x)
 HC_MATH_WRAPPER_1(log10f, x)

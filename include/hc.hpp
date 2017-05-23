@@ -1078,6 +1078,14 @@ public:
         return pDev->get_compute_unit_count();
     }
 
+    /**
+     * Return the unique integer sequence-number for the accelerator.
+     * Sequence-numbers are assigned in monotonically increasing order starting with 0.
+     */
+    int get_seqnum() const {
+        return pDev->get_seqnum();
+    }
+
 
     /**
      * Return true if the accelerator's memory can be mapped into the CPU's address space,
@@ -1442,7 +1450,17 @@ accelerator_view::get_accelerator() const { return pQueue->getDev(); }
 
 inline completion_future
 accelerator_view::create_marker(memory_scope scope) const {
-    return completion_future(pQueue->EnqueueMarker(scope));
+    std::shared_ptr<Kalmar::KalmarAsyncOp> deps[1]; 
+    // If necessary create an explicit dependency on previous command
+    // This is necessary for example if copy command is followed by marker - we need the marker to wait for the copy to complete.
+    std::shared_ptr<Kalmar::KalmarAsyncOp> depOp = pQueue->detectStreamDeps(hcCommandMarker, nullptr);
+
+    int cnt = 0;
+    if (depOp) {
+        deps[cnt++] = depOp; // retrieve async op associated with completion_future
+    }
+
+    return completion_future(pQueue->EnqueueMarkerWithDependency(cnt, deps, scope));
 }
 
 inline unsigned int accelerator_view::get_version() const { return get_accelerator().get_version(); }

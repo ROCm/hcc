@@ -252,25 +252,30 @@ auto_voidp am_alloc(size_t sizeBytes, hc::accelerator &acc, unsigned flags)
                alloc_region = static_cast<hsa_amd_memory_pool_t*>(acc.get_hsa_am_region());
             }
 
-            if (alloc_region->handle != -1) {
+            if (alloc_region && alloc_region->handle != -1) {
 
                 hsa_status_t s1 = hsa_amd_memory_pool_allocate(*alloc_region, sizeBytes, 0, &ptr);
 
                 if (s1 != HSA_STATUS_SUCCESS) {
                     ptr = NULL;
                 } else {
-                    if (flags & amHostPinned) {
-                      s1 = hsa_amd_agents_allow_access(1, hsa_agent, NULL, ptr);
-                      if (s1 != HSA_STATUS_SUCCESS) {
-                        hsa_amd_memory_pool_free(ptr);
-                        ptr = NULL;
-                      }
-                      else {
-                        hc::AmPointerInfo ampi(ptr/*hostPointer*/, ptr /*devicePointer*/, sizeBytes, acc, false/*isDevice*/, true /*isAMManaged*/);
-                        g_amPointerTracker.insert(ptr,ampi);
-                      }
-                    }
-                    else {
+                    if (flags & (amHostPinned|amHostCoherent)) {
+                        if (s1 != HSA_STATUS_SUCCESS) {
+                            hsa_amd_memory_pool_free(ptr);
+                            ptr = NULL;
+                        } else {
+                            hc::AmPointerInfo ampi(ptr/*hostPointer*/, ptr /*devicePointer*/, sizeBytes, acc, false/*isDevice*/, true /*isAMManaged*/);
+                            g_amPointerTracker.insert(ptr,ampi);
+
+                            // Host memory is always mapped to all possible peers:
+                            auto accs = hc::accelerator::get_all();
+                            auto s2 = am_map_to_peers(ptr, accs.size(), accs.data());
+                            if (s2 != AM_SUCCESS) {
+                                hsa_amd_memory_pool_free(ptr);
+                                ptr = NULL;
+                            }
+                        }
+                    } else {
                         hc::AmPointerInfo ampi(NULL/*hostPointer*/, ptr /*devicePointer*/, sizeBytes, acc, true/*isDevice*/, true /*isAMManaged*/);
                         g_amPointerTracker.insert(ptr,ampi);
                     }
@@ -288,12 +293,13 @@ am_status_t am_free(void* ptr)
     am_status_t status = AM_SUCCESS;
 
     if (ptr != NULL) {
-        // See also tracker::reset which can free memory.
-        hsa_amd_memory_pool_free(ptr);
 
         int numRemoved = g_amPointerTracker.remove(ptr) ;
         if (numRemoved == 0) {
             status = AM_ERROR_MISC;
+        } else {
+            // See also tracker::reset which can free memory.
+            hsa_amd_memory_pool_free(ptr);
         }
     }
     return status;
@@ -479,8 +485,8 @@ am_status_t am_map_to_peers(void* ptr, size_t num_peer, const hc::accelerator* p
     if(nullptr == ptr || 0 == num_peer || nullptr == peers)
         return AM_ERROR_MISC;
 
-    hc::accelerator acc;
-    AmPointerInfo info(nullptr, nullptr, 0, acc, false, false);
+    hc::accelerator ptrAcc;
+    AmPointerInfo info(nullptr, nullptr, 0, ptrAcc, false, false);
     auto status = am_memtracker_getinfo(&info, ptr);
     if(AM_SUCCESS != status)
         return status;
@@ -489,8 +495,8 @@ am_status_t am_map_to_peers(void* ptr, size_t num_peer, const hc::accelerator* p
     if(info._isInDeviceMem)
     {
         // get accelerator and pool of device memory
-        acc = info._acc;
-        pool = static_cast<hsa_amd_memory_pool_t*>(acc.get_hsa_am_region());
+        ptrAcc = info._acc;
+        pool = static_cast<hsa_amd_memory_pool_t*>(ptrAcc.get_hsa_am_region());
     }
     else
     {
@@ -500,8 +506,8 @@ am_status_t am_map_to_peers(void* ptr, size_t num_peer, const hc::accelerator* p
         if(info._isAmManaged)
         {
             // here, accelerator is the device, but used to query system memory pool
-            acc = info._acc;
-            pool = static_cast<hsa_amd_memory_pool_t*>(acc.get_hsa_am_system_region()); 
+            ptrAcc = info._acc;
+            pool = static_cast<hsa_amd_memory_pool_t*>(ptrAcc.get_hsa_am_system_region()); 
         }
         else
             return AM_ERROR_MISC;
@@ -518,34 +524,37 @@ am_status_t am_map_to_peers(void* ptr, size_t num_peer, const hc::accelerator* p
         auto& a = peers[i];
         if(info._isInDeviceMem)
         {
-            if(a == acc)
+            if(a == ptrAcc)
                 continue;
         }
 
-        hsa_agent_t* agent = static_cast<hsa_agent_t*>(acc.get_hsa_agent());
+        hsa_agent_t* agent = static_cast<hsa_agent_t*>(a.get_hsa_agent());
 
-        hsa_amd_memory_pool_access_t access;
-        hsa_status_t  status = hsa_amd_agent_memory_pool_get_info(*agent, *pool, HSA_AMD_AGENT_MEMORY_POOL_INFO_ACCESS, &access);
-        if(HSA_STATUS_SUCCESS != status)
-            return AM_ERROR_MISC;
+        if (agent) {
 
-        // check access
-        if(HSA_AMD_MEMORY_POOL_ACCESS_NEVER_ALLOWED == access)
-            return AM_ERROR_MISC;
+            hsa_amd_memory_pool_access_t access;
+            hsa_status_t  status = hsa_amd_agent_memory_pool_get_info(*agent, *pool, HSA_AMD_AGENT_MEMORY_POOL_INFO_ACCESS, &access);
+            if(HSA_STATUS_SUCCESS != status)
+                return AM_ERROR_MISC;
 
-        bool add_agent = true;
+            // check access
+            if(HSA_AMD_MEMORY_POOL_ACCESS_NEVER_ALLOWED == access)
+                return AM_ERROR_MISC;
 
-        for(int ii = 0; ii < peer_count; ii++)
-        {
-            if(agent->handle == agents[ii].handle)
-                add_agent = false;
-        } 
+            bool add_agent = true;
 
-        if(add_agent)
-        {
-             agents[peer_count] = *agent;
-             peer_count++;
-        }    
+            for(int ii = 0; ii < peer_count; ii++)
+            {
+                if(agent->handle == agents[ii].handle)
+                    add_agent = false;
+            } 
+
+            if(add_agent)
+            {
+                 agents[peer_count] = *agent;
+                 peer_count++;
+            }    
+        }
     }
 
     // allow access to the agents
