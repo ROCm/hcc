@@ -41,10 +41,21 @@ enum execute_order
 // Flags to specify visibility of previous commands after a marker is executed.
 enum memory_scope
 {
-    no_scope,           // No release operation applied
-    accelerator_scope,  // Release to current accelerator
-    system_scope,       // Release to system (CPU + all accelerators)
+    no_scope=0,           // No release operation applied
+    accelerator_scope=1,  // Release to current accelerator
+    system_scope=2,       // Release to system (CPU + all accelerators)
 };
+
+static inline memory_scope greater_scope(memory_scope scope1, memory_scope scope2)
+{
+    if ((scope1==system_scope) || (scope2 == system_scope)) {
+        return system_scope;
+    } else if ((scope1==accelerator_scope) || (scope2 == accelerator_scope)) {
+        return accelerator_scope;
+    } else {
+        return no_scope;
+    }
+}
 
 
 enum hcCommandKind {
@@ -59,6 +70,7 @@ enum hcCommandKind {
 };
 
 
+// Commands sent to copy queues:
 static inline bool isCopyCommand(hcCommandKind k) 
 {
     switch (k) {
@@ -71,6 +83,13 @@ static inline bool isCopyCommand(hcCommandKind k)
             return false;
     };
 };
+
+
+// Commands sent to compute queue:
+static bool isComputeQueueCommand(hcCommandKind k) {
+    return (k == hcCommandKernel) || (k == hcCommandMarker);
+};
+
 
 
 
@@ -245,7 +264,7 @@ public:
   /// enqueue marker with prior dependency
   virtual std::shared_ptr<KalmarAsyncOp> EnqueueMarkerWithDependency(int count, std::shared_ptr <KalmarAsyncOp> *depOps, memory_scope scope) { return nullptr; }
 
-  virtual std::shared_ptr<KalmarAsyncOp> detectStreamDeps(hcCommandKind commandKind, KalmarAsyncOp *newCopyOp) { return nullptr; };
+  virtual std::shared_ptr<KalmarAsyncOp> detectStreamDeps(hcCommandKind commandKind, KalmarAsyncOp *newCopyOp, memory_scope *requiredRelease) { return nullptr; };
 
 
   /// copy src to dst asynchronously
