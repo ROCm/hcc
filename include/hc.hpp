@@ -1453,14 +1453,15 @@ accelerator_view::create_marker(memory_scope scope) const {
     std::shared_ptr<Kalmar::KalmarAsyncOp> deps[1]; 
     // If necessary create an explicit dependency on previous command
     // This is necessary for example if copy command is followed by marker - we need the marker to wait for the copy to complete.
-    std::shared_ptr<Kalmar::KalmarAsyncOp> depOp = pQueue->detectStreamDeps(hcCommandMarker, nullptr);
+    hc::memory_scope depReleaseScope = hc::no_scope;
+    std::shared_ptr<Kalmar::KalmarAsyncOp> depOp = pQueue->detectStreamDeps(hcCommandMarker, nullptr, &depReleaseScope);
 
     int cnt = 0;
     if (depOp) {
         deps[cnt++] = depOp; // retrieve async op associated with completion_future
     }
 
-    return completion_future(pQueue->EnqueueMarkerWithDependency(cnt, deps, scope));
+    return completion_future(pQueue->EnqueueMarkerWithDependency(cnt, deps, greater_scope(depReleaseScope, scope)));
 }
 
 inline unsigned int accelerator_view::get_version() const { return get_accelerator().get_version(); }
@@ -1470,7 +1471,8 @@ inline completion_future accelerator_view::create_blocking_marker(completion_fut
 
     // If necessary create an explicit dependency on previous command
     // This is necessary for example if copy command is followed by marker - we need the marker to wait for the copy to complete.
-    std::shared_ptr<Kalmar::KalmarAsyncOp> depOp = pQueue->detectStreamDeps(hcCommandMarker, nullptr);
+    hc::memory_scope depReleaseScope = hc::no_scope;
+    std::shared_ptr<Kalmar::KalmarAsyncOp> depOp = pQueue->detectStreamDeps(hcCommandMarker, nullptr, &depReleaseScope);
 
     int cnt = 0;
     if (depOp) {
@@ -1481,7 +1483,7 @@ inline completion_future accelerator_view::create_blocking_marker(completion_fut
         deps[cnt++] = dependent_future.__asyncOp; // retrieve async op associated with completion_future
     } 
     
-    return completion_future(pQueue->EnqueueMarkerWithDependency(cnt, deps, scope));
+    return completion_future(pQueue->EnqueueMarkerWithDependency(cnt, deps, greater_scope(depReleaseScope, scope)));
 }
 
 template<typename InputIterator>
@@ -1493,7 +1495,8 @@ accelerator_view::create_blocking_marker(InputIterator first, InputIterator last
 
     // If necessary create an explicit dependency on previous command
     // This is necessary for example if copy command is followed by marker - we need the marker to wait for the copy to complete.
-    std::shared_ptr<Kalmar::KalmarAsyncOp> depOp = pQueue->detectStreamDeps(hcCommandMarker, nullptr);
+    hc::memory_scope depReleaseScope = hc::no_scope;
+    std::shared_ptr<Kalmar::KalmarAsyncOp> depOp = pQueue->detectStreamDeps(hcCommandMarker, nullptr, &depReleaseScope);
 
     int cnt = 0;
     if (depOp) {
@@ -1509,14 +1512,14 @@ accelerator_view::create_blocking_marker(InputIterator first, InputIterator last
         if (iter->__asyncOp) {
             deps[cnt++] = iter->__asyncOp; // retrieve async op associated with completion_future
             if (cnt == 5) {
-                lastMarker = completion_future(pQueue->EnqueueMarkerWithDependency(cnt, deps, scope));
+                lastMarker = completion_future(pQueue->EnqueueMarkerWithDependency(cnt, deps, greater_scope(depReleaseScope, scope)));
                 cnt = 0;
             }
         }
     }
 
     if (cnt) {
-        lastMarker = completion_future(pQueue->EnqueueMarkerWithDependency(cnt, deps, scope));
+        lastMarker = completion_future(pQueue->EnqueueMarkerWithDependency(cnt, deps, greater_scope(depReleaseScope, scope)));
     }
 
     return lastMarker;

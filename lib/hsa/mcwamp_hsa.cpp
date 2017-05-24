@@ -926,7 +926,7 @@ private:
 public:
     HSAQueue(KalmarDevice* pDev, hsa_agent_t agent, execute_order order) ;
 
-    void setNeedsSysRelease() { _needs_sys_release = true; };
+    void setNeedsSysRelease(bool r) { _needs_sys_release = r; };
 
     void dispose() override;
 
@@ -991,14 +991,22 @@ public:
     }
 
 
+
     // Check the command kind for the upcoming command that will be sent to this queue
     // if it differs from the youngest async op sent to the queue, we may need to insert additional synchronization.
     // The function returns nullptr if no dependency is required. For example, back-to-back commands of same type
     // are often implicitly synchronized so no dependency is required.
     // Also different modes and optimizations can control when dependencies are added.
     // TODO - return reference if possible to avoid shared ptr overhead.
-    std::shared_ptr<KalmarAsyncOp> detectStreamDeps(hcCommandKind newCommandKind, KalmarAsyncOp *copyOp) {
+    //
+    // releaseScope specifies the scope of the fence that should be
+    // applied before the new command executes. For some commands (ie Kernels, Barriers) this can be applied as part of the AQL
+    // packet, while for some commands (copies) this requires a separate Barrier packet.
+    std::shared_ptr<KalmarAsyncOp> detectStreamDeps(hcCommandKind newCommandKind, KalmarAsyncOp *copyOp, hc::memory_scope *releaseScope) {
+
         assert (newCommandKind != hcCommandInvalid);
+
+        *releaseScope = hc::no_scope;
 
         if (!asyncOps.empty()) {
             assert (youngestCommandKind != hcCommandInvalid);
@@ -1028,6 +1036,12 @@ public:
                 if (FORCE_SIGNAL_DEP_BETWEEN_COPIES) {
                     needDep = true;
                 }
+            } else if ((isComputeQueueCommand(youngestCommandKind)) && 
+                       (newCommandKind == hcMemcpyDeviceToHost) &&
+                       _needs_sys_release) {
+                // AMD_HSA:  ROCM SDMA engines do not snoop GPU L2 caches so (may) need
+                // to add a system-scope release before issuing the SDMA:
+                *releaseScope = hc::system_scope;
             }
 
 
@@ -1042,9 +1056,10 @@ public:
 
 
     void waitForStreamDeps (KalmarAsyncOp *newOp) {
-        std::shared_ptr<KalmarAsyncOp> depOp = detectStreamDeps(newOp->getCommandKind(), newOp);
+        hc::memory_scope releaseScope;
+        std::shared_ptr<KalmarAsyncOp> depOp = detectStreamDeps(newOp->getCommandKind(), newOp, &releaseScope);
         if (depOp != nullptr) {
-            EnqueueMarkerWithDependency(1, &depOp, hc::system_scope);
+            EnqueueMarkerWithDependency(1, &depOp, HCC_OPT_FLUSH ? releaseScope : hc::system_scope);
         }
     }
 
@@ -1107,7 +1122,6 @@ public:
         }
 #endif
         if (HCC_OPT_FLUSH && _needs_sys_release) {
-            _needs_sys_release = false;
 
             // In the loop below, this will be the first op waited on
             auto marker = EnqueueMarker(hc::system_scope);
@@ -1560,7 +1574,18 @@ public:
 
 
     // enqueue a barrier packet with multiple prior dependencies
-    std::shared_ptr<KalmarAsyncOp> EnqueueMarkerWithDependency(int count, std::shared_ptr <KalmarAsyncOp> *depOps, hc::memory_scope scope) override {
+    // The marker will wait for all specified input dependencies to resolve and 
+    // also for all older commands in the queue to execute, and then will
+    // signal completion by decrementing the associated signal.
+    //
+    // depOps specifies the other ops that this marker will depend on.  These 
+    // can be in any queue on any GPU .
+    // 
+    // releaseScope specifies the scope of the release fence that will be
+    // applied after the marker executes.  See hc::memory_scope
+    std::shared_ptr<KalmarAsyncOp> EnqueueMarkerWithDependency(int count, 
+            std::shared_ptr <KalmarAsyncOp> *depOps, 
+            hc::memory_scope releaseScope) override {
         hsa_status_t status = HSA_STATUS_SUCCESS;
 
 
@@ -1570,7 +1595,7 @@ public:
             std::shared_ptr<HSABarrier> barrier = std::make_shared<HSABarrier>(count, depOps);
 
             // enqueue the barrier
-            status = barrier.get()->enqueueAsync(this, scope);
+            status = barrier.get()->enqueueAsync(this, releaseScope);
             STATUS_CHECK(status, __LINE__);
 
             // associate the barrier with this queue
@@ -3749,7 +3774,7 @@ HSADispatch::dispatchKernelAsync(Kalmar::HSAQueue* hsaQueue, const void *hostKer
 
     // If HCC_OPT_FLUSH=1, we are not flushing to system scope after each command.
     // Set the flag so we remember to do so at next queue::wait() call.
-    hsaQueue->setNeedsSysRelease();
+    hsaQueue->setNeedsSysRelease(true);
 
     {
         // extract hsa_queue_t from HSAQueue
@@ -3932,6 +3957,11 @@ HSABarrier::enqueueAsync(Kalmar::HSAQueue* hsaQueue, hc::memory_scope releaseSco
     // record HSAQueue association
     this->hsaQueue = hsaQueue;
     // extract hsa_queue_t from HSAQueue
+    //
+   
+    if (releaseScope == hc::system_scope) { 
+        hsaQueue->setNeedsSysRelease(false);
+    };
 
     // enqueue barrier packet
     // TODO - can we remove acquire fence, this is barrier:
@@ -3962,13 +3992,13 @@ HSABarrier::enqueueAsync(Kalmar::HSAQueue* hsaQueue, hc::memory_scope releaseSco
     signalIndex = ret.second;
 
 
-        // setup header
-        uint16_t header = HSA_PACKET_TYPE_BARRIER_AND << HSA_PACKET_HEADER_TYPE;
+    // setup header
+    uint16_t header = HSA_PACKET_TYPE_BARRIER_AND << HSA_PACKET_HEADER_TYPE;
 #ifndef AMD_HSA
-        // AMD implementation does not require barrier bit on barrier packet and executes a little faster without it set.
-        header |= (1 << HSA_PACKET_HEADER_BARRIER);
+    // AMD implementation does not require barrier bit on barrier packet and executes a little faster without it set.
+    header |= (1 << HSA_PACKET_HEADER_BARRIER);
 #endif
-        header |= fenceBits;
+    header |= fenceBits;
 
 
     {
@@ -4237,11 +4267,30 @@ HSACopy::enqueueAsyncCopyCommand(Kalmar::HSAQueue* hsaQueue, const Kalmar::HSADe
         int depSignalCnt = 0;
         hsa_signal_t depSignal;
         setCommandKind (resolveMemcpyDirection(srcPtrInfo._isInDeviceMem, dstPtrInfo._isInDeviceMem));
-        depAsyncOp = hsaQueue->detectStreamDeps(this->getCommandKind(), this);
+        hc::memory_scope releaseScope;
+        depAsyncOp = hsaQueue->detectStreamDeps(this->getCommandKind(), this, &releaseScope);
 
-        if (depAsyncOp) {
-            depSignalCnt = 1;
+        // We need to ensure the copy waits for preceding commands the HCC queue to complete, if those commands exist.
+        // The copy has to be set so that it depends on the completion_signal of the youngest command in the queue.
+        if (depAsyncOp) { 
             depSignal = * (static_cast <hsa_signal_t*> (depAsyncOp->getNativeHandle()));
+
+            // Normally we can use the input signal to hsa_amd_memory_async_copy to ensure the copy waits for youngest op.
+            // However, two cases require special handling:
+            //    - the youngest op may not have a completion signal - this is optional for kernel launch commands.
+            //    - we may need a system-scope fence.
+            // For both of these cases, we create an additional barrier packet in the source, and attach the desired fence.
+            // Then we make the copy depend on the signal written by this command.
+            if ((depSignal.handle == 0x0) || (releaseScope != hc::no_scope)) {
+                DBOUT( DB_CMD, "  asyncCopy adding marker for needed dependency or release\n");
+
+                // Set depAsyncOp for use by the async copy below:
+                depAsyncOp = hsaQueue->EnqueueMarkerWithDependency(0, nullptr, releaseScope);
+                depSignal = * (static_cast <hsa_signal_t*> (depAsyncOp->getNativeHandle()));
+            };
+
+            depSignalCnt = 1;
+
             DBOUT( DB_CMD, "  asyncCopy sent with dependency on op#" << depAsyncOp->getSeqNum() << " depSignal="<< std::hex  << depSignal.handle << std::dec <<"\n");
         }
 
