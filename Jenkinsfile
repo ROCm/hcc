@@ -23,7 +23,6 @@ node ('rocmtest')
   // The client workspace is shared with the docker container
   stage('HCC Checkout')
   {
-    deleteDir( )
     checkout scm
 
     // list the commit hash of the submodules
@@ -59,6 +58,7 @@ node ('rocmtest')
       // This is necessary because cmake seemingly randomly generates build makefile into the docker
       // workspace instead of the current set directory.  Not sure why, but it seems like a bug
       sh  """
+          rm -rf ${build_dir_release_rel}
           mkdir -p ${build_dir_release_rel}
           cd ${build_dir_release_rel}
           cmake -B${build_dir_release_abs} \
@@ -78,6 +78,8 @@ node ('rocmtest')
           sh  """#!/usr/bin/env bash
               cd ${build_dir_release_abs}
               make install
+
+              rm -rf ${build_dir_cmake_tests_abs}
               mkdir -p ${build_dir_cmake_tests_abs}
               cd ${build_dir_cmake_tests_abs}
               CXX=${hcc_install_prefix}/bin/hcc cmake ${workspace_dir_abs}/cmake-tests
