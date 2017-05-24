@@ -61,15 +61,37 @@ bool test()
     //       collection of tested functions, as opposed to this verbose form.
     using namespace hc;
 
-    return test_math_fn<T, grid_sz>("sqrt", [](T x) __HC__ { return sqrt(x); }, [](T x) { return std::sqrt(x); }) &&
-           test_math_fn<T, grid_sz>("fabs", [](T x) __HC__ { return fabs(x); }, [](T x) { return std::fabs(x); }) &&
-           test_math_fn<T, grid_sz>("cbrt", [](T x) __HC__ { return cbrt(x); }, [](T x) { return std::cbrt(x); }) &&
-           test_math_fn<T, grid_sz>("log", [](T x) __HC__ { return log(x); }, [](T x) { return std::log(x); }) &&
-           test_math_fn<T, grid_sz>("ilogb", [](T x) __HC__ { return ilogb(x); }, [](T x) { return std::ilogb(x); }) &&
-           test_math_fn<T, grid_sz>("isnormal", [](T x) __HC__ { return isnormal(x); }, [](T x) { return std::isnormal(x); }) &&
-           test_math_fn<T, grid_sz>("cospi", [](T x) __HC__ { return cospi(x); }, [](T x) { return cospi(x); }) &&
-           test_math_fn<T, grid_sz>("sinpi", [](T x) __HC__ { return sinpi(x); }, [](T x) { return sinpi(x); }) &&
-           test_math_fn<T, grid_sz>("rsqrt", [](T x) __HC__ { return rsqrt(x); }, [](T x) { return rsqrt(x); });
+    return test_math_fn<T, grid_sz>(
+        "sqrt",
+        [](T x) __HC__ { return sqrt(x); }, [](T x) { return std::sqrt(x); })
+        && test_math_fn<T, grid_sz>(
+        "fabs",
+        [](T x) __HC__ { return fabs(x); }, [](T x) { return std::fabs(x); })
+        && test_math_fn<T, grid_sz>(
+        "cbrt",
+        [](T x) __HC__ { return cbrt(x); }, [](T x) { return std::cbrt(x); })
+        && test_math_fn<T, grid_sz>(
+        "log",
+        [](T x) __HC__ { return log(x); }, [](T x) { return std::log(x); })
+        && test_math_fn<T, grid_sz>(
+        "ilogb",
+        [](T x) __HC__ { return ilogb(x); }, [](T x) { return std::ilogb(x); })
+        && test_math_fn<T, grid_sz>(
+        "isnormal",
+        [](T x) __HC__ { return isnormal(x); },
+        [](T x) { return std::isnormal(x); })
+        && test_math_fn<T, grid_sz>(
+        "cospi",
+        [](T x) __HC__ { return cospi(x); },
+        [](T x) { return std::cos(static_cast<T>(M_PI) * x); })
+        && test_math_fn<T, grid_sz>(
+        "sinpi",
+        [](T x) __HC__ { return sinpi(x); },
+        [](T x) { return std::sin(static_cast<T>(M_PI) * x); })
+        && test_math_fn<T, grid_sz>(
+        "rsqrt",
+        [](T x) __HC__ { return rsqrt(x); },
+        [](T x) { return static_cast<T>(1) / std::sqrt(x); });
 }
 
 int main()

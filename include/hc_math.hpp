@@ -239,9 +239,6 @@ namespace {
 
 // following math functions are NOT available because they don't have a GPU implementation
 //
-// erfinv
-// erfcinv
-// fpclassify
 //
 // following math functions are NOT available because they don't have a CPU implementation
 //
@@ -308,9 +305,9 @@ HC_MATH_WRAPPER_FP_OVERLOAD_1(erf, x)
 HC_MATH_WRAPPER_1(erfcf, x)
 HC_MATH_WRAPPER_FP_OVERLOAD_1(erfc, x)
 HC_MATH_WRAPPER_1(erfcinvf, x)
-HC_MATH_WRAPPER_FP_OVERLOAD_1(erfcinv, x)
+HC_MATH_WRAPPER_1(erfcinv, x)
 HC_MATH_WRAPPER_1(erfinvf, x)
-HC_MATH_WRAPPER_FP_OVERLOAD_1(erfinv, x)
+HC_MATH_WRAPPER_1(erfinv, x)
 HC_MATH_WRAPPER_1(expf, x)
 HC_MATH_WRAPPER_FP_OVERLOAD_1(exp, x)
 HC_MATH_WRAPPER_1(exp2f, x)

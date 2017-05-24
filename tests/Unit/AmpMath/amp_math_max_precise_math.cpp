@@ -1,63 +1,69 @@
-// RUN: %cxxamp %s -o %t.out && %t.out
-#include <amp.h>
-#include <amp_math.h>
+#define DISABLED_PENDING_REMOVAL true
 
-#include <iostream>
-#include <random>
+#if !DISABLED_PENDING_REMOVAL
+  // RUN: %cxxamp %s -o %t.out && %t.out
+  #include <amp.h>
+  #include <amp_math.h>
 
-using namespace concurrency;
+  #include <iostream>
+  #include <random>
 
-#define ERROR_THRESHOLD (1e-4)
+  using namespace concurrency;
 
-template<typename _Tp>
-bool test() {
-  const int vecSize = 1024;
+  #define ERROR_THRESHOLD (1e-4)
 
-  // Alloc & init input data
-  extent<1> e(vecSize);
-  array<_Tp, 1> a(vecSize);
+  template<typename _Tp>
+  bool test() {
+    const int vecSize = 1024;
 
-  array<_Tp, 1> b(vecSize);
-  array<_Tp, 1> c(vecSize);
-  array<_Tp, 1> d(vecSize);
+    // Alloc & init input data
+    extent<1> e(vecSize);
+    array<_Tp, 1> a(vecSize);
 
-  // setup RNG
-  std::random_device rd;
-  std::default_random_engine gen(rd());
-  std::uniform_real_distribution<_Tp> dis(0, 1);
-  array_view<_Tp> ga(a);
-  array_view<_Tp> gb(b);
-  array_view<_Tp> gc(c);
-  array_view<_Tp> gd(d);
+    array<_Tp, 1> b(vecSize);
+    array<_Tp, 1> c(vecSize);
+    array<_Tp, 1> d(vecSize);
 
-  for (index<1> i(0); i[0] < vecSize; i++) {
-    ga[i] = dis(gen);
-    gb[i] = dis(gen);
+    // setup RNG
+    std::random_device rd;
+    std::default_random_engine gen(rd());
+    std::uniform_real_distribution<_Tp> dis(0, 1);
+    array_view<_Tp> ga(a);
+    array_view<_Tp> gb(b);
+    array_view<_Tp> gc(c);
+    array_view<_Tp> gd(d);
+
+    for (index<1> i(0); i[0] < vecSize; i++) {
+      ga[i] = dis(gen);
+      gb[i] = dis(gen);
+    }
+
+    parallel_for_each(
+      e,
+      [=](index<1> idx) restrict(amp) {
+      gc[idx] = precise_math::max(ga[idx], gb[idx]);
+    });
+
+    for(unsigned i = 0; i < vecSize; i++) {
+      gd[i] = precise_math::max(ga[i], gb[i]);
+    }
+
+    _Tp sum = 0;
+    for(unsigned i = 0; i < vecSize; i++) {
+      sum += precise_math::fabs(
+        precise_math::fabs(gc[i]) - precise_math::fabs(gd[i]));
+    }
+    return (sum < ERROR_THRESHOLD);
   }
 
-  parallel_for_each(
-    e,
-    [=](index<1> idx) restrict(amp) {
-    gc[idx] = precise_math::max(ga[idx], gb[idx]);
-  });
+  int main(void) {
+    bool ret = true;
 
-  for(unsigned i = 0; i < vecSize; i++) {
-    gd[i] = precise_math::max(ga[i], gb[i]);
+    ret &= test<float>();
+    ret &= test<double>();
+
+    return !(ret == true);
   }
-
-  _Tp sum = 0;
-  for(unsigned i = 0; i < vecSize; i++) {
-    sum += precise_math::fabs(precise_math::fabs(gc[i]) - precise_math::fabs(gd[i]));
-  }
-  return (sum < ERROR_THRESHOLD);
-}
-
-int main(void) {
-  bool ret = true;
-
-  ret &= test<float>();
-  ret &= test<double>();
-
-  return !(ret == true);
-}
-
+#else
+    int main() { return 0; }
+#endif
