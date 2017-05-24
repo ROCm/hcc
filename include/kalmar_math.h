@@ -10,334 +10,222 @@
 #include <cmath>
 #include <stdexcept>
 
-[[noreturn]]
-inline
-void unimplemented_math_fn(const std::string& fn)
+namespace
 {
-    throw std::runtime_error{fn + "is unimplemented for host."};
+    [[noreturn]]
+    inline
+    float erfcinv(float)
+    { throw std::runtime_error{"Unimplemented!"}; }
+
+    [[noreturn]]
+    inline
+    double erfcinv(double)
+    { throw std::runtime_error{"Unimplemented!"}; }
+
+    [[noreturn]]
+    inline
+    float erfinv(float)
+    { throw std::runtime_error{"Unimplemented!"}; }
+
+    [[noreturn]]
+    inline
+    double erfinv(double)
+    { throw std::runtime_error{"Unimplemented!"}; }
 }
 
-[[noreturn]]
-inline
-float erfcinv(float) { unimplemented_math_fn(__PRETTY_FUNCTION__); }
-
-[[noreturn]]
-inline
-double erfcinv(double) { unimplemented_math_fn(__PRETTY_FUNCTION__); }
-
-[[noreturn]]
-inline
-float erfinv(float) { unimplemented_math_fn(__PRETTY_FUNCTION__); }
-
-[[noreturn]]
-inline
-double erfinv(double) { unimplemented_math_fn(__PRETTY_FUNCTION__); }
-
-[[noreturn]]
-inline
-__fp16 modf(__fp16, __fp16*) { unimplemented_math_fn(__PRETTY_FUNCTION__); }
-
-template<typename T>
-[[noreturn]]
-inline
-void sincos(T, T*, T*) { unimplemented_math_fn(__PRETTY_FUNCTION__); }
-
-extern "C" __fp16 __hc_acos_half(__fp16 x) restrict(amp);
-extern "C" float __hc_acos(float x) restrict(amp);
-extern "C" double __hc_acos_double(double x) restrict(amp);
-
-extern "C" __fp16 __hc_acosh_half(__fp16 x) restrict(amp);
-extern "C" float __hc_acosh(float x) restrict(amp);
-extern "C" double __hc_acosh_double(double x) restrict(amp);
-
-extern "C" __fp16 __hc_asin_half(__fp16 x) restrict(amp);
-extern "C" float __hc_asin(float x) restrict(amp);
-extern "C" double __hc_asin_double(double x) restrict(amp);
-
-extern "C" __fp16 __hc_asinh_half(__fp16 x) restrict(amp);
-extern "C" float __hc_asinh(float x) restrict(amp);
-extern "C" double __hc_asinh_double(double x) restrict(amp);
-
-extern "C" __fp16 __hc_atan_half(__fp16 x) restrict(amp);
-extern "C" float __hc_atan(float x) restrict(amp);
-extern "C" double __hc_atan_double(double x) restrict(amp);
-
-extern "C" __fp16 __hc_atanh_half(__fp16 x) restrict(amp);
-extern "C" float __hc_atanh(float x) restrict(amp);
-extern "C" double __hc_atanh_double(double x) restrict(amp);
-
-extern "C" __fp16 __hc_atan2_half(__fp16 y, __fp16 x) restrict(amp);
-extern "C" float __hc_atan2(float y, float x) restrict(amp);
-extern "C" double __hc_atan2_double(double y, double x) restrict(amp);
-
-extern "C" __fp16 __hc_cbrt_half(__fp16 x) restrict(amp);
-extern "C" float __hc_cbrt(float x) restrict(amp);
-extern "C" double __hc_cbrt_double(double x) restrict(amp);
-
-extern "C" __fp16 __hc_ceil_half(__fp16 x) restrict(amp);
-extern "C" __fp16 __hc_ceil_native_half(__fp16 x) restrict(amp);
-extern "C" float __hc_ceil(float x) restrict(amp);
-extern "C" float __hc_ceil_native(float x) restrict(amp);
-extern "C" double __hc_ceil_double(double x) restrict(amp);
-
-extern "C" __fp16 __hc_copysign_half(__fp16 x, __fp16 y) restrict(amp);
-extern "C" float __hc_copysign(float x, float y) restrict(amp);
-extern "C" double __hc_copysign_double(double x, double y) restrict(amp);
-
-extern "C" __fp16 __hc_cos_half(__fp16 x) restrict(amp);
-extern "C" __fp16 __hc_cos_native_half(__fp16 x) restrict(amp);
-extern "C" float __hc_cos(float x) restrict(amp);
-extern "C" float __hc_cos_native(float x) restrict(amp);
-extern "C" double __hc_cos_double(double x) restrict(amp);
-
-extern "C" __fp16 __hc_cosh_half(__fp16 x) restrict(amp);
-extern "C" float __hc_cosh(float x) restrict(amp);
-extern "C" double __hc_cosh_double(double x) restrict(amp);
-
-extern "C" __fp16 __hc_cospi_half(__fp16 x) restrict(amp);
-extern "C" float __hc_cospi(float x) restrict(amp);
-extern "C" double __hc_cospi_double(double x) restrict(amp);
-
-extern "C" __fp16 __hc_erf_half(__fp16 x) restrict(amp);
-extern "C" float __hc_erf(float x) restrict(amp);
-extern "C" double __hc_erf_double(double x) restrict(amp);
-
-extern "C" __fp16 __hc_erfc_half(__fp16 x) restrict(amp);
-extern "C" float __hc_erfc(float x) restrict(amp);
-extern "C" double __hc_erfc_double(double x) restrict(amp);
-
-extern "C" __fp16 __hc_erfcinv_half(__fp16 x) restrict(amp);
-extern "C" float __hc_erfcinv(float x) restrict(amp);
-extern "C" double __hc_erfcinv_double(double x) restrict(amp);
-
-extern "C" __fp16 __hc_erfinv_half(__fp16 x) restrict(amp);
-extern "C" float __hc_erfinv(float x) restrict(amp);
-extern "C" double __hc_erfinv_double(double x) restrict(amp);
-
-extern "C" __fp16 __hc_exp_half(__fp16 x) restrict(amp);
-extern "C" float __hc_exp(float x) restrict(amp);
-extern "C" double __hc_exp_double(double x) restrict(amp);
-
-extern "C" __fp16 __hc_exp10_native_half(__fp16 x) restrict(amp);
-extern "C" __fp16 __hc_exp10_half(__fp16 x) restrict(amp);
-extern "C" float __hc_exp10(float x) restrict(amp);
-extern "C" double __hc_exp10_double(double x) restrict(amp);
-
-extern "C" __fp16 __hc_exp2_native_half(__fp16 x) restrict(amp);
-extern "C" __fp16 __hc_exp2_half(__fp16 x) restrict(amp);
-extern "C" float __hc_exp2(float x) restrict(amp);
-extern "C" float __hc_exp2_native(float x) restrict(amp);
-extern "C" double __hc_exp2_double(double x) restrict(amp);
-
-extern "C" __fp16 __hc_expm1_half(__fp16 x) restrict(amp);
-extern "C" float __hc_expm1(float x) restrict(amp);
-extern "C" double __hc_expm1_double(double x) restrict(amp);
-
-extern "C" __fp16 __hc_fabs_half(__fp16 x) restrict(amp);
-extern "C" __fp16 __hc_fabs_native_half(__fp16 x) restrict(amp);
-extern "C" float __hc_fabs(float x) restrict(amp);
-extern "C" float __hc_fabs_native(float x) restrict(amp);
-extern "C" double __hc_fabs_double(double x) restrict(amp);
-
-extern "C" __fp16 __hc_fdim_half(__fp16 x, __fp16 y) restrict(amp);
-extern "C" float __hc_fdim(float x, float y) restrict(amp);
-extern "C" double __hc_fdim_double(double x, double y) restrict(amp);
-
-extern "C" __fp16 __hc_floor_half(__fp16 x) restrict(amp);
-extern "C" __fp16 __hc_floor_native_half(__fp16 x) restrict(amp);
-extern "C" float __hc_floor(float x) restrict(amp);
-extern "C" float __hc_floor_native(float x) restrict(amp);
-extern "C" double __hc_floor_double(double x) restrict(amp);
-
-extern "C" __fp16 __hc_fma_half(__fp16 x, __fp16 y, __fp16 z) restrict(amp);
-extern "C" float __hc_fma(float x, float y, float z) restrict(amp);
-extern "C" double __hc_fma_double(double x, double y, double z) restrict(amp);
-
-extern "C" __fp16 __hc_fmax_half(__fp16 x, __fp16 y) restrict(amp);
-extern "C" float __hc_fmax(float x, float y) restrict(amp);
-extern "C" double __hc_fmax_double(double x, double y) restrict(amp);
-
-extern "C" __fp16 __hc_fmin_half(__fp16 x, __fp16 y) restrict(amp);
-extern "C" float __hc_fmin(float x, float y) restrict(amp);
-extern "C" double __hc_fmin_double(double x, double y) restrict(amp);
-
-extern "C" __fp16 __hc_fmod_half(__fp16 x, __fp16 y) restrict(amp);
-extern "C" float __hc_fmod(float x, float y) restrict(amp);
-extern "C" double __hc_fmod_double(double x, double y) restrict(amp);
-
-extern "C" int __hc_fpclassify_half(__fp16 x) restrict(amp);
-extern "C" int __hc_fpclassify(float x) restrict(amp);
-extern "C" int __hc_fpclassify_double(double x) restrict(amp);
-
-extern "C" __fp16 __hc_frexp_half(__fp16 x, int *exp) restrict(amp);
-extern "C" float __hc_frexp(float x, int *exp) restrict(amp);
-extern "C" double __hc_frexp_double(double x, int *exp) restrict(amp);
-
-extern "C" __fp16 __hc_hypot_half(__fp16 x, __fp16 y) restrict(amp);
-extern "C" float __hc_hypot(float x, float y) restrict(amp);
-extern "C" double __hc_hypot_double(double x, double y) restrict(amp);
-
-extern "C" int __hc_ilogb_half(__fp16 x) restrict(amp);
-extern "C" int __hc_ilogb(float x) restrict(amp);
-extern "C" int __hc_ilogb_double(double x) restrict(amp);
-
-extern "C" int __hc_isfinite_half(__fp16 x) restrict(amp);
-extern "C" int __hc_isfinite(float x) restrict(amp);
-extern "C" int __hc_isfinite_double(double x) restrict(amp);
-
-extern "C" int __hc_isinf_half(__fp16 x) restrict(amp);
-extern "C" int __hc_isinf(float x) restrict(amp);
-extern "C" int __hc_isinf_double(double x) restrict(amp);
-
-extern "C" int __hc_isnan_half(__fp16 x) restrict(amp);
-extern "C" int __hc_isnan(float x) restrict(amp);
-extern "C" int __hc_isnan_double(double x) restrict(amp);
-
-extern "C" int __hc_isnormal_half(__fp16 x) restrict(amp);
-extern "C" int __hc_isnormal(float x) restrict(amp);
-extern "C" int __hc_isnormal_double(double x) restrict(amp);
-
-extern "C" __fp16 __hc_ldexp_half(__fp16 x, int exp) restrict(amp);
-extern "C" __fp16 __hc_ldexp_native_half(__fp16 x, int exp) restrict(amp);
-extern "C" float __hc_ldexp(float x, int exp) restrict(amp);
-extern "C" float __hc_ldexp_native(float x, int exp) restrict(amp);
-extern "C" double __hc_ldexp_double(double x, int exp) restrict(amp);
-
-extern "C" __fp16 __hc_lgamma_half(__fp16 x) restrict(amp);
-extern "C" float __hc_lgamma(float x) restrict(amp);
-extern "C" double __hc_lgamma_double(double x) restrict(amp);
-
-extern "C" __fp16 __hc_log_half(__fp16 x) restrict(amp);
-extern "C" float __hc_log(float x) restrict(amp);
-extern "C" float __hc_log_native(float x) restrict(amp);
-extern "C" double __hc_log_double(double x) restrict(amp);
-
-extern "C" __fp16 __hc_log10_half(__fp16 x) restrict(amp);
-extern "C" float __hc_log10(float x) restrict(amp);
-extern "C" double __hc_log10_double(double x) restrict(amp);
-
-extern "C" __fp16 __hc_log2_half(__fp16 x) restrict(amp);
-extern "C" __fp16 __hc_log2_native_half(__fp16 x) restrict(amp);
-extern "C" float __hc_log2(float x) restrict(amp);
-extern "C" float __hc_log2_native(float x) restrict(amp);
-extern "C" double __hc_log2_double(double x) restrict(amp);
-
-extern "C" __fp16 __hc_log1p_half(__fp16 x) restrict(amp);
-extern "C" float __hc_log1p(float x) restrict(amp);
-extern "C" double __hc_log1p_double(double x) restrict(amp);
-
-extern "C" __fp16 __hc_logb_half(__fp16 x) restrict(amp);
-extern "C" float __hc_logb(float x) restrict(amp);
-extern "C" double __hc_logb_double(double x) restrict(amp);
-
-extern "C" __fp16 __hc_modf_half(__fp16 x, __fp16 *iptr) restrict(amp);
-extern "C" float __hc_modf(float x, float *iptr) restrict(amp);
-extern "C" double __hc_modf_double(double x, double *iptr) restrict(amp);
-
-extern "C" __fp16 __hc_nan_half(int tagp) restrict(amp);
-extern "C" float __hc_nan(int tagp) restrict(amp);
-extern "C" double __hc_nan_double(unsigned long tagp) restrict(amp);
-
-extern "C" __fp16 __hc_nearbyint_half(__fp16 x) restrict(amp);
-extern "C" float __hc_nearbyint(float x) restrict(amp);
-extern "C" double __hc_nearbyint_double(double x) restrict(amp);
-
-extern "C" __fp16 __hc_nextafter_half(__fp16 x, __fp16 y) restrict(amp);
-extern "C" float __hc_nextafter(float x, float y) restrict(amp);
-extern "C" double __hc_nextafter_double(double x, double y) restrict(amp);
-
-extern "C" __fp16 __hc_pow_half(__fp16 x, __fp16 y) restrict(amp);
-extern "C" float __hc_pow(float x, float y) restrict(amp);
-extern "C" double __hc_pow_double(double x, double y) restrict(amp);
-
-extern "C" __fp16 __hc_rcbrt_half(__fp16 x) restrict(amp);
-extern "C" float __hc_rcbrt(float x) restrict(amp);
-extern "C" double __hc_rcbrt_double(double x) restrict(amp);
-
-// TODO: rcp is implementation only, it does not have a public interface.
-extern "C" __fp16 __hc_rcp_native_half(__fp16 x) restrict(amp);
-extern "C" float __hc_rcp_native(float x) restrict(amp);
-
-extern "C" __fp16 __hc_remainder_half(__fp16 x, __fp16 y) restrict(amp);
-extern "C" float __hc_remainder(float x, float y) restrict(amp);
-extern "C" double __hc_remainder_double(double x, double y) restrict(amp);
-
-extern "C" __fp16 __hc_remquo_half(__fp16 x, __fp16 y, int *quo) restrict(amp);
-extern "C" float __hc_remquo(float x, float y, int *quo) restrict(amp);
-extern "C" double __hc_remquo_double(double x, double y, int *quo) restrict(amp);
-
-extern "C" __fp16 __hc_round_half(__fp16 x) restrict(amp);
-extern "C" __fp16 __hc_round_native_half(__fp16 x) restrict(amp);
-extern "C" float __hc_round(float x) restrict(amp);
-extern "C" float __hc_round_native(float x) restrict(amp);
-extern "C" double __hc_round_double(double x) restrict(amp);
-
-extern "C" __fp16 __hc_rsqrt_half(__fp16 x) restrict(amp);
-extern "C" __fp16 __hc_rsqrt_native_half(__fp16 x) restrict(amp);
-extern "C" float __hc_rsqrt(float x) restrict(amp);
-extern "C" float __hc_rsqrt_native(float x) restrict(amp);
-extern "C" double __hc_rsqrt_double(double x) restrict(amp);
-
-extern "C" __fp16 __hc_scalb_half(__fp16 x, __fp16 exp) restrict(amp);
-extern "C" float __hc_scalb(float x, float exp) restrict(amp);
-extern "C" double __hc_scalb_double(double x, double exp) restrict(amp);
-
-extern "C" __fp16 __hc_scalbn_half(__fp16 x, int exp) restrict(amp);
-extern "C" float __hc_scalbn(float x, int exp) restrict(amp);
-extern "C" double __hc_scalbn_double(double x, int exp) restrict(amp);
-
-extern "C" __fp16 __hc_sinpi_half(__fp16 x) restrict(amp);
-extern "C" float __hc_sinpi(float x) restrict(amp);
-extern "C" double __hc_sinpi_double(double x) restrict(amp);
-
-extern "C" int __hc_signbit_half(__fp16 x) restrict(amp);
-extern "C" int __hc_signbit(float x) restrict(amp);
-extern "C" int __hc_signbit_double(double x) restrict(amp);
-
-extern "C" __fp16 __hc_sin_half(__fp16 x) restrict(amp);
-extern "C" __fp16 __hc_sin_native_half(__fp16 x) restrict(amp);
-extern "C" float __hc_sin(float x) restrict(amp);
-extern "C" float __hc_sin_native(float x) restrict(amp);
-extern "C" double __hc_sin_double(double x) restrict(amp);
-
-extern "C" __fp16 __hc_sincos_half(__fp16 x, __fp16 *c) restrict(amp);
-extern "C" float __hc_sincos(float x, float *c) restrict(amp);
-extern "C" double __hc_sincos_double(double x, double *c) restrict(amp);
-
-extern "C" __fp16 __hc_sinh_half(__fp16 x) restrict(amp);
-extern "C" float __hc_sinh(float x) restrict(amp);
-extern "C" double __hc_sinh_double(double x) restrict(amp);
-
-extern "C" __fp16 __hc_sqrt_half(__fp16 x) restrict(amp);
-extern "C" __fp16 __hc_sqrt_native_half(__fp16 x) restrict(amp);
-extern "C" float __hc_sqrt(float x) restrict(amp);
-extern "C" float __hc_sqrt_native(float x) restrict(amp);
-extern "C" double __hc_sqrt_double(double x) restrict(amp);
-
-extern "C" __fp16 __hc_tgamma_half(__fp16 x) restrict(amp);
-extern "C" float __hc_tgamma(float x) restrict(amp);
-extern "C" double __hc_tgamma_double(double x) restrict(amp);
-
-extern "C" __fp16 __hc_tan_half(__fp16 x) restrict(amp);
-extern "C" float __hc_tan(float x) restrict(amp);
-extern "C" double __hc_tan_double(double x) restrict(amp);
-
-extern "C" __fp16 __hc_tanh_half(__fp16 x) restrict(amp);
-extern "C" float __hc_tanh(float x) restrict(amp);
-extern "C" double __hc_tanh_double(double x) restrict(amp);
-
-extern "C" __fp16 __hc_tanpi_half(__fp16 x) restrict(amp);
-extern "C" float __hc_tanpi(float x) restrict(amp);
-extern "C" double __hc_tanpi_double(double x) restrict(amp);
-
-extern "C" __fp16 __hc_trunc_half(__fp16 x) restrict(amp);
-extern "C" __fp16 __hc_trunc_native_half(__fp16 x) restrict(amp);
-extern "C" float __hc_trunc(float x) restrict(amp);
-extern "C" float __hc_trunc_native(float x) restrict(amp);
-extern "C" double __hc_trunc_double(double x) restrict(amp);
+#if __KALMAR_ACCELERATOR__ == 1
+  extern "C" float __hc_acos(float x) restrict(amp);
+  extern "C" double __hc_acos_double(double x) restrict(amp);
+
+  extern "C" float __hc_acosh(float x) restrict(amp);
+  extern "C" double __hc_acosh_double(double x) restrict(amp);
+
+  extern "C" float __hc_asin(float x) restrict(amp);
+  extern "C" double __hc_asin_double(double x) restrict(amp);
+
+  extern "C" float __hc_asinh(float x) restrict(amp);
+  extern "C" double __hc_asinh_double(double x) restrict(amp);
+
+  extern "C" float __hc_atan(float x) restrict(amp);
+  extern "C" double __hc_atan_double(double x) restrict(amp);
+
+  extern "C" float __hc_atanh(float x) restrict(amp);
+  extern "C" double __hc_atanh_double(double x) restrict(amp);
+
+  extern "C" float __hc_atan2(float y, float x) restrict(amp);
+  extern "C" double __hc_atan2_double(double y, double x) restrict(amp);
+
+  extern "C" float __hc_cbrt(float x) restrict(amp);
+  extern "C" double __hc_cbrt_double(double x) restrict(amp);
+
+  extern "C" float __hc_ceil(float x) restrict(amp);
+  extern "C" double __hc_ceil_double(double x) restrict(amp);
+
+  extern "C" float __hc_copysign(float x, float y) restrict(amp);
+  extern "C" double __hc_copysign_double(double x, double y) restrict(amp);
+
+  extern "C" float __hc_cos(float x) restrict(amp);
+  extern "C" double __hc_cos_double(double x) restrict(amp);
+
+  extern "C" float __hc_cosh(float x) restrict(amp);
+  extern "C" double __hc_cosh_double(double x) restrict(amp);
+
+  extern "C" float __hc_cospi(float x) restrict(amp);
+  extern "C" double __hc_cospi_double(double x) restrict(amp);
+
+  extern "C" float __hc_erf(float x) restrict(amp);
+  extern "C" double __hc_erf_double(double x) restrict(amp);
+
+  extern "C" float __hc_erfc(float x) restrict(amp);
+  extern "C" double __hc_erfc_double(double x) restrict(amp);
+
+  extern "C" float __hc_erfcinv(float x) restrict(amp);
+  extern "C" double __hc_erfcinv_double(double x) restrict(amp);
+
+  extern "C" float __hc_erfinv(float x) restrict(amp);
+  extern "C" double __hc_erfinv_double(double x) restrict(amp);
+
+  extern "C" float __hc_exp(float x) restrict(amp);
+  extern "C" double __hc_exp_double(double x) restrict(amp);
+
+  extern "C" float __hc_exp10(float x) restrict(amp);
+  extern "C" double __hc_exp10_double(double x) restrict(amp);
+
+  extern "C" float __hc_exp2(float x) restrict(amp);
+  extern "C" double __hc_exp2_double(double x) restrict(amp);
+
+  extern "C" float __hc_expm1(float x) restrict(amp);
+  extern "C" double __hc_expm1_double(double x) restrict(amp);
+
+  extern "C" float __hc_fabs(float x) restrict(amp);
+  extern "C" double __hc_fabs_double(double x) restrict(amp);
+
+  extern "C" float __hc_fdim(float x, float y) restrict(amp);
+  extern "C" double __hc_fdim_double(double x, double y) restrict(amp);
+
+  extern "C" float __hc_floor(float x) restrict(amp);
+  extern "C" double __hc_floor_double(double x) restrict(amp);
+
+  extern "C" float __hc_fma(float x, float y, float z) restrict(amp);
+  extern "C" double __hc_fma_double(double x, double y, double z) restrict(amp);
+
+  extern "C" float __hc_fmax(float x, float y) restrict(amp);
+  extern "C" double __hc_fmax_double(double x, double y) restrict(amp);
+
+  extern "C" float __hc_fmin(float x, float y) restrict(amp);
+  extern "C" double __hc_fmin_double(double x, double y) restrict(amp);
+
+  extern "C" float __hc_fmod(float x, float y) restrict(amp);
+  extern "C" double __hc_fmod_double(double x, double y) restrict(amp);
+
+  /* FIXME missing fpclassify */
+
+  extern "C" float __hc_frexp(float x, int *exp) restrict(amp);
+  extern "C" double __hc_frexp_double(double x, int *exp) restrict(amp);
+
+  extern "C" float __hc_hypot(float x, float y) restrict(amp);
+  extern "C" double __hc_hypot_double(double x, double y) restrict(amp);
+
+  extern "C" int __hc_ilogb(float x) restrict(amp);
+  extern "C" int __hc_ilogb_double(double x) restrict(amp);
+
+  extern "C" int __hc_isfinite(float x) restrict(amp);
+  extern "C" int __hc_isfinite_double(double x) restrict(amp);
+
+  extern "C" int __hc_isinf(float x) restrict(amp);
+  extern "C" int __hc_isinf_double(double x) restrict(amp);
+
+  extern "C" int __hc_isnan(float x) restrict(amp);
+  extern "C" int __hc_isnan_double(double x) restrict(amp);
+
+  extern "C" int __hc_isnormal(float x) restrict(amp);
+  extern "C" int __hc_isnormal_double(double x) restrict(amp);
+
+  extern "C" float __hc_ldexp(float x, int exp) restrict(amp);
+  extern "C" double __hc_ldexp_double(double x, int exp) restrict(amp);
+
+  extern "C" float __hc_lgamma(float x) restrict(amp);
+  extern "C" double __hc_lgamma_double(double x) restrict(amp);
+
+  extern "C" float __hc_log(float x) restrict(amp);
+  extern "C" double __hc_log_double(double x) restrict(amp);
+
+  extern "C" float __hc_log10(float x) restrict(amp);
+  extern "C" double __hc_log10_double(double x) restrict(amp);
+
+  extern "C" float __hc_log2(float x) restrict(amp);
+  extern "C" double __hc_log2_double(double x) restrict(amp);
+
+  extern "C" float __hc_log1p(float x) restrict(amp);
+  extern "C" double __hc_log1p_double(double x) restrict(amp);
+
+  extern "C" float __hc_logb(float x) restrict(amp);
+  extern "C" double __hc_logb_double(double x) restrict(amp);
+
+  extern "C" float __hc_modf(float x, float *iptr) restrict(amp);
+  extern "C" double __hc_modf_double(double x, double *iptr) restrict(amp);
+
+  extern "C" float __hc_nan(int tagp) restrict(amp);
+  extern "C" double __hc_nan_double(unsigned long tagp) restrict(amp);
+
+  extern "C" float __hc_nearbyint(float x) restrict(amp);
+  extern "C" double __hc_nearbyint_double(double x) restrict(amp);
+
+  extern "C" float __hc_nextafter(float x, float y) restrict(amp);
+  extern "C" double __hc_nextafter_double(double x, double y) restrict(amp);
+
+  extern "C" float __hc_pow(float x, float y) restrict(amp);
+  extern "C" double __hc_pow_double(double x, double y) restrict(amp);
+
+  extern "C" float __hc_remainder(float x, float y) restrict(amp);
+  extern "C" double __hc_remainder_double(double x, double y) restrict(amp);
+
+  extern "C" float __hc_remquo(float x, float y, int *quo) restrict(amp);
+  extern "C" double __hc_remquo_double(double x, double y, int *quo) restrict(amp);
+
+  extern "C" float __hc_round(float x) restrict(amp);
+  extern "C" double __hc_round_double(double x) restrict(amp);
+
+  extern "C" float __hc_rsqrt(float x) restrict(amp);
+  extern "C" double __hc_rsqrt_double(double x) restrict(amp);
+
+  extern "C" float __hc_sinpi(float x) restrict(amp);
+  extern "C" double __hc_sinpi_double(double x) restrict(amp);
+
+  extern "C" int   __hc_signbit(float x) restrict(amp);
+  extern "C" int   __hc_signbit_double(double x) restrict(amp);
+
+  extern "C" float __hc_sin(float x) restrict(amp);
+  extern "C" double __hc_sin_double(double x) restrict(amp);
+
+  extern "C" float __hc_sincos(float x, float *c) restrict(amp);
+  extern "C" double __hc_sincos_double(double x, double *c) restrict(amp);
+
+  extern "C" float __hc_sinh(float x) restrict(amp);
+  extern "C" double __hc_sinh_double(double x) restrict(amp);
+
+  extern "C" float __hc_sqrt(float x) restrict(amp);
+  extern "C" double __hc_sqrt_double(double x) restrict(amp);
+
+  extern "C" float __hc_tgamma(float x) restrict(amp);
+  extern "C" double __hc_tgamma_double(double x) restrict(amp);
+
+  extern "C" float __hc_tan(float x) restrict(amp);
+  extern "C" double __hc_tan_double(double x) restrict(amp);
+
+  extern "C" float __hc_tanh(float x) restrict(amp);
+  extern "C" double __hc_tanh_double(double x) restrict(amp);
+
+  extern "C" float __hc_tanpi(float x) restrict(amp);
+  extern "C" double __hc_tanpi_double(double x) restrict(amp);
+
+  extern "C" float __hc_trunc(float x) restrict(amp);
+  extern "C" double __hc_trunc_double(double x) restrict(amp);
+#endif
 
 namespace Kalmar {
 namespace fast_math {
+
   inline float host_acosf(float x) restrict(cpu) { return std::acos(x); }
   inline float acosf(float x) restrict(amp,cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
@@ -346,10 +234,6 @@ namespace fast_math {
       return host_acosf(x);
     #endif
   }
-
-  inline
-  __attribute__((used))
-  __fp16 acos(__fp16 x) restrict(amp) { return __hc_acos_half(x); }
 
   inline float host_acos(float x) restrict(cpu) { return std::acos(x); }
   inline float acos(float x) restrict(amp,cpu) {
@@ -369,10 +253,6 @@ namespace fast_math {
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 asin(__fp16 x) restrict(amp) { return __hc_asin_half(x); }
-
   inline float host_asin(float x) restrict(cpu) { return std::asin(x); }
   inline float asin(float x) restrict(amp,cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
@@ -391,10 +271,6 @@ namespace fast_math {
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 atan(__fp16 x) restrict(amp) { return __hc_atan_half(x); }
-
   inline float host_atan(float x) restrict(cpu) { return std::atan(x); }
   inline float atan(float x) restrict(amp,cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
@@ -404,9 +280,7 @@ namespace fast_math {
     #endif
   }
 
-  inline float host_atan2f(float y, float x) restrict(cpu) {
-    return std::atan2(y, x);
-  }
+  inline float host_atan2f(float y, float x) restrict(cpu) { return std::atan2(y, x); }
   inline float atan2f(float y, float x) restrict(amp,cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_atan2(y, x);
@@ -415,15 +289,7 @@ namespace fast_math {
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 atan2(__fp16 y, __fp16 x) restrict(amp) {
-    return __hc_atan2_half(y, x);
-  }
-
-  inline float host_atan2(float y, float x) restrict(cpu) {
-    return std::atan2(y, x);
-  }
+  inline float host_atan2(float y, float x) restrict(cpu) { return std::atan2(y, x); }
   inline float atan2(float y, float x) restrict(amp,cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_atan2(y, x);
@@ -435,20 +301,16 @@ namespace fast_math {
   inline float host_ceilf(float x) restrict(cpu) { return std::ceil(x); }
   inline float ceilf(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_ceil_native(x);
+      return __hc_ceil(x);
     #else
       return host_ceilf(x);
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 ceil(__fp16 x) restrict(amp) { return __hc_ceil_native_half(x); }
-
   inline float host_ceil(float x) restrict(cpu) { return std::ceil(x); }
   inline float ceil(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_ceil_native(x);
+      return __hc_ceil(x);
     #else
       return host_ceil(x);
     #endif
@@ -457,20 +319,16 @@ namespace fast_math {
   inline float host_cosf(float x) restrict(cpu) { return std::cos(x); }
   inline float cosf(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_cos_native(x);
+      return __hc_cos(x);
     #else
       return host_cosf(x);
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 cos(__fp16 x) restrict(amp) { return __hc_cos_native_half(x); }
-
   inline float host_cos(float x) restrict(cpu) { return std::cos(x); }
   inline float cos(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_cos_native(x);
+      return __hc_cos(x);
     #else
       return host_cos(x);
     #endif
@@ -485,10 +343,6 @@ namespace fast_math {
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 cosh(__fp16 x) restrict(amp) { return __hc_cosh_half(x); }
-
   inline float host_cosh(float x) restrict(cpu) { return std::cosh(x); }
   inline float cosh(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
@@ -501,22 +355,16 @@ namespace fast_math {
   inline float host_expf(float x) restrict(cpu) { return std::exp(x); }
   inline float expf(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_exp2_native(M_LOG2E * x);
+      return __hc_exp(x);
     #else
       return host_expf(x);
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 exp(__fp16 x) restrict(amp) {
-    return __hc_exp2_native_half(M_LOG2E * x);
-  }
-
   inline float host_exp(float x) restrict(cpu) { return std::exp(x); }
   inline float exp(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_exp2_native(M_LOG2E * x);
+      return __hc_exp(x);
     #else
       return host_exp(x);
     #endif
@@ -525,20 +373,16 @@ namespace fast_math {
   inline float host_exp2f(float x) restrict(cpu) { return std::exp2(x); }
   inline float exp2f(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_exp2_native(x);
+      return __hc_exp2(x);
     #else
       return host_exp2f(x);
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 exp2(__fp16 x) restrict(amp) { return __hc_exp2_native_half(x); }
-
   inline float host_exp2(float x) restrict(cpu) { return std::exp2(x); }
   inline float exp2(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_exp2_native(x);
+      return __hc_exp2(x);
     #else
       return host_exp2(x);
     #endif
@@ -547,20 +391,20 @@ namespace fast_math {
   inline float host_fabsf(float x) restrict(cpu) { return std::fabs(x); }
   inline float fabsf(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_fabs_native(x);
+      return __hc_fabs(x);
     #else
       return host_fabsf(x);
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 fabs(__fp16 x) restrict(amp) { return __hc_fabs_native_half(x); }
-
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+  inline float host_fabs(float x) restrict(cpu,amp) { return std::fabs(x); }
+#else
   inline float host_fabs(float x) restrict(cpu) { return std::fabs(x); }
+#endif
   inline float fabs(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_fabs_native(x);
+      return __hc_fabs(x);
     #else
       return host_fabs(x);
     #endif
@@ -569,28 +413,22 @@ namespace fast_math {
   inline float host_floorf(float x) restrict(cpu) { return std::floor(x); }
   inline float floorf(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_floor_native(x);
+      return __hc_floor(x);
     #else
       return host_floorf(x);
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 floor(__fp16 x) restrict(amp) { return __hc_floor_native_half(x); }
-
   inline float host_floor(float x) restrict(cpu) { return std::floor(x); }
   inline float floor(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_floor_native(x);
+      return __hc_floor(x);
     #else
       return host_floor(x);
     #endif
   }
 
-  inline float host_fmaxf(float x, float y) restrict(cpu) {
-    return std::fmax(x, y);
-  }
+  inline float host_fmaxf(float x, float y) restrict(cpu) { return std::fmax(x, y); }
   inline float fmaxf(float x, float y) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_fmax(x, y);
@@ -599,13 +437,7 @@ namespace fast_math {
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 fmax(__fp16 x, __fp16 y) restrict(amp) { return __hc_fmax_half(x, y); }
-
-  inline float host_fmax(float x, float y) restrict(cpu) {
-    return std::fmax(x, y);
-}
+  inline float host_fmax(float x, float y) restrict(cpu) { return std::fmax(x, y); }
   inline float fmax(float x, float y) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_fmax(x, y);
@@ -614,9 +446,16 @@ namespace fast_math {
     #endif
   }
 
-  inline float host_fminf(float x, float y) restrict(cpu) {
-    return std::fmin(x, y);
+  inline float host_max(float x, float y) restrict(cpu) { return std::fmax(x, y); }
+  inline float max(float x, float y) restrict(amp, cpu) {
+    #if __KALMAR_ACCELERATOR__ == 1
+      return __hc_fmax(x, y);
+    #else
+      return host_max(x, y);
+    #endif
   }
+
+  inline float host_fminf(float x, float y) restrict(cpu) { return std::fmin(x, y); }
   inline float fminf(float x, float y) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_fmin(x, y);
@@ -625,13 +464,7 @@ namespace fast_math {
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 fmin(__fp16 x, __fp16 y) restrict(amp) { return __hc_fmin_half(x, y); }
-
-  inline float host_fmin(float x, float y) restrict(cpu) {
-    return std::fmin(x, y);
-  }
+  inline float host_fmin(float x, float y) restrict(cpu) { return std::fmin(x, y); }
   inline float fmin(float x, float y) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_fmin(x, y);
@@ -640,9 +473,16 @@ namespace fast_math {
     #endif
   }
 
-  inline float host_fmodf(float x, float y) restrict(cpu) {
-    return std::fmod(x, y);
+  inline float host_min(float x, float y) restrict(cpu) { return std::fmin(x, y); }
+  inline float min(float x, float y) restrict(amp, cpu) {
+    #if __KALMAR_ACCELERATOR__ == 1
+      return __hc_fmin(x, y);
+    #else
+      return host_min(x, y);
+    #endif
   }
+
+  inline float host_fmodf(float x, float y) restrict(cpu) { return std::fmod(x, y); }
   inline float fmodf(float x, float y) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_fmod(x, y);
@@ -651,13 +491,7 @@ namespace fast_math {
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 fmod(__fp16 x, __fp16 y) restrict(amp) { return __hc_fmod_half(x, y); }
-
-  inline float host_fmod(float x, float y) restrict(cpu) {
-    return std::fmod(x, y);
-  }
+  inline float host_fmod(float x, float y) restrict(cpu) { return std::fmod(x, y); }
   inline float fmod(float x, float y) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_fmod(x, y);
@@ -666,9 +500,7 @@ namespace fast_math {
     #endif
   }
 
-  inline float host_frexpf(float x, int *exp) restrict(cpu) {
-    return std::frexp(x, exp);
-  }
+  inline float host_frexpf(float x, int *exp) restrict(cpu) { return std::frexp(x, exp); }
   inline float frexpf(float x, int *exp) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_frexp(x, exp);
@@ -677,15 +509,7 @@ namespace fast_math {
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 frexp(__fp16 x, int *exp) restrict(amp) {
-    return __hc_frexp_half(x, exp);
-  }
-
-  inline float host_frexp(float x, int *exp) restrict(cpu) {
-    return std::frexp(x, exp);
-  }
+  inline float host_frexp(float x, int *exp) restrict(cpu) { return std::frexp(x, exp); }
   inline float frexp(float x, int *exp) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_frexp(x, exp);
@@ -693,10 +517,6 @@ namespace fast_math {
       return host_frexp(x, exp);
     #endif
   }
-
-  inline
-  __attribute__((used))
-  int isfinite(__fp16 x) restrict(amp) { return __hc_isfinite_half(x); }
 
   inline int host_isfinite(float x) restrict(cpu) { return std::isfinite(x); }
   inline int isfinite(float x) restrict(amp, cpu) {
@@ -707,10 +527,6 @@ namespace fast_math {
     #endif
   }
 
-  inline
-  __attribute__((used))
-  int isinf(__fp16 x) restrict(amp) { return __hc_isinf_half(x); }
-
   inline int host_isinf(float x) restrict(cpu) { return std::isinf(x); }
   inline int isinf(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
@@ -719,10 +535,6 @@ namespace fast_math {
       return host_isinf(x);
     #endif
   }
-
-  inline
-  __attribute__((used))
-  int isnan(__fp16 x) restrict(amp) { return __hc_isnan_half(x); }
 
   inline int host_isnan(float x) restrict(cpu) { return std::isnan(x); }
   inline int isnan(float x) restrict(amp, cpu) {
@@ -735,62 +547,37 @@ namespace fast_math {
     #endif
   }
 
-  inline float host_ldexpf(float x, int exp) restrict(cpu) {
-    return std::ldexp(x,exp);
-  }
+  inline float host_ldexpf(float x, int exp) restrict(cpu) { return std::ldexp(x,exp); }
   inline float ldexpf(float x, int exp) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_ldexp_native(x,exp);
+      return __hc_ldexp(x,exp);
     #else
       return host_ldexpf(x,exp);
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 ldexp(__fp16 x, int exp) restrict(amp) {
-    return __hc_ldexp_native_half(x,exp);
-  }
-
-  inline float host_ldexp(float x, int exp) restrict(cpu) {
-    return std::ldexp(x,exp);
-  }
+  inline float host_ldexp(float x, int exp) restrict(cpu) { return std::ldexp(x,exp); }
   inline float ldexp(float x, int exp) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_ldexp_native(x,exp);
+      return __hc_ldexp(x,exp);
     #else
       return host_ldexp(x,exp);
     #endif
   }
 
-  namespace
-  { // TODO: this is temporary, lifted straight out of irif.h
-      #define M_LOG2_10_F 0x1.a934f0p+1f
-      // Value of 1 / log2(10)
-      #define M_RLOG2_10_F 0x1.344136p-2f
-      // Value of 1 / M_LOG2E_F = 1 / log2(e)
-      #define M_RLOG2_E_F 0x1.62e430p-1f
-  }
-
   inline float host_logf(float x) restrict(cpu) { return std::log(x); }
   inline float logf(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_log2_native(x) * M_RLOG2_E_F;
+      return __hc_log(x);
     #else
       return host_logf(x);
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 log(__fp16 x) restrict(amp) {
-    return __hc_log2_native_half(x) * static_cast<__fp16>(M_RLOG2_E_F);
-  }
-
   inline float host_log(float x) restrict(cpu) { return std::log(x); }
   inline float log(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_log2_native(x) * M_RLOG2_E_F;
+      return __hc_log(x);
     #else
       return host_log(x);
     #endif
@@ -799,22 +586,16 @@ namespace fast_math {
   inline float host_log10f(float x) restrict(cpu) { return std::log10(x); }
   inline float log10f(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_log2_native(x) * M_RLOG2_10_F;
+      return __hc_log10(x);
     #else
       return host_log10f(x);
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 log10(__fp16 x) restrict(amp) {
-    return __hc_log2_native_half(x) * static_cast<__fp16>(M_RLOG2_10_F);
-  }
-
   inline float host_log10(float x) restrict(cpu) { return std::log10(x); }
   inline float log10(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_log2_native(x) * M_RLOG2_10_F;
+      return __hc_log10(x);
     #else
       return host_log10(x);
     #endif
@@ -823,28 +604,22 @@ namespace fast_math {
   inline float host_log2f(float x) restrict(cpu) { return std::log2(x); }
   inline float log2f(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_log2_native(x);
+      return __hc_log2(x);
     #else
       return host_log2f(x);
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 log2(__fp16 x) restrict(amp) { return __hc_log2_native_half(x); }
-
   inline float host_log2(float x) restrict(cpu) { return std::log2(x); }
   inline float log2(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_log2_native(x);
+      return __hc_log2(x);
     #else
       return host_log2(x);
     #endif
   }
 
-  inline float host_modff(float x, float *iptr) restrict(cpu) {
-    return std::modf(x, iptr);
-  }
+  inline float host_modff(float x, float *iptr) restrict(cpu) { return std::modf(x, iptr); }
   inline float modff(float x, float *iptr) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_modf(x, iptr);
@@ -853,15 +628,7 @@ namespace fast_math {
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 modf(__fp16 x, __fp16 *iptr) restrict(amp) {
-    return __hc_modf_half(x, iptr);
-  }
-
-  inline float host_modf(float x, float *iptr) restrict(cpu) {
-    return std::modf(x, iptr);
-  }
+  inline float host_modf(float x, float *iptr) restrict(cpu) { return std::modf(x, iptr); }
   inline float modf(float x, float *iptr) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_modf(x, iptr);
@@ -870,9 +637,7 @@ namespace fast_math {
     #endif
   }
 
-  inline float host_powf(float x, float y) restrict(cpu) {
-    return std::pow(x, y);
-  }
+  inline float host_powf(float x, float y) restrict(cpu) { return std::pow(x, y); }
   inline float powf(float x, float y) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_pow(x, y);
@@ -881,13 +646,7 @@ namespace fast_math {
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 pow(__fp16 x, __fp16 y) restrict(amp) { return __hc_pow_half(x, y); }
-
-  inline float host_pow(float x, float y) restrict(cpu) {
-    return std::pow(x, y);
-  }
+  inline float host_pow(float x, float y) restrict(cpu) { return std::pow(x, y); }
   inline float pow(float x, float y) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_pow(x, y);
@@ -899,45 +658,34 @@ namespace fast_math {
   inline float host_roundf(float x) restrict(cpu) { return std::round(x); }
   inline float roundf(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_round_native(x);
+      return __hc_round(x);
     #else
       return host_roundf(x);
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 round(__fp16 x) restrict(amp) { return __hc_round_native_half(x); }
-
   inline float host_round(float x) restrict(cpu) { return std::round(x); }
   inline float round(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_round_native(x);
+      return __hc_round(x);
     #else
       return host_round(x);
     #endif
   }
 
-  inline float host_rsqrtf(float x) restrict(cpu) {
-    return 1.0f / (std::sqrt(x));
-  }
-  inline float rsqrtf(float x) restrict(amp, cpu) {
+  inline float  host_rsqrtf(float x) restrict(cpu) { return 1.0f / (std::sqrt(x)); }
+  inline float  rsqrtf(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_rsqrt_native(x);
+      return __hc_rsqrt(x);
     #else
       return host_rsqrtf(x);
     #endif
   }
 
-  inline
-  __fp16 rsqrt(__fp16 x) restrict(amp) { return __hc_rsqrt_native_half(x); }
-
-  inline float host_rsqrt(float x) restrict(cpu) {
-    return 1.0f / (std::sqrt(x));
-  }
-  inline float rsqrt(float x) restrict(amp, cpu) {
+  inline float  host_rsqrt(float x) restrict(cpu) { return 1.0f / (std::sqrt(x)); }
+  inline float  rsqrt(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_rsqrt_native(x);
+      return __hc_rsqrt(x);
     #else
       return host_rsqrt(x);
     #endif
@@ -952,11 +700,6 @@ namespace fast_math {
     #endif
   }
 
-  inline
-  __attribute__((used)) int signbit(__fp16 x) restrict(amp) {
-    return __hc_signbit_half(x);
-  }
-
   inline int host_signbit(float x) restrict(cpu) { return std::signbit(x); }
   inline int signbit(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
@@ -969,28 +712,22 @@ namespace fast_math {
   inline float host_sinf(float x) restrict(cpu) { return std::sin(x); }
   inline float sinf(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_sin_native(x);
+      return __hc_sin(x);
     #else
       return host_sinf(x);
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 sin(__fp16 x) restrict(amp) { return __hc_sin_native_half(x); }
-
   inline float host_sin(float x) restrict(cpu) { return std::sin(x); }
   inline float sin(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_sin_native(x);
+      return __hc_sin(x);
     #else
       return host_sin(x);
     #endif
   }
 
-  inline void host_sincosf(float x, float *s, float *c) restrict(cpu) {
-    ::sincosf(x, s, c);
-  }
+  inline void host_sincosf(float x, float *s, float *c) restrict(cpu) { ::sincosf(x, s, c); }
   inline void sincosf(float x, float *s, float *c) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       *s = __hc_sincos(x, c);
@@ -999,15 +736,7 @@ namespace fast_math {
     #endif
   }
 
-  inline
-  __attribute__((used))
-  void sincos(__fp16 x, __fp16 *s, __fp16 *c) restrict(amp) {
-    *s = __hc_sincos_half(x, c);
-  }
-
-  inline void host_sincos(float x, float *s, float *c) restrict(cpu) {
-    ::sincosf(x, s, c);
-  }
+  inline void host_sincos(float x, float *s, float *c) restrict(cpu) { ::sincosf(x, s, c); }
   inline void sincos(float x, float *s, float *c) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       *s = __hc_sincos(x, c);
@@ -1025,10 +754,6 @@ namespace fast_math {
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 sinh(__fp16 x) restrict(amp) { return __hc_sinh_half(x); }
-
   inline float host_sinh(float x) restrict(cpu) { return std::sinh(x); }
   inline float sinh(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
@@ -1041,20 +766,16 @@ namespace fast_math {
   inline float host_sqrtf(float x) restrict(cpu) { return std::sqrt(x); }
   inline float sqrtf(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_sqrt_native(x);
+      return __hc_sqrt(x);
     #else
       return host_sqrtf(x);
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 sqrt(__fp16 x) restrict(amp) { return __hc_sqrt_native_half(x); }
-
   inline float host_sqrt(float x) restrict(cpu) { return std::sqrt(x); }
   inline float sqrt(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_sqrt_native(x);
+      return __hc_sqrt(x);
     #else
       return host_sqrt(x);
     #endif
@@ -1063,23 +784,16 @@ namespace fast_math {
   inline float host_tanf(float x) restrict(cpu) { return std::tan(x); }
   inline float tanf(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_sin_native(x) * __hc_rcp_native(__hc_cos_native(x));
+      return __hc_tan(x);
     #else
       return host_tanf(x);
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 tan(__fp16 x) restrict(amp) {
-    return
-      __hc_sin_native_half(x) * __hc_rcp_native_half(__hc_cos_native_half(x));
-  }
-
   inline float host_tan(float x) restrict(cpu) { return std::tan(x); }
   inline float tan(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_sin_native(x) * __hc_rcp_native(__hc_cos_native(x));
+      return __hc_tan(x);
     #else
       return host_tan(x);
     #endif
@@ -1094,10 +808,6 @@ namespace fast_math {
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 tanh(__fp16 x) restrict(amp) { return __hc_tanh_half(x); }
-
   inline float host_tanh(float x) restrict(cpu) { return std::tanh(x); }
   inline float tanh(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
@@ -1110,27 +820,25 @@ namespace fast_math {
   inline float host_truncf(float x) restrict(cpu) { return std::trunc(x); }
   inline float truncf(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_trunc_native(x);
+      return __hc_trunc(x);
     #else
       return host_truncf(x);
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 trunc(__fp16 x) restrict(amp) { return __hc_trunc_native_half(x); }
-
   inline float host_trunc(float x) restrict(cpu) { return std::trunc(x); }
   inline float trunc(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_trunc_native(x);
+      return __hc_trunc(x);
     #else
       return host_trunc(x);
     #endif
   }
+
 } // namespace fast_math
 
   namespace precise_math {
+
   inline float host_acosf(float x) restrict(cpu) { return ::acos(x); }
   inline float acosf(float x) restrict(amp,cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
@@ -1139,10 +847,6 @@ namespace fast_math {
       return host_acosf(x);
     #endif
   }
-
-  inline
-  __attribute__((used))
-  __fp16 acos(__fp16 x) restrict(amp) { return __hc_acos_half(x); }
 
   inline float host_acos(float x) restrict(cpu) { return std::acos(x); }
   inline float acos(float x) restrict(amp,cpu) {
@@ -1171,10 +875,6 @@ namespace fast_math {
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 acosh(__fp16 x) restrict(amp) { return __hc_acosh_half(x); }
-
   inline float host_acosh(float x) restrict(cpu) { return std::acosh(x); }
   inline float acosh(float x) restrict(amp,cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
@@ -1201,10 +901,6 @@ namespace fast_math {
       return host_asinf(x);
     #endif
   }
-
-  inline
-  __attribute__((used))
-  __fp16 asin(__fp16 x) restrict(amp) { return __hc_asin_half(x); }
 
   inline float host_asin(float x) restrict(cpu) { return std::asin(x); }
   inline float asin(float x) restrict(amp,cpu) {
@@ -1233,10 +929,6 @@ namespace fast_math {
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 asinh(__fp16 x) restrict(amp) { return __hc_asinh_half(x); }
-
   inline float host_asinh(float x) restrict(cpu) { return std::asinh(x); }
   inline float asinh(float x) restrict(amp,cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
@@ -1263,10 +955,6 @@ namespace fast_math {
       return host_atanf(x);
     #endif
   }
-
-  inline
-  __attribute__((used))
-  __fp16 atan(__fp16 x) restrict(amp) { return __hc_atan_half(x); }
 
   inline float host_atan(float x) restrict(cpu) { return std::atan(x); }
   inline float atan(float x) restrict(amp,cpu) {
@@ -1295,10 +983,6 @@ namespace fast_math {
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 atanh(__fp16 x) restrict(amp) { return __hc_atanh_half(x); }
-
   inline float host_atanh(float x) restrict(cpu) { return std::atanh(x); }
   inline float atanh(float x) restrict(amp,cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
@@ -1317,9 +1001,7 @@ namespace fast_math {
     #endif
   }
 
-  inline float host_atan2f(float y, float x) restrict(cpu) {
-    return std::atan2(y, x);
-  }
+  inline float host_atan2f(float y, float x) restrict(cpu) { return std::atan2(y, x); }
   inline float atan2f(float y, float x) restrict(amp,cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_atan2(y, x);
@@ -1328,15 +1010,7 @@ namespace fast_math {
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 atan2(__fp16 x, __fp16 y) restrict(amp) {
-    return __hc_atan2_half(x, y);
-  }
-
-  inline float host_atan2(float y, float x) restrict(cpu) {
-    return std::atan2(y, x);
-  }
+  inline float host_atan2(float y, float x) restrict(cpu) { return std::atan2(y, x); }
   inline float atan2(float y, float x) restrict(amp,cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_atan2(y, x);
@@ -1345,9 +1019,7 @@ namespace fast_math {
     #endif
   }
 
-  inline double host_atan2(double y, double x) restrict(cpu) {
-    return std::atan2(y, x);
-  }
+  inline double host_atan2(double y, double x) restrict(cpu) { return std::atan2(y, x); }
   inline double atan2(double y, double x) restrict(amp,cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_atan2_double(y, x);
@@ -1364,10 +1036,6 @@ namespace fast_math {
       return host_cbrtf(x);
     #endif
   }
-
-  inline
-  __attribute__((used))
-  __fp16 cbrt(__fp16 x) restrict(amp) { return __hc_cbrt_half(x); }
 
   inline float host_cbrt(float x) restrict(cpu) { return std::cbrt(x); }
   inline float cbrt(float x) restrict(amp,cpu) {
@@ -1396,10 +1064,6 @@ namespace fast_math {
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 ceil(__fp16 x) restrict(amp) { return __hc_ceil_half(x); }
-
   inline float host_ceil(float x) restrict(cpu) { return std::ceil(x); }
   inline float ceil(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
@@ -1418,9 +1082,7 @@ namespace fast_math {
     #endif
   }
 
-  inline float host_copysignf(float x, float y) restrict(cpu) {
-    return std::copysign(x, y);
-  }
+  inline float host_copysignf(float x, float y) restrict(cpu) { return std::copysign(x, y); }
   inline float copysignf(float x, float y) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_copysign(x, y);
@@ -1429,15 +1091,7 @@ namespace fast_math {
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 copysign(__fp16 x, __fp16 y) restrict(amp) {
-    return __hc_copysign_half(x, y);
-  }
-
-  inline float host_copysign(float x, float y) restrict(cpu) {
-    return std::copysign(x, y);
-  }
+  inline float host_copysign(float x, float y) restrict(cpu) { return std::copysign(x, y); }
   inline float copysign(float x, float y) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_copysign(x, y);
@@ -1446,9 +1100,7 @@ namespace fast_math {
     #endif
   }
 
-  inline double host_copysign(double x, double y) restrict(cpu) {
-    return std::copysign(x, y);
-  }
+  inline double host_copysign(double x, double y) restrict(cpu) { return std::copysign(x, y); }
   inline double copysign(double x, double y) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_copysign_double(x, y);
@@ -1465,10 +1117,6 @@ namespace fast_math {
       return host_cosf(x);
     #endif
   }
-
-  inline
-  __attribute__((used))
-  __fp16 cos(__fp16 x) restrict(amp) { return __hc_cos_half(x); }
 
   inline float host_cos(float x) restrict(cpu) { return std::cos(x); }
   inline float cos(float x) restrict(amp, cpu) {
@@ -1497,10 +1145,6 @@ namespace fast_math {
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 cosh(__fp16 x) restrict(amp) { return __hc_cosh_half(x); }
-
   inline float host_cosh(float x) restrict(cpu) { return std::cosh(x); }
   inline float cosh(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
@@ -1519,9 +1163,7 @@ namespace fast_math {
     #endif
   }
 
-  inline float host_cospif(float x) restrict(cpu) {
-    return std::cos((float)M_PI * x);
-  }
+  inline float host_cospif(float x) restrict(cpu) { return std::cos((float)M_PI * x); }
   inline float cospif(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_cospi(x);
@@ -1530,13 +1172,7 @@ namespace fast_math {
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 cospi(__fp16 x) restrict(amp) { return __hc_cospi_half(x); }
-
-  inline float host_cospi(float x) restrict(cpu) {
-    return std::cos((float)M_PI * x);
-  }
+  inline float host_cospi(float x) restrict(cpu) { return std::cos((float)M_PI * x); }
   inline float cospi(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_cospi(x);
@@ -1545,9 +1181,7 @@ namespace fast_math {
     #endif
   }
 
-  inline double host_cospi(double x) restrict(cpu) {
-    return std::cos(M_PI * x);
-  }
+  inline double host_cospi(double x) restrict(cpu) { return std::cos(M_PI * x); }
   inline double cospi(double x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_cospi_double(x);
@@ -1564,10 +1198,6 @@ namespace fast_math {
       return host_erff(x);
     #endif
   }
-
-  inline
-  __attribute__((used))
-  __fp16 erf(__fp16 x) restrict(amp) { return __hc_erf_half(x); }
 
   inline float host_erf(float x) restrict(cpu) { return std::erf(x); }
   inline float erf(float x) restrict(amp, cpu) {
@@ -1596,10 +1226,6 @@ namespace fast_math {
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 erfc(__fp16 x) restrict(amp) { return __hc_erfc_half(x); }
-
   inline float host_erfc(float x) restrict(cpu) { return std::erfcf(x); }
   inline float erfc(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
@@ -1626,10 +1252,6 @@ namespace fast_math {
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 erfcinv(__fp16 x) restrict(amp) { return __hc_erfcinv_half(x); }
-
   inline float erfcinv(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_erfcinv(x);
@@ -1653,10 +1275,6 @@ namespace fast_math {
       return ::erfinv(x);
     #endif
   }
-
-  inline
-  __attribute__((used))
-  __fp16 erfinv(__fp16 x) restrict(amp) { return __hc_erfinv_half(x); }
 
   inline float erfinv(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
@@ -1682,10 +1300,6 @@ namespace fast_math {
       return host_expf(x);
     #endif
   }
-
-  inline
-  __attribute__((used))
-  __fp16 exp(__fp16 x) restrict(amp) { return __hc_exp_half(x); }
 
   inline float host_exp(float x) restrict(cpu) { return std::exp(x); }
   inline float exp(float x) restrict(amp, cpu) {
@@ -1714,10 +1328,6 @@ namespace fast_math {
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 exp2(__fp16 x) restrict(amp) { return __hc_exp2_half(x); }
-
   inline float host_exp2(float x) restrict(cpu) { return std::exp2(x); }
   inline float exp2(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
@@ -1744,10 +1354,6 @@ namespace fast_math {
       return host_exp10f(x);
     #endif
   }
-
-  inline
-  __attribute__((used))
-  __fp16 exp10(__fp16 x) restrict(amp) { return __hc_exp10_half(x); }
 
   inline float host_exp10(float x) restrict(cpu) { return std::pow(10.f, x); }
   inline float exp10(float x) restrict(amp, cpu) {
@@ -1776,10 +1382,6 @@ namespace fast_math {
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 expm1(__fp16 x) restrict(amp) { return __hc_expm1_half(x); }
-
   inline float host_expm1(float x) restrict(cpu) { return std::expm1(x); }
   inline float expm1(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
@@ -1807,11 +1409,11 @@ namespace fast_math {
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 fabs(__fp16 x) restrict(amp) { return __hc_fabs_half(x); }
-
-  inline float host_fabs(float x) restrict(cpu) { return std::fabs(x); }
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+  inline float host_fabs(float x) restrict(cpu,amp) { return std::fabs(x); }
+#else
+  inline float host_fabs(float x) restrict(cpu) { return ::fabs(x); }
+#endif
   inline float fabs(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_fabs(x);
@@ -1820,7 +1422,11 @@ namespace fast_math {
     #endif
   }
 
-  inline double host_fabs(double x) restrict(cpu) { return std::fabs(x); }
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+  inline double host_fabs(double x) restrict(cpu,amp) { return std::fabs(x); }
+#else
+  inline double host_fabs(double x) restrict(cpu) { return ::fabs(x); }
+#endif
   inline double fabs(double x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_fabs_double(x);
@@ -1829,9 +1435,7 @@ namespace fast_math {
     #endif
   }
 
-  inline float host_fdimf(float x, float y) restrict(cpu) {
-    return std::fdim(x, y);
-  }
+  inline float host_fdimf(float x, float y) restrict(cpu) { return std::fdim(x, y); }
   inline float fdimf(float x, float y) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_fdim(x, y);
@@ -1840,13 +1444,7 @@ namespace fast_math {
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 fdim(__fp16 x, __fp16 y) restrict(amp) { return __hc_fdim_half(x, y); }
-
-  inline float host_fdim(float x, float y) restrict(cpu) {
-    return std::fdim(x, y);
-  }
+  inline float host_fdim(float x, float y) restrict(cpu) { return std::fdim(x, y); }
   inline float fdim(float x, float y) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_fdim(x, y);
@@ -1855,9 +1453,7 @@ namespace fast_math {
     #endif
   }
 
-  inline double host_fdim(double x, double y) restrict(cpu) {
-    return std::fdim(x, y);
-  }
+  inline double host_fdim(double x, double y) restrict(cpu) { return std::fdim(x, y); }
   inline double fdim(double x, double y) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_fdim_double(x, y);
@@ -1874,10 +1470,6 @@ namespace fast_math {
       return host_floorf(x);
     #endif
   }
-
-  inline
-  __attribute__((used))
-  __fp16 floor(__fp16 x) restrict(amp) { return __hc_floor_half(x); }
 
   inline float host_floor(float x) restrict(cpu) { return std::floor(x); }
   inline float floor(float x) restrict(amp, cpu) {
@@ -1899,8 +1491,8 @@ namespace fast_math {
 
 
   inline float host_fmaf(float x, float y, float z) restrict(cpu) {
-    return std::fmaf(x, y, z);
-  }
+    return std::fmaf(x, y , z);
+}
   inline float fmaf(float x, float y, float z) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_fma(x, y , z);
@@ -1909,14 +1501,8 @@ namespace fast_math {
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 fma(__fp16 x, __fp16 y, __fp16 z) restrict(amp) {
-    return __hc_fma_half(x, y, z);
-  }
-
   inline float host_fma(float x, float y, float z) restrict(cpu) {
-    return std::fmaf(x, y, z);
+    return std::fmaf(x, y , z);
   }
   inline float fma(float x, float y, float z) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
@@ -1927,7 +1513,7 @@ namespace fast_math {
   }
 
   inline double host_fma(double x, double y, double z) restrict(cpu) {
-    return std::fma(x, y, z);
+    return std::fma(x, y , z);
   }
   inline double fma(double x, double y, double z) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
@@ -1937,9 +1523,7 @@ namespace fast_math {
     #endif
   }
 
-  inline float host_fmaxf(float x, float y) restrict(cpu) {
-    return std::fmax(x, y);
-  }
+  inline float host_fmaxf(float x, float y) restrict(cpu) { return std::fmax(x, y); }
   inline float fmaxf(float x, float y) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_fmax(x, y);
@@ -1948,13 +1532,7 @@ namespace fast_math {
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 fmax(__fp16 x, __fp16 y) restrict(amp) { return __hc_fmax_half(x, y); }
-
-  inline float host_fmax(float x, float y) restrict(cpu) {
-    return std::fmax(x, y);
-  }
+  inline float host_fmax(float x, float y) restrict(cpu) { return std::fmax(x, y); }
   inline float fmax(float x, float y) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_fmax(x, y);
@@ -1963,9 +1541,7 @@ namespace fast_math {
     #endif
   }
 
-  inline double host_fmax(double x, double y) restrict(cpu) {
-    return std::fmax(x, y);
-  }
+  inline double host_fmax(double x, double y) restrict(cpu) { return std::fmax(x, y); }
   inline double fmax(double x, double y) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_fmax_double(x, y);
@@ -1974,9 +1550,25 @@ namespace fast_math {
     #endif
   }
 
-  inline float host_fminf(float x, float y) restrict(cpu) {
-    return std::fmin(x, y);
+  inline float host_max(float x, float y) restrict(cpu) { return std::fmax(x, y); }
+  inline float max(float x, float y) restrict(amp, cpu) {
+    #if __KALMAR_ACCELERATOR__ == 1
+      return __hc_fmax(x, y);
+    #else
+      return host_max(x, y);
+    #endif
   }
+
+  inline double host_max(double x, double y) restrict(cpu) { return std::fmax(x, y); }
+  inline double max(double x, double y) restrict(amp, cpu) {
+    #if __KALMAR_ACCELERATOR__ == 1
+      return __hc_fmax_double(x, y);
+    #else
+      return host_max(x, y);
+    #endif
+  }
+
+  inline float host_fminf(float x, float y) restrict(cpu) { return std::fmin(x, y); }
   inline float fminf(float x, float y) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_fmin(x, y);
@@ -1985,13 +1577,7 @@ namespace fast_math {
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 fmin(__fp16 x, __fp16 y) restrict(amp) { return __hc_fmin_half(x, y); }
-
-  inline float host_fmin(float x, float y) restrict(cpu) {
-    return std::fmin(x, y);
-  }
+  inline float host_fmin(float x, float y) restrict(cpu) { return std::fmin(x, y); }
   inline float fmin(float x, float y) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_fmin(x, y);
@@ -2000,9 +1586,7 @@ namespace fast_math {
     #endif
   }
 
-  inline double host_fmin(double x, double y) restrict(cpu) {
-    return std::fmin(x, y);
-  }
+  inline double host_fmin(double x, double y) restrict(cpu) { return std::fmin(x, y); }
   inline double fmin(double x, double y) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_fmin_double(x, y);
@@ -2011,9 +1595,25 @@ namespace fast_math {
     #endif
   }
 
-  inline float host_fmodf(float x, float y) restrict(cpu) {
-    return std::fmod(x, y);
+  inline float host_min(float x, float y) restrict(cpu) { return std::fmin(x, y); }
+  inline float min(float x, float y) restrict(amp, cpu) {
+    #if __KALMAR_ACCELERATOR__ == 1
+      return __hc_fmin(x, y);
+    #else
+      return host_min(x, y);
+    #endif
   }
+
+  inline double host_min(double x, double y) restrict(cpu) { return std::fmin(x, y); }
+  inline double min(double x, double y) restrict(amp, cpu) {
+    #if __KALMAR_ACCELERATOR__ == 1
+      return __hc_fmin_double(x, y);
+    #else
+      return host_min(x, y);
+    #endif
+  }
+
+  inline float host_fmodf(float x, float y) restrict(cpu) { return std::fmod(x, y); }
   inline float fmodf(float x, float y) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_fmod(x, y);
@@ -2022,13 +1622,7 @@ namespace fast_math {
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 fmod(__fp16 x, __fp16 y) restrict(amp) { return __hc_fmod_half(x, y); }
-
-  inline float host_fmod(float x, float y) restrict(cpu) {
-    return std::fmod(x, y);
-  }
+  inline float host_fmod(float x, float y) restrict(cpu) { return std::fmod(x, y); }
   inline float fmod(float x, float y) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_fmod(x, y);
@@ -2037,9 +1631,7 @@ namespace fast_math {
     #endif
   }
 
-  inline double host_fmod(double x, double y) restrict(cpu) {
-    return std::fmod(x, y);
-  }
+  inline double host_fmod(double x, double y) restrict(cpu) { return std::fmod(x, y); }
   inline double fmod(double x, double y) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_fmod_double(x, y);
@@ -2048,27 +1640,9 @@ namespace fast_math {
     #endif
   }
 
-  inline
-  __attribute__((used))
-  int fpclassify(__fp16 x) restrict(amp) { return __hc_fpclassify_half(x); }
+  /* FIXME missing fpclassify */
 
-  inline
-  int fpclassify(float x) restrict(cpu) { return std::fpclassify(x); }
-
-  inline
-  __attribute__((used))
-  int fpclassify(float x) restrict(amp) { return __hc_fpclassify(x); }
-
-  inline
-  int fpclassify(double x) restrict(cpu) { return std::fpclassify(x); }
-
-  inline
-  __attribute__((used))
-  int fpclassify(double x) restrict(amp) { return __hc_fpclassify_double(x); }
-
-  inline float host_frexpf(float x, int *exp) restrict(cpu) {
-    return std::frexp(x, exp);
-  }
+  inline float host_frexpf(float x, int *exp) restrict(cpu) { return std::frexp(x, exp); }
   inline float frexpf(float x, int *exp) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_frexp(x, exp);
@@ -2077,13 +1651,11 @@ namespace fast_math {
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 frexp(__fp16 x, int* e) restrict(amp) { return __hc_frexp_half(x, e); }
-
-  inline float host_frexp(float x, int *exp) restrict(cpu) {
-    return std::frexp(x, exp);
-  }
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+  inline float host_frexp(float x, int *exp) restrict(cpu,amp) { return std::frexp(x, exp); }
+#else
+  inline float host_frexp(float x, int *exp) restrict(cpu) { return std::frexp(x, exp); }
+#endif
   inline float frexp(float x, int *exp) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_frexp(x, exp);
@@ -2092,9 +1664,7 @@ namespace fast_math {
     #endif
   }
 
-  inline double host_frexp(double x, int *exp) restrict(cpu) {
-    return std::frexp(x, exp);
-  }
+  inline double host_frexp(double x, int *exp) restrict(cpu) { return std::frexp(x, exp); }
   inline double frexp(double x, int *exp) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_frexp_double(x, exp);
@@ -2103,9 +1673,7 @@ namespace fast_math {
     #endif
   }
 
-  inline float host_hypotf(float x, float y) restrict(cpu) {
-    return std::hypot(x, y);
-  }
+  inline float host_hypotf(float x, float y) restrict(cpu) { return std::hypot(x, y); }
   inline float hypotf(float x, float y) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_hypot(x, y);
@@ -2114,15 +1682,7 @@ namespace fast_math {
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 hypot(__fp16 x, __fp16 y) restrict(amp) {
-    return __hc_hypot_half(x, y);
-  }
-
-  inline float host_hypot(float x, float y) restrict(cpu) {
-    return std::hypot(x, y);
-  }
+  inline float host_hypot(float x, float y) restrict(cpu) { return std::hypot(x, y); }
   inline float hypot(float x, float y) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_hypot(x, y);
@@ -2131,9 +1691,7 @@ namespace fast_math {
     #endif
   }
 
-  inline double host_hypot(double x, double y) restrict(cpu) {
-    return std::hypot(x, y);
-  }
+  inline double host_hypot(double x, double y) restrict(cpu) { return std::hypot(x, y); }
   inline double hypot(double x, double y) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_hypot_double(x, y);
@@ -2150,10 +1708,6 @@ namespace fast_math {
       return host_ilogbf(x);
     #endif
   }
-
-  inline
-  __attribute__((used))
-  int ilogb(__fp16 x) restrict(amp) { return __hc_ilogb_half(x); }
 
   inline int host_ilogb(float x) restrict(cpu) { return std::ilogb(x); }
   inline int ilogb(float x) restrict(amp, cpu) {
@@ -2173,10 +1727,6 @@ namespace fast_math {
     #endif
   }
 
-  inline
-  __attribute__((used))
-  int isfinite(__fp16 x) restrict(amp) { return __hc_isfinite_half(x); }
-
   inline int host_isfinite(float x) restrict(cpu) { return std::isfinite(x); }
   inline int isfinite(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
@@ -2194,10 +1744,6 @@ namespace fast_math {
       return host_isfinite(x);
     #endif
   }
-
-  inline
-  __attribute__((used))
-  int isinf(__fp16 x) restrict(amp) { return __hc_isinf_half(x); }
 
   inline int host_isinf(float x) restrict(cpu) { return std::isinf(x); }
   inline int isinf(float x) restrict(amp, cpu) {
@@ -2217,10 +1763,6 @@ namespace fast_math {
     #endif
   }
 
-  inline
-  __attribute__((used))
-  int isnan(__fp16 x) restrict(amp) { return __hc_isnan_half(x); }
-
   inline int host_isnan(float x) restrict(cpu) { return std::isnan(x); }
   inline int isnan(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
@@ -2238,10 +1780,6 @@ namespace fast_math {
       return host_isnan(x);
     #endif
   }
-
-  inline
-  __attribute__((used))
-  int isnormal(__fp16 x) restrict(amp) { return __hc_isnormal_half(x); }
 
   inline int host_isnormal(float x) restrict(cpu) { return std::isnormal(x); }
   inline int isnormal(float x) restrict(amp, cpu) {
@@ -2261,9 +1799,7 @@ namespace fast_math {
     #endif
   }
 
-  inline float host_ldexpf(float x, int exp) restrict(cpu) {
-    return std::ldexp(x,exp);
-  }
+  inline float host_ldexpf(float x, int exp) restrict(cpu) { return std::ldexp(x,exp); }
   inline float ldexpf(float x, int exp) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_ldexp(x,exp);
@@ -2272,13 +1808,7 @@ namespace fast_math {
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 ldexp(__fp16 x, int e) restrict(amp) { return __hc_ldexp_half(x, e); }
-
-  inline float host_ldexp(float x, int exp) restrict(cpu) {
-    return std::ldexp(x,exp);
-  }
+  inline float host_ldexp(float x, int exp) restrict(cpu) { return std::ldexp(x,exp); }
   inline float ldexp(float x, int exp) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_ldexp(x,exp);
@@ -2287,9 +1817,7 @@ namespace fast_math {
     #endif
   }
 
-  inline double host_ldexp(double x, int exp) restrict(cpu) {
-    return std::ldexp(x,exp);
-  }
+  inline double host_ldexp(double x, int exp) restrict(cpu) { return std::ldexp(x,exp); }
   inline double ldexp(double x, int exp) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_ldexp_double(x,exp);
@@ -2306,10 +1834,6 @@ namespace fast_math {
       return host_lgammaf(x);
     #endif
   }
-
-  inline
-  __attribute__((used))
-  __fp16 lgamma(__fp16 x) restrict(amp) { return __hc_lgamma_half(x); }
 
   inline float host_lgamma(float x) restrict(cpu) { return std::lgamma(x); }
   inline float lgamma(float x) restrict(amp, cpu) {
@@ -2338,10 +1862,6 @@ namespace fast_math {
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 log(__fp16 x) restrict(amp) { return __hc_log_half(x); }
-
   inline float host_log(float x) restrict(cpu) { return std::log(x); }
   inline float log(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
@@ -2368,10 +1888,6 @@ namespace fast_math {
       return host_log10f(x);
     #endif
   }
-
-  inline
-  __attribute__((used))
-  __fp16 log10(__fp16 x) restrict(amp) { return __hc_log10_half(x); }
 
   inline float host_log10(float x) restrict(cpu) { return std::log10(x); }
   inline float log10(float x) restrict(amp, cpu) {
@@ -2400,10 +1916,6 @@ namespace fast_math {
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 log2(__fp16 x) restrict(amp) { return __hc_log2_half(x); }
-
   inline float host_log2(float x) restrict(cpu) { return std::log2(x); }
   inline float log2(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
@@ -2430,10 +1942,6 @@ namespace fast_math {
       return host_log1pf(x);
     #endif
   }
-
-  inline
-  __attribute__((used))
-  __fp16 log1p(__fp16 x) restrict(amp) { return __hc_log1p_half(x); }
 
   inline float host_log1p(float x) restrict(cpu) { return std::log1p(x); }
   inline float log1p(float x) restrict(amp, cpu) {
@@ -2462,10 +1970,6 @@ namespace fast_math {
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 logb(__fp16 x) restrict(amp) { return __hc_logb_half(x); }
-
   inline float host_logb(float x) restrict(cpu) { return std::logb(x); }
   inline float logb(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
@@ -2484,9 +1988,11 @@ namespace fast_math {
     #endif
   }
 
-  inline float host_modff(float x, float *iptr) restrict(cpu) {
-    return std::modf(x, iptr);
-  }
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+  inline float host_modff(float x, float *iptr) restrict(cpu,amp) { return std::modf(x, iptr); }
+#else
+  inline float host_modff(float x, float *iptr) restrict(cpu) { return std::modf(x, iptr); }
+#endif
   inline float modff(float x, float *iptr) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_modf(x, iptr);
@@ -2495,15 +2001,11 @@ namespace fast_math {
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 modf(__fp16 x, __fp16* p) restrict(amp) {
-    return __hc_modf_half(x, p);
-  }
-
-  inline float host_modf(float x, float *iptr) restrict(cpu) {
-    return std::modf(x, iptr);
-  }
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+  inline float host_modf(float x, float *iptr) restrict(cpu,amp) { return std::modf(x, iptr); }
+#else
+  inline float host_modf(float x, float *iptr) restrict(cpu) { return std::modf(x, iptr); }
+#endif
   inline float modf(float x, float *iptr) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_modf(x, iptr);
@@ -2512,9 +2014,7 @@ namespace fast_math {
     #endif
   }
 
-  inline double host_modf(double x, double *iptr) restrict(cpu) {
-    return std::modf(x, iptr);
-  }
+  inline double host_modf(double x, double *iptr) restrict(cpu) { return std::modf(x, iptr); }
   inline double modf(double x, double *iptr) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_modf_double(x, iptr);
@@ -2522,11 +2022,6 @@ namespace fast_math {
       return host_modf(x, iptr);
     #endif
   }
-
-
-  inline
-  __attribute__((used))
-  __fp16 nanh(int x) restrict(amp) { return __hc_nan_half(x); }
 
   inline float host_nanf(int tagp) restrict(cpu) {
     return std::nan(reinterpret_cast<const char*>(&tagp));
@@ -2550,9 +2045,7 @@ namespace fast_math {
     #endif
   }
 
-  inline float host_nearbyintf(float x) restrict(cpu) {
-    return std::nearbyint(x);
-  }
+  inline float host_nearbyintf(float x) restrict(cpu) { return std::nearbyint(x); }
   inline float nearbyintf(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_nearbyint(x);
@@ -2561,13 +2054,7 @@ namespace fast_math {
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 nearbyint(__fp16 x) restrict(amp) { return __hc_nearbyint_half(x); }
-
-  inline float host_nearbyint(float x) restrict(cpu) {
-    return std::nearbyint(x);
-  }
+  inline float host_nearbyint(float x) restrict(cpu) { return std::nearbyint(x); }
   inline float nearbyint(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_nearbyint(x);
@@ -2576,9 +2063,7 @@ namespace fast_math {
     #endif
   }
 
-  inline double host_nearbyint(double x) restrict(cpu) {
-    return std::nearbyint(x);
-  }
+  inline double host_nearbyint(double x) restrict(cpu) { return std::nearbyint(x); }
   inline double nearbyint(double x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_nearbyint_double(x);
@@ -2596,12 +2081,6 @@ namespace fast_math {
     #else
       return host_nextafterf(x, y);
     #endif
-  }
-
-  inline
-  __attribute__((used))
-  __fp16 nextafter(__fp16 x, __fp16 y) restrict(amp) {
-    return __hc_nextafter_half(x, y);
   }
 
   inline float host_nextafter(float x, float y) restrict(cpu) {
@@ -2626,9 +2105,7 @@ namespace fast_math {
     #endif
   }
 
-  inline float host_powf(float x, float y) restrict(cpu) {
-    return std::pow(x, y);
-  }
+  inline float host_powf(float x, float y) restrict(cpu) { return std::pow(x, y); }
   inline float powf(float x, float y) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_pow(x, y);
@@ -2637,13 +2114,7 @@ namespace fast_math {
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 pow(__fp16 x, __fp16 y) restrict(amp) { return __hc_pow_half(x, y); }
-
-  inline float host_pow(float x, float y) restrict(cpu) {
-    return std::pow(x, y);
-  }
+  inline float host_pow(float x, float y) restrict(cpu) { return std::pow(x, y); }
   inline float pow(float x, float y) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_pow(x, y);
@@ -2652,9 +2123,7 @@ namespace fast_math {
     #endif
   }
 
-  inline double host_pow(double x, double y) restrict(cpu) {
-    return std::pow(x, y);
-  }
+  inline double host_pow(double x, double y) restrict(cpu) { return std::pow(x, y); }
   inline double pow(double x, double y) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_pow_double(x, y);
@@ -2663,38 +2132,28 @@ namespace fast_math {
     #endif
   }
 
-  inline float host_rcbrtf(float x) restrict(cpu) {
-    return 1.0f / std::cbrt(x);
-  }
+  inline float host_rcbrtf(float x) restrict(cpu) { return 1.0f / (std::cbrt(x)); }
   inline float rcbrtf(float x) restrict(amp,cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_rcbrt(x);
+      return 1.0f / __hc_cbrt(x);
     #else
       return host_rcbrtf(x);
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 rcbrt(__fp16 x) restrict(amp) { return __hc_rcbrt_half(x); }
-
-  inline float host_rcbrt(float x) restrict(cpu) {
-    return 1.0f / std::cbrt(x);
-  }
+  inline float host_rcbrt(float x) restrict(cpu) { return 1.0f / (std::cbrt(x)); }
   inline float rcbrt(float x) restrict(amp,cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_rcbrt(x);
+      return 1.0f / __hc_cbrt(x);
     #else
       return host_rcbrt(x);
     #endif
   }
 
-  inline double host_rcbrt(double x) restrict(cpu) {
-    return 1.0 / std::cbrt(x);
-  }
+  inline double host_rcbrt(double x) restrict(cpu) { return 1.0 / (std::cbrt(x)); }
   inline double rcbrt(double x) restrict(amp,cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_rcbrt_double(x);
+      return 1.0 / __hc_cbrt_double(x);
     #else
       return host_rcbrt(x);
     #endif
@@ -2709,12 +2168,6 @@ namespace fast_math {
     #else
       return host_remainderf(x, y);
     #endif
-  }
-
-  inline
-  __attribute__((used))
-  __fp16 remainder(__fp16 x, __fp16 y) restrict(amp) {
-    return __hc_remainder_half(x, y);
   }
 
   inline float host_remainder(float x, float y) restrict(cpu) {
@@ -2750,12 +2203,6 @@ namespace fast_math {
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 remquo(__fp16 x, __fp16 y, int* q) restrict(amp) {
-    return __hc_remquo_half(x, y, q);
-  }
-
   inline float host_remquo(float x, float y, int *quo) restrict(cpu) {
     return std::remquo(x, y, quo);
   }
@@ -2787,10 +2234,6 @@ namespace fast_math {
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 round(__fp16 x) restrict(amp) { return __hc_round_half(x); }
-
   inline float host_round(float x) restrict(cpu) { return std::round(x); }
   inline float round(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
@@ -2809,9 +2252,7 @@ namespace fast_math {
     #endif
   }
 
-  inline float host_rsqrtf(float x) restrict(cpu) {
-    return 1.0f / std::sqrt(x);
-  }
+  inline float host_rsqrtf(float x) restrict(cpu) { return 1.0f / (std::sqrt(x)); }
   inline float rsqrtf(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_rsqrt(x);
@@ -2820,12 +2261,8 @@ namespace fast_math {
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 rsqrt(__fp16 x) restrict(amp) { return __hc_rsqrt_half(x); }
-
-  inline float host_rsqrt(float x) restrict(cpu) { return 1.0f / std::sqrt(x); }
-  inline float rsqrt(float x) restrict(amp, cpu) {
+  inline float  host_rsqrt(float x) restrict(cpu) { return 1.0f / (std::sqrt(x)); }
+  inline float  rsqrt(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_rsqrt(x);
     #else
@@ -2833,10 +2270,8 @@ namespace fast_math {
     #endif
   }
 
-  inline double host_rsqrt(double x) restrict(cpu) {
-    return 1.0 / std::sqrt(x);
-  }
-  inline double rsqrt(double x) restrict(amp, cpu) {
+  inline double  host_rsqrt(double x) restrict(cpu) { return 1.0 / (std::sqrt(x)); }
+  inline double  rsqrt(double x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_rsqrt_double(x);
     #else
@@ -2844,9 +2279,7 @@ namespace fast_math {
     #endif
   }
 
-  inline float host_sinpif(float x) restrict(cpu) {
-    return std::sin((float)M_PI * x);
-  }
+  inline float host_sinpif(float x) restrict(cpu) { return std::sin((float)M_PI * x); }
   inline float sinpif(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_sinpi(x);
@@ -2855,13 +2288,7 @@ namespace fast_math {
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 sinpi(__fp16 x) restrict(amp) { return __hc_sinpi_half(x); }
-
-  inline float host_sinpi(float x) restrict(cpu) {
-    return std::sin((float)M_PI * x);
-  }
+  inline float host_sinpi(float x) restrict(cpu) { return std::sin((float)M_PI * x); }
   inline float sinpi(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_sinpi(x);
@@ -2870,9 +2297,7 @@ namespace fast_math {
     #endif
   }
 
-  inline double host_sinpi(double x) restrict(cpu) {
-    return std::sin(M_PI * x);
-  }
+  inline double host_sinpi(double x) restrict(cpu) { return std::sin(M_PI * x); }
   inline double sinpi(double x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_sinpi_double(x);
@@ -2881,79 +2306,55 @@ namespace fast_math {
     #endif
   }
 
-  inline float host_scalbf(float x, float exp) restrict(cpu) {
-    return std::scalbn(x, exp);
-  }
+  inline float host_scalbf(float x, float exp) restrict(cpu) { return std::scalbn(x, exp); }
   inline float scalbf(float x, float exp) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_scalb(x, exp);
+      return x * powf(2.0f, exp);
     #else
       return host_scalbf(x, exp);
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 scalb(__fp16 x, __fp16 y) restrict(amp) {
-    return __hc_scalb_half(x, y);
-  }
-
-  inline float host_scalb(float x, float exp) restrict(cpu) {
-    return std::scalbn(x, exp);
-  }
+  inline float host_scalb(float x, float exp) restrict(cpu) { return std::scalbn(x, exp); }
   inline float scalb(float x, float exp) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_scalb(x, exp);
+      return x * powf(2.0f, exp);
     #else
       return host_scalb(x, exp);
     #endif
   }
 
-  inline double host_scalb(double x, double exp) restrict(cpu) {
-    return std::scalbn(x, exp);
-  }
+  inline double host_scalb(double x, double exp) restrict(cpu) { return std::scalbn(x, exp); }
   inline double scalb(double x, double exp) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_scalb_double(x, exp);
+      return x * pow(2.0, exp);
     #else
       return host_scalb(x, exp);
     #endif
   }
 
-  inline float host_scalbnf(float x, int exp) restrict(cpu) {
-    return std::scalbn(x, exp);
-  }
+  inline float host_scalbnf(float x, int exp) restrict(cpu) { return std::scalbn(x, exp); }
   inline float scalbnf(float x, int exp) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_scalbn(x, exp);
+      return __hc_ldexp(x, exp);
     #else
       return host_scalbnf(x, exp);
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 scalbn(__fp16 x, int e) restrict(amp) {
-    return __hc_scalbn_half(x, e);
-  }
-
-  inline float host_scalbn(float x, int exp) restrict(cpu) {
-    return std::scalbn(x, exp);
-  }
+  inline float host_scalbn(float x, int exp) restrict(cpu) { return std::scalbn(x, exp); }
   inline float scalbn(float x, int exp) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_scalbn(x, exp);
+      return __hc_ldexp(x, exp);
     #else
       return host_scalbn(x, exp);
     #endif
   }
 
-  inline double host_scalbn(double x, int exp) restrict(cpu) {
-    return std::scalbn(x, exp);
-  }
+  inline double host_scalbn(double x, int exp) restrict(cpu) { return std::scalbn(x, exp); }
   inline double scalbn(double x, int exp) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_scalbn_double(x, exp);
+      return __hc_ldexp_double(x, exp);
     #else
       return host_scalbn(x, exp);
     #endif
@@ -2967,10 +2368,6 @@ namespace fast_math {
       return host_signbitf(x);
     #endif
   }
-
-  inline
-  __attribute__((used))
-  int signbit(__fp16 x) restrict(amp) { return __hc_signbit_half(x); }
 
   inline int host_signbit(float x) restrict(cpu) { return std::signbit(x); }
   inline int signbit(float x) restrict(amp, cpu) {
@@ -2999,10 +2396,6 @@ namespace fast_math {
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 sin(__fp16 x) restrict(amp) { return __hc_sin_half(x); }
-
   inline float host_sin(float x) restrict(cpu) { return std::sin(x); }
   inline float sin(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
@@ -3021,9 +2414,7 @@ namespace fast_math {
     #endif
   }
 
-  inline void host_sincosf(float x, float *s, float *c) restrict(cpu) {
-    ::sincosf(x, s, c);
-  }
+  inline void host_sincosf(float x, float *s, float *c) restrict(cpu) { ::sincosf(x, s, c); }
   inline void sincosf(float x, float *s, float *c) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       *s = __hc_sincos(x, c);
@@ -3032,15 +2423,7 @@ namespace fast_math {
     #endif
   }
 
-  inline
-  __attribute__((used))
-  void sincos(__fp16 x, __fp16* s, __fp16* c) restrict(amp) {
-    *s = __hc_sincos_half(x, c);
-  }
-
-  inline void host_sincos(float x, float *s, float *c) restrict(cpu) {
-    ::sincosf(x, s, c);
-  }
+  inline void host_sincos(float x, float *s, float *c) restrict(cpu) { ::sincosf(x, s, c); }
   inline void sincos(float x, float *s, float *c) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       *s = __hc_sincos(x, c);
@@ -3049,9 +2432,7 @@ namespace fast_math {
     #endif
   }
 
-  inline void host_sincos(double x, double *s, double *c) restrict(cpu) {
-    ::sincos(x, s, c);
-  }
+  inline void host_sincos(double x, double *s, double *c) restrict(cpu) { ::sincos(x, s, c); }
   inline void sincos(double x, double *s, double *c) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       *s = __hc_sincos_double(x, c);
@@ -3068,10 +2449,6 @@ namespace fast_math {
       return host_sinhf(x);
     #endif
   }
-
-  inline
-  __attribute__((used))
-  __fp16 sinh(__fp16 x) restrict(amp) { return __hc_sinh_half(x); }
 
   inline float host_sinh(float x) restrict(cpu) { return std::sinh(x); }
   inline float sinh(float x) restrict(amp, cpu) {
@@ -3100,10 +2477,6 @@ namespace fast_math {
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 sqrt(__fp16 x) restrict(amp) { return __hc_sqrt_half(x); }
-
   inline float host_sqrt(float x) restrict(cpu) { return std::sqrt(x); }
   inline float sqrt(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
@@ -3130,10 +2503,6 @@ namespace fast_math {
       return host_tgammaf(x);
     #endif
   }
-
-  inline
-  __attribute__((used))
-  __fp16 tgamma(__fp16 x) restrict(amp) { return __hc_tgamma_half(x); }
 
   inline float host_tgamma(float x) restrict(cpu) { return std::tgamma(x); }
   inline float tgamma(float x) restrict(amp, cpu) {
@@ -3162,10 +2531,6 @@ namespace fast_math {
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 tan(__fp16 x) restrict(amp) { return __hc_tan_half(x); }
-
   inline float host_tan(float x) restrict(cpu) { return std::tan(x); }
   inline float tan(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
@@ -3192,10 +2557,6 @@ namespace fast_math {
       return host_tanhf(x);
     #endif
   }
-
-  inline
-  __attribute__((used))
-  __fp16 tanh(__fp16 x) restrict(amp) { return __hc_tanh_half(x); }
 
   inline float host_tanh(float x) restrict(cpu) { return std::tanh(x); }
   inline float tanh(float x) restrict(amp, cpu) {
@@ -3224,10 +2585,6 @@ namespace fast_math {
     #endif
   }
 
-  inline
-  __attribute__((used))
-  __fp16 tanpi(__fp16 x) restrict(amp) { return __hc_tanpi_half(x); }
-
   inline float host_tanpi(float x) restrict(cpu) { return std::tan(M_PI * x); }
   inline float tanpi(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
@@ -3254,10 +2611,6 @@ namespace fast_math {
       return host_truncf(x);
     #endif
   }
-
-  inline
-  __attribute__((used))
-  __fp16 trunc(__fp16 x) restrict(amp) { return __hc_trunc_half(x); }
 
   inline float host_trunc(float x) restrict(cpu) { return std::trunc(x); }
   inline float trunc(float x) restrict(amp, cpu) {
