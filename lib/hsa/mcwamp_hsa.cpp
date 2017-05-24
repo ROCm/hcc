@@ -41,7 +41,6 @@
 #include <time.h>
 #include <iomanip>
 
-#define KALMAR_DEBUG (0)
 #ifndef KALMAR_DEBUG
 #define KALMAR_DEBUG (0)
 #endif
@@ -1026,6 +1025,10 @@ public:
     // are often implicitly synchronized so no dependency is required.
     // Also different modes and optimizations can control when dependencies are added.
     // TODO - return reference if possible to avoid shared ptr overhead.
+    //
+    // releaseScope specifies the scope of the fence that should be
+    // applied before the new command executes. For some commands (ie Kernels, Barriers) this can be applied as part of the AQL
+    // packet, while for some commands (copies) this requires a separate Barrier packet.
     std::shared_ptr<KalmarAsyncOp> detectStreamDeps(hcCommandKind newCommandKind, KalmarAsyncOp *copyOp, hc::memory_scope *releaseScope) {
 
         assert (newCommandKind != hcCommandInvalid);
@@ -1598,7 +1601,18 @@ public:
 
 
     // enqueue a barrier packet with multiple prior dependencies
-    std::shared_ptr<KalmarAsyncOp> EnqueueMarkerWithDependency(int count, std::shared_ptr <KalmarAsyncOp> *depOps, hc::memory_scope scope) override {
+    // The marker will wait for all specified input dependencies to resolve and 
+    // also for all older commands in the queue to execute, and then will
+    // signal completion by decrementing the associated signal.
+    //
+    // depOps specifies the other ops that this marker will depend on.  These 
+    // can be in any queue on any GPU .
+    // 
+    // releaseScope specifies the scope of the release fence that will be
+    // applied after the marker executes.  See hc::memory_scope
+    std::shared_ptr<KalmarAsyncOp> EnqueueMarkerWithDependency(int count, 
+            std::shared_ptr <KalmarAsyncOp> *depOps, 
+            hc::memory_scope releaseScope) override {
         hsa_status_t status = HSA_STATUS_SUCCESS;
 
 
@@ -1608,7 +1622,7 @@ public:
             std::shared_ptr<HSABarrier> barrier = std::make_shared<HSABarrier>(count, depOps);
 
             // enqueue the barrier
-            status = barrier.get()->enqueueAsync(this, scope);
+            status = barrier.get()->enqueueAsync(this, releaseScope);
             STATUS_CHECK(status, __LINE__);
 
             // associate the barrier with this queue
