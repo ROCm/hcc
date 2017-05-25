@@ -86,7 +86,7 @@ static inline bool isCopyCommand(hcCommandKind k)
 
 
 // Commands sent to compute queue:
-static bool isComputeQueueCommand(hcCommandKind k) {
+static inline bool isComputeQueueCommand(hcCommandKind k) {
     return (k == hcCommandKernel) || (k == hcCommandMarker);
 };
 
