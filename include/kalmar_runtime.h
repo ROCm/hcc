@@ -115,6 +115,7 @@ using namespace Kalmar::enums;
 
 /// forward declaration
 class KalmarDevice;
+class KalmarQueue;
 struct rw_info;
 
 /// KalmarAsyncOp
@@ -122,7 +123,7 @@ struct rw_info;
 /// This is an abstraction of all asynchronous operations within Kalmar
 class KalmarAsyncOp {
 public:
-  KalmarAsyncOp(hcCommandKind xCommandKind) : commandKind(xCommandKind), seqNum(0) {} 
+  KalmarAsyncOp(KalmarQueue *xqueue, hcCommandKind xCommandKind) : queue(xqueue), commandKind(xCommandKind), seqNum(0) {} 
 
   virtual ~KalmarAsyncOp() {} 
   virtual std::shared_future<void>* getFuture() { return nullptr; }
@@ -169,9 +170,13 @@ public:
   hcCommandKind getCommandKind() const { return commandKind; };
   void          setCommandKind(hcCommandKind xCommandKind) { commandKind = xCommandKind; };
 
+  KalmarQueue  *getQueue() const { return queue; };
+
 private:
   // Kind of this command - copy, kernel, barrier, etc:
   hcCommandKind  commandKind;
+
+  KalmarQueue    *queue;
 
   // Sequence number of this op in the queue it is dispatched into.
   uint64_t       seqNum;
