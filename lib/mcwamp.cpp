@@ -357,6 +357,7 @@ void BuildProgram(KalmarQueue* pQueue) {
 
 // used in parallel_for_each.h
 void *CreateKernel(std::string s, KalmarQueue* pQueue) {
+  // TODO - should create a HSAQueue:: CreateKernel member function that creates and returns a dispatch.
   return pQueue->getDev()->CreateKernel(s.c_str(), pQueue);
 }
 
