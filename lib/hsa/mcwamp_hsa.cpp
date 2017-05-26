@@ -41,7 +41,6 @@
 #include <time.h>
 #include <iomanip>
 
-#define KALMAR_DEBUG (0)
 #ifndef KALMAR_DEBUG
 #define KALMAR_DEBUG (0)
 #endif

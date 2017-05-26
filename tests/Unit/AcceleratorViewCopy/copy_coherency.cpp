@@ -36,7 +36,8 @@ void check(const int *ptr, int numElements, int expected) {
 int main()
 {
     hc::accelerator acc;
-    hc::accelerator_view av = acc.create_view();
+    hc::accelerator_view av0 = acc.create_view();
+    hc::accelerator_view av1 = acc.create_view();
 
 
     int numElements = 20000000;
@@ -48,19 +49,53 @@ int main()
     int * B  = hc::am_alloc(sizeElements, acc, 0);
     int * Bh = hc::am_alloc(sizeElements, acc, amHostPinned);
 
-    const int binit = 13;
-    //memsetIntKernel(av, A, -1, numElements);
-    memsetIntKernel(av, Bh, -3, numElements);
-    av.wait();
 
-    memsetIntKernel(av, B, -42, numElements);
-    memsetIntKernel(av, B, binit, numElements);
+    if (1) {
+        printf ("test: running same-stream copy coherency test\n");
+        // Reset values:
+        const int bexpected = 13;
+        memset(Bh, 0xAF, numElements); // dummy values to ensure we can tell if copy occurs
+        av0.wait();
+        printf ("test:   setup complete\n");
 
-    // check kernel followed by D2H copy:
-    av.copy_async(B, Bh, sizeElements); 
+        // Set B to -42, followed immediately by setting to expected value:
+        memsetIntKernel(av0, B, -42, numElements);
+        memsetIntKernel(av0, B, bexpected, numElements);
 
-    av.wait();
-    check(Bh, numElements, binit);
+        // Async copy back to host with no intervening code - 
+        // This should fail unless we properly issue a release fence after the memset:
+        av0.copy_async(B, Bh, sizeElements); 
+
+        // Wait on host:
+        av0.wait();
+        check(Bh, numElements, bexpected);
+    }
+
+
+    {
+        printf ("test: running cross-stream copy coherency test\n");
+        // Reset values:
+        const int bexpected = 13;
+        memset(Bh, 0xAF, numElements); // dummy values to ensure we can tell if copy occurs
+        av0.wait();
+        printf ("test:   setup complete\n");
+
+        // Set B to -42, followed immediately by setting to expected value:
+        memsetIntKernel(av0, B, -42, numElements);
+        memsetIntKernel(av0, B, bexpected, numElements);
+
+        auto m0 = av0.create_marker(hc::accelerator_scope);
+        auto m1 = av1.create_blocking_marker(m0, hc::accelerator_scope);
+
+
+        // Async copy back to host with no intervening code - 
+        // This should fail unless we properly issue a release fence after the memset:
+        av1.copy_async(B, Bh, sizeElements); 
+
+        // Wait on host:  This needs to flush the caches appropriately:
+        av1.wait();
+        check(Bh, numElements, bexpected);
+    }
 
     printf ("passed!\n");
     return 0;
