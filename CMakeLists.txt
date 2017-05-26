@@ -541,20 +541,16 @@ set(PACKAGE_DESCRIPTION "HCC: An Open Source, Optimizing C++ Compiler for Hetero
 
 set(OFFICIAL_RELEASE_BUILD 1)
 
-option(CPACK_GENERATOR "Specify the installer package generator")
-
-# If no CPACK generator was specified, then set the default generator according to the distro 
-if (NOT CPACK_GENERATOR)
-    if ( "${DISTRO_ID}" MATCHES "ubuntu" )
-    set(CPACK_GENERATOR "DEB")
-  elseif ("${DISTRO_ID}" MATCHES "fedora")
-    set(CPACK_GENERATOR "RPM")
-  else ()
-    # generate a tarball for unknown DISTRO_ID
-    set(CPACK_GENERATOR "TGZ")
-  endif ()
-endif (NOT CPACK_GENERATOR)
-
+# Default to generate a package appropriate for a distro; users override using command line with -D
+# -D writes variables into the cmake cache, and setting CACHE variables won't overwrite variables already in the CACHE
+if( "${DISTRO_ID}" MATCHES "ubuntu" )
+  set( CPACK_GENERATOR "DEB" CACHE STRING "cpack list: 7Z, DEB, IFW, NSIS, NSIS64, RPM, STGZ, TBZ2, TGZ, TXZ, TZ, ZIP" )
+elseif ("${DISTRO_ID}" MATCHES "fedora")
+  set( CPACK_GENERATOR "RPM" CACHE STRING "cpack list: 7Z, DEB, IFW, NSIS, NSIS64, RPM, STGZ, TBZ2, TGZ, TXZ, TZ, ZIP" )
+else()
+  # generate a tarball for unknown DISTRO_ID
+  set( CPACK_GENERATOR "TGZ" CACHE STRING "cpack list: 7Z, DEB, IFW, NSIS, NSIS64, RPM, STGZ, TBZ2, TGZ, TXZ, TZ, ZIP" )
+endif ()
 
 # DEB package settings
 set(CPACK_DEBIAN_PACKAGE_DESCRIPTION ${PACKAGE_DESCRIPTION})

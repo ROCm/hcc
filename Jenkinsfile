@@ -7,7 +7,9 @@ properties([buildDiscarder(logRotator(
     artifactNumToKeepStr: '',
     daysToKeepStr: '',
     numToKeepStr: '10')),
-  disableConcurrentBuilds()])
+    disableConcurrentBuilds(),
+    [$class: 'CopyArtifactPermissionProperty', projectNames: '*']
+  ])
 
 node ('rocmtest')
 {
@@ -92,6 +94,7 @@ node ('rocmtest')
       {
         sh "cd ${build_dir_release_abs}; make package"
         archiveArtifacts artifacts: "${build_dir_release_rel}/*.deb", fingerprint: true
+        // archiveArtifacts artifacts: "${build_dir_release_rel}/*.rpm", fingerprint: true
       }
     }
   }
@@ -112,10 +115,18 @@ node ('rocmtest')
       hcc_install_image = docker.build( "${artifactory_org}/${image_name}:${env.BUILD_NUMBER}", "-f dockerfile-${image_name} ." )
     }
 
-    docker.withRegistry('http://compute-artifactory:5001', 'artifactory-cred' )
+    // The connection to artifactory can fail sometimes, but this should not be treated as a build fail
+    try
     {
-      hcc_install_image.push( "${env.BUILD_NUMBER}" )
-      hcc_install_image.push( 'latest' )
+      docker.withRegistry('http://compute-artifactory:5001', 'artifactory-cred' )
+      {
+        hcc_install_image.push( "${env.BUILD_NUMBER}" )
+        hcc_install_image.push( 'latest' )
+      }
+    }
+    catch( err )
+    {
+      currentBuild.result = 'SUCCESS'
     }
 
     // Lots of images with tags are created above; no apparent way to delete images:tags with docker global variable
