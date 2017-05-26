@@ -2967,7 +2967,7 @@ HSADevice::HSADevice(hsa_agent_t a, hsa_agent_t host, int x_accSeqNum) : KalmarD
     /// and version information
     {
         char name[64] {0};
-        uint32_t node = 0;
+        node = 0;
         status = hsa_agent_get_info(agent, HSA_AGENT_INFO_NAME, name);
         STATUS_CHECK(status, __LINE__);
         status = hsa_agent_get_info(agent, HSA_AGENT_INFO_NODE, &node);
