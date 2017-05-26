@@ -65,7 +65,7 @@
 
 // number of pre-allocated kernarg buffers in HSAContext
 // Should be greater than SIGNAL_POOL_SIZE (some kernels don't allocate signals but nearly all need kernargs)
-#define KERNARG_POOL_SIZE (512)
+#define KERNARG_POOL_SIZE (1024)
 
 // number of pre-allocated HSA signals in HSAContext
 // Signals are precious resource so manage carefully
@@ -75,10 +75,10 @@
 // If limit is exceeded, HCC will force a queue wait to reclaim
 // resources (signals, kernarg)
 // MUST be a power of 2.
-#define MAX_INFLIGHT_COMMANDS_PER_QUEUE  512
+#define MAX_INFLIGHT_COMMANDS_PER_QUEUE  8192
 
 // threshold to clean up finished kernel in HSAQueue.asyncOps
-#define ASYNCOPS_VECTOR_GC_SIZE (512)
+#define ASYNCOPS_VECTOR_GC_SIZE (8192)
 
 
 //---
