@@ -137,13 +137,13 @@ typename std::enable_if<std::is_floating_point<T>::value,T>::type \
 template<typename T> \
 inline \
 typename std::enable_if<std::is_integral<T>::value,HC_IMPLICIT_FLOAT_CONV>::type \
- function(T arg1) __attribute__((hc,cpu)) { \
+ function(T arg1) __attribute__((hc)) { \
   return hc::precise_math::function(static_cast<HC_IMPLICIT_FLOAT_CONV>(arg1)); \
 } \
 template<typename T> \
 inline \
 typename std::enable_if<std::is_floating_point <T>::value,T>::type \
- function(T arg1) __attribute__((hc,cpu)) { \
+ function(T arg1) __attribute__((hc)) { \
   return hc::precise_math::function(arg1); \
 }
 
@@ -242,13 +242,6 @@ namespace {
 //
 // following math functions are NOT available because they don't have a CPU implementation
 //
-// cospif
-// cospi
-// rsqrtf
-// rsqrt
-// sinpif
-// sinpi
-// tanpi
 //
 
 HC_MATH_WRAPPER_TQ(ilogbf, x)
@@ -304,10 +297,10 @@ HC_MATH_WRAPPER_1(erff, x)
 HC_MATH_WRAPPER_FP_OVERLOAD_1(erf, x)
 HC_MATH_WRAPPER_1(erfcf, x)
 HC_MATH_WRAPPER_FP_OVERLOAD_1(erfc, x)
-HC_MATH_WRAPPER_1(erfcinvf, x)
-HC_MATH_WRAPPER_1(erfcinv, x)
-HC_MATH_WRAPPER_1(erfinvf, x)
-HC_MATH_WRAPPER_1(erfinv, x)
+KALMAR_MATH_WRAPPER_1(erfcinvf, x)
+KALMAR_MATH_WRAPPER_1(erfcinv, x)
+KALMAR_MATH_WRAPPER_1(erfinvf, x)
+KALMAR_MATH_WRAPPER_1(erfinv, x)
 HC_MATH_WRAPPER_1(expf, x)
 HC_MATH_WRAPPER_FP_OVERLOAD_1(exp, x)
 HC_MATH_WRAPPER_1(exp2f, x)
@@ -350,8 +343,8 @@ HC_MATH_WRAPPER_2(nextafterf, x, y)
 HC_MATH_WRAPPER_2(nextafter, x, y)
 HC_MATH_WRAPPER_2(powf, x, y)
 HC_MATH_WRAPPER_FP_OVERLOAD_TTQ(pow,x,y)
-HC_MATH_WRAPPER_1(rcbrtf, x)
-HC_MATH_WRAPPER_1(rcbrt, x)
+KALMAR_MATH_WRAPPER_1(rcbrtf, x)
+KALMAR_MATH_WRAPPER_FP_OVERLOAD_1(rcbrt, x)
 HC_MATH_WRAPPER_2(remainderf, x, y)
 HC_MATH_WRAPPER_2(remainder, x, y)
 HC_MATH_WRAPPER_1(roundf, x)
@@ -374,10 +367,9 @@ HC_MATH_WRAPPER_1(tanf, x)
 HC_MATH_WRAPPER_FP_OVERLOAD_1(tan, x)
 HC_MATH_WRAPPER_1(tanhf, x)
 HC_MATH_WRAPPER_FP_OVERLOAD_1(tanh, x)
+KALMAR_MATH_WRAPPER_1(tanpif, x)
+KALMAR_MATH_WRAPPER_FP_OVERLOAD_1(tanpi, x)
 HC_MATH_WRAPPER_1(truncf, x)
 HC_MATH_WRAPPER_FP_OVERLOAD_1(trunc, x)
-
-HC_MATH_ALIAS_2(min, fmin, x, y)
-HC_MATH_ALIAS_2(max, fmax, x, y)
 
 } // namespace
