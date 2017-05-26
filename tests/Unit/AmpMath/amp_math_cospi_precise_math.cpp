@@ -2,9 +2,9 @@
 #include <amp.h>
 #include <amp_math.h>
 
+#include <cmath>
 #include <iostream>
 #include <random>
-#include <cmath>
 
 using namespace concurrency;
 
@@ -39,7 +39,7 @@ bool test() {
   });
 
   for(unsigned i = 0; i < vecSize; i++) {
-    gb[i] = precise_math::cospi(ga[i]);
+    gb[i] = std::cos(static_cast<_Tp>(M_PI) * ga[i]);
   }
 
   _Tp sum = 0.0;

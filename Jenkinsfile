@@ -7,7 +7,9 @@ properties([buildDiscarder(logRotator(
     artifactNumToKeepStr: '',
     daysToKeepStr: '',
     numToKeepStr: '10')),
-  disableConcurrentBuilds()])
+    disableConcurrentBuilds(),
+    [$class: 'CopyArtifactPermissionProperty', projectNames: '*']
+  ])
 
 node ('rocmtest')
 {
@@ -26,40 +28,11 @@ node ('rocmtest')
     deleteDir( )
     checkout scm
 
-    // init submodule
-    sh 'git submodule init'
+    // list the commit hash of the submodules
+    sh 'git ls-tree HEAD | grep commit'
 
-    // Manually clone all submodules to get shallow copies to speed up checkout time
-    def clone_depth = "10"
-    def hcc_branch = "clang_tot_upgrade"
-
-
-    sh  """
-
-        clang_hash=`git ls-tree HEAD clang | awk \'{print \$3}\'`
-        llvm_hash=`git ls-tree HEAD compiler | awk \'{print \$3}\'`
-        lld_hash=`git ls-tree HEAD lld | awk \'{print \$3}\'`
-        compiler_rt_hash=`git ls-tree HEAD compiler-rt | awk \'{print \$3}\'`
-        rocdl_hash=`git ls-tree HEAD rocdl | awk \'{print \$3}\'`
-
-        git clone --depth ${clone_depth} -b ${hcc_branch} https://github.com/RadeonOpenCompute/hcc-clang-upgrade.git clang
-        cd clang; git checkout \$clang_hash; cd ..
-
-        git clone --depth ${clone_depth} -b amd-hcc https://github.com/RadeonOpenCompute/llvm.git compiler
-        cd compiler; git checkout \$llvm_hash; cd ..
-
-        git clone --depth ${clone_depth} -b amd-hcc https://github.com/RadeonOpenCompute/lld.git lld
-        cd lld; git checkout \$lld_hash; cd ..
-
-
-        git clone --depth ${clone_depth} -b amd-hcc https://github.com/RadeonOpenCompute/compiler-rt.git compiler-rt
-        cd compiler-rt; git checkout \$compiler_rt_hash; cd ..
-
-        git clone --depth ${clone_depth} -b remove-promote-change-addr-space https://github.com/RadeonOpenCompute/ROCm-Device-Libs.git rocdl
-        cd rocdl; git checkout \$rocdl_hash; cd ..
-
-        git clone --depth ${clone_depth} -b clang_tot_upgrade https://github.com/RadeonOpenCompute/clang-tools-extra.git clang/tools/extra
-        """
+    // clone the submodules
+    sh 'git submodule update --init'
   }
 
   def hcc_build_image = null
@@ -121,6 +94,7 @@ node ('rocmtest')
       {
         sh "cd ${build_dir_release_abs}; make package"
         archiveArtifacts artifacts: "${build_dir_release_rel}/*.deb", fingerprint: true
+        // archiveArtifacts artifacts: "${build_dir_release_rel}/*.rpm", fingerprint: true
       }
     }
   }
@@ -141,10 +115,18 @@ node ('rocmtest')
       hcc_install_image = docker.build( "${artifactory_org}/${image_name}:${env.BUILD_NUMBER}", "-f dockerfile-${image_name} ." )
     }
 
-    docker.withRegistry('http://compute-artifactory:5001', 'artifactory-cred' )
+    // The connection to artifactory can fail sometimes, but this should not be treated as a build fail
+    try
     {
-      hcc_install_image.push( "${env.BUILD_NUMBER}" )
-      hcc_install_image.push( 'latest' )
+      docker.withRegistry('http://compute-artifactory:5001', 'artifactory-cred' )
+      {
+        hcc_install_image.push( "${env.BUILD_NUMBER}" )
+        hcc_install_image.push( 'latest' )
+      }
+    }
+    catch( err )
+    {
+      currentBuild.result = 'SUCCESS'
     }
 
     // Lots of images with tags are created above; no apparent way to delete images:tags with docker global variable

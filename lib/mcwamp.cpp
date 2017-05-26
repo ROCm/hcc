@@ -15,7 +15,7 @@
 #include <mutex>
 
 #include "mcwamp_impl.hpp"
-#include "hc_stack_unwind.h"
+#include "hc_rt_debug.h"
 
 #include <dlfcn.h>
 
