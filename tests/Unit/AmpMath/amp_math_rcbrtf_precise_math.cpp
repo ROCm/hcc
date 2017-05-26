@@ -28,7 +28,7 @@ int main(void) {
   });
 
   for(unsigned i = 0; i < vecSize; i++) {
-    gb[i] = precise_math::rcbrtf(ga[i]);
+    gb[i] = 1.f / precise_math::cbrtf(ga[i]);
   }
 
   float sum = 0;

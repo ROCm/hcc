@@ -28,7 +28,7 @@ int main(void) {
   });
 
   for(unsigned i = 0; i < vecSize; i++) {
-    gb[i] = fast_math::rsqrt(ga[i]);
+    gb[i] = 1.f / fast_math::sqrt(ga[i]);
   }
 
   float sum = 0;
