@@ -72,7 +72,7 @@ int main()
     }
 
 
-    {
+    if (1) {
         printf ("test: running cross-stream copy coherency test\n");
         // Reset values:
         const int bexpected = 13;
@@ -94,6 +94,22 @@ int main()
 
         // Wait on host:  This needs to flush the caches appropriately:
         av1.wait();
+        check(Bh, numElements, bexpected);
+    }
+
+
+    if (1) {
+        printf ("test: running same-stream pinned host zero-copy read test\n");
+        // Reset values:
+        const int bexpected = 13;
+        memset(Bh, 0xAF, numElements); // dummy values to ensure we can tell if copy occurs
+        av0.wait();
+        printf ("test:   setup complete\n");
+
+        // Set Bh to 13
+        memsetIntKernel(av0, Bh, bexpected, numElements);
+
+        av0.wait();
         check(Bh, numElements, bexpected);
     }
 
