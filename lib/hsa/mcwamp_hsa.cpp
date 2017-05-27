@@ -97,7 +97,7 @@ long int HCC_D2H_PININPLACE_THRESHOLD = 1024;
 int HCC_SERIALIZE_KERNEL = 0;
 int HCC_SERIALIZE_COPY = 0;
 
-int HCC_OPT_FLUSH=0;
+int HCC_OPT_FLUSH=1;
 
 
 unsigned HCC_DB = 0;
@@ -2586,7 +2586,7 @@ void ReadHccEnv()
 
     GET_ENV_INT(HCC_DB, "Enable HCC trace debug");
 
-    GET_ENV_INT(HCC_OPT_FLUSH, "Perform cache flushes only at CPU sync boundaries (rather than after each kernel)");
+    GET_ENV_INT(HCC_OPT_FLUSH, "Perform system-scope acquire/release only at CPU sync boundaries (rather than after each kernel)");
     GET_ENV_INT(HCC_MAX_QUEUES, "Set max number of HSA queues this process will use.  accelerator_views will share the allotted queues and steal from each other as necessary");
 
 
