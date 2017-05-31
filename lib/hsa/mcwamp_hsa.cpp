@@ -4440,7 +4440,7 @@ HSACopy::syncCopyExt(hc::hcCommandKind copyDir, const hc::AmPointerInfo &srcPtrI
 void
 HSACopy::syncCopy() {
 
-    DBOUT(DB_COPY, "HSACopy::syncCopy(" << hsaQueue << "), src = " << src << ", dst = " << dst << ", sizeBytes = " << sizeBytes << "\n");
+    DBOUT(DB_COPY, "HSACopy::syncCopy(" << hsaQueue() << "), src = " << src << ", dst = " << dst << ", sizeBytes = " << sizeBytes << "\n");
 
     // The tracker stores information on all device memory allocations and all pinned host memory, for the specified device
     // If the memory is not found in the tracker, then it is assumed to be unpinned host memory.
