@@ -216,13 +216,15 @@ void UnpinnedCopyEngine::CopyHostToDevice(UnpinnedCopyEngine::CopyMode copyMode,
     bool isLocked = false;
     const char *srcp = static_cast<const char*> (src);
     info.size = sizeof(info);
-    hsa_status = hsa_amd_pointer_info(const_cast<char*> (srcp), &info, nullptr, nullptr, nullptr);
-    if(hsa_status != HSA_STATUS_SUCCESS) {
-        THROW_ERROR(hipErrorInvalidValue, HSA_STATUS_ERROR_INVALID_ARGUMENT);
-    }
-    DBOUTL (DB_COPY2, "Unpinned H2D: pointer type =" << info.type);
-    if((info.type == HSA_EXT_POINTER_TYPE_HSA) || (info.type == HSA_EXT_POINTER_TYPE_LOCKED)) {
-        isLocked = true;
+    if((copyMode == ChooseBest) || (copyMode == UsePinInPlace)) {
+        hsa_status = hsa_amd_pointer_info(const_cast<char*> (srcp), &info, nullptr, nullptr, nullptr);
+        if(hsa_status != HSA_STATUS_SUCCESS) {
+            THROW_ERROR(hipErrorInvalidValue, HSA_STATUS_ERROR_INVALID_ARGUMENT);
+        }
+        DBOUTL (DB_COPY2, "Unpinned H2D: pointer type =" << info.type);
+        if((info.type == HSA_EXT_POINTER_TYPE_HSA) || (info.type == HSA_EXT_POINTER_TYPE_LOCKED)) {
+            isLocked = true;
+        }
     }
     if (copyMode == ChooseBest) {
         if (_isLargeBar && (sizeBytes < _hipH2DTransferThresholdDirectOrStaging)) {
