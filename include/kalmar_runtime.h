@@ -922,6 +922,10 @@ struct rw_info
         /// 2. Because the data pointer cannout be released, erase itself from devs
         if (HostPtr)
             synchronize(false);
+        if (curr) {
+            // Wait issues a system-scope release:
+            curr->wait();
+        }
         auto cpu_dev = get_cpu_queue()->getDev();
         if (devs.find(cpu_dev) != std::end(devs)) {
             if (!HostPtr)

@@ -10,6 +10,9 @@
 
 #define TEST_DEBUG (1)
 
+// Number of async-ops changes if flush-opt is enabled since we may need to add extra ops in some places.
+#define HCC_OPT_FLUSH 1
+
 /// test implicit synchronization of array_view and kernel dispatches
 ///
 template<size_t grid_size, size_t tile_size>
@@ -74,9 +77,12 @@ void test1D() {
             << "\n";
 #endif
 
+  // HCC_OPT_FLUSH adds extra barrier to flush before a write copy:
+  const int expectedPendingOps = HCC_OPT_FLUSH ? 3 : 2;
+
   // now there must be 2 pending async operations for the accelerator_view
   // because pfe1 and pfe2 are independent
-  assert (hc::accelerator().get_default_view().get_pending_async_ops() == 2);
+  assert (hc::accelerator().get_default_view().get_pending_async_ops() == expectedPendingOps);
 
 #if TEST_DEBUG
   std::cout << "launch pfe3\n";

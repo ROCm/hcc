@@ -97,7 +97,7 @@ long int HCC_D2H_PININPLACE_THRESHOLD = 1024;
 int HCC_SERIALIZE_KERNEL = 0;
 int HCC_SERIALIZE_COPY = 0;
 
-int HCC_OPT_FLUSH=0;
+int HCC_OPT_FLUSH=1;
 
 
 unsigned HCC_DB = 0;
@@ -667,8 +667,8 @@ public:
 
     hsa_status_t dispatchKernelWaitComplete();
 
-    hsa_status_t dispatchKernelAsync(const void *hostKernarg, int hostKernargSize, bool allocSignal);
     hsa_status_t dispatchKernelAsyncFromOp();
+    hsa_status_t dispatchKernelAsync(const void *hostKernarg, int hostKernargSize, bool allocSignal);
 
     // dispatch a kernel asynchronously
     hsa_status_t dispatchKernel(hsa_queue_t* lockedHsaQueue, const void *hostKernarg,
@@ -940,7 +940,7 @@ public:
                 hsa_signal_t signal = * (static_cast<hsa_signal_t*> (op->getNativeHandle()));
                 hsa_signal_value_t v = hsa_signal_load_acquire(signal);
                 s  << " " << getHcCommandKindString(op->getCommandKind());
-                s  << " signal=" << std::hex << signal.handle << std::dec <<" value=" << v;
+                s  << " signal=0x" << std::hex << signal.handle << std::dec <<" value=" << v;
 
                 if (v != oldv) {
                     s << " <--TRANSITION";
@@ -972,6 +972,10 @@ public:
         asyncOps.push_back(op);
 
         youngestCommandKind = op->getCommandKind();
+
+        if (DBFLAG(DB_QUEUE)) {
+            printAsyncOps(std::cerr);
+        }
     }
 
 
@@ -1110,8 +1114,8 @@ public:
             // In the loop below, this will be the first op waited on
             auto marker = EnqueueMarker(hc::system_scope);
 
-            
             DBOUT(DB_MISC, " Sys-release needed, enqueue marker to release written data " << marker<<"\n");
+            
         }
 
         DBOUT(DB_WAIT, *this << " wait, contents:\n");
@@ -1211,6 +1215,17 @@ public:
     }
 
 
+    void releaseToSystemIfNeeded() 
+    {
+        if (HCC_OPT_FLUSH && _needs_sys_release) {
+            // In the loop below, this will be the first op waited on
+            auto marker= EnqueueMarker(hc::system_scope);
+
+            DBOUT(DB_MISC, " In waitForDependentAsyncOps, sys-release needed: enqueue marker to release written data " << marker<<"\n");
+        };
+    }
+
+
     // wait for dependent async operations to complete
     void waitForDependentAsyncOps(void* buffer) {
         auto&& dependentAsyncOpVector = bufferKernelMap[buffer];
@@ -1226,6 +1241,7 @@ public:
           }
         }
         dependentAsyncOpVector.clear();
+
     }
 
 
@@ -1250,6 +1266,7 @@ public:
 
     void read(void* device, void* dst, size_t count, size_t offset) override {
         waitForDependentAsyncOps(device);
+        releaseToSystemIfNeeded();
 
         // do read
         if (dst != device) {
@@ -1291,6 +1308,7 @@ public:
 
     void write(void* device, const void* src, size_t count, size_t offset, bool blocking) override {
         waitForDependentAsyncOps(device);
+        releaseToSystemIfNeeded(); // may not be needed.
 
         // do write
         if (src != device) {
@@ -1331,6 +1349,7 @@ public:
     void copy(void* src, void* dst, size_t count, size_t src_offset, size_t dst_offset, bool blocking) override {
         waitForDependentAsyncOps(dst);
         waitForDependentAsyncOps(src);
+        releaseToSystemIfNeeded();
 
         // do copy
         if (src != dst) {
@@ -1359,6 +1378,7 @@ public:
         dumpHSAAgentInfo(*static_cast<hsa_agent_t*>(getHSAAgent()), "map(...)");
 #endif
         waitForDependentAsyncOps(device);
+        releaseToSystemIfNeeded();
 
         // do map
         // as HSA runtime doesn't have map/unmap facility at this moment,
@@ -1976,6 +1996,7 @@ public:
 
         // release all queues
         queues_mutex.lock();
+
         for (auto queue_iterator : queues) {
             if (!queue_iterator.expired()) {
                 auto queue = queue_iterator.lock();
@@ -2749,7 +2770,7 @@ public:
 
         if (signal.handle) {
 
-            DBOUT(DB_SIG, "  releaseSignal: " << signal.handle << " and restored value to 1\n");
+            DBOUT(DB_SIG, "  releaseSignal: 0x" << std::hex << signal.handle << std::dec << " and restored value to 1\n");
             hsa_status_t status = HSA_STATUS_SUCCESS;
 #if SIGNAL_POOL_SIZE > 0
             signalPoolMutex.lock();
@@ -3621,7 +3642,6 @@ HSADispatch::dispatchKernel(hsa_queue_t* lockedHsaQueue, const void *hostKernarg
     q_aql->header = header;
 
     hsa_queue_store_write_index_relaxed(lockedHsaQueue, index + 1);
-
     DBOUT(DB_AQL, "queue:" << lockedHsaQueue  <<  " dispatch kernel " << (kernel ? kernel->getKernelName():"<unknown>") << "\n");
     DBOUT(DB_AQL, "dispatch_aql:" << *q_aql << "\n");
 
@@ -3689,6 +3709,13 @@ HSADispatch::dispatchKernelWaitComplete() {
     if (isDispatched) {
         return HSA_STATUS_ERROR_INVALID_ARGUMENT;
     }
+
+    // WaitComplete dispatches need to ensure all data is released to system scope
+    // This ensures the op is trule "complete" before continuing.
+    // This WaitComplete path is used for AMP-style dispatches and may merit future review&optimization.
+    aql.header = 
+        ((HSA_FENCE_SCOPE_SYSTEM) << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
+        ((HSA_FENCE_SCOPE_SYSTEM) << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
 
     {
         // extract hsa_queue_t from HSAQueue
