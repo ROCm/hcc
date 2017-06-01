@@ -86,7 +86,7 @@ static inline bool isCopyCommand(hcCommandKind k)
 
 
 // Commands sent to compute queue:
-static bool isComputeQueueCommand(hcCommandKind k) {
+static inline bool isComputeQueueCommand(hcCommandKind k) {
     return (k == hcCommandKernel) || (k == hcCommandMarker);
 };
 
@@ -115,6 +115,7 @@ using namespace Kalmar::enums;
 
 /// forward declaration
 class KalmarDevice;
+class KalmarQueue;
 struct rw_info;
 
 /// KalmarAsyncOp
@@ -122,7 +123,7 @@ struct rw_info;
 /// This is an abstraction of all asynchronous operations within Kalmar
 class KalmarAsyncOp {
 public:
-  KalmarAsyncOp(hcCommandKind xCommandKind) : commandKind(xCommandKind), seqNum(0) {} 
+  KalmarAsyncOp(KalmarQueue *xqueue, hcCommandKind xCommandKind) : queue(xqueue), commandKind(xCommandKind), seqNum(0) {} 
 
   virtual ~KalmarAsyncOp() {} 
   virtual std::shared_future<void>* getFuture() { return nullptr; }
@@ -169,9 +170,13 @@ public:
   hcCommandKind getCommandKind() const { return commandKind; };
   void          setCommandKind(hcCommandKind xCommandKind) { commandKind = xCommandKind; };
 
+  KalmarQueue  *getQueue() const { return queue; };
+
 private:
   // Kind of this command - copy, kernel, barrier, etc:
   hcCommandKind  commandKind;
+
+  KalmarQueue    *queue;
 
   // Sequence number of this op in the queue it is dispatched into.
   uint64_t       seqNum;
@@ -365,7 +370,7 @@ public:
     virtual void BuildProgram(void* size, void* source) {}
 
     /// create kernel
-    virtual void* CreateKernel(const char* fun) { return nullptr; }
+    virtual void* CreateKernel(const char* fun, KalmarQueue *queue) { return nullptr; }
 
     /// check if a given kernel is compatible with the device
     virtual bool IsCompatibleKernel(void* size, void* source) { return true; }
@@ -471,7 +476,7 @@ public:
     std::shared_ptr<KalmarQueue> createQueue(execute_order order = execute_in_order) override { return std::shared_ptr<KalmarQueue>(new CPUQueue(this)); }
     void* create(size_t count, struct rw_info* /* not used */ ) override { return kalmar_aligned_alloc(0x1000, count); }
     void release(void* ptr, struct rw_info* /* nout used */) override { kalmar_aligned_free(ptr); }
-    void* CreateKernel(const char* fun) { return nullptr; }
+    void* CreateKernel(const char* fun, KalmarQueue *queue) { return nullptr; }
 };
 
 /// KalmarContext
