@@ -47,7 +47,7 @@ void test(int numElements)
     int * Bh = hc::am_alloc(sizeElements, acc, amHostPinned);
     int * Ch = hc::am_alloc(sizeElements, acc, amHostPinned);
 
-    const int expected = 13;
+    const int expected = 42;
     memsetIntKernel(av, Bh, expected, numElements);
     memsetIntKernel(av, Ch, -4, numElements);
     memsetIntKernel(av, C, -3, numElements);

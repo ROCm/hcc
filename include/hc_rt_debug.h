@@ -17,7 +17,7 @@
 #define DB_QUEUE      4  /* 0x0010  // Queue creation and desruction commands, and queue contents after each command push. */
 #define DB_SIG        5  /* 0x0020  // Signal creation, allocation, pool */
 #define DB_LOCK       6  /* 0x0040  // Locks and HCC thread-safety code */
-#define DB_KERNARG    7  /* 0x0080  // Decode and display AQL packets  */
+#define DB_KERNARG    7  /* 0x0080  // Show first 128 bytes of kernarg blocks passed to kernels */
 #define DB_COPY       8  /* 0x0100  // Copy debug */
 #define DB_COPY2      9  /* 0x0200  // Detailed copy debug */
 #define DB_RESOURCE  10  /* 0x0400  // Resource (signal/kernarg/queue) allocation and growth, and other unusual potentially performance-impacting events. */

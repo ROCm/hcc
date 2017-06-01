@@ -87,16 +87,19 @@ void printRocrPointerInfo(std::ostream &os, const void *ptr)
     uint32_t peerAgentCnt=0;
     hsa_agent_t * peerAgents = nullptr;
     hsa_status = hsa_amd_pointer_info(const_cast<void*> (ptr), &info, malloc, &peerAgentCnt, &peerAgents);
+
     if(hsa_status == HSA_STATUS_SUCCESS) {
 
         for (uint32_t i=0; i<peerAgentCnt; i++) {
-            os << " " << peerAgents[i].handle ;
+            os << " 0x" << std::hex << peerAgents[i].handle ;
+               //<< "(" << hc::accelerator::get_seqnum_from_agent(peerAgents[i]) << ")" << std::dec;
         }
 
         if (peerAgents) {
             free (peerAgents);
         }
     }
+    os << std::dec;
 }
 
 
