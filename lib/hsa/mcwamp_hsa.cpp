@@ -787,13 +787,17 @@ namespace Kalmar {
 // HSAQueue is the implementation of accelerator_view for HSA back-and.  HSAQueue
 // points to RocrQueue, or to nullptr if the HSAQueue is not currently attached to a RocrQueue.
 struct RocrQueue {
+    static void callbackQueue(hsa_status_t status, hsa_queue_t* queue, void *data) {
+        STATUS_CHECK(status, __LINE__);
+    }
+
     RocrQueue(hsa_agent_t agent, size_t queue_size, HSAQueue *hccQueue) 
     {
 
         assert(queue_size != 0);
 
         /// Create a queue using the maximum size.
-        hsa_status_t status = hsa_queue_create(agent, queue_size, HSA_QUEUE_TYPE_SINGLE, NULL, NULL,
+        hsa_status_t status = hsa_queue_create(agent, queue_size, HSA_QUEUE_TYPE_SINGLE, callbackQueue /*NULL*/, NULL,
                                   UINT32_MAX, UINT32_MAX, &_hwQueue);
         DBOUT(DB_QUEUE, "  " <<  __func__ << ": created an HSA command queue: " << _hwQueue << "\n");
 

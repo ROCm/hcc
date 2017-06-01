@@ -3202,7 +3202,9 @@ inline int __mad24(int x, int y, int z) [[hc]] {
   return __mul24(x,y) + z;
 }
 
-
+extern "C" inline void abort() __HC__ {
+  __builtin_trap();
+}
 
 // ------------------------------------------------------------------------
 // group segment
