@@ -95,6 +95,10 @@ do
     AMDGPU_TARGET="${ARG#*=}"
     continue
     ;;
+    --hcc-extra-libs=*)
+    HCC_EXTRA_LIBRARIES="$HCC_EXTRA_LIBRARIES ${ARG#*=}"
+    continue
+    ;;
     --dump-isa)
     KMDUMPISA=1
     ;;
