@@ -14,7 +14,7 @@
 #define DB_CMD        1  // 0x0002  // Kernel and Copy Commands and Barriers
 #define DB_WAIT       2  // 0x0004  // Synchronization and waiting for commands to finish.
 #define DB_AQL        3  // 0x0008  // Decode and display AQL packets 
-#define DB_QUEUE      4  // 0x0010  // Queue creation and desruction commands
+#define DB_QUEUE      4  // 0x0010  // Queue creation and desruction commands, and queue contents after each command push.
 #define DB_SIG        5  // 0x0020  // Signal creation, allocation, pool
 #define DB_LOCK       6  // 0x0040  // Locks and HCC thread-safety code
 #define DB_KERNARG    7  // 0x0080  // Decode and display AQL packets 
@@ -29,14 +29,14 @@ extern unsigned HCC_DB;
 
 
 // Keep close to debug defs above since these have to be kept in-sync
-static std::vector<std::string> g_DbStr = {"api", "cmd", "wait", "aql", "queue", "sig", "lock", "kernarg", "copy", "copy2", "resource", "init", "misc" };
+static std::vector<std::string> g_DbStr = {"api", "cmd", "wait", "aql", "queue", "sig", "lock", "kernarg", "copy", "copy2", "resource", "init", "misc"};
 
 
 // Macro for prettier debug messages, use like:
 // DBOUT(" Something happened" << myId() << " i= " << i << "\n");
 #define COMPILE_HCC_DB 1
 
-#define DBFLAG(db_flag) (HCC_DB & (1<<db_flag))
+#define DBFLAG(db_flag) (HCC_DB & (1<<(db_flag)))
 
 // Use str::stream so output is atomic wrt other threads:
 #define DBOUT(db_flag, msg) \
