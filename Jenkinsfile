@@ -64,7 +64,6 @@ node ('rocmtest')
           mkdir -p ${build_dir_release_rel}
           cd ${build_dir_release_rel}
           cmake -B${build_dir_release_abs} \
-            -DCMAKE_INSTALL_PREFIX=${hcc_install_prefix} \
             -DCMAKE_BUILD_TYPE=${build_config} \
             -DHSA_AMDGPU_GPU_TARGET="gfx701;gfx803" \
             ../..
