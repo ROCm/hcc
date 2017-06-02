@@ -27,6 +27,7 @@ target_link_libraries(hccrt INTERFACE dl m)
 if (USE_LIBCXX)
   target_link_libraries(hccrt INTERFACE c++ c++abi)
 endif (USE_LIBCXX)
+target_include_directories(hccrt SYSTEM INTERFACE $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/${HCC_SUBDIR}/include>)
 
 # Library interface for building shared libraries
 add_library(hccshared INTERFACE)
