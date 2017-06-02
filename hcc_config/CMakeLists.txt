@@ -33,10 +33,8 @@ add_custom_command(TARGET hcc-config POST_BUILD
   WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/bin
 )
 
-install(TARGETS hcc-config
-    RUNTIME DESTINATION bin
-)
+rocm_install_targets(TARGETS hcc-config PREFIX ${HCC_SUBDIR})
 
-install(FILES ${PROJECT_BINARY_DIR}/bin/clamp-config DESTINATION bin)
+install(FILES ${PROJECT_BINARY_DIR}/bin/clamp-config DESTINATION ${HCC_SUBDIR}/bin)
 
 

@@ -41,13 +41,13 @@ install(PROGRAMS ${PROJECT_BINARY_DIR}/compiler/bin/clamp-device
     ${PROJECT_BINARY_DIR}/compiler/bin/clamp-link
     ${PROJECT_BINARY_DIR}/compiler/bin/hc-kernel-assemble
     ${PROJECT_BINARY_DIR}/compiler/bin/hc-host-assemble
-    DESTINATION compiler/bin)
+    DESTINATION ${HCC_SUBDIR}/compiler/bin)
 
 ####################
 # C++AMP tools (HSA-specific)
 ####################
 install(PROGRAMS ${PROJECT_BINARY_DIR}/bin/extractkernel
-    DESTINATION bin)
+    DESTINATION ${HCC_SUBDIR}/bin)
 
 ####################
 # CodeXL Activity Logger
@@ -73,37 +73,14 @@ add_subdirectory(cpu)
 ####################
 # install targets
 ####################
-install(TARGETS mcwamp mcwamp_atomic hccrt hccshared
-    EXPORT hcc-targets
-    RUNTIME DESTINATION bin
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    )
+rocm_install_targets(
+  TARGETS mcwamp mcwamp_atomic hccrt hccshared
+  PREFIX ${HCC_SUBDIR}
+)
 
-install( EXPORT hcc-targets
-  DESTINATION
-    ${CONFIG_PACKAGE_INSTALL_DIR}
+rocm_export_targets(
   NAMESPACE hcc::
+  INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/import-hsa.cmake
+  TARGETS hccrt hc_am
+  PREFIX ${HCC_SUBDIR}
 )
-
-include( CMakePackageConfigHelpers )
-
-configure_package_config_file(
-  hcc-config.cmake.in
-  ${CMAKE_CURRENT_BINARY_DIR}/hcc-config.cmake
-  INSTALL_DESTINATION ${CONFIG_PACKAGE_INSTALL_DIR}
-  PATH_VARS LIB_INSTALL_DIR INCLUDE_INSTALL_DIR
-)
-
-write_basic_package_version_file(
-  ${CMAKE_CURRENT_BINARY_DIR}/hcc-config-version.cmake
-  VERSION "${KALMAR_VERSION_MAJOR}.${KALMAR_VERSION_MINOR}.${KALMAR_VERSION_PATCH}"
-  COMPATIBILITY SameMajorVersion
-)
-
-
-install( FILES
-  ${CMAKE_CURRENT_BINARY_DIR}/hcc-config.cmake
-  ${CMAKE_CURRENT_BINARY_DIR}/hcc-config-version.cmake
-  DESTINATION
-    ${CONFIG_PACKAGE_INSTALL_DIR} )

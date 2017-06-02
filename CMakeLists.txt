@@ -1,7 +1,12 @@
 cmake_minimum_required( VERSION 3.0 )
 project (HCC)
 
-include(GNUInstallDirs)
+find_package(ROCM PATHS /opt/rocm)
+include(ROCMInstallTargets)
+include(ROCMPackageConfigHelpers)
+include(ROCMSetupVersion)
+include(ROCMInstallSymlinks)
+include(ROCMCreatePackage)
 
 SET(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/scripts/cmake")
 MESSAGE("Module path: ${CMAKE_MODULE_PATH}")
@@ -217,11 +222,11 @@ endif()
 add_version_info_from_git(KALMAR_VERSION_STRING
   KALMAR_VERSION_PATCH KALMAR_SDK_COMMIT KALMAR_FRONTEND_COMMIT KALMAR_BACKEND_COMMIT)
 
+rocm_setup_version(VERSION ${KALMAR_VERSION_MAJOR}.${KALMAR_VERSION_MINOR}.${KALMAR_VERSION_PATCH})
+
 # set default installation path
-if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT AND CMAKE_INSTALL_PREFIX MATCHES "/usr/local")
-  set(INSTALL_DIR_NAME "hcc-${KALMAR_VERSION_MAJOR}.${KALMAR_VERSION_MINOR}")
-  set(CMAKE_INSTALL_PREFIX "/opt/rocm/${INSTALL_DIR_NAME}" CACHE PATH "Default installation path of hcc" FORCE)
-endif ()
+set(HCC_SUBDIR "hcc-${KALMAR_VERSION_MAJOR}.${KALMAR_VERSION_MINOR}")
+set(CMAKE_INSTALL_PREFIX "/opt/rocm" CACHE PATH "Default installation path of hcc")
 MESSAGE("Installation path: ${CMAKE_INSTALL_PREFIX}")
 
 # set the installation path for the installer package
@@ -349,17 +354,17 @@ install(FILES ${PROJECT_BINARY_DIR}/bin/hcc
               ${PROJECT_BINARY_DIR}/bin/llvm-mc
               ${PROJECT_BINARY_DIR}/bin/llvm-objdump
               ${PROJECT_BINARY_DIR}/bin/lld
-        DESTINATION bin)
+        DESTINATION ${HCC_SUBDIR}/bin)
 
 # install clang along with HCC
 # stored under compiler/
 install(DIRECTORY ${CLANG_BIN_DIR}/bin
-        DESTINATION compiler
+        DESTINATION ${HCC_SUBDIR}/compiler
         COMPONENT compiler
         PATTERN * PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 
 install(DIRECTORY ${CLANG_BIN_DIR}/lib
-        DESTINATION compiler
+        DESTINATION ${HCC_SUBDIR}/compiler
         COMPONENT compiler
         PATTERN CMakeFiles EXCLUDE
         PATTERN *tmp EXCLUDE
@@ -376,22 +381,22 @@ install(FILES  ${CLANG_BIN_DIR}/lib/libLLVMAMDGPUDesc.a
                ${CLANG_BIN_DIR}/lib/libLLVMMC.a
                ${CLANG_BIN_DIR}/lib/libLLVMCore.a
                ${CLANG_BIN_DIR}/lib/libLLVMSupport.a
-        DESTINATION compiler/lib
+        DESTINATION ${HCC_SUBDIR}/compiler/lib
         COMPONENT compiler
         PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 
 install(FILES ${CLANG_BIN_DIR}/lib/clang/5.0.0/lib/linux/libclang_rt.builtins-x86_64.a
-        DESTINATION  ${CMAKE_INSTALL_LIBDIR}
+        DESTINATION ${HCC_SUBDIR}/${CMAKE_INSTALL_LIBDIR}
         COMPONENT compiler)
 
 install(DIRECTORY ${CLANG_BIN_DIR}/include
-        DESTINATION compiler
+        DESTINATION ${HCC_SUBDIR}/compiler
         COMPONENT compiler
         PATTERN CMakeFiles EXCLUDE
         PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
 
 install(DIRECTORY ${CLANG_SRC_DIR}/include
-        DESTINATION compiler
+        DESTINATION ${HCC_SUBDIR}/compiler
         COMPONENT compiler
         PATTERN CMakeFiles EXCLUDE
         PATTERN CMakeLists* EXCLUDE
@@ -462,7 +467,7 @@ if (HCC_INTEGRATE_ROCDL)
                     ${ROCDL_BUILD_DIR}/oclc
                     ${ROCDL_BUILD_DIR}/ocml
                     ${ROCDL_BUILD_DIR}/opencl
-          DESTINATION rocdl
+          DESTINATION ${HCC_SUBDIR}/rocdl
           PATTERN CMake* EXCLUDE
           PATTERN CPack* EXCLUDE
           PATTERN *.cmake EXCLUDE
@@ -479,9 +484,9 @@ if (HCC_INTEGRATE_ROCDL)
   # create search paths for ROCDL
   list(APPEND ROCM_DEVICE_LIB_PATHS ${ROCDL_BUILD_DIR}/lib)
   if (NOT CPACK_SET_DESTDIR)
-    list(APPEND ROCM_DEVICE_LIB_PATHS ${CPACK_PACKAGING_INSTALL_PREFIX}/rocdl/lib)
+    list(APPEND ROCM_DEVICE_LIB_PATHS ${CPACK_PACKAGING_INSTALL_PREFIX}/${HCC_SUBDIR}/rocdl/lib)
   endif(NOT CPACK_SET_DESTDIR)
-  list(APPEND ROCM_DEVICE_LIB_PATHS ${CMAKE_INSTALL_PREFIX}/rocdl/lib)
+  list(APPEND ROCM_DEVICE_LIB_PATHS ${CMAKE_INSTALL_PREFIX}/${HCC_SUBDIR}/rocdl/lib)
 
 endif(HCC_INTEGRATE_ROCDL)
 
@@ -493,6 +498,8 @@ add_subdirectory(include)
 add_subdirectory(amp-conformance)
 add_subdirectory(stl-test)
 add_subdirectory(cmake-tests)
+# This should always be last
+add_subdirectory(symlinks)
 
 # create a "hcc" symlink in the include directory
 # that points to itself so we could support
@@ -512,55 +519,15 @@ add_custom_target(docs
 # install documentation
 # optionally stored under doc/
 install(DIRECTORY ${PROJECT_BINARY_DIR}/docs/html
-        DESTINATION doc
+        DESTINATION ${HCC_SUBDIR}/doc
         FILE_PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
         DIRECTORY_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
         COMPONENT doc
         OPTIONAL)
 
-# generate Debian control scripts postinst and postrm
-set(CPACK_PACKAGE_NAME "hcc")
-
-set(DEBIAN_EXTRA_SCRIPT_SOURCE_DIR "${PROJECT_SOURCE_DIR}/packaging/debian")
-set(DEBIAN_EXTRA_SCRIPT_DEST_DIR "${PROJECT_BINARY_DIR}/packaging/debian")
-file(MAKE_DIRECTORY ${DEBIAN_EXTRA_SCRIPT_DEST_DIR})
-
-execute_process(COMMAND ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/process_packaging_script.bsh ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/postinst.in  ${DEBIAN_EXTRA_SCRIPT_DEST_DIR}/postinst ${CPACK_PACKAGE_NAME} ${HCC_PACKAGE_INSTALL_PREFIX} ${CMAKE_INSTALL_LIBDIR}
-                WORKING_DIRECTORY ${PROJECT_BINARY_DIR})
-
-execute_process(COMMAND ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/process_packaging_script.bsh ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/prerm.in  ${DEBIAN_EXTRA_SCRIPT_DEST_DIR}/prerm ${CPACK_PACKAGE_NAME} ${HCC_PACKAGE_INSTALL_PREFIX} ${CMAKE_INSTALL_LIBDIR}
-                WORKING_DIRECTORY ${PROJECT_BINARY_DIR})
-
-set(CPACK_PACKAGE_VENDOR "Advanced Micro Devices, Inc")
-set(CPACK_PACKAGE_VERSION "${KALMAR_VERSION_MAJOR}.${KALMAR_VERSION_MINOR}.${KALMAR_VERSION_PATCH}")
-set(CPACK_PACKAGE_VERSION_MAJOR ${KALMAR_VERSION_MAJOR})
-set(CPACK_PACKAGE_VERSION_MINOR ${KALMAR_VERSION_MINOR})
-set(CPACK_PACKAGE_VERSION_PATCH ${KALMAR_VERSION_PATCH})
-
 set(PACKAGE_DESCRIPTION "HCC: An Open Source, Optimizing C++ Compiler for Heterogeneous Compute")
 
 set(OFFICIAL_RELEASE_BUILD 1)
-
-# Default to generate a package appropriate for a distro; users override using command line with -D
-# -D writes variables into the cmake cache, and setting CACHE variables won't overwrite variables already in the CACHE
-if( "${DISTRO_ID}" MATCHES "ubuntu" )
-  set( CPACK_GENERATOR "DEB" CACHE STRING "cpack list: 7Z, DEB, IFW, NSIS, NSIS64, RPM, STGZ, TBZ2, TGZ, TXZ, TZ, ZIP" )
-elseif ("${DISTRO_ID}" MATCHES "fedora")
-  set( CPACK_GENERATOR "RPM" CACHE STRING "cpack list: 7Z, DEB, IFW, NSIS, NSIS64, RPM, STGZ, TBZ2, TGZ, TXZ, TZ, ZIP" )
-else()
-  # generate a tarball for unknown DISTRO_ID
-  set( CPACK_GENERATOR "TGZ" CACHE STRING "cpack list: 7Z, DEB, IFW, NSIS, NSIS64, RPM, STGZ, TBZ2, TGZ, TXZ, TZ, ZIP" )
-endif ()
-
-# DEB package settings
-set(CPACK_DEBIAN_PACKAGE_DESCRIPTION ${PACKAGE_DESCRIPTION})
-set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Siu Chi Chan <siuchi.chan@amd.com>")
-set(CPACK_DEBIAN_PACKAGE_SECTION "devel")
-
-set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA
-  "${PROJECT_BINARY_DIR}/packaging/debian/postinst;${PROJECT_BINARY_DIR}/packaging/debian/prerm")
-
-set(HCC_GENERAL_DEBIAN_DEP "g++-multilib, gcc-multilib, findutils, libelf1, libpci3, file, libunwind8")
 
 if ( USE_LIBCXX )
   set(HCC_LIBCXX_DEBIAN_DEP ", libc++1, libc++-dev, libc++abi1, libc++abi-dev")
@@ -582,20 +549,16 @@ endif (OFFICIAL_RELEASE_BUILD)
 
 set(CPACK_DEBIAN_PACKAGE_DEPENDS "${HCC_GENERAL_DEBIAN_DEP} ${HCC_ROCR_DEP} ${HCC_LIBCXX_DEBIAN_DEP}")
 
-# RPM package settings
-set(CPACK_RPM_PACKAGE_DESCRIPTION ${PACKAGE_DESCRIPTION})
-set(CPACK_RPM_POST_INSTALL_SCRIPT_FILE "${PROJECT_BINARY_DIR}/packaging/debian/postinst")
-set(CPACK_RPM_PRE_UNINSTALL_SCRIPT_FILE "${PROJECT_BINARY_DIR}/packaging/debian/prerm")
-
-# disable automatic shared libraries dependency detection
-set(CPACK_RPM_PACKAGE_AUTOREQ 0)
-
 set(HCC_GENERAL_RPM_DEP "findutils, elfutils-libelf, pciutils-libs, file, pth, libunwind")
 set(CPACK_RPM_PACKAGE_REQUIRES "${HCC_GENERAL_RPM_DEP} ${HCC_ROCR_DEP}" )
 
-set(CPACK_COMPONENTS_ALL compiler)
+rocm_create_package(
+  NAME hcc 
+  MAINTAINER "Siu Chi Chan <siuchi.chan@amd.com>"
+  DESCRIPTION "HCC: An Open Source, Optimizing C++ Compiler for Heterogeneous Compute"
+  LDCONFIG
+)
 
-include (CPack)
 MESSAGE("")
 MESSAGE("** For the first time:")
 MESSAGE("   'make' to build all")

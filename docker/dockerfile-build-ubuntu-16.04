@@ -24,6 +24,10 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
     software-properties-common \
     wget \
     python \
+    python-dev \
+    python-setuptools \
+    python-wheel \
+    python-pip \
     rpm \
     gcc-multilib \
     g++-multilib \
@@ -39,5 +43,8 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
     hsa-rocr-dev && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
+
+RUN pip install cget
+RUN cget install -p $rocm_install_path RadeonOpenCompute/rocm-cmake@master
 
 RUN chmod 777 $(find /opt/rocm -type d)
