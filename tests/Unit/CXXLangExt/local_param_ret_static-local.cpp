@@ -28,11 +28,13 @@
 
 // RUN: %hc -DTYPE="wchar_t"  %s -o %t.out && %t.out
 
-#include <iostream>
 #include <amp.h>
 
 // added for checking HSA profile
 #include <hc.hpp>
+
+#include <algorithm>
+#include <iostream>
 
 // test C++AMP with fine-grained SVM
 // requires HSA Full Profile to operate successfully
@@ -62,14 +64,10 @@ bool test() {
   // Verify
   int error = 0;
   for(int i = 0; i < vecSize; i++) {
-    error += std::abs((TYPE)ans[i] - (TYPE)(2 * i));
+    if (static_cast<TYPE>(ans[i]) != static_cast<TYPE>(2 * i)) return false;
   }
-  if (error == 0) {
-    std::cout << "Verify success!\n";
-  } else {
-    std::cout << "Verify failed!\n";
-  }
-  return (error == 0);
+
+  return true;
 }
 
 int main() {
