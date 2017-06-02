@@ -234,6 +234,7 @@ set(CPACK_SET_DESTDIR ON CACHE BOOL "Installer package will install hcc to CMAKE
 if (CPACK_SET_DESTDIR)
   set(HCC_PACKAGE_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX})
 else (CPACK_SET_DESTDIR)
+  set(CPACK_PACKAGING_INSTALL_PREFIX "/opt/rocm/${INSTALL_DIR_NAME}" CACHE PATH "Default installation path of hcc installer package") 
   set(HCC_PACKAGE_INSTALL_PREFIX ${CPACK_PACKAGING_INSTALL_PREFIX})
 endif (CPACK_SET_DESTDIR)
 MESSAGE("Installer package installation path: ${HCC_PACKAGE_INSTALL_PREFIX}")
