@@ -173,10 +173,11 @@ public:
   KalmarQueue  *getQueue() const { return queue; };
 
 private:
+  KalmarQueue    *queue;
+
   // Kind of this command - copy, kernel, barrier, etc:
   hcCommandKind  commandKind;
 
-  KalmarQueue    *queue;
 
   // Sequence number of this op in the queue it is dispatched into.
   uint64_t       seqNum;
@@ -269,7 +270,7 @@ public:
   /// enqueue marker with prior dependency
   virtual std::shared_ptr<KalmarAsyncOp> EnqueueMarkerWithDependency(int count, std::shared_ptr <KalmarAsyncOp> *depOps, memory_scope scope) { return nullptr; }
 
-  virtual std::shared_ptr<KalmarAsyncOp> detectStreamDeps(hcCommandKind commandKind, KalmarAsyncOp *newCopyOp, memory_scope *requiredRelease) { return nullptr; };
+  virtual std::shared_ptr<KalmarAsyncOp> detectStreamDeps(hcCommandKind commandKind, KalmarAsyncOp *newCopyOp) { return nullptr; };
 
 
   /// copy src to dst asynchronously

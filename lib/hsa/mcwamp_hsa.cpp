@@ -510,7 +510,6 @@ private:
 public:
     uint16_t  header;
     hc::memory_scope _acquire_scope;
-    hc::memory_scope _release_scope;
 
     // array of all operations that this op depends on.
     // This array keeps a reference which prevents those ops from being deleted until this op is deleted.
@@ -542,7 +541,7 @@ public:
 
 
     // constructor with 1 prior dependency
-    HSABarrier(Kalmar::KalmarQueue *queue, std::shared_ptr <Kalmar::KalmarAsyncOp> dependent_op) : KalmarAsyncOp(queue, Kalmar::hcCommandMarker), isDispatched(false), future(nullptr), _acquire_scope(hc::no_scope), _release_scope(hc::no_scope), waitMode(HSA_WAIT_STATE_BLOCKED) {
+    HSABarrier(Kalmar::KalmarQueue *queue, std::shared_ptr <Kalmar::KalmarAsyncOp> dependent_op) : KalmarAsyncOp(queue, Kalmar::hcCommandMarker), isDispatched(false), future(nullptr), _acquire_scope(hc::no_scope), waitMode(HSA_WAIT_STATE_BLOCKED) {
         if (dependent_op != nullptr) {
             depAsyncOps[0] = dependent_op;
             depCount = 1;
@@ -552,7 +551,7 @@ public:
     }
 
     // constructor with at most 5 prior dependencies
-    HSABarrier(Kalmar::KalmarQueue *queue, int count, std::shared_ptr <Kalmar::KalmarAsyncOp> *dependent_op_array) : KalmarAsyncOp(queue, Kalmar::hcCommandMarker), isDispatched(false), future(nullptr), _acquire_scope(hc::no_scope), _release_scope(hc::no_scope), waitMode(HSA_WAIT_STATE_BLOCKED), depCount(0) {
+    HSABarrier(Kalmar::KalmarQueue *queue, int count, std::shared_ptr <Kalmar::KalmarAsyncOp> *dependent_op_array) : KalmarAsyncOp(queue, Kalmar::hcCommandMarker), isDispatched(false), future(nullptr), _acquire_scope(hc::no_scope), waitMode(HSA_WAIT_STATE_BLOCKED), depCount(0) {
         if ((count >= 0) && (count <= 5)) {
             for (int i = 0; i < count; ++i) {
                 if (dependent_op_array[i]) {
@@ -1013,23 +1012,16 @@ public:
 
 
     // Check upcoming command that will be sent to this queue against the youngest async op 
-    // in the queue to detect if any command dependency or synchronization is required.
+    // in the queue to detect if any command dependency is required.
     //
     // The function returns nullptr if no dependency is required. For example, back-to-back commands
     // of same type are often implicitly synchronized so no dependency is required.
     //
     // Also different modes and optimizations can control when dependencies are added.
     // TODO - return reference if possible to avoid shared ptr overhead.
-    //
-    // releaseScope specifies the scope of the fence that should be
-    // applied before the new command executes. For some commands (ie Kernels, Barriers) 
-    // this can be applied as part of the AQL packet, while for some commands (copies) 
-    // this requires a separate Barrier packet.
-    std::shared_ptr<KalmarAsyncOp> detectStreamDeps(hcCommandKind newCommandKind, KalmarAsyncOp *copyOp, hc::memory_scope *releaseScope) {
+    std::shared_ptr<KalmarAsyncOp> detectStreamDeps(hcCommandKind newCommandKind, KalmarAsyncOp *copyOp) {
 
         assert (newCommandKind != hcCommandInvalid);
-
-        *releaseScope = hc::no_scope;
 
         if (!asyncOps.empty()) {
             assert (youngestCommandKind != hcCommandInvalid);
@@ -1059,14 +1051,7 @@ public:
                 if (FORCE_SIGNAL_DEP_BETWEEN_COPIES) {
                     needDep = true;
                 }
-            } else if ((isComputeQueueCommand(youngestCommandKind)) && 
-                       _nextSyncNeedsSysRelease) {
-                // AMD_HSA:  ROCM SDMA engines do not snoop GPU L2 caches so (may) need
-                // to add a system-scope release before issuing the SDMA:
-                *releaseScope = hc::system_scope;
-                // queue state _nextSyncNeedsSysRelease will be cleared when barrier command is actually sent.
             }
-
 
             if (needDep) {
                 DBOUT(DB_CMD, "command type changed " << getHcCommandKindString(youngestCommandKind) << "  ->  " << getHcCommandKindString(newCommandKind) << "\n") ;
@@ -1079,10 +1064,9 @@ public:
 
 
     void waitForStreamDeps (KalmarAsyncOp *newOp) {
-        hc::memory_scope releaseScope;
-        std::shared_ptr<KalmarAsyncOp> depOp = detectStreamDeps(newOp->getCommandKind(), newOp, &releaseScope);
+        std::shared_ptr<KalmarAsyncOp> depOp = detectStreamDeps(newOp->getCommandKind(), newOp);
         if (depOp != nullptr) {
-            EnqueueMarkerWithDependency(1, &depOp, HCC_OPT_FLUSH ? releaseScope : hc::system_scope);
+            EnqueueMarkerWithDependency(1, &depOp, HCC_OPT_FLUSH ? hc::no_scope : hc::system_scope);
         }
     }
 
@@ -4329,8 +4313,9 @@ HSACopy::enqueueAsyncCopyCommand(const Kalmar::HSADevice *copyDevice, const hc::
         int depSignalCnt = 0;
         hsa_signal_t depSignal;
         setCommandKind (resolveMemcpyDirection(srcPtrInfo._isInDeviceMem, dstPtrInfo._isInDeviceMem));
-        hc::memory_scope releaseScope;
-        depAsyncOp = hsaQueue()->detectStreamDeps(this->getCommandKind(), this, &releaseScope);
+
+        auto releaseScope = (hsaQueue()->nextSyncNeedsSysRelease()) ? hc::system_scope : hc::no_scope;
+        depAsyncOp = hsaQueue()->detectStreamDeps(this->getCommandKind(), this);
 
         // We need to ensure the copy waits for preceding commands the HCC queue to complete, if those commands exist.
         // The copy has to be set so that it depends on the completion_signal of the youngest command in the queue.
@@ -4340,7 +4325,8 @@ HSACopy::enqueueAsyncCopyCommand(const Kalmar::HSADevice *copyDevice, const hc::
             // Normally we can use the input signal to hsa_amd_memory_async_copy to ensure the copy waits for youngest op.
             // However, two cases require special handling:
             //    - the youngest op may not have a completion signal - this is optional for kernel launch commands.
-            //    - we may need a system-scope fence.
+            //    - we may need a system-scope fence. This is true if any kernels have been executed in this queue, or 
+            //      in streams that we depend on.
             // For both of these cases, we create an additional barrier packet in the source, and attach the desired fence.
             // Then we make the copy depend on the signal written by this command.
             if ((depSignal.handle == 0x0) || (releaseScope != hc::no_scope)) {
