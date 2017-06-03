@@ -22,7 +22,7 @@ bench: $(OBJECTS) nullkernel
 	hcc `hcc-config --build --cxxflags` $(OPT) -I$(ROCM_PATH)/include $< -c -o $@
 
 nullkernel: nullkernel.cpp
-	hcc `hcc-config --build --cxxflags --ldflags --shared` -$< -o $@
+	hcc `hcc-config --build --cxxflags --ldflags --shared` $< -o $@
 	extractkernel -i nullkernel
 
 plot: bench
