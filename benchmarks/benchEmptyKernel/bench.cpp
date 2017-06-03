@@ -120,7 +120,7 @@ void time_dispatch_hsa_kernel(std::string testName, const grid_launch_parm *lp, 
         auto m0 = lp->av->create_marker(hc::no_scope);
         m0.wait(hc::hcWaitModeActive);
     } else if (lp->cf) {
-        lp->cf.wait(hc::hcWaitModeActive);
+        lp->cf->wait(hc::hcWaitModeActive);
     }
 
     //std::cout << "CF get_use_count=" << cf.get_use_count() << "is_ready=" << cf.is_ready()<< "\n";
@@ -166,7 +166,7 @@ void usage() {
     printf (" --hsaco_dir, -h           : Directory to look for nullkernel hsaco file\n");
     printf (" --tests, -t               : Bit vector to control which tests are run, see p_tests in code\n");
     printf (" --system_scope, -S        : Use system-scope acquire/release for GL submissions\n");
-    printf (" --queue_wait, -W          : Use queue-level wait rather than event-level
+    printf (" --queue_wait, -W          : Use queue-level wait rather than event-level");
     printf (" --execute_any_order,-a    : Create queue with execute_any_order (no barrier bit)\n");
 };
 

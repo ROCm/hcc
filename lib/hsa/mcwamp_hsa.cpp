@@ -959,7 +959,10 @@ public:
             if (op != nullptr) {
                 s << " op#"<< op->getSeqNum() ;
                 hsa_signal_t signal = * (static_cast<hsa_signal_t*> (op->getNativeHandle()));
-                hsa_signal_value_t v = hsa_signal_load_acquire(signal);
+                hsa_signal_value_t v = 0;
+                if (signal.handle) {
+                    v = hsa_signal_load_acquire(signal);
+                }
                 s  << " " << getHcCommandKindString(op->getCommandKind());
                 // TODO - replace with virtual function
                 if (op->getCommandKind() == hc::hcCommandMarker) {
@@ -3517,8 +3520,8 @@ static std::ostream& PrintHeader(std::ostream& os, uint16_t h)
     //os << std::hex << "("
        << "type=" << extractBits(h, HSA_PACKET_HEADER_TYPE, HSA_PACKET_HEADER_WIDTH_TYPE)
        << ",barrier=" << extractBits (h, HSA_PACKET_HEADER_BARRIER, HSA_PACKET_HEADER_WIDTH_BARRIER)
-       << ",acquire_fence=" << extractBits(h, HSA_PACKET_HEADER_SCACQUIRE_FENCE_SCOPE, HSA_PACKET_HEADER_WIDTH_SCACQUIRE_FENCE_SCOPE)
-       << ",release_fence=" << extractBits(h, HSA_PACKET_HEADER_SCRELEASE_FENCE_SCOPE, HSA_PACKET_HEADER_WIDTH_SCRELEASE_FENCE_SCOPE)
+       << ",acquire=" << extractBits(h, HSA_PACKET_HEADER_SCACQUIRE_FENCE_SCOPE, HSA_PACKET_HEADER_WIDTH_SCACQUIRE_FENCE_SCOPE)
+       << ",release=" << extractBits(h, HSA_PACKET_HEADER_SCRELEASE_FENCE_SCOPE, HSA_PACKET_HEADER_WIDTH_SCRELEASE_FENCE_SCOPE)
        << ")";
 
 
@@ -3539,7 +3542,7 @@ static std::ostream& operator<<(std::ostream& os, const hsa_kernel_dispatch_pack
        << " completion_signal=" <<  aql.completion_signal.handle;
 
     const unsigned *aqlBytes = (unsigned*)&aql;
-     os << "\n              raw_aql=[" << std::hex << std::setfill('0'); 
+     os << "    raw_aql=[" << std::hex << std::setfill('0'); 
      for (int i=0; i<sizeof(aql)/sizeof(unsigned); i++) {
          os << " 0x" << std::setw(8) << aqlBytes[i];
      }
@@ -3560,7 +3563,7 @@ static std::ostream& operator<<(std::ostream& os, const hsa_barrier_and_packet_t
        << " completion_signal=" <<  aql.completion_signal.handle;
 
     const unsigned *aqlBytes = (unsigned*)&aql;
-     os << "              raw_aql=[" << std::hex << std::setfill('0'); 
+     os << "    raw_aql=[" << std::hex << std::setfill('0'); 
      for (int i=0; i<sizeof(aql)/sizeof(unsigned); i++) {
          os << " 0x" << std::setw(8) << aqlBytes[i];
      }
@@ -3677,8 +3680,7 @@ HSADispatch::dispatchKernel(hsa_queue_t* lockedHsaQueue, const void *hostKernarg
     q_aql->header = header;
 
     hsa_queue_store_write_index_relaxed(lockedHsaQueue, index + 1);
-    DBOUT(DB_AQL, "queue:" << lockedHsaQueue  <<  " dispatch kernel " << (kernel ? kernel->getKernelName():"<unknown>") << "\n");
-    DBOUT(DB_AQL, "dispatch_aql:" << *q_aql << "\n");
+    DBOUT(DB_AQL, " dispatch_aql into " << *hsaQueue() << "(" << lockedHsaQueue << ")  " << *q_aql << "\n");
 
     if (DBFLAG(DB_KERNARG)) { 
         // TODO, perhaps someday we could determine size of kernarg block here:
@@ -4069,8 +4071,7 @@ HSABarrier::enqueueAsync(hc::memory_scope releaseScope) {
         // Set header last:
         barrier->header = header;
 
-        DBOUT(DB_AQL, "queue:" << rocrQueue << ".op#" << getSeqNum() << " dispatch barrier depCount=" << depCount << "\n");
-        DBOUT(DB_AQL, "barrier_aql:" <<  *barrier << "\n");
+        DBOUT(DB_AQL, " barrier_aql  into " << *hsaQueue() << "(" << rocrQueue << ")  " << *barrier << "\n");
 
 
         // Increment write index and ring doorbell to dispatch the kernel
