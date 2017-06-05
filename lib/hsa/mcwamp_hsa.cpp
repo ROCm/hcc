@@ -506,10 +506,10 @@ private:
     // maximum up to 5 prior dependencies could be associated with one
     // HSABarrier instance
     int depCount;
+    hc::memory_scope _acquire_scope;
 
 public:
     uint16_t  header;  // stores header of AQL packet.  Preserve so we can see flushes associated with this barrier.
-    hc::memory_scope _acquire_scope;
 
     // array of all operations that this op depends on.
     // This array keeps a reference which prevents those ops from being deleted until this op is deleted.
@@ -517,6 +517,7 @@ public:
 
 public:
     std::shared_future<void>* getFuture() override { return future; }
+    void acquire_scope(hc::memory_scope acquireScope) { _acquire_scope = acquireScope;};
 
     void* getNativeHandle() override { return &signal; }
 
@@ -1117,7 +1118,7 @@ public:
         //
 
   
-        if (HCC_OPT_FLUSH && _nextSyncNeedsSysRelease) {
+        if (HCC_OPT_FLUSH && nextSyncNeedsSysRelease()) {
 
             // In the loop below, this will be the first op waited on
             auto marker = EnqueueMarker(hc::system_scope);
@@ -1228,7 +1229,7 @@ public:
 
     void releaseToSystemIfNeeded() 
     {
-        if (HCC_OPT_FLUSH && _nextSyncNeedsSysRelease) {
+        if (HCC_OPT_FLUSH && nextSyncNeedsSysRelease()) {
             // In the loop below, this will be the first op waited on
             auto marker= EnqueueMarker(hc::system_scope);
 
@@ -1634,7 +1635,7 @@ public:
                         // This requires system-scope acquire 
                         // TODO - only needed if these are peer GPUs, could optimize with an extra check
                         DBOUT(DB_WAIT, "  Adding cross-accelerator system-scope acquire\n");
-                        barrier->_acquire_scope = hc::system_scope;
+                        barrier->acquire_scope (hc::system_scope);
                     } 
 
                 } else {
