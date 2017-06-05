@@ -10,26 +10,27 @@
 #include <iostream>
 
 
-#define DB_API        0  /* 0x0001  // HCC runtime API calls */
-#define DB_CMD        1  /* 0x0002  // Kernel and Copy Commands and Barriers */
-#define DB_WAIT       2  /* 0x0004  // Synchronization and waiting for commands to finish. */
-#define DB_AQL        3  /* 0x0008  // Decode and display AQL packets  */
-#define DB_QUEUE      4  /* 0x0010  // Queue creation and desruction commands, and queue contents after each command push. */
-#define DB_SIG        5  /* 0x0020  // Signal creation, allocation, pool */
-#define DB_LOCK       6  /* 0x0040  // Locks and HCC thread-safety code */
-#define DB_KERNARG    7  /* 0x0080  // Show first 128 bytes of kernarg blocks passed to kernels */
-#define DB_COPY       8  /* 0x0100  // Copy debug */
-#define DB_COPY2      9  /* 0x0200  // Detailed copy debug */
-#define DB_RESOURCE  10  /* 0x0400  // Resource (signal/kernarg/queue) allocation and growth, and other unusual potentially performance-impacting events. */
-#define DB_INIT      11  /* 0x0800  // HCC initialization and shutdown. */
-#define DB_MISC      12  /* 0x1000  // misc debug, not yet classified. */
+#define DB_API        0  /* 0x0001  HCC runtime API calls */
+#define DB_CMD        1  /* 0x0002  Kernel and Copy Commands and Barriers */
+#define DB_WAIT       2  /* 0x0004  Synchronization and waiting for commands to finish. */
+#define DB_AQL        3  /* 0x0008  Decode and display AQL packets  */
+#define DB_QUEUE      4  /* 0x0010  Queue creation and desruction commands, and queue contents after each command push. */
+#define DB_SIG        5  /* 0x0020  Signal creation, allocation, pool */
+#define DB_LOCK       6  /* 0x0040  Locks and HCC thread-safety code */
+#define DB_KERNARG    7  /* 0x0080  Show first 128 bytes of kernarg blocks passed to kernels */
+#define DB_COPY       8  /* 0x0100  Copy debug */
+#define DB_COPY2      9  /* 0x0200  Detailed copy debug */
+#define DB_RESOURCE  10  /* 0x0400  Resource (signal/kernarg/queue) allocation and growth, and other unusual potentially performance-impacting events. */
+#define DB_INIT      11  /* 0x0800  HCC initialization and shutdown. */
+#define DB_MISC      12  /* 0x1000  misc debug, not yet classified. */
+#define DB_AQL2      13  /* 0x2000  Show raw bytes of AQL packet */
 // If adding new define here update the table below:
 
 extern unsigned HCC_DB;
 
 
 // Keep close to debug defs above since these have to be kept in-sync
-static std::vector<std::string> g_DbStr = {"api", "cmd", "wait", "aql", "queue", "sig", "lock", "kernarg", "copy", "copy2", "resource", "init", "misc"};
+static std::vector<std::string> g_DbStr = {"api", "cmd", "wait", "aql", "queue", "sig", "lock", "kernarg", "copy", "copy2", "resource", "init", "misc", "aql2"};
 
 
 // Macro for prettier debug messages, use like:
