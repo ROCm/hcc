@@ -952,7 +952,7 @@ public:
     void printAsyncOps(std::ostream &s = std::cerr)
     {
         hsa_signal_value_t oldv=0;
-        s << "Queue: " << this << "  : " << asyncOps.size() << " op entries\n";
+        s << *this << " : " << asyncOps.size() << " op entries\n";
         for (int i=0; i<asyncOps.size(); i++) {
             const std::shared_ptr<Kalmar::KalmarAsyncOp> &op = asyncOps[i];
             s << "index:" << std::setw(4) << i ;
@@ -1092,15 +1092,18 @@ public:
 
 
     bool isEmpty() override {
-        // Have to walk asyncOps since it can contain null pointers.
+        // Have to walk asyncOps since it can contain null pointers (if event is waited on and removed)
+        // Also not all commands contain signals.
         for (int i = 0; i < asyncOps.size(); ++i) {
             if (asyncOps[i] != nullptr) {
                 auto &asyncOp = asyncOps[i];
                 hsa_signal_t signal = *(static_cast <hsa_signal_t*> (asyncOp->getNativeHandle()));
-                hsa_signal_value_t v = hsa_signal_load_relaxed(signal);
-                if (v != 0) {
-                    return false;
-                }
+                if (signal.handle) {
+					hsa_signal_value_t v = hsa_signal_load_relaxed(signal);
+					if (v != 0) {
+						return false;
+					}
+				}
             }
         };
         return true;
@@ -1114,23 +1117,6 @@ public:
         //
 
   
-#if 0 
-        // TODO - can remove this when HCC_OPT_FLUSH=1
-        // If oldest OP doesn't have a signal, we need to enqueue 
-        // a barrier with a signal so host can tell when it finishes
-        for (int i = asyncOps.size()-1; i >= 0;  i--) {
-            auto asyncOp = asyncOps[i];
-            if (asyncOp != nullptr) {
-                hsa_signal_t signal =*(static_cast <hsa_signal_t*> (asyncOp->getNativeHandle()));
-                if (signal.handle==0) {
-                    // In the code below, this will be the first op waited on
-                    auto marker = EnqueueMarker();
-                    DBOUT("oldest AsyncOp has no signal - enqueue marker "<< marker<<"\n");
-                }
-                break;
-            }
-        }
-#endif
         if (HCC_OPT_FLUSH && _nextSyncNeedsSysRelease) {
 
             // In the loop below, this will be the first op waited on
@@ -3680,7 +3666,8 @@ HSADispatch::dispatchKernel(hsa_queue_t* lockedHsaQueue, const void *hostKernarg
     q_aql->header = header;
 
     hsa_queue_store_write_index_relaxed(lockedHsaQueue, index + 1);
-    DBOUT(DB_AQL, " dispatch_aql into " << *hsaQueue() << "(" << lockedHsaQueue << ")  " << *q_aql << "\n");
+    DBOUT(DB_AQL, " dispatch_aql into " << *hsaQueue() << "(" << lockedHsaQueue << ")\n");
+    DBOUTL(DB_AQL2, *q_aql);
 
     if (DBFLAG(DB_KERNARG)) { 
         // TODO, perhaps someday we could determine size of kernarg block here:
@@ -4071,7 +4058,8 @@ HSABarrier::enqueueAsync(hc::memory_scope releaseScope) {
         // Set header last:
         barrier->header = header;
 
-        DBOUT(DB_AQL, " barrier_aql  into " << *hsaQueue() << "(" << rocrQueue << ")  " << *barrier << "\n");
+        DBOUTL(DB_AQL, " barrier_aql  into " << *hsaQueue() << "(" << rocrQueue << ")");
+        DBOUTL(DB_AQL2, *barrier);
 
 
         // Increment write index and ring doorbell to dispatch the kernel
