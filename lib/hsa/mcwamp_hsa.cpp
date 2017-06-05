@@ -97,7 +97,7 @@ long int HCC_D2H_PININPLACE_THRESHOLD = 1024;
 int HCC_SERIALIZE_KERNEL = 0;
 int HCC_SERIALIZE_COPY = 0;
 
-int HCC_OPT_FLUSH=0;
+int HCC_OPT_FLUSH=1;
 
 
 unsigned HCC_DB = 0;
@@ -217,6 +217,11 @@ static void dumpHSAAgentInfo(hsa_agent_t agent, const char* extra_string = (cons
 
   return;
 }
+
+static unsigned extractBits(unsigned v, unsigned pos, unsigned w)
+{
+    return (v >> pos) & ((1 << w) - 1);
+};
 
 
 namespace Kalmar {
@@ -494,21 +499,25 @@ private:
     bool isDispatched;
     hsa_wait_state_t waitMode;
 
+
     std::shared_future<void>* future;
 
     // prior dependencies
     // maximum up to 5 prior dependencies could be associated with one
     // HSABarrier instance
     int depCount;
-
+    hc::memory_scope _acquire_scope;
 
 public:
+    uint16_t  header;  // stores header of AQL packet.  Preserve so we can see flushes associated with this barrier.
+
     // array of all operations that this op depends on.
     // This array keeps a reference which prevents those ops from being deleted until this op is deleted.
     std::shared_ptr<KalmarAsyncOp> depAsyncOps [HSA_BARRIER_DEP_SIGNAL_CNT];
 
 public:
     std::shared_future<void>* getFuture() override { return future; }
+    void acquire_scope(hc::memory_scope acquireScope) { _acquire_scope = acquireScope;};
 
     void* getNativeHandle() override { return &signal; }
 
@@ -532,8 +541,8 @@ public:
 
 
 
-    // constructor with 1 prior depedency
-    HSABarrier(Kalmar::KalmarQueue *queue, std::shared_ptr <Kalmar::KalmarAsyncOp> dependent_op) : KalmarAsyncOp(queue, Kalmar::hcCommandMarker), isDispatched(false), future(nullptr), waitMode(HSA_WAIT_STATE_BLOCKED) {
+    // constructor with 1 prior dependency
+    HSABarrier(Kalmar::KalmarQueue *queue, std::shared_ptr <Kalmar::KalmarAsyncOp> dependent_op) : KalmarAsyncOp(queue, Kalmar::hcCommandMarker), isDispatched(false), future(nullptr), _acquire_scope(hc::no_scope), waitMode(HSA_WAIT_STATE_BLOCKED) {
         if (dependent_op != nullptr) {
             depAsyncOps[0] = dependent_op;
             depCount = 1;
@@ -543,7 +552,7 @@ public:
     }
 
     // constructor with at most 5 prior dependencies
-    HSABarrier(Kalmar::KalmarQueue *queue, int count, std::shared_ptr <Kalmar::KalmarAsyncOp> *dependent_op_array) : KalmarAsyncOp(queue, Kalmar::hcCommandMarker), isDispatched(false), future(nullptr), waitMode(HSA_WAIT_STATE_BLOCKED), depCount(0) {
+    HSABarrier(Kalmar::KalmarQueue *queue, int count, std::shared_ptr <Kalmar::KalmarAsyncOp> *dependent_op_array) : KalmarAsyncOp(queue, Kalmar::hcCommandMarker), isDispatched(false), future(nullptr), _acquire_scope(hc::no_scope), waitMode(HSA_WAIT_STATE_BLOCKED), depCount(0) {
         if ((count >= 0) && (count <= 5)) {
             for (int i = 0; i < count; ++i) {
                 if (dependent_op_array[i]) {
@@ -667,8 +676,8 @@ public:
 
     hsa_status_t dispatchKernelWaitComplete();
 
-    hsa_status_t dispatchKernelAsync(const void *hostKernarg, int hostKernargSize, bool allocSignal);
     hsa_status_t dispatchKernelAsyncFromOp();
+    hsa_status_t dispatchKernelAsync(const void *hostKernarg, int hostKernargSize, bool allocSignal);
 
     // dispatch a kernel asynchronously
     hsa_status_t dispatchKernel(hsa_queue_t* lockedHsaQueue, const void *hostKernarg,
@@ -689,6 +698,8 @@ public:
     uint64_t getBeginTimestamp() override;
 
     uint64_t getEndTimestamp() override;
+
+    const hsa_kernel_dispatch_packet_t &getAql() const { return aql; };
 
 private:
     template <typename T>
@@ -863,9 +874,14 @@ private:
 
 
     // Flag that is set when a kernel command is sent without system scope
-    // Indicates queue needs a flush at the next queue::wait() call to ensure
+    // Indicates queue needs a flush at the next queue::wait() call or copy to ensure
     // host data is valid.
-    bool                                            _needs_sys_release;
+    bool                                            _nextSyncNeedsSysRelease;
+
+    // Flag that is set after a copy command.  
+    // The next kernel command issued needs to add a system-scope acquire to 
+    // pick up any data that may have been written by the copy.
+    bool                                            _nextKernelNeedsSysAcquire;
 
 
     // Kind of the youngest command in the queue.
@@ -913,7 +929,13 @@ private:
 public:
     HSAQueue(KalmarDevice* pDev, hsa_agent_t agent, execute_order order) ;
 
-    void setNeedsSysRelease(bool r) { _needs_sys_release = r; };
+    bool nextKernelNeedsSysAcquire() const { return _nextKernelNeedsSysAcquire; };
+    void setNextKernelNeedsSysAcquire(bool r) { _nextKernelNeedsSysAcquire = r; };
+
+    bool nextSyncNeedsSysRelease() const { return _nextSyncNeedsSysRelease; };
+    void setNextSyncNeedsSysRelease(bool r) { _nextSyncNeedsSysRelease = r; };
+
+    Kalmar::HSADevice * getHSADev() const;
 
     void dispose() override;
 
@@ -931,16 +953,29 @@ public:
     void printAsyncOps(std::ostream &s = std::cerr)
     {
         hsa_signal_value_t oldv=0;
-        s << "Queue: " << this << "  : " << asyncOps.size() << " op entries\n";
+        s << *this << " : " << asyncOps.size() << " op entries\n";
         for (int i=0; i<asyncOps.size(); i++) {
             const std::shared_ptr<Kalmar::KalmarAsyncOp> &op = asyncOps[i];
             s << "index:" << std::setw(4) << i ;
             if (op != nullptr) {
                 s << " op#"<< op->getSeqNum() ;
                 hsa_signal_t signal = * (static_cast<hsa_signal_t*> (op->getNativeHandle()));
-                hsa_signal_value_t v = hsa_signal_load_acquire(signal);
+                hsa_signal_value_t v = 0;
+                if (signal.handle) {
+                    v = hsa_signal_load_acquire(signal);
+                }
                 s  << " " << getHcCommandKindString(op->getCommandKind());
-                s  << " signal=" << std::hex << signal.handle << std::dec <<" value=" << v;
+                // TODO - replace with virtual function
+                if (op->getCommandKind() == hc::hcCommandMarker) {
+                    auto b = static_cast<HSABarrier*> (op.get());
+                    s << " acq=" << extractBits(b->header, HSA_PACKET_HEADER_SCACQUIRE_FENCE_SCOPE, HSA_PACKET_HEADER_WIDTH_SCACQUIRE_FENCE_SCOPE);
+                    s << ",rel=" << extractBits(b->header, HSA_PACKET_HEADER_SCRELEASE_FENCE_SCOPE, HSA_PACKET_HEADER_WIDTH_SCRELEASE_FENCE_SCOPE);
+                } else if (op->getCommandKind() == hc::hcCommandKernel) {
+                    auto d = static_cast<HSADispatch*> (op.get());
+                    s << " acq=" << extractBits(d->getAql().header, HSA_PACKET_HEADER_SCACQUIRE_FENCE_SCOPE, HSA_PACKET_HEADER_WIDTH_SCACQUIRE_FENCE_SCOPE);
+                    s << ",rel=" << extractBits(d->getAql().header, HSA_PACKET_HEADER_SCRELEASE_FENCE_SCOPE, HSA_PACKET_HEADER_WIDTH_SCRELEASE_FENCE_SCOPE);
+                }
+                s  << " completion=0x" << std::hex << signal.handle << std::dec <<",value=" << v;
 
                 if (v != oldv) {
                     s << " <--TRANSITION";
@@ -972,25 +1007,25 @@ public:
         asyncOps.push_back(op);
 
         youngestCommandKind = op->getCommandKind();
+
+        if (DBFLAG(DB_QUEUE)) {
+            printAsyncOps(std::cerr);
+        }
     }
 
 
 
-    // Check the command kind for the upcoming command that will be sent to this queue
-    // if it differs from the youngest async op sent to the queue, we may need to insert additional synchronization.
-    // The function returns nullptr if no dependency is required. For example, back-to-back commands of same type
-    // are often implicitly synchronized so no dependency is required.
+    // Check upcoming command that will be sent to this queue against the youngest async op 
+    // in the queue to detect if any command dependency is required.
+    //
+    // The function returns nullptr if no dependency is required. For example, back-to-back commands
+    // of same type are often implicitly synchronized so no dependency is required.
+    //
     // Also different modes and optimizations can control when dependencies are added.
     // TODO - return reference if possible to avoid shared ptr overhead.
-    //
-    // releaseScope specifies the scope of the fence that should be
-    // applied before the new command executes. For some commands (ie Kernels, Barriers) this can be applied as part of the AQL
-    // packet, while for some commands (copies) this requires a separate Barrier packet.
-    std::shared_ptr<KalmarAsyncOp> detectStreamDeps(hcCommandKind newCommandKind, KalmarAsyncOp *copyOp, hc::memory_scope *releaseScope) {
+    std::shared_ptr<KalmarAsyncOp> detectStreamDeps(hcCommandKind newCommandKind, KalmarAsyncOp *copyOp) {
 
         assert (newCommandKind != hcCommandInvalid);
-
-        *releaseScope = hc::no_scope;
 
         if (!asyncOps.empty()) {
             assert (youngestCommandKind != hcCommandInvalid);
@@ -1020,14 +1055,7 @@ public:
                 if (FORCE_SIGNAL_DEP_BETWEEN_COPIES) {
                     needDep = true;
                 }
-            } else if ((isComputeQueueCommand(youngestCommandKind)) && 
-                       (newCommandKind == hcMemcpyDeviceToHost) &&
-                       _needs_sys_release) {
-                // AMD_HSA:  ROCM SDMA engines do not snoop GPU L2 caches so (may) need
-                // to add a system-scope release before issuing the SDMA:
-                *releaseScope = hc::system_scope;
             }
-
 
             if (needDep) {
                 DBOUT(DB_CMD, "command type changed " << getHcCommandKindString(youngestCommandKind) << "  ->  " << getHcCommandKindString(newCommandKind) << "\n") ;
@@ -1040,10 +1068,9 @@ public:
 
 
     void waitForStreamDeps (KalmarAsyncOp *newOp) {
-        hc::memory_scope releaseScope;
-        std::shared_ptr<KalmarAsyncOp> depOp = detectStreamDeps(newOp->getCommandKind(), newOp, &releaseScope);
+        std::shared_ptr<KalmarAsyncOp> depOp = detectStreamDeps(newOp->getCommandKind(), newOp);
         if (depOp != nullptr) {
-            EnqueueMarkerWithDependency(1, &depOp, HCC_OPT_FLUSH ? releaseScope : hc::system_scope);
+            EnqueueMarkerWithDependency(1, &depOp, HCC_OPT_FLUSH ? hc::no_scope : hc::system_scope);
         }
     }
 
@@ -1066,15 +1093,18 @@ public:
 
 
     bool isEmpty() override {
-        // Have to walk asyncOps since it can contain null pointers.
+        // Have to walk asyncOps since it can contain null pointers (if event is waited on and removed)
+        // Also not all commands contain signals.
         for (int i = 0; i < asyncOps.size(); ++i) {
             if (asyncOps[i] != nullptr) {
                 auto &asyncOp = asyncOps[i];
                 hsa_signal_t signal = *(static_cast <hsa_signal_t*> (asyncOp->getNativeHandle()));
-                hsa_signal_value_t v = hsa_signal_load_relaxed(signal);
-                if (v != 0) {
-                    return false;
-                }
+                if (signal.handle) {
+					hsa_signal_value_t v = hsa_signal_load_relaxed(signal);
+					if (v != 0) {
+						return false;
+					}
+				}
             }
         };
         return true;
@@ -1088,30 +1118,13 @@ public:
         //
 
   
-#if 0 
-        // TODO - can remove this when HCC_OPT_FLUSH=1
-        // If oldest OP doesn't have a signal, we need to enqueue 
-        // a barrier with a signal so host can tell when it finishes
-        for (int i = asyncOps.size()-1; i >= 0;  i--) {
-            auto asyncOp = asyncOps[i];
-            if (asyncOp != nullptr) {
-                hsa_signal_t signal =*(static_cast <hsa_signal_t*> (asyncOp->getNativeHandle()));
-                if (signal.handle==0) {
-                    // In the code below, this will be the first op waited on
-                    auto marker = EnqueueMarker();
-                    DBOUT("oldest AsyncOp has no signal - enqueue marker "<< marker<<"\n");
-                }
-                break;
-            }
-        }
-#endif
-        if (HCC_OPT_FLUSH && _needs_sys_release) {
+        if (HCC_OPT_FLUSH && nextSyncNeedsSysRelease()) {
 
             // In the loop below, this will be the first op waited on
             auto marker = EnqueueMarker(hc::system_scope);
 
+            DBOUT(DB_CMD, " Sys-release needed, enqueued marker to release written data " << marker<<"\n");
             
-            DBOUT(DB_MISC, " Sys-release needed, enqueue marker to release written data " << marker<<"\n");
         }
 
         DBOUT(DB_WAIT, *this << " wait, contents:\n");
@@ -1153,6 +1166,8 @@ public:
 
         waitForStreamDeps(dispatch);
 
+
+
         // dispatch the kernel
         // and wait for its completion
         dispatch->dispatchKernelWaitComplete();
@@ -1187,6 +1202,7 @@ public:
 
         waitForStreamDeps(dispatch);
 
+
         // dispatch the kernel
         status = dispatch->dispatchKernelAsyncFromOp();
         STATUS_CHECK(status, __LINE__);
@@ -1211,6 +1227,17 @@ public:
     }
 
 
+    void releaseToSystemIfNeeded() 
+    {
+        if (HCC_OPT_FLUSH && nextSyncNeedsSysRelease()) {
+            // In the loop below, this will be the first op waited on
+            auto marker= EnqueueMarker(hc::system_scope);
+
+            DBOUT(DB_CMD, " In waitForDependentAsyncOps, sys-release needed: enqueued marker to release written data " << marker<<"\n");
+        };
+    }
+
+
     // wait for dependent async operations to complete
     void waitForDependentAsyncOps(void* buffer) {
         auto&& dependentAsyncOpVector = bufferKernelMap[buffer];
@@ -1226,6 +1253,7 @@ public:
           }
         }
         dependentAsyncOpVector.clear();
+
     }
 
 
@@ -1250,6 +1278,7 @@ public:
 
     void read(void* device, void* dst, size_t count, size_t offset) override {
         waitForDependentAsyncOps(device);
+        releaseToSystemIfNeeded();
 
         // do read
         if (dst != device) {
@@ -1291,6 +1320,7 @@ public:
 
     void write(void* device, const void* src, size_t count, size_t offset, bool blocking) override {
         waitForDependentAsyncOps(device);
+        releaseToSystemIfNeeded(); // may not be needed.
 
         // do write
         if (src != device) {
@@ -1331,6 +1361,7 @@ public:
     void copy(void* src, void* dst, size_t count, size_t src_offset, size_t dst_offset, bool blocking) override {
         waitForDependentAsyncOps(dst);
         waitForDependentAsyncOps(src);
+        releaseToSystemIfNeeded();
 
         // do copy
         if (src != dst) {
@@ -1359,6 +1390,7 @@ public:
         dumpHSAAgentInfo(*static_cast<hsa_agent_t*>(getHSAAgent()), "map(...)");
 #endif
         waitForDependentAsyncOps(device);
+        releaseToSystemIfNeeded();
 
         // do map
         // as HSA runtime doesn't have map/unmap facility at this moment,
@@ -1580,16 +1612,32 @@ public:
 
             for (int i=0; i<count; i++) {
                 if (barrier->depAsyncOps[i] != nullptr) {
-                    // _needs_sys_release is set when a queue executes a kernel.  It indicates the queue needs to execute a release-to-system
-                    // before host can see the data - this is important for kernels which write non-coherent zero-copy host memory.
-                    // If creating a dependency on a queue which needs_system_release, copy that state here.   If the host then 
-                    // waits on the freshly created marker, runtime will issue a system-release fence.
-                    //
                     auto depHSAQueue = static_cast<Kalmar::HSAQueue *> (barrier->depAsyncOps[i]->getQueue());
-
-                    if (depHSAQueue->_needs_sys_release) {
-                        setNeedsSysRelease(true);
+                    // Same accelerator:
+                    // Inherit system-acquire and system-release bits from the queue which contains the op we are dependent on.
+                    //
+                    // _nextSyncNeedsSysRelease is set when a queue executes a kernel.  
+                    // It indicates the queue needs to execute a release-to-system
+                    // before host can see the data - this is important for kernels which write 
+                    // non-coherent zero-copy host memory.
+                    // If creating a dependency on a queue which needs_system_release, copy that 
+                    // state here.   If the host then waits on the freshly created marker, 
+                    // runtime will issue a system-release fence.
+                    if (depHSAQueue->nextKernelNeedsSysAcquire()) {
+                        setNextKernelNeedsSysAcquire(true);
                     }
+                    if (depHSAQueue->nextSyncNeedsSysRelease()) {
+                        setNextSyncNeedsSysRelease(true);
+                    }
+
+                    if (depHSAQueue->getHSADev() != this->getHSADev()) {
+                        // Cross-accelerator dependency case.
+                        // This requires system-scope acquire 
+                        // TODO - only needed if these are peer GPUs, could optimize with an extra check
+                        DBOUT(DB_WAIT, "  Adding cross-accelerator system-scope acquire\n");
+                        barrier->acquire_scope (hc::system_scope);
+                    } 
+
                 } else {
                     break;
                 }
@@ -1976,6 +2024,7 @@ public:
 
         // release all queues
         queues_mutex.lock();
+
         for (auto queue_iterator : queues) {
             if (!queue_iterator.expired()) {
                 auto queue = queue_iterator.lock();
@@ -2603,7 +2652,7 @@ void ReadHccEnv()
 
     GET_ENV_INT(HCC_DB, "Enable HCC trace debug");
 
-    GET_ENV_INT(HCC_OPT_FLUSH, "Perform cache flushes only at CPU sync boundaries (rather than after each kernel)");
+    GET_ENV_INT(HCC_OPT_FLUSH, "Perform system-scope acquire/release only at CPU sync boundaries (rather than after each kernel)");
     GET_ENV_INT(HCC_MAX_QUEUES, "Set max number of HSA queues this process will use.  accelerator_views will share the allotted queues and steal from each other as necessary");
 
 
@@ -2749,7 +2798,7 @@ public:
 
         if (signal.handle) {
 
-            DBOUT(DB_SIG, "  releaseSignal: " << signal.handle << " and restored value to 1\n");
+            DBOUT(DB_SIG, "  releaseSignal: 0x" << std::hex << signal.handle << std::dec << " and restored value to 1\n");
             hsa_status_t status = HSA_STATUS_SUCCESS;
 #if SIGNAL_POOL_SIZE > 0
             signalPoolMutex.lock();
@@ -3159,7 +3208,7 @@ inline std::ostream& operator<<(std::ostream& os, const HSADispatch & op)
 HSAQueue::HSAQueue(KalmarDevice* pDev, hsa_agent_t agent, execute_order order) : 
     KalmarQueue(pDev, queuing_mode_automatic, order), 
     rocrQueue(nullptr),
-    asyncOps(), opSeqNums(0), valid(true), _needs_sys_release(false), bufferKernelMap(), kernelBufferMap() 
+    asyncOps(), opSeqNums(0), valid(true), _nextSyncNeedsSysRelease(false), _nextKernelNeedsSysAcquire(false), bufferKernelMap(), kernelBufferMap() 
 {
     { 
         // Protect the HSA queue we can steal it.
@@ -3221,6 +3270,9 @@ void HSAQueue::dispose() override {
     DBOUT(DB_INIT, "HSAQueue::dispose() out\n");
 }
 
+Kalmar::HSADevice * HSAQueue::getHSADev() const { 
+    return static_cast<Kalmar::HSADevice*>(this->getDev()); 
+};
 
 hsa_queue_t *HSAQueue::acquireLockedRocrQueue() {
     DBOUT(DB_LOCK, " ptr:" << this << " lock...\n");
@@ -3446,12 +3498,7 @@ HSADispatch::HSADispatch(Kalmar::HSADevice* _device, Kalmar::KalmarQueue *queue,
     clearArgs();
 }
 
-#if 1
 
-static unsigned extractBits(unsigned v, unsigned pos, unsigned w)
-{
-    return (v >> pos) & ((1 << w) - 1);
-};
 
 
 static std::ostream& PrintHeader(std::ostream& os, uint16_t h)
@@ -3460,14 +3507,13 @@ static std::ostream& PrintHeader(std::ostream& os, uint16_t h)
     //os << std::hex << "("
        << "type=" << extractBits(h, HSA_PACKET_HEADER_TYPE, HSA_PACKET_HEADER_WIDTH_TYPE)
        << ",barrier=" << extractBits (h, HSA_PACKET_HEADER_BARRIER, HSA_PACKET_HEADER_WIDTH_BARRIER)
-       << ",acquire_fence=" << extractBits(h, HSA_PACKET_HEADER_SCACQUIRE_FENCE_SCOPE, HSA_PACKET_HEADER_WIDTH_SCACQUIRE_FENCE_SCOPE)
-       << ",release_fence=" << extractBits(h, HSA_PACKET_HEADER_SCRELEASE_FENCE_SCOPE, HSA_PACKET_HEADER_WIDTH_SCRELEASE_FENCE_SCOPE)
+       << ",acquire=" << extractBits(h, HSA_PACKET_HEADER_SCACQUIRE_FENCE_SCOPE, HSA_PACKET_HEADER_WIDTH_SCACQUIRE_FENCE_SCOPE)
+       << ",release=" << extractBits(h, HSA_PACKET_HEADER_SCRELEASE_FENCE_SCOPE, HSA_PACKET_HEADER_WIDTH_SCRELEASE_FENCE_SCOPE)
        << ")";
 
 
     return os;
 }
-#endif
 
 
 static std::ostream& operator<<(std::ostream& os, const hsa_kernel_dispatch_packet_t &aql)
@@ -3483,7 +3529,7 @@ static std::ostream& operator<<(std::ostream& os, const hsa_kernel_dispatch_pack
        << " completion_signal=" <<  aql.completion_signal.handle;
 
     const unsigned *aqlBytes = (unsigned*)&aql;
-     os << "\n              raw_aql=[" << std::hex << std::setfill('0'); 
+     os << "    raw_aql=[" << std::hex << std::setfill('0'); 
      for (int i=0; i<sizeof(aql)/sizeof(unsigned); i++) {
          os << " 0x" << std::setw(8) << aqlBytes[i];
      }
@@ -3504,7 +3550,7 @@ static std::ostream& operator<<(std::ostream& os, const hsa_barrier_and_packet_t
        << " completion_signal=" <<  aql.completion_signal.handle;
 
     const unsigned *aqlBytes = (unsigned*)&aql;
-     os << "              raw_aql=[" << std::hex << std::setfill('0'); 
+     os << "    raw_aql=[" << std::hex << std::setfill('0'); 
      for (int i=0; i<sizeof(aql)/sizeof(unsigned); i++) {
          os << " 0x" << std::setw(8) << aqlBytes[i];
      }
@@ -3621,9 +3667,8 @@ HSADispatch::dispatchKernel(hsa_queue_t* lockedHsaQueue, const void *hostKernarg
     q_aql->header = header;
 
     hsa_queue_store_write_index_relaxed(lockedHsaQueue, index + 1);
-
-    DBOUT(DB_AQL, "queue:" << lockedHsaQueue  <<  " dispatch kernel " << (kernel ? kernel->getKernelName():"<unknown>") << "\n");
-    DBOUT(DB_AQL, "dispatch_aql:" << *q_aql << "\n");
+    DBOUT(DB_AQL, " dispatch_aql into " << *hsaQueue() << "(" << lockedHsaQueue << ")\n");
+    DBOUTL(DB_AQL2, *q_aql);
 
     if (DBFLAG(DB_KERNARG)) { 
         // TODO, perhaps someday we could determine size of kernarg block here:
@@ -3690,6 +3735,13 @@ HSADispatch::dispatchKernelWaitComplete() {
         return HSA_STATUS_ERROR_INVALID_ARGUMENT;
     }
 
+    // WaitComplete dispatches need to ensure all data is released to system scope
+    // This ensures the op is trule "complete" before continuing.
+    // This WaitComplete path is used for AMP-style dispatches and may merit future review&optimization.
+    aql.header = 
+        ((HSA_FENCE_SCOPE_SYSTEM) << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
+        ((HSA_FENCE_SCOPE_SYSTEM) << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
+
     {
         // extract hsa_queue_t from HSAQueue
         hsa_queue_t* rocrQueue = hsaQueue()->acquireLockedRocrQueue();
@@ -3730,7 +3782,7 @@ HSADispatch::dispatchKernelAsync(const void *hostKernarg, int hostKernargSize, b
 
     // If HCC_OPT_FLUSH=1, we are not flushing to system scope after each command.
     // Set the flag so we remember to do so at next queue::wait() call.
-    hsaQueue()->setNeedsSysRelease(true);
+    hsaQueue()->setNextSyncNeedsSysRelease(true);
 
     {
         // extract hsa_queue_t from HSAQueue
@@ -3865,12 +3917,22 @@ HSADispatch::setLaunchConfiguration(int dims, size_t *globalDims, size_t *localD
 
     aql.setup = dims << HSA_KERNEL_DISPATCH_PACKET_SETUP_DIMENSIONS;
 
-    aql.header = HCC_OPT_FLUSH ? 
-        ((HSA_FENCE_SCOPE_AGENT) << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
-        ((HSA_FENCE_SCOPE_AGENT) << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE)
-        :
-        ((HSA_FENCE_SCOPE_SYSTEM) << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
-        ((HSA_FENCE_SCOPE_SYSTEM) << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
+    aql.header = 0;
+    if (HCC_OPT_FLUSH) {
+        if (hsaQueue()->nextKernelNeedsSysAcquire())  {
+            DBOUT( DB_CMD, "  kernel AQL packet adding system-scope acquire\n");
+            // Pick up system acquire if needed.
+            aql.header |= ((HSA_FENCE_SCOPE_SYSTEM) << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) ;
+            hsaQueue()->setNextKernelNeedsSysAcquire(false);
+        } else {
+            aql.header |= ((HSA_FENCE_SCOPE_AGENT) << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE);
+        }
+        aql.header |= ((HSA_FENCE_SCOPE_AGENT) << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
+    } else { 
+        aql.header = ((HSA_FENCE_SCOPE_SYSTEM) << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
+                     ((HSA_FENCE_SCOPE_SYSTEM) << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
+    }
+
 
     return HSA_STATUS_SUCCESS;
 }
@@ -3916,27 +3978,39 @@ HSABarrier::enqueueAsync(hc::memory_scope releaseScope) {
     //
    
     if (releaseScope == hc::system_scope) { 
-        hsaQueue()->setNeedsSysRelease(false);
+        hsaQueue()->setNextSyncNeedsSysRelease(false);
     };
 
-    // enqueue barrier packet
-    // TODO - can we remove acquire fence, this is barrier:
-    unsigned fenceBits;
-    if (releaseScope == hc::no_scope) {
-        fenceBits =
-            ((HSA_FENCE_SCOPE_NONE) << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
-            ((HSA_FENCE_SCOPE_NONE) << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
-    } else if (releaseScope == hc::accelerator_scope) {
-        fenceBits =
-            ((HSA_FENCE_SCOPE_NONE)  << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
-            ((HSA_FENCE_SCOPE_AGENT) << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
-    } else if (releaseScope == hc::system_scope) {
-        fenceBits =
-            ((HSA_FENCE_SCOPE_NONE)   << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
-            ((HSA_FENCE_SCOPE_SYSTEM) << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
-    } else {
-        STATUS_CHECK(HSA_STATUS_ERROR_INVALID_ARGUMENT, __LINE__);
+    // set acquire scope:
+    unsigned fenceBits = 0;
+
+    switch (_acquire_scope) {
+        case hc::no_scope:
+            fenceBits |= ((HSA_FENCE_SCOPE_NONE) << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE);
+            break;
+        case hc::accelerator_scope:
+            fenceBits |= ((HSA_FENCE_SCOPE_AGENT) << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE);
+            break;
+        case hc::system_scope:
+            fenceBits |= ((HSA_FENCE_SCOPE_SYSTEM) << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE);
+            break;
+        default:
+            STATUS_CHECK(HSA_STATUS_ERROR_INVALID_ARGUMENT, __LINE__);
     }
+
+    switch (releaseScope) {
+        case hc::no_scope:
+            fenceBits |= ((HSA_FENCE_SCOPE_NONE) << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
+            break;
+        case hc::accelerator_scope:
+            fenceBits |= ((HSA_FENCE_SCOPE_AGENT) << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
+            break;
+        case hc::system_scope:
+            fenceBits |= ((HSA_FENCE_SCOPE_SYSTEM) << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
+            break;
+        default:
+            STATUS_CHECK(HSA_STATUS_ERROR_INVALID_ARGUMENT, __LINE__);
+    };
 
     if (isDispatched) {
         STATUS_CHECK(HSA_STATUS_ERROR_INVALID_ARGUMENT, __LINE__);
@@ -3949,7 +4023,7 @@ HSABarrier::enqueueAsync(hc::memory_scope releaseScope) {
 
 
     // setup header
-    uint16_t header = HSA_PACKET_TYPE_BARRIER_AND << HSA_PACKET_HEADER_TYPE;
+    header = HSA_PACKET_TYPE_BARRIER_AND << HSA_PACKET_HEADER_TYPE;
 #ifndef AMD_HSA
     // AMD implementation does not require barrier bit on barrier packet and executes a little faster without it set.
     header |= (1 << HSA_PACKET_HEADER_BARRIER);
@@ -3985,8 +4059,8 @@ HSABarrier::enqueueAsync(hc::memory_scope releaseScope) {
         // Set header last:
         barrier->header = header;
 
-        DBOUT(DB_AQL, "queue:" << rocrQueue << ".op#" << getSeqNum() << " dispatch barrier depCount=" << depCount << "\n");
-        DBOUT(DB_AQL, "barrier_aql:" <<  *barrier << "\n");
+        DBOUTL(DB_AQL, " barrier_aql  into " << *hsaQueue() << "(" << rocrQueue << ")");
+        DBOUTL(DB_AQL2, *barrier);
 
 
         // Increment write index and ring doorbell to dispatch the kernel
@@ -4155,16 +4229,30 @@ hsa_status_t HSACopy::hcc_memory_async_copy(Kalmar::hcCommandKind copyKind, cons
      *     3.   Launch a Blit kernel if the src agent is a GPU AND dst agent is a GPU.
      */
 
+    DBOUT(DB_AQL, "hsa_amd_memory_async_copy(" 
+                   <<  "dstPtr=" << dstPtr << ",0x" << std::hex << dstAgent.handle
+                   << ",srcPtr=" << srcPtr << ",0x" << std::hex << srcAgent.handle
+                   << ",sizeBytes=" << std::dec << sizeBytes 
+                   << ",depSignalCnt=" << depSignalCnt << "," << depSignals << ","
+                   << std::hex << completion_signal.handle << "\n" << std::dec);
 
     status = hsa_amd_memory_async_copy(dstPtr, dstAgent, srcPtr, srcAgent, sizeBytes, depSignalCnt, depSignals, completion_signal);
     if (status != HSA_STATUS_SUCCESS) {
         throw Kalmar::runtime_exception("hsa_amd_memory_async_copy error", status);
     }
 
+    
+
     if (HCC_CHECK_COPY) {
         hsa_signal_wait_acquire(completion_signal, HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX, HSA_WAIT_STATE_BLOCKED);
         checkCopy(dstPtr, srcPtr, sizeBytes);
     }
+
+    // Next kernel needs to acquire the result of the copy.
+    // This holds true for any copy direction, since host memory can also be cached on this GPU. 
+    DBOUT( DB_CMD, "  H2D copy setNextKernelNeedsSysAcquire(true)\n");
+    // HSA memory copy requires a system-scope acquire before the next kernel command - set flag here so we remember:
+    hsaQueue()->setNextKernelNeedsSysAcquire(true);
 
     return status;
 }
@@ -4215,8 +4303,9 @@ HSACopy::enqueueAsyncCopyCommand(const Kalmar::HSADevice *copyDevice, const hc::
         int depSignalCnt = 0;
         hsa_signal_t depSignal;
         setCommandKind (resolveMemcpyDirection(srcPtrInfo._isInDeviceMem, dstPtrInfo._isInDeviceMem));
-        hc::memory_scope releaseScope;
-        depAsyncOp = hsaQueue()->detectStreamDeps(this->getCommandKind(), this, &releaseScope);
+
+        auto releaseScope = (hsaQueue()->nextSyncNeedsSysRelease()) ? hc::system_scope : hc::no_scope;
+        depAsyncOp = hsaQueue()->detectStreamDeps(this->getCommandKind(), this);
 
         // We need to ensure the copy waits for preceding commands the HCC queue to complete, if those commands exist.
         // The copy has to be set so that it depends on the completion_signal of the youngest command in the queue.
@@ -4226,7 +4315,8 @@ HSACopy::enqueueAsyncCopyCommand(const Kalmar::HSADevice *copyDevice, const hc::
             // Normally we can use the input signal to hsa_amd_memory_async_copy to ensure the copy waits for youngest op.
             // However, two cases require special handling:
             //    - the youngest op may not have a completion signal - this is optional for kernel launch commands.
-            //    - we may need a system-scope fence.
+            //    - we may need a system-scope fence. This is true if any kernels have been executed in this queue, or 
+            //      in streams that we depend on.
             // For both of these cases, we create an additional barrier packet in the source, and attach the desired fence.
             // Then we make the copy depend on the signal written by this command.
             if ((depSignal.handle == 0x0) || (releaseScope != hc::no_scope)) {
@@ -4397,7 +4487,7 @@ HSACopy::syncCopyExt(hc::hcCommandKind copyDir, const hc::AmPointerInfo &srcPtrI
 
         hsa_signal_store_relaxed(signal, 1);
 
-        DBOUT(DB_CMD, "HSACopy::syncCopy(), invoke hsa_amd_memory_async_copy() with dstAgent=%lu srcAgent=%lu\n");
+        DBOUT(DB_CMD, "HSACopy::syncCopy(), invoke hsa_amd_memory_async_copy()\n");
 
         if (copyDevice == nullptr) {
             throw Kalmar::runtime_exception("Null copyDevice reached call to hcc_memory_async_copy", -1);
