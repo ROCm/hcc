@@ -925,6 +925,7 @@ struct rw_info
             synchronize(false);
         if (curr) {
             // Wait issues a system-scope release:
+            // Need to make sure we write-back cache contents before deallocating the memory those writes might eventually touch
             curr->wait();
         }
         auto cpu_dev = get_cpu_queue()->getDev();

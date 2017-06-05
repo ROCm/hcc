@@ -8,7 +8,7 @@
 // loop to deliberately slow down kernel execution
 #define LOOP_COUNT (10240)
 
-#define TEST_DEBUG (1)
+#define TEST_DEBUG (0)
 
 /// test implicit synchronization of array_view and kernel dispatches
 ///

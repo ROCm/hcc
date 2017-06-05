@@ -263,6 +263,7 @@ int main()
         singleAccelerator(numElements);
     }
 
+    // TODO - need to re-enable multi-GPU tests:
     if (0) {
         multiAccelerator(numElements);
     }

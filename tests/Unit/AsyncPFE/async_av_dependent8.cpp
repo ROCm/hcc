@@ -8,7 +8,7 @@
 // loop to deliberately slow down kernel execution
 #define LOOP_COUNT (10240)
 
-#define TEST_DEBUG (1)
+#define TEST_DEBUG (0)
 
 // Number of async-ops changes if flush-opt is enabled since we may need to add extra ops in some places.
 #define HCC_OPT_FLUSH 1

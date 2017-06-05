@@ -508,7 +508,7 @@ private:
     int depCount;
 
 public:
-    uint16_t  header;
+    uint16_t  header;  // stores header of AQL packet.  Preserve so we can see flushes associated with this barrier.
     hc::memory_scope _acquire_scope;
 
     // array of all operations that this op depends on.
