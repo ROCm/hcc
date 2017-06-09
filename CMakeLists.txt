@@ -218,8 +218,8 @@ add_version_info_from_git(KALMAR_VERSION_STRING
   KALMAR_VERSION_PATCH KALMAR_SDK_COMMIT KALMAR_FRONTEND_COMMIT KALMAR_BACKEND_COMMIT)
 
 # set default installation path
+set(INSTALL_DIR_NAME "hcc-${KALMAR_VERSION_MAJOR}.${KALMAR_VERSION_MINOR}")
 if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT AND CMAKE_INSTALL_PREFIX MATCHES "/usr/local")
-  set(INSTALL_DIR_NAME "hcc-${KALMAR_VERSION_MAJOR}.${KALMAR_VERSION_MINOR}")
   set(CMAKE_INSTALL_PREFIX "/opt/rocm/${INSTALL_DIR_NAME}" CACHE PATH "Default installation path of hcc" FORCE)
 endif ()
 MESSAGE("Installation path: ${CMAKE_INSTALL_PREFIX}")
@@ -229,6 +229,7 @@ set(CPACK_SET_DESTDIR ON CACHE BOOL "Installer package will install hcc to CMAKE
 if (CPACK_SET_DESTDIR)
   set(HCC_PACKAGE_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX})
 else (CPACK_SET_DESTDIR)
+  set(CPACK_PACKAGING_INSTALL_PREFIX "/opt/rocm/${INSTALL_DIR_NAME}" CACHE PATH "Default installation path of hcc installer package") 
   set(HCC_PACKAGE_INSTALL_PREFIX ${CPACK_PACKAGING_INSTALL_PREFIX})
 endif (CPACK_SET_DESTDIR)
 MESSAGE("Installer package installation path: ${HCC_PACKAGE_INSTALL_PREFIX}")
@@ -539,22 +540,18 @@ set(CPACK_PACKAGE_VERSION_PATCH ${KALMAR_VERSION_PATCH})
 
 set(PACKAGE_DESCRIPTION "HCC: An Open Source, Optimizing C++ Compiler for Heterogeneous Compute")
 
-set(OFFICIAL_RELEASE_BUILD 0)
+set(OFFICIAL_RELEASE_BUILD 1)
 
-option(CPACK_GENERATOR "Specify the installer package generator")
-
-# If no CPACK generator was specified, then set the default generator according to the distro 
-if (NOT CPACK_GENERATOR)
-    if ( "${DISTRO_ID}" MATCHES "ubuntu" )
-    set(CPACK_GENERATOR "DEB")
-  elseif ("${DISTRO_ID}" MATCHES "fedora")
-    set(CPACK_GENERATOR "RPM")
-  else ()
-    # generate a tarball for unknown DISTRO_ID
-    set(CPACK_GENERATOR "TGZ")
-  endif ()
-endif (NOT CPACK_GENERATOR)
-
+# Default to generate a package appropriate for a distro; users override using command line with -D
+# -D writes variables into the cmake cache, and setting CACHE variables won't overwrite variables already in the CACHE
+if( "${DISTRO_ID}" MATCHES "ubuntu" )
+  set( CPACK_GENERATOR "DEB" CACHE STRING "cpack list: 7Z, DEB, IFW, NSIS, NSIS64, RPM, STGZ, TBZ2, TGZ, TXZ, TZ, ZIP" )
+elseif ("${DISTRO_ID}" MATCHES "fedora")
+  set( CPACK_GENERATOR "RPM" CACHE STRING "cpack list: 7Z, DEB, IFW, NSIS, NSIS64, RPM, STGZ, TBZ2, TGZ, TXZ, TZ, ZIP" )
+else()
+  # generate a tarball for unknown DISTRO_ID
+  set( CPACK_GENERATOR "TGZ" CACHE STRING "cpack list: 7Z, DEB, IFW, NSIS, NSIS64, RPM, STGZ, TBZ2, TGZ, TXZ, TZ, ZIP" )
+endif ()
 
 # DEB package settings
 set(CPACK_DEBIAN_PACKAGE_DESCRIPTION ${PACKAGE_DESCRIPTION})
@@ -564,7 +561,7 @@ set(CPACK_DEBIAN_PACKAGE_SECTION "devel")
 set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA
   "${PROJECT_BINARY_DIR}/packaging/debian/postinst;${PROJECT_BINARY_DIR}/packaging/debian/prerm")
 
-set(HCC_GENERAL_DEBIAN_DEP "g++-multilib, gcc-multilib, findutils, libelf1, libpci3, file")
+set(HCC_GENERAL_DEBIAN_DEP "g++-multilib, gcc-multilib, findutils, libelf1, libpci3, file, libunwind8")
 
 if ( USE_LIBCXX )
   set(HCC_LIBCXX_DEBIAN_DEP ", libc++1, libc++-dev, libc++abi1, libc++abi-dev")
@@ -577,9 +574,9 @@ endif( USE_LIBCXX )
 if (OFFICIAL_RELEASE_BUILD)
   if (HCC_INTEGRATE_ROCDL)
     set(HCC_ROCR_DEP ", hsa-rocr-dev, hsa-ext-rocr-dev")
-  else (NOT HCC_INTEGRATE_ROCDL)
+  else (HCC_INTEGRATE_ROCDL)
     set(HCC_ROCR_DEP ", hsa-rocr-dev, hsa-ext-rocr-dev, rocm-device-libs")
-  endif(NOT HCC_INTEGRATE_ROCDL)
+  endif(HCC_INTEGRATE_ROCDL)
 else (OFFICIAL_RELEASE_BUILD)
   set(HCC_ROCR_DEP "")
 endif (OFFICIAL_RELEASE_BUILD)
@@ -594,7 +591,7 @@ set(CPACK_RPM_PRE_UNINSTALL_SCRIPT_FILE "${PROJECT_BINARY_DIR}/packaging/debian/
 # disable automatic shared libraries dependency detection
 set(CPACK_RPM_PACKAGE_AUTOREQ 0)
 
-set(HCC_GENERAL_RPM_DEP "findutils, elfutils-libelf, pciutils-libs, file, pth")
+set(HCC_GENERAL_RPM_DEP "findutils, elfutils-libelf, pciutils-libs, file, pth, libunwind")
 set(CPACK_RPM_PACKAGE_REQUIRES "${HCC_GENERAL_RPM_DEP} ${HCC_ROCR_DEP}" )
 
 set(CPACK_COMPONENTS_ALL compiler)

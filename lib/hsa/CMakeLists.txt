@@ -3,6 +3,7 @@
 ####################
 if (HAS_ROCM EQUAL 1)
 add_mcwamp_library_hsa(mcwamp_hsa mcwamp_hsa.cpp unpinned_copy_engine.cpp)
+target_link_libraries(mcwamp_hsa  unwind)
 add_mcwamp_library_hc_am(hc_am hc_am.cpp)
 install(TARGETS mcwamp_hsa hc_am
     EXPORT hcc-targets
@@ -24,4 +25,3 @@ if (CODEXL_ACTIVITY_LOGGER_LIBRARY)
   target_link_libraries(hc_am ${CODEXL_ACTIVITY_LOGGER_LIBRARY}/libCXLActivityLogger.so)
 endif (CODEXL_ACTIVITY_LOGGER_LIBRARY)
 endif (USE_CODEXL_ACTIVITY_LOGGER EQUAL 1)
-

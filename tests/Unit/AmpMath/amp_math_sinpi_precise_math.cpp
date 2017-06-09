@@ -39,12 +39,13 @@ bool test() {
   });
 
   for(unsigned i = 0; i < vecSize; i++) {
-    gb[i] = precise_math::sinpi(ga[i]);
+    gb[i] = precise_math::sin(static_cast<_Tp>(M_PI) * ga[i]);
   }
 
   _Tp sum = 0.0;
   for(unsigned i = 0; i < vecSize; i++) {
-    sum += precise_math::fabs(precise_math::fabs(gc[i]) - precise_math::fabs(gb[i]));
+    sum += precise_math::fabs(
+        precise_math::fabs(gc[i]) - precise_math::fabs(gb[i]));
   }
   return (sum < ERROR_THRESHOLD);
 }

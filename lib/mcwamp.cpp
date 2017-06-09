@@ -15,6 +15,7 @@
 #include <mutex>
 
 #include "mcwamp_impl.hpp"
+#include "hc_rt_debug.h"
 
 #include <dlfcn.h>
 
@@ -257,6 +258,7 @@ static inline uint64_t Read8byteIntegerFromBuffer(const char *data, size_t pos) 
 }
 
 #define RUNTIME_ERROR(val, error_string, line) { \
+  hc::print_backtrace(); \
   printf("### HCC RUNTIME ERROR: %s at file:%s line:%d\n", error_string, __FILE__, line); \
   exit(val); \
 }
@@ -355,7 +357,8 @@ void BuildProgram(KalmarQueue* pQueue) {
 
 // used in parallel_for_each.h
 void *CreateKernel(std::string s, KalmarQueue* pQueue) {
-  return pQueue->getDev()->CreateKernel(s.c_str());
+  // TODO - should create a HSAQueue:: CreateKernel member function that creates and returns a dispatch.
+  return pQueue->getDev()->CreateKernel(s.c_str(), pQueue);
 }
 
 void PushArg(void *k_, int idx, size_t sz, const void *s) {

@@ -21,12 +21,17 @@ macro(amp_target name )
   target_include_directories(${name} SYSTEM PRIVATE ${GTEST_INC_DIR} ${LIBCXX_INC_DIR})
 	target_include_directories(${name} PRIVATE ${MCWAMP_INC_DIR})
   target_include_directories(${name} SYSTEM INTERFACE $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include>)
- 
-  if (USE_LIBCXX)
+    if (USE_LIBCXX)
     target_include_directories(${name} SYSTEM PUBLIC ${LIBCXX_HEADER})
     target_compile_options(${name} PUBLIC -stdlib=libc++)
   endif (USE_LIBCXX)
 	target_compile_options(${name} PUBLIC -std=c++amp -fPIC)
+
+  # Enable debug line info only if it's a release build and HCC_RUNTIME_DEBUG is OFF
+  # Otherwise, -gline-tables-only would override other existing debug flags
+  if ((NOT HCC_RUNTIME_DEBUG) AND ("${CMAKE_BUILD_TYPE}" STREQUAL "Release"))
+	  target_compile_options(${name} PUBLIC -gline-tables-only)
+  endif ((NOT HCC_RUNTIME_DEBUG) AND ("${CMAKE_BUILD_TYPE}" STREQUAL "Release"))
 endmacro(amp_target name )
 
 ####################
@@ -37,6 +42,7 @@ macro(add_mcwamp_library name )
   add_compile_options(-std=c++11)
   add_library( ${name} ${ARGN} )
   amp_target(${name})
+  target_link_libraries(${name} unwind)
   # LLVM and Clang shall be compiled beforehand
   add_dependencies(${name} llvm-link opt clang rocdl)
 endmacro(add_mcwamp_library name )

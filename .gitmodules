@@ -17,4 +17,4 @@
 [submodule "rocdl"]
 	path = rocdl
 	url = http://github.com/RadeonOpenCompute/ROCm-Device-Libs.git
-        branch = amd-hcc-alloca
+        branch = master

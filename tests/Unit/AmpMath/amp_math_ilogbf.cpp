@@ -33,7 +33,9 @@ int main(void) {
 
   float sum = 0;
   for(unsigned i = 0; i < vecSize; i++) {
-    sum += fast_math::fabs(fast_math::fabs(gc[i]) - fast_math::fabs(gb[i]));
+    sum += fast_math::fabs(
+        fast_math::fabs(static_cast<float>(gc[i])) -
+        fast_math::fabs(static_cast<float>(gb[i])));
   }
   return (sum > 0.1f);
 }

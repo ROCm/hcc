@@ -79,7 +79,7 @@ bool test() {
 
   // create a barrier packet
   hc::accelerator_view av = hc::accelerator().get_default_view();
-  hc::completion_future fut5 = av.create_blocking_marker({fut0, fut1, fut2, fut3, fut4});
+  hc::completion_future fut5 = av.create_blocking_marker({fut0, fut1, fut2, fut3, fut4}, hc::system_scope);
 
   void* nativeHandle0 = fut0.get_native_handle();
   void* nativeHandle1 = fut1.get_native_handle();

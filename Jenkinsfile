@@ -7,7 +7,9 @@ properties([buildDiscarder(logRotator(
     artifactNumToKeepStr: '',
     daysToKeepStr: '',
     numToKeepStr: '10')),
-  disableConcurrentBuilds()])
+    disableConcurrentBuilds(),
+    [$class: 'CopyArtifactPermissionProperty', projectNames: '*']
+  ])
 
 node ('rocmtest')
 {
@@ -15,8 +17,10 @@ node ('rocmtest')
   def workspace_dir_abs = pwd()
   def build_dir_debug_rel = "build/debug"
   def build_dir_release_rel = "build/release"
+  def build_dir_cmake_tests_rel = "build/cmake-tests"
   def build_dir_debug_abs = "${workspace_dir_abs}/${build_dir_debug_rel}"
   def build_dir_release_abs = "${workspace_dir_abs}/${build_dir_release_rel}"
+  def build_dir_cmake_tests_abs = "${workspace_dir_abs}/${build_dir_cmake_tests_rel}"
 
   // The client workspace is shared with the docker container
   stage('HCC Checkout')
@@ -24,18 +28,11 @@ node ('rocmtest')
     deleteDir( )
     checkout scm
 
-    // submodule update may not be updating fresh files from submodules
-    // sh 'git submodule update --init'
+    // list the commit hash of the submodules
+    sh 'git ls-tree HEAD | grep commit'
 
-    // Manually clone all submodules to get shallow copies to speed up checkout time
-    sh  '''
-        git clone --depth 1 -b clang_tot_upgrade https://github.com/RadeonOpenCompute/hcc-clang-upgrade.git clang
-        git clone --depth 1 -b amd-hcc https://github.com/RadeonOpenCompute/llvm.git compiler
-        git clone --depth 1 -b amd-hcc https://github.com/RadeonOpenCompute/lld.git lld
-        git clone --depth 1 -b amd-hcc https://github.com/RadeonOpenCompute/compiler-rt.git compiler-rt
-        git clone --depth 1 -b clang_tot_upgrade https://github.com/RadeonOpenCompute/clang-tools-extra.git clang/tools/extra
-        git clone --depth 1 -b remove-promote-change-addr-space https://github.com/RadeonOpenCompute/ROCm-Device-Libs.git rocdl
-        '''
+    // clone the submodules
+    sh 'git submodule update --init'
   }
 
   def hcc_build_image = null
@@ -68,6 +65,7 @@ node ('rocmtest')
           cd ${build_dir_release_rel}
           cmake -B${build_dir_release_abs} \
             -DCMAKE_INSTALL_PREFIX=${hcc_install_prefix} \
+            -DCPACK_SET_DESTDIR=OFF \
             -DCMAKE_BUILD_TYPE=${build_config} \
             -DHSA_AMDGPU_GPU_TARGET="gfx701;gfx803" \
             ../..
@@ -82,7 +80,12 @@ node ('rocmtest')
           // install from debian packages because pre/post scripts set up softlinks install targets don't
           sh  """#!/usr/bin/env bash
               cd ${build_dir_release_abs}
-              echo Do reasonable build sanity tests here
+              make install
+              mkdir -p ${build_dir_cmake_tests_abs}
+              cd ${build_dir_cmake_tests_abs}
+              CXX=${hcc_install_prefix}/bin/hcc cmake ${workspace_dir_abs}/cmake-tests
+              make
+              ./cmake-test
               """
           // junit "${build_dir_release_abs}/*.xml"
         }
@@ -92,6 +95,7 @@ node ('rocmtest')
       {
         sh "cd ${build_dir_release_abs}; make package"
         archiveArtifacts artifacts: "${build_dir_release_rel}/*.deb", fingerprint: true
+        // archiveArtifacts artifacts: "${build_dir_release_rel}/*.rpm", fingerprint: true
       }
     }
   }
@@ -109,13 +113,21 @@ node ('rocmtest')
       //  We copy the docker files into the bin directory where the .deb lives so that it's a clean
       //  build everytime
       sh "cp -r ${workspace_dir_abs}/docker/* .; cp ${build_dir_release_abs}/*.deb ."
-      hcc_build_image = docker.build( "${artifactory_org}/${image_name}:${env.BUILD_NUMBER}", "-f dockerfile-${image_name} ." )
+      hcc_install_image = docker.build( "${artifactory_org}/${image_name}:${env.BUILD_NUMBER}", "-f dockerfile-${image_name} ." )
     }
 
-    docker.withRegistry('http://compute-artifactory:5001', 'artifactory-cred' )
+    // The connection to artifactory can fail sometimes, but this should not be treated as a build fail
+    try
     {
-      hcc_build_image.push( "${env.BUILD_NUMBER}" )
-      hcc_build_image.push( 'latest' )
+      docker.withRegistry('http://compute-artifactory:5001', 'artifactory-cred' )
+      {
+        hcc_install_image.push( "${env.BUILD_NUMBER}" )
+        hcc_install_image.push( 'latest' )
+      }
+    }
+    catch( err )
+    {
+      currentBuild.result = 'SUCCESS'
     }
 
     // Lots of images with tags are created above; no apparent way to delete images:tags with docker global variable

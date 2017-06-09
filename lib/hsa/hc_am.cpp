@@ -1,6 +1,7 @@
 #include "hc_am.hpp"
 
 #include <cstdint>
+#include <iomanip>
 #include <hsa/hsa.h>
 #include <hsa/hsa_ext_amd.h>
 
@@ -56,15 +57,64 @@ struct AmMemoryRangeCompare {
 };
 
 
+
+// width to use when printing pointers:
+const int PTRW=14;
+
+void printShortPointerInfo(std::ostream &os, const hc::AmPointerInfo &ap)
+{
+    using namespace std;
+    os << "#" << setw(6)  << ap._allocSeqNum
+       << " " << setw(PTRW) << ap._hostPointer 
+       << " " << setw(PTRW) << ap._devicePointer
+       << " " << setw(12) <<  ap._sizeBytes
+       << " " << setw(8) << fixed << setprecision(2) << (double)ap._sizeBytes/1024.0/1024.0
+       << (ap._isInDeviceMem ? " DEV " : " HOST")
+       << (ap._isAmManaged ? " ALLOC" : " REGIS")
+       << " " << setw(5) << ap._appId 
+       << " " << hex << setw(8) << ap._appAllocationFlags << dec
+       ;
+}
+
+
+void printRocrPointerInfo(std::ostream &os, const void *ptr)
+{
+    hsa_amd_pointer_info_t info;
+    hsa_status_t hsa_status;
+    bool isLocked = false;
+    info.size = sizeof(info);
+
+    uint32_t peerAgentCnt=0;
+    hsa_agent_t * peerAgents = nullptr;
+    hsa_status = hsa_amd_pointer_info(const_cast<void*> (ptr), &info, malloc, &peerAgentCnt, &peerAgents);
+
+    if(hsa_status == HSA_STATUS_SUCCESS) {
+
+        for (uint32_t i=0; i<peerAgentCnt; i++) {
+            os << " 0x" << std::hex << peerAgents[i].handle ;
+               //<< "(" << hc::accelerator::get_seqnum_from_agent(peerAgents[i]) << ")" << std::dec;
+        }
+
+        if (peerAgents) {
+            free (peerAgents);
+        }
+    }
+    os << std::dec;
+}
+
+
 std::ostream &operator<<(std::ostream &os, const hc::AmPointerInfo &ap)
 {
     os << "allocSeqNum:" << ap._allocSeqNum
        << " hostPointer:" << ap._hostPointer << " devicePointer:"<< ap._devicePointer << " sizeBytes:" << ap._sizeBytes
        << " isInDeviceMem:" << ap._isInDeviceMem  << " isAmManaged:" << ap._isAmManaged 
-       << " appId:" << ap._appId << " appAllocFlags:" << ap._appAllocationFlags;
+       << " appId:" << ap._appId << " appAllocFlags:" << ap._appAllocationFlags
+       << std::left << " peers:" << std::right
+       ;
+
+    printRocrPointerInfo(os, ap._isInDeviceMem ? ap._devicePointer : ap._hostPointer);
     return os;
 }
-
 
 //-------------------------------------------------------------------------------------------------
 // This structure tracks information for each pointer.
@@ -205,25 +255,30 @@ auto_voidp am_alloc(size_t sizeBytes, hc::accelerator &acc, unsigned flags)
                alloc_region = static_cast<hsa_amd_memory_pool_t*>(acc.get_hsa_am_region());
             }
 
-            if (alloc_region->handle != -1) {
+            if (alloc_region && alloc_region->handle != -1) {
 
                 hsa_status_t s1 = hsa_amd_memory_pool_allocate(*alloc_region, sizeBytes, 0, &ptr);
 
                 if (s1 != HSA_STATUS_SUCCESS) {
                     ptr = NULL;
                 } else {
-                    if (flags & amHostPinned) {
-                      s1 = hsa_amd_agents_allow_access(1, hsa_agent, NULL, ptr);
-                      if (s1 != HSA_STATUS_SUCCESS) {
-                        hsa_amd_memory_pool_free(ptr);
-                        ptr = NULL;
-                      }
-                      else {
-                        hc::AmPointerInfo ampi(ptr/*hostPointer*/, ptr /*devicePointer*/, sizeBytes, acc, false/*isDevice*/, true /*isAMManaged*/);
-                        g_amPointerTracker.insert(ptr,ampi);
-                      }
-                    }
-                    else {
+                    if (flags & (amHostPinned|amHostCoherent)) {
+                        if (s1 != HSA_STATUS_SUCCESS) {
+                            hsa_amd_memory_pool_free(ptr);
+                            ptr = NULL;
+                        } else {
+                            hc::AmPointerInfo ampi(ptr/*hostPointer*/, ptr /*devicePointer*/, sizeBytes, acc, false/*isDevice*/, true /*isAMManaged*/);
+                            g_amPointerTracker.insert(ptr,ampi);
+
+                            // Host memory is always mapped to all possible peers:
+                            auto accs = hc::accelerator::get_all();
+                            auto s2 = am_map_to_peers(ptr, accs.size(), accs.data());
+                            if (s2 != AM_SUCCESS) {
+                                hsa_amd_memory_pool_free(ptr);
+                                ptr = NULL;
+                            }
+                        }
+                    } else {
                         hc::AmPointerInfo ampi(NULL/*hostPointer*/, ptr /*devicePointer*/, sizeBytes, acc, true/*isDevice*/, true /*isAMManaged*/);
                         g_amPointerTracker.insert(ptr,ampi);
                     }
@@ -241,12 +296,13 @@ am_status_t am_free(void* ptr)
     am_status_t status = AM_SUCCESS;
 
     if (ptr != NULL) {
-        // See also tracker::reset which can free memory.
-        hsa_amd_memory_pool_free(ptr);
 
         int numRemoved = g_amPointerTracker.remove(ptr) ;
         if (numRemoved == 0) {
             status = AM_ERROR_MISC;
+        } else {
+            // See also tracker::reset which can free memory.
+            hsa_amd_memory_pool_free(ptr);
         }
     }
     return status;
@@ -322,7 +378,7 @@ am_status_t am_memtracker_remove(void* ptr)
 //---
 void am_memtracker_print(void *targetAddress)
 {
-    const char *targetAddressP = static_cast<const char *> (targetAddressP);
+    const char *targetAddressP = static_cast<const char *> (targetAddress);
     std::ostream &os = std::cerr;
 
     uint64_t beforeD = std::numeric_limits<uint64_t>::max() ;
@@ -331,34 +387,60 @@ void am_memtracker_print(void *targetAddress)
     auto closestAfter  = g_amPointerTracker.end();
     bool foundMatch = false;
 
-    //g_amPointerTracker.print(std::cerr);
-    for (auto iter = g_amPointerTracker.readerLockBegin() ; iter != g_amPointerTracker.end(); iter++) {
-        const auto basePointer = static_cast<const char*> (iter->first._basePointer);
-        const auto endPointer = static_cast<const char*> (iter->first._endPointer);
-        if ((targetAddressP != nullptr) && (targetAddressP >= basePointer) && (targetAddressP < endPointer)) {
-            foundMatch = true;
-            os << "-->" ;
-        } else {
-            os << "   " ;
-            if ((targetAddressP < basePointer) && (basePointer - targetAddressP < beforeD)) {
-                beforeD = (basePointer - targetAddressP);
-                closestBefore = iter;
-            }
-            if ((endPointer > targetAddressP) && (targetAddressP - endPointer < afterD)) {
-                afterD = (targetAddressP - endPointer);
-                closestAfter = iter;
-            }
-        };
-        os << iter->first._basePointer << "-" << iter->first._endPointer << "::  ";
-        os << iter->second << std::endl;
-    }
 
-    if (!foundMatch) { 
-        if (closestBefore != g_amPointerTracker.end()) {
-            os << "closest before: " << beforeD << " bytes before base of: " << closestBefore->second << std::endl;
+    if (targetAddress) {
+        for (auto iter = g_amPointerTracker.readerLockBegin() ; iter != g_amPointerTracker.end(); iter++) {
+            const auto basePointer = static_cast<const char*> (iter->first._basePointer);
+            const auto endPointer = static_cast<const char*> (iter->first._endPointer);
+            if ((targetAddressP >= basePointer) && (targetAddressP < endPointer)) {
+                ptrdiff_t offset = targetAddressP - basePointer;
+                os << "db: memtracker found pointer:" << targetAddress << " offset:" << offset << " bytes inside this allocation:\n";
+                os << "   " << iter->first._basePointer << "-" << iter->first._endPointer << "::  ";
+                os << iter->second << std::endl;
+                foundMatch = true;
+                break;
+            } else {
+                if ((targetAddressP < basePointer) && (basePointer - targetAddressP < beforeD)) {
+                    beforeD = (basePointer - targetAddressP);
+                    closestBefore = iter;
+                }
+                if ((targetAddressP > endPointer) && (targetAddressP - endPointer < afterD)) {
+                    afterD = (targetAddressP - endPointer);
+                    closestAfter = iter;
+                }
+            };
+
         }
-        if (closestAfter != g_amPointerTracker.end()) {
-            os << "closest after: " << afterD << "bytes after end of " << closestAfter->second << std::endl ;
+
+        if (!foundMatch) {
+            os << "db: memtracker did not find pointer:" << targetAddress << ".  However, it is closest to the following allocations:\n";
+            if (closestBefore != g_amPointerTracker.end()) {
+                os << "db: closest before: " << beforeD << " bytes before base of: " << closestBefore->second << std::endl;
+            }
+            if (closestAfter != g_amPointerTracker.end()) {
+                os << "db: closest after: " << afterD << " bytes after end of " << closestAfter->second << std::endl ;
+            }
+        }
+    } else {
+        using namespace std;
+        os <<  setw(PTRW) << "base" << "-" << setw(PTRW) << "end" << ": ";
+        os  << setw(6+1) << "#SeqNum"
+            << setw(PTRW+1) << "HostPtr"
+            << setw(PTRW+1) << "DevPtr"
+            << setw(12+1) << "SizeBytes"
+            << setw(8+1) << "SizeMB"
+            << setw(5) << "Dev?"
+            << setw(6) << "Reg?"
+            << setw(6) << " AppId"
+            << setw(7) << " AppFlags"
+            << setw(12) << left << " Peers" << right
+            << "\n";
+
+        for (auto iter = g_amPointerTracker.readerLockBegin() ; iter != g_amPointerTracker.end(); iter++) {
+            os << setw(PTRW) << iter->first._basePointer << "-" << setw(PTRW) << iter->first._endPointer << ": ";
+            printShortPointerInfo(os, iter->second);
+            printRocrPointerInfo(os, iter->first._basePointer);
+            os << "\n";
         }
     }
 
@@ -406,8 +488,8 @@ am_status_t am_map_to_peers(void* ptr, size_t num_peer, const hc::accelerator* p
     if(nullptr == ptr || 0 == num_peer || nullptr == peers)
         return AM_ERROR_MISC;
 
-    hc::accelerator acc;
-    AmPointerInfo info(nullptr, nullptr, 0, acc, false, false);
+    hc::accelerator ptrAcc;
+    AmPointerInfo info(nullptr, nullptr, 0, ptrAcc, false, false);
     auto status = am_memtracker_getinfo(&info, ptr);
     if(AM_SUCCESS != status)
         return status;
@@ -416,8 +498,8 @@ am_status_t am_map_to_peers(void* ptr, size_t num_peer, const hc::accelerator* p
     if(info._isInDeviceMem)
     {
         // get accelerator and pool of device memory
-        acc = info._acc;
-        pool = static_cast<hsa_amd_memory_pool_t*>(acc.get_hsa_am_region());
+        ptrAcc = info._acc;
+        pool = static_cast<hsa_amd_memory_pool_t*>(ptrAcc.get_hsa_am_region());
     }
     else
     {
@@ -427,8 +509,8 @@ am_status_t am_map_to_peers(void* ptr, size_t num_peer, const hc::accelerator* p
         if(info._isAmManaged)
         {
             // here, accelerator is the device, but used to query system memory pool
-            acc = info._acc;
-            pool = static_cast<hsa_amd_memory_pool_t*>(acc.get_hsa_am_system_region()); 
+            ptrAcc = info._acc;
+            pool = static_cast<hsa_amd_memory_pool_t*>(ptrAcc.get_hsa_am_system_region()); 
         }
         else
             return AM_ERROR_MISC;
@@ -445,34 +527,37 @@ am_status_t am_map_to_peers(void* ptr, size_t num_peer, const hc::accelerator* p
         auto& a = peers[i];
         if(info._isInDeviceMem)
         {
-            if(a == acc)
+            if(a == ptrAcc)
                 continue;
         }
 
-        hsa_agent_t* agent = static_cast<hsa_agent_t*>(acc.get_hsa_agent());
+        hsa_agent_t* agent = static_cast<hsa_agent_t*>(a.get_hsa_agent());
 
-        hsa_amd_memory_pool_access_t access;
-        hsa_status_t  status = hsa_amd_agent_memory_pool_get_info(*agent, *pool, HSA_AMD_AGENT_MEMORY_POOL_INFO_ACCESS, &access);
-        if(HSA_STATUS_SUCCESS != status)
-            return AM_ERROR_MISC;
+        if (agent) {
 
-        // check access
-        if(HSA_AMD_MEMORY_POOL_ACCESS_NEVER_ALLOWED == access)
-            return AM_ERROR_MISC;
+            hsa_amd_memory_pool_access_t access;
+            hsa_status_t  status = hsa_amd_agent_memory_pool_get_info(*agent, *pool, HSA_AMD_AGENT_MEMORY_POOL_INFO_ACCESS, &access);
+            if(HSA_STATUS_SUCCESS != status)
+                return AM_ERROR_MISC;
 
-        bool add_agent = true;
+            // check access
+            if(HSA_AMD_MEMORY_POOL_ACCESS_NEVER_ALLOWED == access)
+                return AM_ERROR_MISC;
 
-        for(int ii = 0; ii < peer_count; ii++)
-        {
-            if(agent->handle == agents[ii].handle)
-                add_agent = false;
-        } 
+            bool add_agent = true;
 
-        if(add_agent)
-        {
-             agents[peer_count] = *agent;
-             peer_count++;
-        }    
+            for(int ii = 0; ii < peer_count; ii++)
+            {
+                if(agent->handle == agents[ii].handle)
+                    add_agent = false;
+            } 
+
+            if(add_agent)
+            {
+                 agents[peer_count] = *agent;
+                 peer_count++;
+            }    
+        }
     }
 
     // allow access to the agents
