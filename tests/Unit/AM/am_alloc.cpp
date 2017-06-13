@@ -7,7 +7,11 @@
 #include <hc_am.hpp>
 #include <iostream>
 
-void accessFromAllAccs(int numElements, int *ptr) 
+#define WAIT_ACCELERATOR_VIEW 2
+#define WAIT_MARKER           1
+#define WAIT_PFE              0
+
+void accessFromAllAccs(int numElements, int *ptr, int waitMode) 
 {
     auto accs = hc::accelerator::get_all();
     hc::extent<1> ext(numElements);;
@@ -18,10 +22,23 @@ void accessFromAllAccs(int numElements, int *ptr)
 
             std::cout << "test: running PFE on accelerator#" << devId << "\n";
 
-            hc::parallel_for_each(a->get_default_view(), ext, [=] (hc::index<1> idx) [[hc]] 
+            auto av = a->get_default_view();
+
+            auto cf = hc::parallel_for_each(av, ext, [=] (hc::index<1> idx) [[hc]] 
             {
                ptr[idx[0]] = devId;
-            }).wait();
+            });
+
+            if (waitMode == WAIT_ACCELERATOR_VIEW) {
+                av.wait();
+            } else if (waitMode == WAIT_MARKER) {
+                av.create_marker(hc::system_scope).wait();
+            } else if (waitMode == WAIT_PFE) {
+                cf.wait();
+            } else {
+                assert(0);  // bad wait mode.
+            }
+
 
 
             for (int i=0; i<numElements; i++) {
@@ -72,18 +89,30 @@ int main()
 
                 int *hostPtr = nullptr;
                 hostPtr = am_alloc(sizeElements, *a, amHostCoherent);
-                std::cout << "test: alloc coherent host mem on accelerator#" << a->get_seqnum() << "\n";
                 assert(hostPtr);
 
-                accessFromAllAccs(numElements, hostPtr);
+                std::cout << "test: alloc coherent host mem on accelerator#" << a->get_seqnum() << " + accelerator_view::wait()\n";
+                accessFromAllAccs(numElements, hostPtr, WAIT_ACCELERATOR_VIEW);
+
+                std::cout << "test: alloc coherent host mem on accelerator#" << a->get_seqnum() << " + flushing marker.wait()\n";
+                accessFromAllAccs(numElements, hostPtr, WAIT_MARKER);
+
+                std::cout << "test: alloc coherent host mem on accelerator#" << a->get_seqnum() << " + pfe.wait()\n";
+                accessFromAllAccs(numElements, hostPtr, WAIT_PFE);
 
                 assert (hc::am_free(hostPtr) == AM_SUCCESS);
 
-                hostPtr = am_alloc(sizeElements, *a, amHostPinned);
-                std::cout << "test: alloc non-coherent host mem on accelerator#" << a->get_seqnum() << "\n";
-                assert(hostPtr);
 
-                accessFromAllAccs(numElements, hostPtr);
+                hostPtr = am_alloc(sizeElements, *a, amHostPinned);
+                assert(hostPtr);
+                std::cout << "test: alloc non-coherent host mem on accelerator#" << a->get_seqnum() << " + accelerator_view::wait()\n";
+                accessFromAllAccs(numElements, hostPtr, WAIT_ACCELERATOR_VIEW);
+
+                std::cout << "test: alloc non-coherent host mem on accelerator#" << a->get_seqnum() << " + flushing marker.wait()\n";
+                accessFromAllAccs(numElements, hostPtr, WAIT_MARKER);
+
+                // pfe::wait() doesn't work for non-coherent memory  - need an explicit release-to-system
+
 
                 assert (hc::am_free(hostPtr) == AM_SUCCESS);
             }
@@ -91,6 +120,8 @@ int main()
 
 
     }
+
+    printf ("passed!\n");
 
     return 0; // passed!
 }
