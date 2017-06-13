@@ -18,7 +18,7 @@ int main(void) {
   in[0] = 1.0f;
   in[1] = 0.0f;
   in[2] = -1.0f;
-  
+
   parallel_for_each(
     e,
     [=](index<1> idx) restrict(amp) {
@@ -33,7 +33,7 @@ int main(void) {
 
   //check on cpu
   for (int i=0; i<vecSize; ++i) {
-    if (std::signbit(in[i]) != (fast_math::signbitf(in[i]) ? true : false))
+    if (std::signbit(in[i]) != (fast_math::signbit(in[i]) ? true : false))
       return 1;
   }
 

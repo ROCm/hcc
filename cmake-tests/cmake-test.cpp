@@ -40,5 +40,5 @@ int main() {
 
   hc::am_free(data1_d);
 
-  return !(s==2016);
+  return !(s==44);
 }

@@ -36,8 +36,8 @@
 
 #include "statutils.h"
 
-#define GRID_SIZE 16
-#define TILE_SIZE 16
+#define GRID_SIZE 64
+#define TILE_SIZE 64
 
 #define DISPATCH_COUNT 10000
 #define TOL_HI 1e-4
@@ -60,6 +60,8 @@ int p_useSystemScope = false;
 int p_dispatch_count = DISPATCH_COUNT;
 int p_burst_count = 1;
 int p_execute_any_order = 0;
+
+int p_queue_wait = 0; // use queue wait vs event wait
 
 __attribute__((hc_grid_launch)) 
 void nullkernel(const grid_launch_parm lp, float* A) {
@@ -111,9 +113,18 @@ void time_dispatch_hsa_kernel(std::string testName, const grid_launch_parm *lp, 
         explicit_launch_null_kernel(lp, k);
     };
 
+    if (p_queue_wait) 
+    {
+        lp->av->wait(hc::hcWaitModeActive);
+    } else if (lp->cf == nullptr) {
+        auto m0 = lp->av->create_marker(hc::no_scope);
+        m0.wait(hc::hcWaitModeActive);
+    } else if (lp->cf) {
+        lp->cf->wait(hc::hcWaitModeActive);
+    }
+
     //std::cout << "CF get_use_count=" << cf.get_use_count() << "is_ready=" << cf.is_ready()<< "\n";
     //
-    lp->av->wait(hc::hcWaitModeActive);
     //cf.wait(hc::hcWaitModeActive);
 
     end = std::chrono::high_resolution_clock::now();
@@ -154,12 +165,14 @@ void usage() {
     printf (" --burst_count, -b         : Set burst count (commands before sync) \n");
     printf (" --hsaco_dir, -h           : Directory to look for nullkernel hsaco file\n");
     printf (" --tests, -t               : Bit vector to control which tests are run, see p_tests in code\n");
+    printf (" --system_scope, -S        : Use system-scope acquire/release for GL submissions\n");
+    printf (" --queue_wait, -W          : Use queue-level wait rather than event-level");
     printf (" --execute_any_order,-a    : Create queue with execute_any_order (no barrier bit)\n");
 };
 
 int main(int argc, char* argv[]) {
 
-  const char *nullkernel_hsaco_dir = NULL;
+  const char *nullkernel_hsaco_dir = ".";
 
   for (int i = 1; i < argc; i++) {
     const char *arg = argv[i];
@@ -184,6 +197,13 @@ int main(int argc, char* argv[]) {
         };
     } else if (!strcmp(arg, "--execute_any_order") || (!strcmp(arg, "-a"))) {
         p_execute_any_order = true;
+    } else if (!strcmp(arg, "--system_scope") || (!strcmp(arg, "-S"))) {
+        p_useSystemScope = true;
+    } else if (!strcmp(arg, "--queue_wait") || (!strcmp(arg, "-W"))) {
+        p_queue_wait = true;
+    } else if (!strcmp(arg, "--help") || (!strcmp(arg, "-a"))) {
+        usage();
+        exit(0);
     } else {
         failed("Bad argument '%s'", arg);
     }
@@ -212,6 +232,7 @@ int main(int argc, char* argv[]) {
   lp.group_dim = gl_dim3(TILE_SIZE);
   lp.av = &av;
 
+  std::cout << "\n";
   std::cout << "Iterations per test:              " << p_dispatch_count << "\n";
   std::cout << "Bursts (#dispatches before sync): " << p_burst_count  << "\n";
   std::cout << "\n";
@@ -335,7 +356,7 @@ int main(int argc, char* argv[]) {
           time_dispatch_hsa_kernel("dispatch_hsa_kernel+nocompletion+activewait", &lp, nullkernel_hsaco_dir);
       }
   } else {
-      std::cout << "skipping dispatch_hsa_kernel - must specify directory with hsaco on commandline.  (ie: ./bench 10000 Inputs/)\n";
+      std::cout << "skipping dispatch_hsa_kernel - must specify directory with hsaco on commandline.  (see ./bench --hsaco_dir .)\n";
   }
 
   return 0;

@@ -62,23 +62,8 @@ set(LLVM_ROOT "${PROJECT_BINARY_DIR}/compiler")
 SET(LOCAL_LLVM_INCLUDE compiler/include)
 
 # setup compilation environment
-if (UNIX)
-SET(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}/bin" )
-SET(LIBRARY_OUTPUT_PATH "${CMAKE_BINARY_DIR}/lib" )
-else (UNIX)
-SET(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}/bin" )
-SET(LIBRARY_OUTPUT_PATH "${CMAKE_BINARY_DIR}/lib" )
-SET( CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${EXECUTABLE_OUTPUT_PATH})
-SET( CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${EXECUTABLE_OUTPUT_PATH})
-
-SET( CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG ${EXECUTABLE_OUTPUT_PATH})
-SET( CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE ${EXECUTABLE_OUTPUT_PATH})
-
-SET( CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${LIBRARY_OUTPUT_PATH})
-SET( CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${LIBRARY_OUTPUT_PATH})
-MESSAGE("(DEBUG|RELEASE) output changed to path:" "${EXECUTABLE_OUTPUT_PATH}")
-
-endif (UNIX)
+set(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}/bin" )
+set(LIBRARY_OUTPUT_PATH "${CMAKE_BINARY_DIR}/lib" )
 
 SET(PROJ_SEARCH_PATH "${PROJECT_BINARY_DIR}/include" "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/${LOCAL_LLVM_INCLUDE}" "${PROJECT_BINARY_DIR}/${LOCAL_LLVM_INCLUDE}") #  "${PROJECT_SOURCE_DIR}/compiler/utils/unittest/googletest/include")
 include_directories( ${PROJ_SEARCH_PATH} )
@@ -196,7 +181,7 @@ endif (USE_CODEXL_ACTIVITY_LOGGER EQUAL 1)
 # hcc will use libc++ if USE_LIBCXX is set to ON; otherwise, it will use libstdc++
 #################
 
-# if USE_LIBCXX is not expicitely set
+# if USE_LIBCXX is not explicitly set
 if( NOT DEFINED USE_LIBCXX )
   # default to libstdc++
   set( USE_LIBCXX "OFF" )
@@ -227,38 +212,21 @@ endif( )
 SET(KALMAR_VERSION_MAJOR "1")
 SET(KALMAR_VERSION_MINOR "0")
 
-# get date information based on UTC
-# use the last two digits of year + week number + day in the week as KALMAR_VERSION_PATCH
-# use the commit date, instead of build date
-# add xargs to remove strange trailing newline character
-execute_process(COMMAND git show -s --format=@%ct
-                COMMAND xargs
-                COMMAND date -f - --utc +%y%U%w
-                WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-                OUTPUT_VARIABLE KALMAR_VERSION_PATCH
-                OUTPUT_STRIP_TRAILING_WHITESPACE)
+include(GenerateVersionFromGit)
 
-# get commit information
-execute_process(COMMAND git rev-parse --short HEAD
-                WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-                OUTPUT_VARIABLE KALMAR_SDK_COMMIT
-                OUTPUT_STRIP_TRAILING_WHITESPACE)
-execute_process(COMMAND git rev-parse --short HEAD
-                WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/clang
-                OUTPUT_VARIABLE KALMAR_FRONTEND_COMMIT
-                OUTPUT_STRIP_TRAILING_WHITESPACE)
-execute_process(COMMAND git rev-parse --short HEAD
-                WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/compiler
-                OUTPUT_VARIABLE KALMAR_BACKEND_COMMIT
-                OUTPUT_STRIP_TRAILING_WHITESPACE)
+if (NOT KALMAR_VERSION_STRING)
+  set(KALMAR_VERSION_STRING
+    "${KALMAR_VERSION_MAJOR}.${KALMAR_VERSION_MINOR}")
+endif()
 
 # Set HCC version string. The rule for version string is:
 # KALMAR_VERSION_MAJOR . KALMAR_VERSION_MINOR . KALMAR_VERSION_PATCH-KALMAR_SDK_COMIT-KALMAR_FRONTEND_COMMIT-KALMAR_BACKEND_COMMIT
-set(KALMAR_VERSION_STRING "${KALMAR_VERSION_MAJOR}.${KALMAR_VERSION_MINOR}.${KALMAR_VERSION_PATCH}-${KALMAR_SDK_COMMIT}-${KALMAR_FRONTEND_COMMIT}-${KALMAR_BACKEND_COMMIT}")
+add_version_info_from_git(KALMAR_VERSION_STRING
+  KALMAR_VERSION_PATCH KALMAR_SDK_COMMIT KALMAR_FRONTEND_COMMIT KALMAR_BACKEND_COMMIT)
 
 # set default installation path
+set(INSTALL_DIR_NAME "hcc-${KALMAR_VERSION_MAJOR}.${KALMAR_VERSION_MINOR}")
 if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT AND CMAKE_INSTALL_PREFIX MATCHES "/usr/local")
-  set(INSTALL_DIR_NAME "hcc-${KALMAR_VERSION_MAJOR}.${KALMAR_VERSION_MINOR}")
   set(CMAKE_INSTALL_PREFIX "/opt/rocm/${INSTALL_DIR_NAME}" CACHE PATH "Default installation path of hcc" FORCE)
 endif ()
 message("Installation path: ${CMAKE_INSTALL_PREFIX}")
@@ -268,6 +236,7 @@ set(CPACK_SET_DESTDIR ON CACHE BOOL "Installer package will install hcc to CMAKE
 if (CPACK_SET_DESTDIR)
   set(HCC_PACKAGE_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX})
 else (CPACK_SET_DESTDIR)
+  set(CPACK_PACKAGING_INSTALL_PREFIX "/opt/rocm/${INSTALL_DIR_NAME}" CACHE PATH "Default installation path of hcc installer package") 
   set(HCC_PACKAGE_INSTALL_PREFIX ${CPACK_PACKAGING_INSTALL_PREFIX})
 endif (CPACK_SET_DESTDIR)
 MESSAGE("Installer package installation path: ${HCC_PACKAGE_INSTALL_PREFIX}")
@@ -462,6 +431,7 @@ if (HCC_INTEGRATE_ROCDL)
             -DLLVM_DIR=${CLANG_BIN_DIR}
             -DAMDHSACOD=${AMDHSACOD}
             -DGENERIC_IS_ZERO=ON
+            -DBUILD_HC_LIB=ON
     COMMAND make -j ${NUM_BUILD_THREADS} # not portable, but we need it this way
     WORKING_DIRECTORY ${ROCDL_BUILD_DIR}
     DEPENDS clang
@@ -517,6 +487,7 @@ if (HCC_INTEGRATE_ROCDL)
           PATTERN test EXCLUDE
           PATTERN cuda2gcn EXCLUDE
           PATTERN *.lib.bc EXCLUDE
+          PATTERN *.optout.bc EXCLUDE
           PATTERN src EXCLUDE
           PATTERN CMakeFiles EXCLUDE
           PATTERN utils EXCLUDE
@@ -582,32 +553,21 @@ set(CPACK_PACKAGE_VERSION "${KALMAR_VERSION_MAJOR}.${KALMAR_VERSION_MINOR}.${KAL
 set(CPACK_PACKAGE_VERSION_MAJOR ${KALMAR_VERSION_MAJOR})
 set(CPACK_PACKAGE_VERSION_MINOR ${KALMAR_VERSION_MINOR})
 set(CPACK_PACKAGE_VERSION_PATCH ${KALMAR_VERSION_PATCH})
-set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION})
-
-if( USE_LIBCXX )
-  set( CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_FILE_NAME}-libc++" )
-else( )
-  set( CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_FILE_NAME}-libstdc++" )
-endif( )
 
 set(PACKAGE_DESCRIPTION "HCC: An Open Source, Optimizing C++ Compiler for Heterogeneous Compute")
 
-set(OFFICIAL_RELEASE_BUILD 0)
+set(OFFICIAL_RELEASE_BUILD 1)
 
-option(CPACK_GENERATOR "Specify the installer package generator")
-
-# If no CPACK generator was specified, then set the default generator according to the distro
-if (NOT CPACK_GENERATOR)
-    if ( "${DISTRO_ID}" MATCHES "ubuntu" )
-    set(CPACK_GENERATOR "DEB")
-  elseif ("${DISTRO_ID}" MATCHES "fedora")
-    set(CPACK_GENERATOR "RPM")
-  else ()
-    # generate a tarball for unknown DISTRO_ID
-    set(CPACK_GENERATOR "TGZ")
-  endif ()
-endif (NOT CPACK_GENERATOR)
-
+# Default to generate a package appropriate for a distro; users override using command line with -D
+# -D writes variables into the cmake cache, and setting CACHE variables won't overwrite variables already in the CACHE
+if( "${DISTRO_ID}" MATCHES "ubuntu" )
+  set( CPACK_GENERATOR "DEB" CACHE STRING "cpack list: 7Z, DEB, IFW, NSIS, NSIS64, RPM, STGZ, TBZ2, TGZ, TXZ, TZ, ZIP" )
+elseif ("${DISTRO_ID}" MATCHES "fedora")
+  set( CPACK_GENERATOR "RPM" CACHE STRING "cpack list: 7Z, DEB, IFW, NSIS, NSIS64, RPM, STGZ, TBZ2, TGZ, TXZ, TZ, ZIP" )
+else()
+  # generate a tarball for unknown DISTRO_ID
+  set( CPACK_GENERATOR "TGZ" CACHE STRING "cpack list: 7Z, DEB, IFW, NSIS, NSIS64, RPM, STGZ, TBZ2, TGZ, TXZ, TZ, ZIP" )
+endif ()
 
 # DEB package settings
 set(CPACK_DEBIAN_PACKAGE_DESCRIPTION ${PACKAGE_DESCRIPTION})
@@ -617,7 +577,7 @@ set(CPACK_DEBIAN_PACKAGE_SECTION "devel")
 set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA
   "${PROJECT_BINARY_DIR}/packaging/debian/postinst;${PROJECT_BINARY_DIR}/packaging/debian/prerm")
 
-set(HCC_GENERAL_DEBIAN_DEP "g++-multilib, gcc-multilib, findutils, libelf1, libpci3, file")
+set(HCC_GENERAL_DEBIAN_DEP "g++-multilib, gcc-multilib, findutils, libelf1, libpci3, file, libunwind8")
 
 if ( USE_LIBCXX )
   set(HCC_LIBCXX_DEBIAN_DEP ", libc++1, libc++-dev, libc++abi1, libc++abi-dev")
@@ -630,9 +590,9 @@ endif( USE_LIBCXX )
 if (OFFICIAL_RELEASE_BUILD)
   if (HCC_INTEGRATE_ROCDL)
     set(HCC_ROCR_DEP ", hsa-rocr-dev, hsa-ext-rocr-dev")
-  else (NOT HCC_INTEGRATE_ROCDL)
+  else (HCC_INTEGRATE_ROCDL)
     set(HCC_ROCR_DEP ", hsa-rocr-dev, hsa-ext-rocr-dev, rocm-device-libs")
-  endif(NOT HCC_INTEGRATE_ROCDL)
+  endif(HCC_INTEGRATE_ROCDL)
 else (OFFICIAL_RELEASE_BUILD)
   set(HCC_ROCR_DEP "")
 endif (OFFICIAL_RELEASE_BUILD)
@@ -647,7 +607,7 @@ set(CPACK_RPM_PRE_UNINSTALL_SCRIPT_FILE "${PROJECT_BINARY_DIR}/packaging/debian/
 # disable automatic shared libraries dependency detection
 set(CPACK_RPM_PACKAGE_AUTOREQ 0)
 
-set(HCC_GENERAL_RPM_DEP "findutils, elfutils-libelf, pciutils-libs, file, pth")
+set(HCC_GENERAL_RPM_DEP "findutils, elfutils-libelf, pciutils-libs, file, pth, libunwind")
 set(CPACK_RPM_PACKAGE_REQUIRES "${HCC_GENERAL_RPM_DEP} ${HCC_ROCR_DEP}" )
 
 set(CPACK_COMPONENTS_ALL compiler)
@@ -655,8 +615,7 @@ set(CPACK_COMPONENTS_ALL compiler)
 include (CPack)
 MESSAGE("")
 MESSAGE("** For the first time:")
-MESSAGE("   'make world' to build HCC Clang, and library for testing.")
-MESSAGE("   'make' to build the rest of LLVM tools")
+MESSAGE("   'make' to build all")
 MESSAGE("   'make docs' to build the HTML API reference")
 MESSAGE("")
 

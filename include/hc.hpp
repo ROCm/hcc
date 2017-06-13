@@ -247,10 +247,15 @@ public:
      * is marked ready.   Thus, markers provide a mechanism to enforce order between
      * commands in an execute_any_order accelerator_view.
      *
+     * release_scope controls the scope of the release fence applied after the marker executes.  Options are:
+     *   - no_scope : No release fence operation is performed.
+     *   - accelerator_scope: Memory is released to the accelerator scope where the marker executes.
+     *   - system_scope: Memory is released to system scope (all accelerators including CPUs)
+     *
      * @return A future which can be waited on, and will block until the
      *         current batch of commands has completed.
      */
-    completion_future create_marker(memory_scope scope=system_scope) const;
+    completion_future create_marker(memory_scope release_scope=system_scope) const;
 
     /**
      * This command inserts a marker event into the accelerator_view's command
@@ -265,11 +270,19 @@ public:
      * is marked ready.   Thus, markers provide a mechanism to enforce order between
      * commands in an execute_any_order accelerator_view.
      *
+     * release_scope controls the scope of the release fence applied after the marker executes.  Options are:
+     *   - no_scope : No release fence operation is performed.
+     *   - accelerator_scope: Memory is released to the accelerator scope where the marker executes.
+     *   - system_scope: Memory is released to system scope (all accelerators including CPUs)
+     *
+     * dependent_futures may be recorded in another queue or another accelerator.  If in another accelerator,
+     * the runtime performs cross-accelerator sychronization.  
+     *
      * @return A future which can be waited on, and will block until the
      *         current batch of commands, plus the dependent event have
      *         been completed.
      */
-    completion_future create_blocking_marker(completion_future& dependent_future, memory_scope scope=system_scope) const;
+    completion_future create_blocking_marker(completion_future& dependent_future, memory_scope release_scope=system_scope) const;
 
     /**
      * This command inserts a marker event into the accelerator_view's command
@@ -284,11 +297,16 @@ public:
      * is marked ready.   Thus, markers provide a mechanism to enforce order between
      * commands in an execute_any_order accelerator_view.
      *
+     * release_scope controls the scope of the release fence applied after the marker executes.  Options are:
+     *   - no_scope : No release fence operation is performed.
+     *   - accelerator_scope: Memory is released to the accelerator scope where the marker executes.
+     *   - system_scope: Memory is released to system scope (all accelerators including CPUs)
+     *
      * @return A future which can be waited on, and will block until the
      *         current batch of commands, plus the dependent event have
      *         been completed.
      */
-    completion_future create_blocking_marker(std::initializer_list<completion_future> dependent_future_list, memory_scope scope=system_scope) const;
+    completion_future create_blocking_marker(std::initializer_list<completion_future> dependent_future_list, memory_scope release_scope=system_scope) const;
 
 
     /**
@@ -1031,7 +1049,7 @@ public:
      * Check if @p other is peer of this accelerator.
      *
      * @return true if other can access this accelerator's device memory pool or false if not.
-     * the acceleratos is its own peer.
+     * The acceleratos is not its own peer.
      */
     bool get_is_peer(const accelerator& other) const {
         return pDev->is_peer(other.pDev);
@@ -1061,6 +1079,14 @@ public:
      */
     unsigned int get_cu_count() const {
         return pDev->get_compute_unit_count();
+    }
+
+    /**
+     * Return the unique integer sequence-number for the accelerator.
+     * Sequence-numbers are assigned in monotonically increasing order starting with 0.
+     */
+    int get_seqnum() const {
+        return pDev->get_seqnum();
     }
 
 
@@ -1427,37 +1453,72 @@ accelerator_view::get_accelerator() const { return pQueue->getDev(); }
 
 inline completion_future
 accelerator_view::create_marker(memory_scope scope) const {
-    return completion_future(pQueue->EnqueueMarker(scope));
+    std::shared_ptr<Kalmar::KalmarAsyncOp> deps[1]; 
+    // If necessary create an explicit dependency on previous command
+    // This is necessary for example if copy command is followed by marker - we need the marker to wait for the copy to complete.
+    std::shared_ptr<Kalmar::KalmarAsyncOp> depOp = pQueue->detectStreamDeps(hcCommandMarker, nullptr);
+
+    int cnt = 0;
+    if (depOp) {
+        deps[cnt++] = depOp; // retrieve async op associated with completion_future
+    }
+
+    return completion_future(pQueue->EnqueueMarkerWithDependency(cnt, deps, scope));
 }
 
 inline unsigned int accelerator_view::get_version() const { return get_accelerator().get_version(); }
 
 inline completion_future accelerator_view::create_blocking_marker(completion_future& dependent_future, memory_scope scope) const {
-    return completion_future(pQueue->EnqueueMarkerWithDependency(dependent_future.__asyncOp, scope));
+    std::shared_ptr<Kalmar::KalmarAsyncOp> deps[2]; 
+
+    // If necessary create an explicit dependency on previous command
+    // This is necessary for example if copy command is followed by marker - we need the marker to wait for the copy to complete.
+    std::shared_ptr<Kalmar::KalmarAsyncOp> depOp = pQueue->detectStreamDeps(hcCommandMarker, nullptr);
+
+    int cnt = 0;
+    if (depOp) {
+        deps[cnt++] = depOp; // retrieve async op associated with completion_future
+    }
+
+    if (dependent_future.__asyncOp) {
+        deps[cnt++] = dependent_future.__asyncOp; // retrieve async op associated with completion_future
+    } 
+    
+    return completion_future(pQueue->EnqueueMarkerWithDependency(cnt, deps, scope));
 }
 
 template<typename InputIterator>
 inline completion_future
 accelerator_view::create_blocking_marker(InputIterator first, InputIterator last, memory_scope scope) const {
-    bool atLeastOne = false; // have we sent at least one marker
-    int cnt = 0;
     std::shared_ptr<Kalmar::KalmarAsyncOp> deps[5]; // array of 5 pointers to the native handle of async ops. 5 is the max supported by barrier packet
     hc::completion_future lastMarker;
+
+
+    // If necessary create an explicit dependency on previous command
+    // This is necessary for example if copy command is followed by marker - we need the marker to wait for the copy to complete.
+    std::shared_ptr<Kalmar::KalmarAsyncOp> depOp = pQueue->detectStreamDeps(hcCommandMarker, nullptr);
+
+    int cnt = 0;
+    if (depOp) {
+        deps[cnt++] = depOp; // retrieve async op associated with completion_future
+    }
+
 
     // loop through signals and group into sections of 5
     // every 5 signals goes into one barrier packet
     // since HC sets the barrier bit in each AND barrier packet, we know
     // the barriers will execute in-order
     for (auto iter = first; iter != last; ++iter) {
-        deps[cnt++] = iter->__asyncOp; // retrieve async op associated with completion_future
-        if (cnt == 5) {
-            atLeastOne = true;
-            lastMarker = completion_future(pQueue->EnqueueMarkerWithDependency(cnt, deps, scope));
-            cnt = 0;
+        if (iter->__asyncOp) {
+            deps[cnt++] = iter->__asyncOp; // retrieve async op associated with completion_future
+            if (cnt == 5) {
+                lastMarker = completion_future(pQueue->EnqueueMarkerWithDependency(cnt, deps, hc::no_scope));
+                cnt = 0;
+            }
         }
     }
 
-    if (cnt || !atLeastOne) {
+    if (cnt) {
         lastMarker = completion_future(pQueue->EnqueueMarkerWithDependency(cnt, deps, scope));
     }
 
@@ -3141,7 +3202,9 @@ inline int __mad24(int x, int y, int z) [[hc]] {
   return __mul24(x,y) + z;
 }
 
-
+inline void abort() __HC__ {
+  __builtin_trap();
+}
 
 // ------------------------------------------------------------------------
 // group segment

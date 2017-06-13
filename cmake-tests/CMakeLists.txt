@@ -1,7 +1,8 @@
 
-if(COMMAND CMAKE_FORCE_CXX_COMPILER)
-CMAKE_FORCE_CXX_COMPILER("${PROJECT_BINARY_DIR}/compiler/bin/clang++" MCWAMPCC)
+if(NOT CMAKE_CXX_COMPILER MATCHES ".*hcc")
+    set(CMAKE_CXX_COMPILER "${PROJECT_BINARY_DIR}/compiler/bin/clang++")
 endif()
+
 add_executable(cmake-test cmake-test.cpp)
 if(TARGET hccrt)
     target_link_libraries(cmake-test hccrt hc_am)
