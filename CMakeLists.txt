@@ -495,12 +495,6 @@ add_subdirectory(amp-conformance)
 add_subdirectory(stl-test)
 add_subdirectory(cmake-tests)
 
-# create a "hcc" symlink in the include directory
-# that points to itself so we could support
-# include <hcc.hpp> and include<hcc/hcc.hpp>
-execute_process(COMMAND ln -sf ../include hcc
-                WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/include)
-
 # create documentation
 configure_file(
   ${PROJECT_SOURCE_DIR}/lib/doxygen_config.in
