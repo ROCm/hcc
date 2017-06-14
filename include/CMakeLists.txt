@@ -1,38 +1,18 @@
 #install commands for headers
 
-set(H_HEADERS
-  amp_math.h
-  amp_short_vectors.h
-  amp.h
-  grid_launch.h
-  grid_launch.hpp
-  hc_am.hpp
-  hc_defines.h
-  hc_math.hpp
-  hc_printf.hpp
-  hc_rt_debug.h
-  hc_short_vector.hpp
-  hc.hpp
-  hsa_atomic.h
-  kalmar_aligned_alloc.h
-  kalmar_buffer.h
-  kalmar_cpu_launch.h
-  kalmar_exception.h
-  kalmar_index.h
-  kalmar_launch.h
-  kalmar_math.h
-  kalmar_runtime.h
-  kalmar_serialize.h
-  pinned_vector.hpp)
+FILE(GLOB H_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/*.h*)
 
-set(INL_HEADERS
-  hc_norm_unorm.inl
-  hc_short_vector.inl
-  kalmar_short_vectors.inl)
+FILE(GLOB INL_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/*.inl)
 
-set(HCC_HEADERS
-  ${H_HEADERS}
-  ${INL_HEADERS})
+
+set(HCC_HEADERS)
+
+#Obtain the names of each Header File
+foreach(InFName ${H_HEADERS} ${INL_HEADERS})
+  STRING(REGEX REPLACE ${CMAKE_CURRENT_SOURCE_DIR}/ "" OutFName ${InFName})
+  set(HCC_HEADERS ${HCC_HEADERS} "${OutFName}")
+endforeach(InFName)
+
 
 set (output_dir "${PROJECT_BINARY_DIR}/include")
 
