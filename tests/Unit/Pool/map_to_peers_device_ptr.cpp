@@ -17,7 +17,7 @@ int main()
     const auto& all = acc.get_peers();
 
     // map device pointer to all peers.
-    if(AM_SUCCESS != am_map_to_peers(dev_ptr, all.size(), all.data()))
+    if(all.size()!=0 && AM_SUCCESS != am_map_to_peers(dev_ptr, all.size(), all.data()))
         return -1;
 
     return 0;
