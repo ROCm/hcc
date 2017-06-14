@@ -398,6 +398,9 @@ install(DIRECTORY ${CLANG_SRC_DIR}/include
         PATTERN CMakeLists* EXCLUDE
         PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
 
+install( FILES ${CMAKE_CURRENT_SOURCE_DIR}/scripts/cmake/ImportedTargets.cmake
+         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/hcc )
+
 add_custom_target(world DEPENDS clang)
 
 
