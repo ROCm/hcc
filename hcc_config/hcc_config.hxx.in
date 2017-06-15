@@ -5,4 +5,6 @@
 
 #define CMAKE_INSTALL_LIB       "@CMAKE_INSTALL_LIBDIR@"
 
+#define CMAKE_ROCM_ROOT     "@ROCM_ROOT@"
+
 #define CMAKE_GTEST_INC_DIR "@PROJECT_SOURCE_DIR@/utils"
