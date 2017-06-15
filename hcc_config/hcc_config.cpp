@@ -114,6 +114,7 @@ void cxxflags(void) {
             std::cout << " -I" << p << "/include";
         } else {
             std::cout << " -I" << get_path(path_hcc_include);
+            std::cout << " -I" << CMAKE_ROCM_ROOT << "/include";
         }
     } else {
         assert(0 && "Unreacheable!");
