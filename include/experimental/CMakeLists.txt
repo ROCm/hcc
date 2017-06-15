@@ -48,7 +48,6 @@ endforeach( f )
 # Create target for pstl-headers and set dependencies
 add_custom_target(pstl-headers ALL DEPENDS ${exp_out_files} ${impl_out_files})
 add_dependencies(world pstl-headers)
-set_target_properties(pstl-headers PROPERTIES FOLDER "HCC Misc")
 
 # Install command for PSTL exp headers
 install(FILES ${PSTL_EXP_HEADERS}
