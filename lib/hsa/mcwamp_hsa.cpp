@@ -109,9 +109,9 @@ int HCC_MAX_QUEUES = 20;
 static std::ofstream g_hccProfileFile; // if using a file open it here
 static std::ostream *g_hccProfileStream = nullptr; // point at file or default stream
 
-#define HCC_PROFILE_VERBOSE_BASIC     (1 << 0)
-#define HCC_PROFILE_VERBOSE_TIMESTAMP (1 << 1)
-#define HCC_PROFILE_VERBOSE_BARRIER   (1 << 2)
+#define HCC_PROFILE_VERBOSE_BASIC                   (1 << 0)
+#define HCC_PROFILE_VERBOSE_TIMESTAMP               (1 << 1)
+#define HCC_PROFILE_VERBOSE_BARRIER                 (1 << 2)
 
 
 int HCC_PROFILE=0;
@@ -119,14 +119,16 @@ int HCC_PROFILE_VERBOSE=0;
 char * HCC_PROFILE_FILE=nullptr;
 
 // Profiler:
-#define LOG_PROFILE(start, end, tag, msg) \
-    *g_hccProfileStream  << "profile: " << std::setw(25) << tag\
-                         << ";\t" << std::fixed << std::setw(6) << std::setprecision(1) << (end-start)/1000.0 << " us;"\
-                         << msg;\
+#define LOG_PROFILE(start, end, type, tag, msg) \
+{\
+    *g_hccProfileStream  << "profile: " << std::setw(7) << type << ";\t" \
+                         << std::setw(25) << tag\
+                         << ";\t" << std::fixed << std::setw(6) << std::setprecision(1) << (end-start)/1000.0 << " us;";\
     if (HCC_PROFILE_VERBOSE & (HCC_PROFILE_VERBOSE_TIMESTAMP)) {\
             *g_hccProfileStream << "\t" << start << ";\t" << end << ";";\
     }\
-   *g_hccProfileStream <<  "\n";
+   *g_hccProfileStream <<  msg << "\n";\
+}
 
 
 // Track a short thread-id, for debugging:
@@ -430,6 +432,7 @@ private:
     bool isAsync;;          // copy was performed asynchronously
     bool isSingleStepCopy;; // copy was performed on fast-path via a single call to the HSA copy routine
     bool isPeerToPeer;
+    uint64_t apiStartTick;
     hsa_wait_state_t waitMode;
 
     std::shared_future<void>* future;
@@ -478,8 +481,7 @@ public:
     {
         using namespace Kalmar;
 
-        std::string s("copy_");
-        s += isAsync ? "async_" : "sync_";
+        std::string s;
         switch (getCommandKind()) {
             case hcMemcpyHostToHost: 
                 s += "HostToHost";
@@ -501,6 +503,8 @@ public:
                 s += "UnknownCopy";
                 break;
         };
+        s += isAsync ? "_async" : "_sync";
+        s += isSingleStepCopy ? "_fast" : "_slow";
 
         return s;
 
@@ -509,12 +513,9 @@ public:
 
     // Copy mode will be set later on.
     // HSA signals would be waited in HSA_WAIT_STATE_ACTIVE by default for HSACopy instances
-    HSACopy(Kalmar::KalmarQueue *queue, const void* src_, void* dst_, size_t sizeBytes_) : KalmarAsyncOp(queue, Kalmar::hcCommandInvalid),
-        isSubmitted(false), isAsync(false), isSingleStepCopy(false), isPeerToPeer(false), future(nullptr), depAsyncOp(nullptr), copyDevice(nullptr), waitMode(HSA_WAIT_STATE_ACTIVE),
-        src(src_), dst(dst_),
-        sizeBytes(sizeBytes_),
-        signalIndex(-1) {
-    }
+    HSACopy(Kalmar::KalmarQueue *queue, const void* src_, void* dst_, size_t sizeBytes_);
+
+    
 
 
     ~HSACopy() {
@@ -693,6 +694,7 @@ public:
     Kalmar::HSAQueue * hsaQueue() const;
     std::shared_future<void>* getFuture() override { return future; }
 
+    void setKernelName(const char *x_kernel_name) { kernel_name = x_kernel_name;};
     const char *getKernelName() { return kernel_name ? kernel_name : (kernel ? kernel->shortKernelName.c_str() : "<unknown_kernel>"); };
 
     void* getNativeHandle() override { return &signal; }
@@ -2274,52 +2276,68 @@ public:
     }
 
     void* CreateKernel(const char* fun, Kalmar::KalmarQueue *queue) override {
+        //fun = "_ZZN8hip_impl21grid_launch_hip_impl_IZ76Cijk_Alik_Bljk_SB_MT064x128x08_GSU06_MO10_PGR0_PLR0_TT04_08_WG16_16_01_WGM01PfPKfS3_ffjjjjjjjjjjjjjP12ihipStream_tjPP11ihipEvent_tS8_E4$_36JNS_17Empty_launch_parmERS1_RjSC_SC_SC_SC_SC_EEEvNS_12_GLOBAL__N_119New_grid_launch_tagE4dim3SF_iRKN2hc16accelerator_viewET_DpOT0_ENUlRKNSG_11tiled_indexILi3EEEE_19__cxxamp_trampolineES1_jjjjjj";
         std::string str(fun);
         HSAKernel *kernel = programs[str];
 
-        int demangleStatus = 0;
-        const char *demangled = abi::__cxa_demangle(fun, nullptr, nullptr, &demangleStatus);
-
-        std::string shortName(demangleStatus ? fun : demangled);
-        try {
-            if (demangleStatus == 0) {
-                int begin = shortName.find(" ");
-                if (begin == std::string::npos) {
-                    begin = 0;
-                } else {
-                    begin +=1; // skip the space
-                }
-                
-                // trim everything after first (
-                int end = shortName.find("(");
-
-
-                // Maybe no return type
-                if (begin > end) {
-                    begin = 0;
-                }
-
-                DBOUTL(DB_CODE, "shortKernel processing demangled.  beginChar=" << begin << " endChar=" << end );
-
-                if (end != std::string::npos) {
-                    shortName = shortName.substr(begin, end-begin);
-                } else {
-                    // didn't find (, just trim the beginning:
-                    shortName = shortName.substr(begin);
-                }
-
-            }
-        } catch (std::out_of_range& exception) {
-            // Do something sensible if string pattern is not what we expect
-            shortName = fun;
-        };
-        DBOUT (DB_CODE, "CreateKernel_short=      " << shortName << "\n");
-        DBOUT (DB_CODE, "CreateKernel_demangled=  " << demangled << "\n");
-        DBOUT (DB_CODE, "CreateKernel_full=       " << fun << "\n");
-
-        
+        const char *demangled = "<demangle_error>";
+        std::string shortName;
 
         if (!kernel) {
+            int demangleStatus = 0;
+            demangled = abi::__cxa_demangle(fun, nullptr, nullptr, &demangleStatus);
+
+            std::string shortName = demangleStatus ? fun : std::string(demangled);
+            try {
+                if (demangleStatus == 0) {
+                    // strip off hip launch template wrapper:
+                    std::string hipImplString ("void hip_impl::grid_launch_hip_impl_<");
+                    int begin = shortName.find(hipImplString);
+                    if ((begin != std::string::npos)) {
+                        begin += hipImplString.length() ;
+                    } else {
+                        begin = 0;
+                    }
+
+                    // trim everything after first (
+                    int end = shortName.find("(");
+                    // Maybe no return type
+                    if (begin > end) {
+                       begin = 0;
+                    }
+
+                    if (end != std::string::npos) {
+                        shortName = shortName.substr(begin, end-begin);
+                    } else {
+                        // didn't find (, just trim the beginning:
+                        shortName = shortName.substr(begin);
+                    }
+
+
+
+                    // Strip off any leading return type:
+                    begin = shortName.find(" ", 0);
+                    if (begin == std::string::npos) {
+                        begin = 0;
+                    } else {
+                        begin +=1; // skip the space
+                    }
+                    shortName = shortName.substr(begin);
+
+
+                    
+                    DBOUTL(DB_CODE, "shortKernel processing demangled.  beginChar=" << begin << " endChar=" << end );
+
+
+                }
+            } catch (std::out_of_range& exception) {
+                // Do something sensible if string pattern is not what we expect
+                shortName = fun;
+            };
+            DBOUT (DB_CODE, "CreateKernel_short=      " << shortName << "\n");
+            DBOUT (DB_CODE, "CreateKernel_demangled=  " << demangled << "\n");
+            DBOUT (DB_CODE, "CreateKernel_raw=       " << fun << "\n");
+
             if (executables.size() != 0) {
                 for (auto executable_iterator : executables) {
                     HSAExecutable *executable = executable_iterator.second;
@@ -2343,11 +2361,8 @@ public:
             if (!kernel) {
                 hc::print_backtrace();
                 std::cerr << "HSADevice::CreateKernel(): Unable to create kernel " << shortName << " \n";
-                std::cerr << "  CreateKernel_full=  " << fun << "\n";
+                std::cerr << "  CreateKernel_raw=  " << fun << "\n";
                 std::cerr << "  CreateKernel_demangled=  " << demangled << "\n";
-                if (demangleStatus == 0) {
-                    std::cerr << "  Demangled=" << demangled << "\n";
-                }
 
                 if (demangled) {
                     free((void*)demangled); // cxa_dmangle mallocs memory.
@@ -3491,6 +3506,7 @@ void HSAQueue::copy_ext(const void *src, void *dst, size_t size_bytes, hc::hcCom
 
     // create a HSACopy instance
     HSACopy* copyCommand = new HSACopy(this, src, dst, size_bytes);
+    copyCommand->setCommandKind(copyDir);
 
     // synchronously do copy
     // FIX me, pull from constructor.
@@ -3615,6 +3631,7 @@ HSAQueue::dispatch_hsa_kernel(const hsa_kernel_dispatch_packet_t *aql,
     //HSADispatch *dispatch = new HSADispatch(device, nullptr, aql);
     std::shared_ptr<HSADispatch> sp_dispatch = std::make_shared<HSADispatch>(device, this/*queue*/, nullptr, aql);
     HSADispatch *dispatch = sp_dispatch.get();
+    dispatch->setKernelName(kernelName);
 
     waitForStreamDeps(dispatch);
 
@@ -4000,8 +4017,7 @@ HSADispatch::dispose() {
     if (HCC_PROFILE) {
         uint64_t start = getBeginTimestamp();
         uint64_t end   = getEndTimestamp();
-        const char *kname = getKernelName();
-        LOG_PROFILE(start, end, getKernelName(), "");
+        LOG_PROFILE(start, end, "kernel", getKernelName(), "");
     }
     Kalmar::ctx.releaseSignal(signal, signalIndex);
 
@@ -4263,14 +4279,26 @@ HSABarrier::enqueueAsync(hc::memory_scope releaseScope) {
 }
 
 
+static std::string fenceToString(int fenceBits)
+{
+    switch (fenceBits) {
+        case 0: return "none";
+        case 1: return "acc";
+        case 2: return "sys";
+        case 3: return "sys";
+        default: return "???";
+    };
+}
 
 
 inline void
 HSABarrier::dispose() {
-    if (HCC_PROFILE_VERBOSE & HCC_PROFILE_VERBOSE_BARRIER) {
+    if (HCC_PROFILE && (HCC_PROFILE_VERBOSE & HCC_PROFILE_VERBOSE_BARRIER)) {
         uint64_t start = getBeginTimestamp();
         uint64_t end   = getEndTimestamp();
-        LOG_PROFILE(start, end, "HSABarrier", "");
+        int acqBits = extractBits(header, HSA_PACKET_HEADER_SCACQUIRE_FENCE_SCOPE, HSA_PACKET_HEADER_WIDTH_SCACQUIRE_FENCE_SCOPE);
+        int relBits = extractBits(header, HSA_PACKET_HEADER_SCRELEASE_FENCE_SCOPE, HSA_PACKET_HEADER_WIDTH_SCRELEASE_FENCE_SCOPE);
+        LOG_PROFILE(start, end, "barrier", "deps:" + std::to_string(depCount) + "_acq:" + fenceToString(acqBits) + "_rel:" + fenceToString(relBits), "")
     }
     Kalmar::ctx.releaseSignal(signal, signalIndex);
 
@@ -4305,6 +4333,17 @@ HSABarrier::getEndTimestamp() override {
 // member function implementation of HSACopy
 // ----------------------------------------------------------------------
 //
+// Copy mode will be set later on.
+// HSA signals would be waited in HSA_WAIT_STATE_ACTIVE by default for HSACopy instances
+HSACopy::HSACopy(Kalmar::KalmarQueue *queue, const void* src_, void* dst_, size_t sizeBytes_) : KalmarAsyncOp(queue, Kalmar::hcCommandInvalid),
+    isSubmitted(false), isAsync(false), isSingleStepCopy(false), isPeerToPeer(false), future(nullptr), depAsyncOp(nullptr), copyDevice(nullptr), waitMode(HSA_WAIT_STATE_ACTIVE),
+    src(src_), dst(dst_),
+    sizeBytes(sizeBytes_),
+    signalIndex(-1) {
+
+
+        apiStartTick = Kalmar::ctx.getSystemTicks();
+}
 
 // wait for the async copy to complete
 inline hsa_status_t
@@ -4570,9 +4609,16 @@ HSACopy::dispose() {
 
             double bw = (double)(sizeBytes)/(end-start) * (1000.0/1024.0) * (1000.0/1024.0);
 
-            LOG_PROFILE(start, end, getCopyCommandString(),  "\t" << sizeBytes << " bytes;\t" << sizeBytes/1024.0/1024 << " MB;\t" << bw << " GB/s;");
+            LOG_PROFILE(start, end, "copy", getCopyCommandString(),  "\t" << sizeBytes << " bytes;\t" << sizeBytes/1024.0/1024 << " MB;\t" << bw << " GB/s;");
         }
         Kalmar::ctx.releaseSignal(signal, signalIndex);
+    } else {
+        if (HCC_PROFILE) {
+            uint64_t start = apiStartTick;
+            uint64_t end   = Kalmar::ctx.getSystemTicks();
+            double bw = (double)(sizeBytes)/(end-start) * (1000.0/1024.0) * (1000.0/1024.0);
+            LOG_PROFILE(start, end, "copyslo", getCopyCommandString(),  "\t" << sizeBytes << " bytes;\t" << sizeBytes/1024.0/1024 << " MB;\t" << bw << " GB/s;");
+        }
     }
 
     if (future != nullptr) {
@@ -4615,8 +4661,6 @@ HSACopy::syncCopyExt(hc::hcCommandKind copyDir, const hc::AmPointerInfo &srcPtrI
     if ((copyDevice == nullptr) && (copyDir != Kalmar::hcMemcpyHostToHost) && (copyDir != Kalmar::hcMemcpyDeviceToDevice)) {
         throw Kalmar::runtime_exception("Null copyDevice can only be used with HostToHost or DeviceToDevice copy", -1);
     }
-
-
 
 
     DBOUT(DB_COPY, "hcCommandKind: " << getHcCommandKindString(copyDir) << "\n");
