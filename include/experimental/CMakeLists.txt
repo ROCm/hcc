@@ -1,11 +1,62 @@
-# PSTL headers
-FILE(GLOB PSTL ${CMAKE_CURRENT_SOURCE_DIR}/algorithm
-               ${CMAKE_CURRENT_SOURCE_DIR}/exception_list
-               ${CMAKE_CURRENT_SOURCE_DIR}/execution_policy
-               ${CMAKE_CURRENT_SOURCE_DIR}/numeric)
-INSTALL(FILES ${PSTL} DESTINATION include/experimental)
-# Copy the file to directory matching the install directory
-file(COPY ${PSTL} DESTINATION "${PROJECT_BINARY_DIR}/include/experimental")
+# Here we have PSTL header files inside experimental directory and impl sub-directory.
+# All PSTL headers should be in the same pstl-headers target, but different output dir
 
-# PSTL internal headers
-ADD_SUBDIRECTORY(impl)
+# PSTL headers from experimental/
+set(PSTL_EXP_HEADERS
+  algorithm
+  exception_list
+  execution_policy
+  numeric)
+
+# PSTL headers from experimental/impl/
+FILE(GLOB PSTL_IMPL ${CMAKE_CURRENT_SOURCE_DIR}/impl/*.inl)
+
+# Obtain the names of each impl header and add to PSTL
+foreach(InFName ${PSTL_IMPL})
+  STRING(REGEX REPLACE ${CMAKE_CURRENT_SOURCE_DIR}/impl/ "" OutFName ${InFName})
+  set(PSTL_IMPL_HEADERS ${PSTL_IMPL_HEADERS} "${OutFName}")
+endforeach(InFName)
+
+# Set location for exp/ output directory
+set(exp_output_dir "${PROJECT_BINARY_DIR}/include/experimental")
+# Set location for exp/impl/ output directory
+set(impl_output_dir "${PROJECT_BINARY_DIR}/include/experimental/impl")
+
+set(exp_out_files)
+set(impl_out_files)
+
+foreach( f ${PSTL_EXP_HEADERS} )
+  set( src ${CMAKE_CURRENT_SOURCE_DIR}/${f} )
+  set( dst ${exp_output_dir}/${f} )
+  add_custom_command(OUTPUT ${dst}
+    DEPENDS ${src}
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src} ${dst}
+    COMMENT "Copying HCC's ${f}...")
+  list(APPEND exp_out_files ${dst})
+endforeach( f )
+
+foreach( f ${PSTL_IMPL_HEADERS} )
+  set( src ${CMAKE_CURRENT_SOURCE_DIR}/impl/${f} )
+  set( dst ${impl_output_dir}/${f} )
+  add_custom_command(OUTPUT ${dst}
+    DEPENDS ${src}
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src} ${dst}
+    COMMENT "Copying HCC's ${f}...")
+  list(APPEND impl_out_files ${dst})
+endforeach( f )
+
+# Create target for pstl-headers and set dependencies
+add_custom_target(pstl-headers ALL DEPENDS ${exp_out_files} ${impl_out_files})
+add_dependencies(world pstl-headers)
+set_target_properties(pstl-headers PROPERTIES FOLDER "HCC Misc")
+
+# Install command for PSTL exp headers
+install(FILES ${PSTL_EXP_HEADERS}
+  PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+  DESTINATION include/experimental)
+  
+# Install command for PSTL impl headers
+install(FILES ${PSTL_IMPL_HEADERS}
+  PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+  DESTINATION include/experimental/impl)
+
