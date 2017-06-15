@@ -30,8 +30,8 @@
 #include <hsa/amd_hsa_kernel_code.h>
 #include <hsa/hsa_ven_amd_loader.h>
 
-#include <hcc/kalmar_runtime.h>
-#include <hcc/kalmar_aligned_alloc.h>
+#include "kalmar_runtime.h"
+#include "kalmar_aligned_alloc.h"
 
 #include <hc_am.hpp>
 
