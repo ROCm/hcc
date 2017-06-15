@@ -3,7 +3,6 @@
 ####################
 if (HAS_ROCM EQUAL 1)
 add_mcwamp_library_hsa(mcwamp_hsa mcwamp_hsa.cpp unpinned_copy_engine.cpp)
-target_link_libraries(mcwamp_hsa  unwind)
 add_mcwamp_library_hc_am(hc_am hc_am.cpp)
 rocm_install_targets(
   TARGETS mcwamp_hsa hc_am

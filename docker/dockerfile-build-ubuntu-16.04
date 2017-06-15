@@ -29,6 +29,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
     python-wheel \
     python-pip \
     rpm \
+    pkg-config \
     gcc-multilib \
     g++-multilib \
     gcc-multilib \
