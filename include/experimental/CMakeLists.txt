@@ -13,7 +13,7 @@ FILE(GLOB PSTL_IMPL ${CMAKE_CURRENT_SOURCE_DIR}/impl/*.inl)
 
 # Obtain the names of each impl header and add to PSTL
 foreach(InFName ${PSTL_IMPL})
-  STRING(REGEX REPLACE ${CMAKE_CURRENT_SOURCE_DIR}/impl/ "" OutFName ${InFName})
+  STRING(REGEX REPLACE ${CMAKE_CURRENT_SOURCE_DIR}/ "" OutFName ${InFName})
   set(PSTL_IMPL_HEADERS ${PSTL_IMPL_HEADERS} "${OutFName}")
 endforeach(InFName)
 
@@ -36,7 +36,7 @@ foreach( f ${PSTL_EXP_HEADERS} )
 endforeach( f )
 
 foreach( f ${PSTL_IMPL_HEADERS} )
-  set( src ${CMAKE_CURRENT_SOURCE_DIR}/impl/${f} )
+  set( src ${CMAKE_CURRENT_SOURCE_DIR}/${f} )
   set( dst ${impl_output_dir}/${f} )
   add_custom_command(OUTPUT ${dst}
     DEPENDS ${src}
