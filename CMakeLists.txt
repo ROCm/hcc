@@ -236,7 +236,7 @@ set(CPACK_SET_DESTDIR ON CACHE BOOL "Installer package will install hcc to CMAKE
 if (CPACK_SET_DESTDIR)
   set(HCC_PACKAGE_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX})
 else (CPACK_SET_DESTDIR)
-  set(CPACK_PACKAGING_INSTALL_PREFIX "/opt/rocm/${INSTALL_DIR_NAME}" CACHE PATH "Default installation path of hcc installer package") 
+  set(CPACK_PACKAGING_INSTALL_PREFIX "/opt/rocm/${INSTALL_DIR_NAME}" CACHE PATH "Default installation path of hcc installer package")
   set(HCC_PACKAGE_INSTALL_PREFIX ${CPACK_PACKAGING_INSTALL_PREFIX})
 endif (CPACK_SET_DESTDIR)
 MESSAGE("Installer package installation path: ${HCC_PACKAGE_INSTALL_PREFIX}")
@@ -268,7 +268,7 @@ endif (HAS_ROCM EQUAL 0)
 # Detect AMDGPU backend for native codegen
 #################
 
-set(HSA_AMDGPU_GPU_TARGET "gfx803" CACHE STRING "Target AMDGPU ISA version")
+set(HSA_AMDGPU_GPU_TARGET "auto" CACHE STRING "Target AMDGPU ISA version")
 
 # Tokenize HSA_AMDGPU_GPU_TARGET
 
@@ -335,6 +335,7 @@ add_custom_target(clang
           -DKALMAR_FRONTEND_COMMIT=${KALMAR_FRONTEND_COMMIT}
           -DKALMAR_BACKEND_COMMIT=${KALMAR_BACKEND_COMMIT}
           -DKALMAR_BACKEND=${KALMAR_BACKEND}
+          -DAMDGPU_TARGET=${AMDGPU_TARGET}
           -DLLVM_TARGETS_TO_BUILD="AMDGPU\;X86"
           -DLLVM_INCLUDE_EXAMPLES=off
   COMMAND ${CMAKE_COMMAND} -E env ROCM_ROOT=${ROCM_ROOT} make -j ${NUM_BUILD_THREADS} # not portable, but we need it this way
@@ -413,6 +414,9 @@ install(DIRECTORY ${CLANG_SRC_DIR}/include
         PATTERN CMakeFiles EXCLUDE
         PATTERN CMakeLists* EXCLUDE
         PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
+
+install( FILES ${CMAKE_CURRENT_SOURCE_DIR}/scripts/cmake/ImportedTargets.cmake
+         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/hcc )
 
 add_custom_target(world DEPENDS clang)
 
@@ -511,12 +515,6 @@ add_subdirectory(amp-conformance)
 add_subdirectory(stl-test)
 add_subdirectory(cmake-tests)
 
-# create a "hcc" symlink in the include directory
-# that points to itself so we could support
-# include <hcc.hpp> and include<hcc/hcc.hpp>
-execute_process(COMMAND ln -sf ../include hcc
-                WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/include)
-
 # create documentation
 configure_file(
   ${PROJECT_SOURCE_DIR}/lib/doxygen_config.in
@@ -589,9 +587,9 @@ endif( USE_LIBCXX )
 # for non-official release build, we want to relax the dependency on rocr runtime
 if (OFFICIAL_RELEASE_BUILD)
   if (HCC_INTEGRATE_ROCDL)
-    set(HCC_ROCR_DEP ", hsa-rocr-dev, hsa-ext-rocr-dev")
+    set(HCC_ROCR_DEP ", hsa-rocr-dev, hsa-ext-rocr-dev, rocm-utils")
   else (HCC_INTEGRATE_ROCDL)
-    set(HCC_ROCR_DEP ", hsa-rocr-dev, hsa-ext-rocr-dev, rocm-device-libs")
+    set(HCC_ROCR_DEP ", hsa-rocr-dev, hsa-ext-rocr-dev, rocm-device-libs, rocm-utils")
   endif(HCC_INTEGRATE_ROCDL)
 else (OFFICIAL_RELEASE_BUILD)
   set(HCC_ROCR_DEP "")
