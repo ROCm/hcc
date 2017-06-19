@@ -25,14 +25,13 @@ node ('rocmtest')
   // The client workspace is shared with the docker container
   stage('HCC Checkout')
   {
-    deleteDir( )
-    checkout scm
-
-    // list the commit hash of the submodules
-    sh 'git ls-tree HEAD | grep commit'
-
-    // clone the submodules
-    sh 'git submodule update --init'
+    checkout([
+      $class: 'GitSCM',
+      branches: scm.branches,
+      doGenerateSubmoduleConfigurations: scm.doGenerateSubmoduleConfigurations,
+      extensions: scm.extensions + [[$class: 'CleanCheckout'], [$class: 'SubmoduleOption', disableSubmodules: false, parentCredentials: false, recursiveSubmodules: true, reference: '', trackingSubmodules: false]],
+      userRemoteConfigs: scm.userRemoteConfigs
+    ])
   }
 
   def hcc_build_image = null
