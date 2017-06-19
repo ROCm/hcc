@@ -424,11 +424,12 @@ if (HCC_INTEGRATE_ROCDL)
     DEPENDS clang
   )
 
-  # FIXME: We have to reset the state of the ROCDL before building
-  add_custom_command(TARGET rocdl PRE_BUILD
-    COMMAND git checkout -- .
-    WORKING_DIRECTORY ${ROCDL_SRC_DIR}
-  )
+  # We will be performing addr space transformations in build directory
+  # Adopting generic address space as address space 0
+  file(COPY ${ROCDL_SRC_DIR}/utils/add_amdgiz.sed
+       DESTINATION ${ROCDL_BUILD_DIR}/utils)
+  file(COPY ${ROCDL_SRC_DIR}/utils/change-addr-space.sh
+       DESTINATION ${ROCDL_BUILD_DIR}/utils)
 
   file(MAKE_DIRECTORY ${ROCDL_BUILD_DIR}/lib)
   add_custom_command(TARGET rocdl POST_BUILD
