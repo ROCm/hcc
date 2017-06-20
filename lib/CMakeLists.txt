@@ -81,7 +81,11 @@ rocm_install_targets(
 
 rocm_export_targets(
   NAMESPACE hcc::
-  INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/import-hsa.cmake
+  DEPENDS
+    PACKAGE PkgConfig
+  INCLUDE 
+    ${CMAKE_CURRENT_SOURCE_DIR}/import-hsa.cmake
+    ${CMAKE_CURRENT_SOURCE_DIR}/import-unwind.cmake
   TARGETS hcc::hccrt hcc::hc_am
   PREFIX ${HCC_SUBDIR}
 )

@@ -403,9 +403,6 @@ install(DIRECTORY ${CLANG_SRC_DIR}/include
         PATTERN CMakeLists* EXCLUDE
         PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
 
-install( FILES ${CMAKE_CURRENT_SOURCE_DIR}/scripts/cmake/ImportedTargets.cmake
-         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/hcc )
-
 add_custom_target(world DEPENDS clang)
 
 
@@ -552,6 +549,8 @@ set(CPACK_DEBIAN_PACKAGE_DEPENDS "${HCC_GENERAL_DEBIAN_DEP} ${HCC_ROCR_DEP} ${HC
 
 set(HCC_GENERAL_RPM_DEP "findutils, elfutils-libelf, pciutils-libs, file, pth, libunwind")
 set(CPACK_RPM_PACKAGE_REQUIRES "${HCC_GENERAL_RPM_DEP} ${HCC_ROCR_DEP}" )
+
+set(CPACK_DEBIAN_ARCHIVE_TYPE "gnutar")
 
 rocm_create_package(
   NAME hcc 
