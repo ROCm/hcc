@@ -296,7 +296,7 @@ public:
 
   virtual void dispatch_hsa_kernel(const hsa_kernel_dispatch_packet_t *aql, 
                                    const void * args, size_t argsize,
-                                   hc::completion_future *cf)  { };
+                                   hc::completion_future *cf, const char *kernel_name)  { };
  
   /// set CU affinity of this queue.
   /// the setting is permanent until the queue is destroyed or another setting
