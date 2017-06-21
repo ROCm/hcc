@@ -97,7 +97,7 @@ LIB_SEARCH_PATHS=()
 for ARG in "$@"
 do
   # matches -L<path>
-  if [[ "$ARG" =~ ^-L* ]]; then
+  if [[ "$ARG" =~ ^-L.* ]]; then
     REAL_PATH="$(readlink -f "${ARG:2}")"
     if [ $VERBOSE == 2 ]; then
       echo "add library path: ${ARG:2}, canonical path: $REAL_PATH"
