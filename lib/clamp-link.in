@@ -177,7 +177,7 @@ do
     fi
 
     OBJS_TO_PROCESS+=( "$ARG" )
-  elif [[ "$ARG" =~ ^-l[^[:space:]]+$ ]] || [[ "$ARG" =~ [^[:space:]]+.a$ ]]; then
+  elif [[ "$ARG" =~ ^-l[^[:space:]]+$ ]] || [[ "$ARG" =~ [^[:space:]]+.a$ ]] || [[ "$ARG" =~ [^[:space:]]+.lo$ ]]; then
 
     # proccess a static library
 
@@ -212,11 +212,11 @@ do
         fi
       done
     else
-      # this is .a static library file specified at the commad line
+      # this is .a or .lo static library file specified at the commad line
       if [ -f "$ARG" ]; then
         FULL_LIB_PATH=$(readlink -f "$ARG")
         if [ $VERBOSE == 2 ]; then
-          echo "use .a specified at: $FULL_LIB_PATH"
+          echo "use .a / .lo specified at: $FULL_LIB_PATH"
         fi
         DETECTED_STATIC_LIBRARY="$FULL_LIB_PATH"
       fi
