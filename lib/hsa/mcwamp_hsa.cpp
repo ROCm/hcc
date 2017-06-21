@@ -41,7 +41,6 @@
 #include <time.h>
 #include <iomanip>
 
-#define KALMAR_DEBUG (0)
 #ifndef KALMAR_DEBUG
 #define KALMAR_DEBUG (0)
 #endif
@@ -106,8 +105,6 @@ unsigned HCC_DB = 0;
 int HCC_MAX_QUEUES = 20;
 
 
-static std::ofstream g_hccProfileFile; // if using a file open it here
-static std::ostream *g_hccProfileStream = nullptr; // point at file or default stream
 
 #define HCC_PROFILE_VERBOSE_BASIC                   (1 << 0)
 #define HCC_PROFILE_VERBOSE_TIMESTAMP               (1 << 1)
@@ -121,13 +118,13 @@ char * HCC_PROFILE_FILE=nullptr;
 // Profiler:
 #define LOG_PROFILE(start, end, type, tag, msg) \
 {\
-    *g_hccProfileStream  << "profile: " << std::setw(7) << type << ";\t" \
+    Kalmar::ctx.getHccProfileStream() << "profile: " << std::setw(7) << type << ";\t" \
                          << std::setw(25) << tag\
                          << ";\t" << std::fixed << std::setw(6) << std::setprecision(1) << (end-start)/1000.0 << " us;";\
     if (HCC_PROFILE_VERBOSE & (HCC_PROFILE_VERBOSE_TIMESTAMP)) {\
-            *g_hccProfileStream << "\t" << start << ";\t" << end << ";";\
+            Kalmar::ctx.getHccProfileStream() << "\t" << start << ";\t" << end << ";";\
     }\
-   *g_hccProfileStream <<  msg << "\n";\
+   Kalmar::ctx.getHccProfileStream() <<  msg << "\n";\
 }
 
 
@@ -429,7 +426,7 @@ private:
     hsa_signal_t signal;
     int signalIndex;
     bool isSubmitted;
-    bool isAsync;;          // copy was performed asynchronously
+    bool isAsync;          // copy was performed asynchronously
     bool isSingleStepCopy;; // copy was performed on fast-path via a single call to the HSA copy routine
     bool isPeerToPeer;
     uint64_t apiStartTick;
@@ -2276,7 +2273,6 @@ public:
     }
 
     void* CreateKernel(const char* fun, Kalmar::KalmarQueue *queue) override {
-        //fun = "_ZZN8hip_impl21grid_launch_hip_impl_IZ76Cijk_Alik_Bljk_SB_MT064x128x08_GSU06_MO10_PGR0_PLR0_TT04_08_WG16_16_01_WGM01PfPKfS3_ffjjjjjjjjjjjjjP12ihipStream_tjPP11ihipEvent_tS8_E4$_36JNS_17Empty_launch_parmERS1_RjSC_SC_SC_SC_SC_EEEvNS_12_GLOBAL__N_119New_grid_launch_tagE4dim3SF_iRKN2hc16accelerator_viewET_DpOT0_ENUlRKNSG_11tiled_indexILi3EEEE_19__cxxamp_trampolineES1_jjjjjj";
         std::string str(fun);
         HSAKernel *kernel = programs[str];
 
@@ -2788,56 +2784,6 @@ void hccgetenv(const char *var_name, char **var, const char *usage)
 #define GET_ENV_STRING(envVar, usage)  hccgetenv (#envVar, &envVar, usage)
 
 
-// Global free function to read HCC_ENV vars.  Really this should be called once per process not once-per-event.
-// Global so HCC clients or debuggers can force a re-read of the environment variables.
-void ReadHccEnv() 
-{
-    GET_ENV_INT(HCC_PRINT_ENV, "Print values of HCC environment variables");
-
-   // 0x1=pre-serialize, 0x2=post-serialize , 0x3= pre- and post- serialize.
-   // HCC_SERIALIZE_KERNEL serializes PFE, GL, and dispatch_hsa_kernel calls.
-   // HCC_SERIALIZE_COPY serializes av::copy_async operations.  (array_view copies are not currently impacted))
-    GET_ENV_INT(HCC_SERIALIZE_KERNEL, 
-                 "0x1=pre-serialize before each kernel launch, 0x2=post-serialize after each kernel launch, 0x3=both");
-    GET_ENV_INT(HCC_SERIALIZE_COPY,
-                 "0x1=pre-serialize before each data copy, 0x2=post-serialize after each data copy, 0x3=both");
-
-
-    GET_ENV_INT(HCC_DB, "Enable HCC trace debug");
-
-    GET_ENV_INT(HCC_OPT_FLUSH, "Perform system-scope acquire/release only at CPU sync boundaries (rather than after each kernel)");
-    GET_ENV_INT(HCC_MAX_QUEUES, "Set max number of HSA queues this process will use.  accelerator_views will share the allotted queues and steal from each other as necessary");
-
-
-    GET_ENV_INT(HCC_UNPINNED_COPY_MODE, "Select algorithm for unpinned copies. 0=ChooseBest(see thresholds), 1=PinInPlace, 2=StagingBuffer, 3=Memcpy");
-
-    GET_ENV_INT(HCC_CHECK_COPY, "Check dst == src after each copy operation.  Only works on large-bar systems.");
-
-   
-    // Select thresholds to use for unpinned copies
-    GET_ENV_INT (HCC_H2D_STAGING_THRESHOLD,    "Min size (in KB) to use staging buffer algorithm for H2D copy if ChooseBest algorithm selected");
-    GET_ENV_INT (HCC_H2D_PININPLACE_THRESHOLD, "Min size (in KB) to use pin-in-place algorithm for H2D copy if ChooseBest algorithm selected");
-    GET_ENV_INT (HCC_D2H_PININPLACE_THRESHOLD, "Min size (in KB) to use pin-in-place for D2H copy if ChooseBest algorithm selected");
-
-
-    GET_ENV_INT    (HCC_PROFILE,         "Enable HCC kernel and data profiling.  1=summary, 2=trace");
-    GET_ENV_INT    (HCC_PROFILE_VERBOSE, "Bitmark to control profile verbosity and format. 0x1=default, 0x2=show begin/end, 0x4=show barrier");
-    GET_ENV_STRING (HCC_PROFILE_FILE,    "Set file name for HCC_PROFILE mode.  Default=stderr");
-
-    if (HCC_PROFILE) {
-        if (HCC_PROFILE_FILE==nullptr || !strcmp(HCC_PROFILE_FILE, "stderr")) {
-            g_hccProfileStream = &std::cerr;
-        } else if (!strcmp(HCC_PROFILE_FILE, "stdout")) {
-            g_hccProfileStream = &std::cout;
-        } else {
-            g_hccProfileFile.open(HCC_PROFILE_FILE, std::ios::out);
-            assert (!g_hccProfileFile.fail());
-
-            g_hccProfileStream = &g_hccProfileFile;
-        }
-    }
-
-};
 
 class HSAContext final : public KalmarContext
 {
@@ -2857,6 +2803,10 @@ private:
     HSADevice class to assign it the host memory pool to GPU agent.
     */
     hsa_agent_t host;
+
+
+    std::ofstream hccProfileFile; // if using a file open it here
+    std::ostream *hccProfileStream = nullptr; // point at file or default stream
 
     /// Determines if the given agent is of type HSA_DEVICE_TYPE_GPU
     /// If so, cache to input data
@@ -2917,6 +2867,9 @@ private:
 
 
 public:
+    void ReadHccEnv() ;
+    std::ostream &getHccProfileStream() const { return *hccProfileStream; };
+
     HSAContext() : KalmarContext(), signalPool(), signalPoolFlag(), signalCursor(0), signalPoolMutex() {
         host.handle = (uint64_t)-1;
 
@@ -3144,6 +3097,58 @@ static HSAContext ctx;
 // member function implementation of HSADevice
 // ----------------------------------------------------------------------
 namespace Kalmar {
+
+
+// Global free function to read HCC_ENV vars.  Really this should be called once per process not once-per-event.
+// Global so HCC clients or debuggers can force a re-read of the environment variables.
+void HSAContext::ReadHccEnv() 
+{
+    GET_ENV_INT(HCC_PRINT_ENV, "Print values of HCC environment variables");
+
+   // 0x1=pre-serialize, 0x2=post-serialize , 0x3= pre- and post- serialize.
+   // HCC_SERIALIZE_KERNEL serializes PFE, GL, and dispatch_hsa_kernel calls.
+   // HCC_SERIALIZE_COPY serializes av::copy_async operations.  (array_view copies are not currently impacted))
+    GET_ENV_INT(HCC_SERIALIZE_KERNEL, 
+                 "0x1=pre-serialize before each kernel launch, 0x2=post-serialize after each kernel launch, 0x3=both");
+    GET_ENV_INT(HCC_SERIALIZE_COPY,
+                 "0x1=pre-serialize before each data copy, 0x2=post-serialize after each data copy, 0x3=both");
+
+
+    GET_ENV_INT(HCC_DB, "Enable HCC trace debug");
+
+    GET_ENV_INT(HCC_OPT_FLUSH, "Perform system-scope acquire/release only at CPU sync boundaries (rather than after each kernel)");
+    GET_ENV_INT(HCC_MAX_QUEUES, "Set max number of HSA queues this process will use.  accelerator_views will share the allotted queues and steal from each other as necessary");
+
+
+    GET_ENV_INT(HCC_UNPINNED_COPY_MODE, "Select algorithm for unpinned copies. 0=ChooseBest(see thresholds), 1=PinInPlace, 2=StagingBuffer, 3=Memcpy");
+
+    GET_ENV_INT(HCC_CHECK_COPY, "Check dst == src after each copy operation.  Only works on large-bar systems.");
+
+   
+    // Select thresholds to use for unpinned copies
+    GET_ENV_INT (HCC_H2D_STAGING_THRESHOLD,    "Min size (in KB) to use staging buffer algorithm for H2D copy if ChooseBest algorithm selected");
+    GET_ENV_INT (HCC_H2D_PININPLACE_THRESHOLD, "Min size (in KB) to use pin-in-place algorithm for H2D copy if ChooseBest algorithm selected");
+    GET_ENV_INT (HCC_D2H_PININPLACE_THRESHOLD, "Min size (in KB) to use pin-in-place for D2H copy if ChooseBest algorithm selected");
+
+
+    GET_ENV_INT    (HCC_PROFILE,         "Enable HCC kernel and data profiling.  1=summary, 2=trace");
+    GET_ENV_INT    (HCC_PROFILE_VERBOSE, "Bitmark to control profile verbosity and format. 0x1=default, 0x2=show begin/end, 0x4=show barrier");
+    GET_ENV_STRING (HCC_PROFILE_FILE,    "Set file name for HCC_PROFILE mode.  Default=stderr");
+
+    if (HCC_PROFILE) {
+        if (HCC_PROFILE_FILE==nullptr || !strcmp(HCC_PROFILE_FILE, "stderr")) {
+            ctx.hccProfileStream = &std::cerr;
+        } else if (!strcmp(HCC_PROFILE_FILE, "stdout")) {
+            ctx.hccProfileStream = &std::cout;
+        } else {
+            ctx.hccProfileFile.open(HCC_PROFILE_FILE, std::ios::out);
+            assert (!ctx.hccProfileFile.fail());
+
+            ctx.hccProfileStream = &ctx.hccProfileFile;
+        }
+    }
+
+};
 
 
 HSADevice::HSADevice(hsa_agent_t a, hsa_agent_t host, int x_accSeqNum) : KalmarDevice(access_type_read_write),
