@@ -106,10 +106,30 @@ do
   fi
 done
 
-
-
-
+# gather input arguments from linker command files
+INPUT_ARGUMENTS=()
 for ARG in "$@"
+do
+  # matches @<path>
+  if [[ "$ARG" =~ ^@.* ]]; then
+    REAL_PATH="$(readlink -f "${ARG:1}")"
+    if [ $VERBOSE == 2 ]; then
+      echo "add linker command path: ${ARG:1}, canonical path: $REAL_PATH"
+    fi
+
+    # read from linker command file
+    IFS=$'\n' read -d '' -r -a LINES < "$REAL_PATH"
+    for LINE in ${LINES[@]}
+    do
+      echo "add linker command: $LINE"
+      INPUT_ARGUMENTS+=($LINE)
+    done
+  else
+    INPUT_ARGUMENTS+=($ARG)
+  fi
+done
+
+for ARG in ${INPUT_ARGUMENTS[@]}
 do
 
   case $ARG in
