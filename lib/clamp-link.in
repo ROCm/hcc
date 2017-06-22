@@ -68,7 +68,7 @@ _find_object() {
 
   if [ -e $FILE ]; then
     local file_output=`file $FILE | grep 'ELF 64-bit LSB  relocatable, x86-64'`
-    local readelf_output=`readelf -h $FILE | grep 'Relocatable file'`
+    local readelf_output=`readelf -h $FILE 2>&1 | grep 'Relocatable file'`
 
     if [ ! -z "$file_output" ] && [ ! -z "$readelf_output" ]; then
       # remove postfix
@@ -263,7 +263,7 @@ do
   elif [ -f "$ARG" ]; then
     # an object file but doesn't have an .o extension??
     file_output=`file "$ARG" | grep 'ELF 64-bit LSB  relocatable, x86-64'`
-    readelf_output=`readelf -h "$ARG" | grep 'Relocatable file'`
+    readelf_output=`readelf -h "$ARG" 2>&1 | grep 'Relocatable file'`
     if [ ! -z "$file_output" ] && [ ! -z "$readelf_output" ]; then
       OBJS_TO_PROCESS+=( "$ARG" )
     fi
