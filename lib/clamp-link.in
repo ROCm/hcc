@@ -121,7 +121,9 @@ do
     IFS=$'\n' read -d '' -r -a LINES < "$REAL_PATH"
     for LINE in ${LINES[@]}
     do
-      echo "add linker command: $LINE"
+      if [ $VERBOSE == 2 ]; then
+        echo "add linker command: $LINE"
+      fi
       INPUT_ARGUMENTS+=($LINE)
     done
   else
