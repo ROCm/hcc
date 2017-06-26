@@ -97,7 +97,7 @@ LIB_SEARCH_PATHS=()
 for ARG in "$@"
 do
   # matches -L<path>
-  if [[ "$ARG" =~ ^-L* ]]; then
+  if [[ "$ARG" =~ ^-L.* ]]; then
     REAL_PATH="$(readlink -f "${ARG:2}")"
     if [ $VERBOSE == 2 ]; then
       echo "add library path: ${ARG:2}, canonical path: $REAL_PATH"
@@ -106,7 +106,30 @@ do
   fi
 done
 
+# gather input arguments from linker command files
+INPUT_ARGUMENTS=()
+for ARG in "$@"
+do
+  # matches @<path>
+  if [[ "$ARG" =~ ^@.* ]]; then
+    REAL_PATH="$(readlink -f "${ARG:1}")"
+    if [ $VERBOSE == 2 ]; then
+      echo "add linker command path: ${ARG:1}, canonical path: $REAL_PATH"
+    fi
 
+    # read from linker command file
+    IFS=$'\n' read -d '' -r -a LINES < "$REAL_PATH"
+    for LINE in ${LINES[@]}
+    do
+      if [ $VERBOSE == 2 ]; then
+        echo "add linker command: $LINE"
+      fi
+      INPUT_ARGUMENTS+=($LINE)
+    done
+  else
+    INPUT_ARGUMENTS+=("$ARG")
+  fi
+done
 
 for ARG in "${INPUT_ARGUMENTS[@]}"
 do
@@ -156,7 +179,7 @@ do
     fi
 
     OBJS_TO_PROCESS+=( "$ARG" )
-  elif [[ "$ARG" =~ ^-l[^[:space:]]+$ ]] || [[ "$ARG" =~ [^[:space:]]+.a$ ]]; then
+  elif [[ "$ARG" =~ ^-l[^[:space:]]+$ ]] || [[ "$ARG" =~ [^[:space:]]+.a$ ]] || [[ "$ARG" =~ [^[:space:]]+.lo$ ]]; then
 
     # proccess a static library
 
@@ -191,11 +214,11 @@ do
         fi
       done
     else
-      # this is .a static library file specified at the commad line
+      # this is .a or .lo static library file specified at the commad line
       if [ -f "$ARG" ]; then
         FULL_LIB_PATH=$(readlink -f "$ARG")
         if [ $VERBOSE == 2 ]; then
-          echo "use .a specified at: $FULL_LIB_PATH"
+          echo "use .a / .lo specified at: $FULL_LIB_PATH"
         fi
         DETECTED_STATIC_LIBRARY="$FULL_LIB_PATH"
       fi
