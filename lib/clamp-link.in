@@ -108,8 +108,7 @@ done
 
 
 
-
-for ARG in "$@"
+for ARG in "${INPUT_ARGUMENTS[@]}"
 do
 
   case $ARG in
