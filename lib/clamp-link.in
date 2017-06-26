@@ -131,7 +131,7 @@ do
   fi
 done
 
-for ARG in ${INPUT_ARGUMENTS[@]}
+for ARG in "${INPUT_ARGUMENTS[@]}"
 do
 
   case $ARG in
