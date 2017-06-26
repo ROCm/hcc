@@ -109,9 +109,10 @@ int HCC_MAX_QUEUES = 20;
 
 
 
-#define HCC_PROFILE_VERBOSE_BASIC                   (1 << 0)
-#define HCC_PROFILE_VERBOSE_TIMESTAMP               (1 << 1)
-#define HCC_PROFILE_VERBOSE_BARRIER                 (1 << 2)
+#define HCC_PROFILE_VERBOSE_BASIC                   (1 << 0)   // 0x1
+#define HCC_PROFILE_VERBOSE_TIMESTAMP               (1 << 1)   // 0x2
+#define HCC_PROFILE_VERBOSE_OPSEQNUM                (1 << 2)   // 0x4
+#define HCC_PROFILE_VERBOSE_BARRIER                 (1 << 3)   // 0x8
 
 
 int HCC_PROFILE=0;
@@ -119,13 +120,16 @@ int HCC_PROFILE_VERBOSE=0;
 char * HCC_PROFILE_FILE=nullptr;
 
 // Profiler:
-#define LOG_PROFILE(start, end, type, tag, msg) \
+#define LOG_PROFILE(op, start, end, type, tag, msg) \
 {\
     Kalmar::ctx.getHccProfileStream() << "profile: " << std::setw(7) << type << ";\t" \
-                         << std::setw(25) << tag\
+                         << std::setw(40) << tag\
                          << ";\t" << std::fixed << std::setw(6) << std::setprecision(1) << (end-start)/1000.0 << " us;";\
     if (HCC_PROFILE_VERBOSE & (HCC_PROFILE_VERBOSE_TIMESTAMP)) {\
             Kalmar::ctx.getHccProfileStream() << "\t" << start << ";\t" << end << ";";\
+    }\
+    if (HCC_PROFILE_VERBOSE & (HCC_PROFILE_VERBOSE_OPSEQNUM)) {\
+            Kalmar::ctx.getHccProfileStream() << "\top#" << op->getSeqNum() <<";";\
     }\
    Kalmar::ctx.getHccProfileStream() <<  msg << "\n";\
 }
@@ -1072,7 +1076,11 @@ public:
         op->setSeqNumFromQueue();
 
         DBOUT(DB_CMD, "  pushing op=" << op << "  #" << op->getSeqNum() << " signal="<< std::hex  << ((hsa_signal_t*)op->getNativeHandle())->handle << std::dec
-                    << "  commandKind=" << getHcCommandKindString(op->getCommandKind()) << std::endl);
+                    << "  commandKind=" << getHcCommandKindString(op->getCommandKind())
+                    << " " 
+                    << (op->getCommandKind() == hcCommandKernel ? ((static_cast<HSADispatch*> (op.get()))->getKernelName()) : "")
+                    << std::endl);
+
 
 
         if (asyncOps.size() >= MAX_INFLIGHT_COMMANDS_PER_QUEUE) {
@@ -4037,7 +4045,9 @@ HSADispatch::dispose() {
     if (HCC_PROFILE) {
         uint64_t start = getBeginTimestamp();
         uint64_t end   = getEndTimestamp();
-        LOG_PROFILE(start, end, "kernel", getKernelName(), "");
+        std::string kname = kernel ? (kernel->kernelName + "+++" + kernel->shortKernelName) : "hmm";
+        LOG_PROFILE(this, start, end, "kernel", kname.c_str(), std::hex << "kernel="<< kernel << " " << (kernel? kernel->kernelCodeHandle:0x0) << " aql.kernel_object=" << aql.kernel_object << std::dec);
+        //LOG_PROFILE(this, start, end, "kernel", getKernelName(), "");
     }
     Kalmar::ctx.releaseSignal(signal, signalIndex);
 
@@ -4318,7 +4328,7 @@ HSABarrier::dispose() {
         uint64_t end   = getEndTimestamp();
         int acqBits = extractBits(header, HSA_PACKET_HEADER_SCACQUIRE_FENCE_SCOPE, HSA_PACKET_HEADER_WIDTH_SCACQUIRE_FENCE_SCOPE);
         int relBits = extractBits(header, HSA_PACKET_HEADER_SCRELEASE_FENCE_SCOPE, HSA_PACKET_HEADER_WIDTH_SCRELEASE_FENCE_SCOPE);
-        LOG_PROFILE(start, end, "barrier", "deps:" + std::to_string(depCount) + "_acq:" + fenceToString(acqBits) + "_rel:" + fenceToString(relBits), "")
+        LOG_PROFILE(this, start, end, "barrier", "deps:" + std::to_string(depCount) + "_acq:" + fenceToString(acqBits) + "_rel:" + fenceToString(relBits), "")
     }
     Kalmar::ctx.releaseSignal(signal, signalIndex);
 
@@ -4629,7 +4639,7 @@ HSACopy::dispose() {
 
             double bw = (double)(sizeBytes)/(end-start) * (1000.0/1024.0) * (1000.0/1024.0);
 
-            LOG_PROFILE(start, end, "copy", getCopyCommandString(),  "\t" << sizeBytes << " bytes;\t" << sizeBytes/1024.0/1024 << " MB;\t" << bw << " GB/s;");
+            LOG_PROFILE(this, start, end, "copy", getCopyCommandString(),  "\t" << sizeBytes << " bytes;\t" << sizeBytes/1024.0/1024 << " MB;\t" << bw << " GB/s;");
         }
         Kalmar::ctx.releaseSignal(signal, signalIndex);
     } else {
@@ -4637,7 +4647,7 @@ HSACopy::dispose() {
             uint64_t start = apiStartTick;
             uint64_t end   = Kalmar::ctx.getSystemTicks();
             double bw = (double)(sizeBytes)/(end-start) * (1000.0/1024.0) * (1000.0/1024.0);
-            LOG_PROFILE(start, end, "copyslo", getCopyCommandString(),  "\t" << sizeBytes << " bytes;\t" << sizeBytes/1024.0/1024 << " MB;\t" << bw << " GB/s;");
+            LOG_PROFILE(this, start, end, "copyslo", getCopyCommandString(),  "\t" << sizeBytes << " bytes;\t" << sizeBytes/1024.0/1024 << " MB;\t" << bw << " GB/s;");
         }
     }
 
