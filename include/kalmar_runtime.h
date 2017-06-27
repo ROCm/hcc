@@ -925,7 +925,8 @@ struct rw_info
 #endif
         /// If this rw_info is constructed by host pointer
         /// 1. synchronize latest data to host pointer
-        /// 2. Because the data pointer cannout be released, erase itself from devs
+        /// 2. Because the data pointer cannot be released, erase itself from devs
+
         if (HostPtr)
             synchronize(false);
         if (curr) {

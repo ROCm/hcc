@@ -129,7 +129,7 @@ char * HCC_PROFILE_FILE=nullptr;
             Kalmar::ctx.getHccProfileStream() << "\t" << start << ";\t" << end << ";";\
     }\
     if (HCC_PROFILE_VERBOSE & (HCC_PROFILE_VERBOSE_OPSEQNUM)) {\
-            Kalmar::ctx.getHccProfileStream() << "\top#" << op->getSeqNum() <<";";\
+            Kalmar::ctx.getHccProfileStream() << "\t#" << op->hsaQueue()->getHSADev()->get_seqnum() << "." <<  op->hsaQueue()->getSeqNum() << "." << op->getSeqNum() <<";";\
     }\
    Kalmar::ctx.getHccProfileStream() <<  msg << "\n";\
 }
@@ -1014,6 +1014,8 @@ public:
 
     bool nextSyncNeedsSysRelease() const { return _nextSyncNeedsSysRelease; };
     void setNextSyncNeedsSysRelease(bool r) { _nextSyncNeedsSysRelease = r; };
+
+    uint64_t getSeqNum() const { return queueSeqNum; };
 
     Kalmar::HSADevice * getHSADev() const;
 
@@ -3527,6 +3529,7 @@ HSAQueue::getHSAKernargRegion() override {
 void HSAQueue::copy_ext(const void *src, void *dst, size_t size_bytes, hc::hcCommandKind copyDir, const hc::AmPointerInfo &srcPtrInfo, const hc::AmPointerInfo &dstPtrInfo,
               const Kalmar::KalmarDevice *copyDevice, bool forceUnpinnedCopy) override {
     // wait for all previous async commands in this queue to finish
+    // TODO - can remove this synchronization, copy is tail-synchronous not required on front end.
     this->wait();
 
 
@@ -4045,9 +4048,9 @@ HSADispatch::dispose() {
     if (HCC_PROFILE) {
         uint64_t start = getBeginTimestamp();
         uint64_t end   = getEndTimestamp();
-        std::string kname = kernel ? (kernel->kernelName + "+++" + kernel->shortKernelName) : "hmm";
-        LOG_PROFILE(this, start, end, "kernel", kname.c_str(), std::hex << "kernel="<< kernel << " " << (kernel? kernel->kernelCodeHandle:0x0) << " aql.kernel_object=" << aql.kernel_object << std::dec);
-        //LOG_PROFILE(this, start, end, "kernel", getKernelName(), "");
+        //std::string kname = kernel ? (kernel->kernelName + "+++" + kernel->shortKernelName) : "hmm";
+        //LOG_PROFILE(this, start, end, "kernel", kname.c_str(), std::hex << "kernel="<< kernel << " " << (kernel? kernel->kernelCodeHandle:0x0) << " aql.kernel_object=" << aql.kernel_object << std::dec);
+        LOG_PROFILE(this, start, end, "kernel", getKernelName(), "");
     }
     Kalmar::ctx.releaseSignal(signal, signalIndex);
 
@@ -4699,7 +4702,7 @@ HSACopy::syncCopyExt(hc::hcCommandKind copyDir, const hc::AmPointerInfo &srcPtrI
     switch (copyDir) {
         case Kalmar::hcMemcpyHostToDevice:
             if (!srcInTracker || forceUnpinnedCopy) {
-                DBOUT(DB_COPY,"HSACopy::syncCopy(), invoke UnpinnedCopyEngine::CopyHostToDevice()\n");
+                DBOUT(DB_COPY,"HSACopy::syncCopyExt(), invoke UnpinnedCopyEngine::CopyHostToDevice()\n");
 
                 copyDevice->copy_engine[0]->CopyHostToDevice(copyDevice->copy_mode, dst, src, sizeBytes, depSignalCnt ? &depSignal : NULL);
                 useFastCopy = false;
@@ -4709,7 +4712,7 @@ HSACopy::syncCopyExt(hc::hcCommandKind copyDir, const hc::AmPointerInfo &srcPtrI
 
         case Kalmar::hcMemcpyDeviceToHost:
             if (!dstInTracker || forceUnpinnedCopy) {
-                DBOUT(DB_COPY,"HSACopy::syncCopy(), invoke UnpinnedCopyEngine::CopyDeviceToHost()\n");
+                DBOUT(DB_COPY,"HSACopy::syncCopyExt(), invoke UnpinnedCopyEngine::CopyDeviceToHost()\n");
                 UnpinnedCopyEngine::CopyMode d2hCopyMode = copyDevice->copy_mode;
                 if (d2hCopyMode == UnpinnedCopyEngine::UseMemcpy) {
                     // override since D2H does not support Memcpy
@@ -4721,7 +4724,7 @@ HSACopy::syncCopyExt(hc::hcCommandKind copyDir, const hc::AmPointerInfo &srcPtrI
             break;
 
         case Kalmar::hcMemcpyHostToHost:
-            DBOUT(DB_COPY,"HSACopy::syncCopy(), invoke memcpy\n");
+            DBOUT(DB_COPY,"HSACopy::syncCopyExt(), invoke memcpy\n");
             // Since this is sync copy, we assume here that the GPU has already drained younger commands.
 
             // This works for both mapped and unmapped memory:
@@ -4734,7 +4737,7 @@ HSACopy::syncCopyExt(hc::hcCommandKind copyDir, const hc::AmPointerInfo &srcPtrI
                 // TODO - is this a same-device copy or a P2P?
                 hsa_agent_t dstAgent = * (static_cast<hsa_agent_t*> (dstPtrInfo._acc.get_hsa_agent()));
                 hsa_agent_t srcAgent = * (static_cast<hsa_agent_t*> (srcPtrInfo._acc.get_hsa_agent()));
-                DBOUT(DB_COPY, "HSACopy:: P2P copy by engine forcing use of staging buffers.  copyEngine=" << copyDevice << "\n");
+                DBOUT(DB_COPY, "HSACopy::syncCopyExt() P2P copy by engine forcing use of staging buffers.  copyEngine=" << copyDevice << "\n");
 
                 isPeerToPeer = true;
 
@@ -4754,7 +4757,7 @@ HSACopy::syncCopyExt(hc::hcCommandKind copyDir, const hc::AmPointerInfo &srcPtrI
     if (useFastCopy) {
         // Didn't already handle copy with one of special (slow) cases above, use the standard runtime copy path.
 
-        DBOUT(DB_COPY, "HSACopy::syncCopy(), useFastCopy=1, fetch and init a HSA signal\n");
+        DBOUT(DB_COPY, "HSACopy::syncCopyExt(), useFastCopy=1, fetch and init a HSA signal\n");
 
         // Get a signal and initialize it:
         std::pair<hsa_signal_t, int> ret = Kalmar::ctx.getSignal();
@@ -4763,7 +4766,7 @@ HSACopy::syncCopyExt(hc::hcCommandKind copyDir, const hc::AmPointerInfo &srcPtrI
 
         hsa_signal_store_relaxed(signal, 1);
 
-        DBOUT(DB_CMD, "HSACopy::syncCopy(), invoke hsa_amd_memory_async_copy()\n");
+        DBOUT(DB_CMD, "HSACopy::syncCopyExt(), invoke hsa_amd_memory_async_copy()\n");
 
         if (copyDevice == nullptr) {
             throw Kalmar::runtime_exception("Null copyDevice reached call to hcc_memory_async_copy", -1);
@@ -4773,12 +4776,12 @@ HSACopy::syncCopyExt(hc::hcCommandKind copyDir, const hc::AmPointerInfo &srcPtrI
         hsa_status_t hsa_status = hcc_memory_async_copy(copyDir, copyDevice, dstPtrInfo, srcPtrInfo, sizeBytes, depSignalCnt, depSignalCnt ? &depSignal:NULL, signal);
 
         if (hsa_status == HSA_STATUS_SUCCESS) {
-            DBOUT(DB_COPY, "HSACopy::syncCopy(), wait for completion...");
+            DBOUT(DB_COPY, "HSACopy::syncCopyExt(), wait for completion...");
             hsa_signal_wait_relaxed(signal, HSA_SIGNAL_CONDITION_LT, 1, UINT64_MAX, waitMode);
 
             DBOUT(DB_COPY,"done!\n");
         } else {
-            DBOUT(DB_COPY, "HSACopy::syncCopy(), hsa_amd_memory_async_copy() returns: 0x" << std::hex << hsa_status << std::dec <<"\n");
+            DBOUT(DB_COPY, "HSACopy::syncCopyExt(), hsa_amd_memory_async_copy() returns: 0x" << std::hex << hsa_status << std::dec <<"\n");
             throw Kalmar::runtime_exception("hsa_amd_memory_async_copy error", hsa_status);
         }
     }
