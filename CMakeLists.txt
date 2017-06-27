@@ -425,12 +425,6 @@ if (HCC_INTEGRATE_ROCDL)
     DEPENDS clang
   )
 
-  # FIXME: We have to reset the state of the ROCDL before building
-  add_custom_command(TARGET rocdl PRE_BUILD
-    COMMAND git checkout -- .
-    WORKING_DIRECTORY ${ROCDL_SRC_DIR}
-  )
-
   file(MAKE_DIRECTORY ${ROCDL_BUILD_DIR}/lib)
   add_custom_command(TARGET rocdl POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E create_symlink ../irif/irif.amdgcn.bc                              irif.amdgcn.bc
