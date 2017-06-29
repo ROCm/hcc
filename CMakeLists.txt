@@ -322,7 +322,6 @@ add_custom_target(clang
           -DLLVM_EXTERNAL_CLANG_SOURCE_DIR="${PROJECT_SOURCE_DIR}/clang"
           -DLLVM_EXTERNAL_COMPILER_RT_SOURCE_DIR="${PROJECT_SOURCE_DIR}/compiler-rt"
           -DLLVM_EXTERNAL_LLD_SOURCE_DIR="${PROJECT_SOURCE_DIR}/lld"
-          -DLLVM_CCACHE_BUILD=ON
   COMMAND make -j ${NUM_BUILD_THREADS} # not portable, but we need it this way
   WORKING_DIRECTORY ${CLANG_BIN_DIR}
 )
