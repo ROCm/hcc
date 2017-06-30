@@ -43,10 +43,6 @@ endif()
 
 include (MCWAMP)
 
-execute_process(COMMAND ln -sf ../../lld WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/compiler/tools)
-execute_process(COMMAND ln -sf ../../clang WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/compiler/tools)
-execute_process(COMMAND ln -sf ../../compiler-rt WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/compiler/projects)
-
 # Regression test
 set(LLVM_SRC "${PROJECT_SOURCE_DIR}/compiler")
 set(LLVM_ROOT "${PROJECT_BINARY_DIR}/compiler")
@@ -322,6 +318,10 @@ add_custom_target(clang
           -DAMDGPU_TARGET=${AMDGPU_TARGET}
           -DLLVM_TARGETS_TO_BUILD="AMDGPU\;X86"
           -DLLVM_INCLUDE_EXAMPLES=off
+          -DLLVM_EXTERNAL_PROJECTS="clang;compiler-rt;lld"
+          -DLLVM_EXTERNAL_CLANG_SOURCE_DIR="${PROJECT_SOURCE_DIR}/clang"
+          -DLLVM_EXTERNAL_COMPILER_RT_SOURCE_DIR="${PROJECT_SOURCE_DIR}/compiler-rt"
+          -DLLVM_EXTERNAL_LLD_SOURCE_DIR="${PROJECT_SOURCE_DIR}/lld"
   COMMAND make -j ${NUM_BUILD_THREADS} # not portable, but we need it this way
   WORKING_DIRECTORY ${CLANG_BIN_DIR}
 )
