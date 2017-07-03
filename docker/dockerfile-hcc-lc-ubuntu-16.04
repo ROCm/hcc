@@ -1,16 +1,19 @@
 FROM ubuntu:16.04
 MAINTAINER Kent Knox <kent.knox@amd>
 
-# Initialize the image we are working with
-RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y curl && \
-  curl -sL http://packages.amd.com/rocm/apt/debian/rocm.gpg.key | apt-key add - && \
-  sh -c 'echo deb [arch=amd64] http://packages.amd.com/rocm/apt/debian/ xenial main > /etc/apt/sources.list.d/rocm.list' && \
-  apt-get update && \
-  apt-get clean
-
 # Copy the debian package of hcc-lc into the container from host
 COPY *.deb /tmp/
 
-# Install the debian package
+# NOTE: Make sure apt-get update and apt-get install are all on the same RUN command
+# Seperate RUN commands are cached by docker in different layers, and the contents of the update command need to
+# be refreshed every time the container is built, or repo metadata will get stale and packages it is looking for
+# won't exist upstream
 # FIXME: add --allow-unauthenticated to workaround issue with packages.amd.com
-RUN apt-get install --no-install-recommends --allow-unauthenticated -y /tmp/hcc*.deb && rm -f /tmp/*.deb
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y curl \
+  && curl -sL http://packages.amd.com/rocm/apt/debian/rocm.gpg.key | apt-key add - \
+  && echo deb [arch=amd64] http://packages.amd.com/rocm/apt/debian/ xenial main | tee /etc/apt/sources.list.d/rocm.list \
+  && apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends --allow-unauthenticated -y \
+    /tmp/hcc*.deb \
+  && rm -f /tmp/*.deb \
+  && apt-get clean \
+  && rm -rf /var/lib/apt/lists/*

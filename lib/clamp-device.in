@@ -192,7 +192,9 @@ fi
 
 # Optimization notes:
 #  -disable-simplify-libcalls:  prevents transforming loops into library calls such as memset, memcopy on GPU
-$OPT -inline -mtriple amdgcn--amdhsa-amdgiz -mcpu=$AMDGPU_TARGET -infer-address-spaces -amdgpu-internalize-symbols -disable-simplify-libcalls $KMOPTOPT -verify $2.linked.bc -o $2.opt.bc
+# Teach LLVM inliner we do want all functions used by a kernel be inlined
+# by assigning a big iniling threshold value
+$OPT -inline -inline-threshold=1048576 -mtriple amdgcn--amdhsa-amdgiz -mcpu=$AMDGPU_TARGET -infer-address-spaces -amdgpu-internalize-symbols -disable-simplify-libcalls $KMOPTOPT -verify $2.linked.bc -o $2.opt.bc
 
 # error handling for opt
 RETVAL=$?

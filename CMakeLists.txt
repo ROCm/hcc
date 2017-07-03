@@ -43,10 +43,6 @@ endif()
 
 include (MCWAMP)
 
-execute_process(COMMAND ln -sf ../../lld WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/compiler/tools)
-execute_process(COMMAND ln -sf ../../clang WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/compiler/tools)
-execute_process(COMMAND ln -sf ../../compiler-rt WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/compiler/projects)
-
 # Regression test
 set(LLVM_SRC "${PROJECT_SOURCE_DIR}/compiler")
 set(LLVM_ROOT "${PROJECT_BINARY_DIR}/compiler")
@@ -322,6 +318,10 @@ add_custom_target(clang
           -DAMDGPU_TARGET=${AMDGPU_TARGET}
           -DLLVM_TARGETS_TO_BUILD="AMDGPU\;X86"
           -DLLVM_INCLUDE_EXAMPLES=off
+          -DLLVM_EXTERNAL_PROJECTS="clang;compiler-rt;lld"
+          -DLLVM_EXTERNAL_CLANG_SOURCE_DIR="${PROJECT_SOURCE_DIR}/clang"
+          -DLLVM_EXTERNAL_COMPILER_RT_SOURCE_DIR="${PROJECT_SOURCE_DIR}/compiler-rt"
+          -DLLVM_EXTERNAL_LLD_SOURCE_DIR="${PROJECT_SOURCE_DIR}/lld"
   COMMAND make -j ${NUM_BUILD_THREADS} # not portable, but we need it this way
   WORKING_DIRECTORY ${CLANG_BIN_DIR}
 )
@@ -425,12 +425,6 @@ if (HCC_INTEGRATE_ROCDL)
     DEPENDS clang
   )
 
-  # FIXME: We have to reset the state of the ROCDL before building
-  add_custom_command(TARGET rocdl PRE_BUILD
-    COMMAND git checkout -- .
-    WORKING_DIRECTORY ${ROCDL_SRC_DIR}
-  )
-
   file(MAKE_DIRECTORY ${ROCDL_BUILD_DIR}/lib)
   add_custom_command(TARGET rocdl POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E create_symlink ../irif/irif.amdgcn.bc                              irif.amdgcn.bc
@@ -499,12 +493,6 @@ add_subdirectory(amp-conformance)
 add_subdirectory(stl-test)
 add_subdirectory(cmake-tests)
 
-# create a "hcc" symlink in the include directory
-# that points to itself so we could support
-# include <hcc.hpp> and include<hcc/hcc.hpp>
-execute_process(COMMAND ln -sf ../include hcc
-                WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/include)
-
 # create documentation
 configure_file(
   ${PROJECT_SOURCE_DIR}/lib/doxygen_config.in
@@ -565,7 +553,7 @@ set(CPACK_DEBIAN_PACKAGE_SECTION "devel")
 set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA
   "${PROJECT_BINARY_DIR}/packaging/debian/postinst;${PROJECT_BINARY_DIR}/packaging/debian/prerm")
 
-set(HCC_GENERAL_DEBIAN_DEP "g++-multilib, gcc-multilib, findutils, libelf1, libpci3, file, libunwind8")
+set(HCC_GENERAL_DEBIAN_DEP "g++-multilib, gcc-multilib, findutils, libelf1, libpci3, file, libunwind8, libunwind-dev")
 
 if ( USE_LIBCXX )
   set(HCC_LIBCXX_DEBIAN_DEP ", libc++1, libc++-dev, libc++abi1, libc++abi-dev")
@@ -577,9 +565,9 @@ endif( USE_LIBCXX )
 # for non-official release build, we want to relax the dependency on rocr runtime
 if (OFFICIAL_RELEASE_BUILD)
   if (HCC_INTEGRATE_ROCDL)
-    set(HCC_ROCR_DEP ", hsa-rocr-dev, hsa-ext-rocr-dev")
+    set(HCC_ROCR_DEP ", hsa-rocr-dev, hsa-ext-rocr-dev, rocm-utils")
   else (HCC_INTEGRATE_ROCDL)
-    set(HCC_ROCR_DEP ", hsa-rocr-dev, hsa-ext-rocr-dev, rocm-device-libs")
+    set(HCC_ROCR_DEP ", hsa-rocr-dev, hsa-ext-rocr-dev, rocm-device-libs, rocm-utils")
   endif(HCC_INTEGRATE_ROCDL)
 else (OFFICIAL_RELEASE_BUILD)
   set(HCC_ROCR_DEP "")
