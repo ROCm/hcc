@@ -17,6 +17,13 @@ and may contain patches not yet upstreamed. amd-common LLVM / LLD / Clang is
 automatically synchronized with upstream LLVM / LLD / Clang every 4 hours, so
 they are very close to the latest codes upstream.
 
+There are two roles in the HCC merge process. The one who conducts the upstream
+sync process through getting all the amd-common code, merging it into amd-hcc, 
+and filing the pull requests. And the one who reviews all of your sync pull
+requests. The HCC merge maintainer will take on the first role, and is required
+to interact, modify, and satisfy the changes requested by the reviewer before
+the pull requests can be accepted.
+
 Generally speaking, the process goes like this:
 
  1. Clone HCC repo manifest
@@ -124,12 +131,12 @@ There will be an `hcc-fork` directory inside the repo. It would be referred as
 - `git checkout origin/master`
 
 ### Merge amd-common LLD commits
-### From here, replace 20170626 with your date (YYYYMMDD).
+### From here, replace YYYYMMDD with your date.
 
 - change to HCC directory
 - `cd lld`
 - `git fetch --all`
-- `git checkout -b merge_20170626 origin/amd-hcc`
+- `git checkout -b merge_YYYYMMDD origin/amd-hcc`
 - `git merge origin/amd-common --no-edit`
 - Resolve any merge conflicts encountered here
 
@@ -138,7 +145,7 @@ There will be an `hcc-fork` directory inside the repo. It would be referred as
 - change to HCC directory
 - `cd compiler`
 - `git fetch --all`
-- `git checkout -b merge_20170626 origin/amd-hcc`
+- `git checkout -b merge_YYYYMMDD origin/amd-hcc`
 - `git merge origin/amd-common --no-edit`
 - Resolve any merge conflicts encountered here
 
@@ -147,7 +154,7 @@ There will be an `hcc-fork` directory inside the repo. It would be referred as
 - change to HCC directory
 - `cd compiler-rt`
 - `git fetch --all`
-- `git checkout -b merge_20170626 origin/amd-hcc`
+- `git checkout -b merge_YYYYMMDD origin/amd-hcc`
 - `git merge --no-ff compiler-rt/master --no-edit`
 - Resolve any merge conflicts encountered here
 
@@ -156,7 +163,7 @@ There will be an `hcc-fork` directory inside the repo. It would be referred as
 - change to HCC directory
 - `cd clang`
 - `git fetch --all`
-- `git checkout -b merge_20170626 origin/clang_tot_upgrade`
+- `git checkout -b merge_YYYYMMDD origin/clang_tot_upgrade`
 - `git merge --no-ff clang/amd-common --no-edit`
 - Resolve any merge conflicts encountered here
 
@@ -206,8 +213,8 @@ bin/hcc `bin/hcc-config --build --cxxflags --ldflags` \
 
 - change to HCC directory
 - `cd clang`
-- `git push clang_fork merge_20170626:merge_20170626`
-Create a pull request to merge `merge_20170626` from your clang fork
+- `git push clang_fork merge_YYYYMMDD:merge_YYYYMMDD`
+Create a pull request to merge `merge_YYYYMMDD` from your clang fork
 into https://github.com/RadeonOpenCompute/hcc-clang-upgrade
 on branch `clang_tot_upgrade`.
 
@@ -215,8 +222,8 @@ on branch `clang_tot_upgrade`.
 
 - change to HCC directory
 - `cd lld`
-- `git push lld_fork merge_20170626:merge_20170626`
-Create a pull request to merge `merge_20170626` from your lld fork
+- `git push lld_fork merge_YYYYMMDD:merge_YYYYMMDD`
+Create a pull request to merge `merge_YYYYMMDD` from your lld fork
 into https://github.com/RadeonOpenCompute/lld.git
 on branch `amd-hcc`.
 
@@ -224,8 +231,8 @@ on branch `amd-hcc`.
 
 - change to HCC directory
 - `cd compiler`
-- `git push llvm_fork merge_20170626:merge_20170626`
-Create a pull request to merge `merge_20170626` from your llvm fork
+- `git push llvm_fork merge_YYYYMMDD:merge_YYYYMMDD`
+Create a pull request to merge `merge_YYYYMMDD` from your llvm fork
 into https://github.com/RadeonOpenCompute/llvm.git
 on branch `amd-hcc`.
 
@@ -233,13 +240,22 @@ on branch `amd-hcc`.
 
 - change to HCC directory
 - `cd compiler-rt`
-- `git push compiler-rt_fork merge_20170626:merge_20170626`
-Create a pull request to merge `merge_20170626` from your compiler-rt fork
+- `git push compiler-rt_fork merge_YYYYMMDD:merge_YYYYMMDD`
+Create a pull request to merge `merge_YYYYMMDD` from your compiler-rt fork
 into https://github.com/RadeonOpenCompute/compiler-rt
 on branch `amd-hcc`.
 
 
 *** Wait until all Pull Requests are approved and merged. ***
+On github when making a pull request, the repository you are trying to update
+will have a list of reviewers who have the authority to approve pull requests
+and merge them into the repositories. During the review period, you are
+required to interact with the reviewers.
+
+For the pull requests to be approved, you must wait for a reviewer to accept
+the changes you are making. The reviewer will request changes if the code is
+not ready for merge. It is your responsibility to interact and resolve all
+conflicts so that the PR is ready for merge.
 
 ### Update HCC git submodules configuration
 
@@ -262,8 +278,8 @@ on branch `amd-hcc`.
 - `git checkout origin/master`
 - `git commit -m "[Config] revise submodule configuration"`, or provide custom
   commit log
-- `git push origin merge_20170626:merge_20170626`
-Create a pull request to merge `merge_20170626` from your hcc fork
+- `git push origin merge_YYYYMMDD:merge_YYYYMMDD`
+Create a pull request to merge `merge_YYYYMMDD` from your hcc fork
 into https://github.com/RadeonOpenCompute/hcc on branch `clang_tot_upgrade`.
 
 ### Update HCC repo manifest
