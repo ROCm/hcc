@@ -3187,7 +3187,7 @@ HSADevice::HSADevice(hsa_agent_t a, hsa_agent_t host, int x_accSeqNum) : KalmarD
         wchar_t path_wchar[128] {0};
         wchar_t description_wchar[128] {0};
         swprintf(path_wchar, 128, L"%s%u", name, node);
-        swprintf(description_wchar, 128, L"AMD HSA Agent %s%u", name, node);
+        swprintf(description_wchar, 128, L"AMD HSA Agent %s, Node %u", name, node);
 
         path = std::wstring(path_wchar);
         description = std::wstring(description_wchar);
