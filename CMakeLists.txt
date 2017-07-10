@@ -333,6 +333,12 @@ install(PROGRAMS $<TARGET_FILE:LLVMAMDGPUDesc>
                  $<TARGET_FILE:LLVMMC>
                  $<TARGET_FILE:LLVMCore>
                  $<TARGET_FILE:LLVMSupport>
+                 $<TARGET_FILE:LLVMCpuRename>
+                 $<TARGET_FILE:LLVMDirectFuncCall>
+                 $<TARGET_FILE:LLVMEraseNonkernel>
+                 $<TARGET_FILE:LLVMHello>
+                 $<TARGET_FILE:LLVMTileUniform>
+                 $<TARGET_FILE:LLVMWrapperGen>
         DESTINATION lib
         COMPONENT compiler
 )
