@@ -41,7 +41,7 @@ install(PROGRAMS ${PROJECT_BINARY_DIR}/compiler/bin/clamp-device
     ${PROJECT_BINARY_DIR}/compiler/bin/clamp-link
     ${PROJECT_BINARY_DIR}/compiler/bin/hc-kernel-assemble
     ${PROJECT_BINARY_DIR}/compiler/bin/hc-host-assemble
-    DESTINATION compiler/bin)
+    DESTINATION bin)
 
 ####################
 # C++AMP tools (HSA-specific)
