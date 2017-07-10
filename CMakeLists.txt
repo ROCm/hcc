@@ -363,7 +363,7 @@ if (HCC_INTEGRATE_ROCDL)
             -DBUILD_HC_LIB=ON
     COMMAND make -j ${NUM_BUILD_THREADS} # not portable, but we need it this way
     WORKING_DIRECTORY ${ROCDL_BUILD_DIR}
-    DEPENDS clang_links
+    DEPENDS clang_links llvm-link
   )
 
   file(MAKE_DIRECTORY ${ROCDL_BUILD_DIR}/lib)
