@@ -44,7 +44,7 @@ node ('rocmtest')
     def build_image_name = "${build_type_name}"
     dir('docker')
     {
-      hcc_build_image = docker.build( "${build_org}/${build_image_name}:latest", "-f ${dockerfile_name} --build-arg build_type=Release --build-arg rocm_install_path=/opt/rocm ." )
+      hcc_build_image = docker.build( "${build_org}/${build_image_name}:latest", "-f ${dockerfile_name} --build-arg REPO_RADEON=10.255.8.5 --build-arg build_type=Release --build-arg rocm_install_path=/opt/rocm ." )
     }
   }
 
