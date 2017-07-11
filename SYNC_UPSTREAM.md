@@ -26,18 +26,20 @@ Generally speaking, the process goes like this:
  5. Merge amd-common LLVM commits
  6. Merge amd-common LLD commits
  7. Merge master COMPILER-RT commits from llvm-mirror
- 8. Add git remote for amd-common Clang
- 9. Fetch amd-common Clang commits
-10. Merge amd-common Clang with HCC Clang
-11. Build merged HCC
-12. Quick sanity tests on merged HCC
-13. Push HCC Clang submodules
-14. Push amd-hcc LLVM submodule
-15. Push amd-hcc LLD submodule
-16. Push amd-hcc COMPILER-RT submodule
-17. Push remove-promote-change-addr-space ROCm-Device-Libs submodule
-18. Update HCC git submodules configuration
-19. Update HCC repo manifest
+ 8. Merge master CLANG-TOOLS-EXTRA commits from llvm-mirror
+ 9. Add git remote for amd-common Clang
+10. Fetch amd-common Clang commits
+11. Merge amd-common Clang with HCC Clang
+12. Build merged HCC
+13. Quick sanity tests on merged HCC
+14. Push HCC Clang submodules
+15. Push amd-hcc LLVM submodule
+16. Push amd-hcc LLD submodule
+17. Push amd-hcc COMPILER-RT submodule
+18. Push amd-hcc CLANG-TOOLS-EXTRA submodule
+19. Push remove-promote-change-addr-space ROCm-Device-Libs submodule
+20. Update HCC git submodules configuration
+21. Update HCC repo manifest
 
 Detailed step-by-step instructions are in following sections.
 
@@ -55,6 +57,9 @@ git locations of repositories used in the merge process are:
   - branch : amd-common
 - amd-common COMPILER-RT
   - URL: git@github.com:llvm-mirror/compiler-rt.git
+  - branch : master
+- amd-common CLANG-TOOLS-EXTRA
+  - URL: git@github.com:llvm-mirror/clang-tools-extra.git
   - branch : master
 - amd-common Clang
   - URL: git@github.com:RadeonOpenCompute/clang.git
@@ -76,6 +81,8 @@ following commands to setup SSH URL.
 - `git remote set-url --push github git@github.com:RadeonOpenCompute/lld.git`
 - `cd ../compiler-rt`
 - `git remote set-url --push github git@github.com:RadeonOpenCompute/compiler-rt.git`
+- `cd ../clang-tools-extra`
+- `git remote set-url --push github git@github.com:llvm-mirror/clang-tools-extra.git`
 - `cd ../rocdl`
 - `git remote set-url --push github git@github.com:RadeonOpenComoute/ROCm-Device-Libs.git`
 
@@ -150,6 +157,23 @@ Resolve any merge conflicts encountered here. Commit to amd-hcc branch.
 - `git checkout amd-hcc`
 - `git fetch compiler-rt`
 - `git merge --no-ff compiler-rt/master --no-edit`
+
+Resolve any merge conflicts encountered here. Commit to amd-hcc branch.
+
+### Add git remote for master CLANG-TOOLS-EXTRA
+
+- change to HCC directory
+- `cd clang-tools-extra`
+- `git remote -v` to check if there is a git remote pointing to:
+  `git@github.com:llvm-mirror/clang-tools-extra.git`
+- If there is not, add it by:
+  `git remote add clang-tools-extra https://github.com/llvm-mirror/clang-tools-extra`
+
+### Merge amd-common CLANG-TOOLS-EXTRA commits
+
+- `git checkout amd-hcc`
+- `git fetch clang-tools-extra`
+- `git merge --no-ff clang-tools-extra/master --no-edit`
 
 Resolve any merge conflicts encountered here. Commit to amd-hcc branch.
 
@@ -242,6 +266,13 @@ Finally switch back to "clang_tot_upgrade" branch.
 - `git checkout amd-hcc`
 - `git push`
 
+### Push amd-hcc CLANG-TOOLS-EXTRA submodule
+
+- change to HCC directory
+- `cd clang-tools-extra`
+- `git checkout amd-hcc`
+- `git push`
+
 ### Push remove-promote-change-addr-space ROCm-Device-Libs submodule
 
 - change to HCC directory
@@ -253,7 +284,7 @@ Finally switch back to "clang_tot_upgrade" branch.
 
 - change to HCC directory
 - `git checkout clang_tot_upgrade`
-- `git add clang compiler lld compiler-rt rocdl`
+- `git add clang compiler lld compiler-rt rocdl clang-tools-extra`
 - `git commit -m "[Config] revise submodule configuration"`, or provide custom
   commit log
 - `git push` to push HCC git submodules configuration online
