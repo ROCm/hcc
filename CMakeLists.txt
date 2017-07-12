@@ -43,9 +43,6 @@ endif()
 
 include (MCWAMP)
 
-execute_process(COMMAND ln -sf ../../lld WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/compiler/tools)
-execute_process(COMMAND ln -sf ../../clang WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/compiler/tools)
-execute_process(COMMAND ln -sf ../../compiler-rt WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/compiler/projects)
 execute_process(COMMAND ln -sf ../../clang-tools-extra extra WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/clang/tools)
 
 # Regression test
@@ -323,6 +320,10 @@ add_custom_target(clang
           -DAMDGPU_TARGET=${AMDGPU_TARGET}
           -DLLVM_TARGETS_TO_BUILD="AMDGPU\;X86"
           -DLLVM_INCLUDE_EXAMPLES=off
+          -DLLVM_EXTERNAL_PROJECTS="clang;compiler-rt;lld"
+          -DLLVM_EXTERNAL_CLANG_SOURCE_DIR="${PROJECT_SOURCE_DIR}/clang"
+          -DLLVM_EXTERNAL_COMPILER_RT_SOURCE_DIR="${PROJECT_SOURCE_DIR}/compiler-rt"
+          -DLLVM_EXTERNAL_LLD_SOURCE_DIR="${PROJECT_SOURCE_DIR}/lld"
   COMMAND make -j ${NUM_BUILD_THREADS} # not portable, but we need it this way
   WORKING_DIRECTORY ${CLANG_BIN_DIR}
 )
@@ -424,12 +425,6 @@ if (HCC_INTEGRATE_ROCDL)
     COMMAND make -j ${NUM_BUILD_THREADS} # not portable, but we need it this way
     WORKING_DIRECTORY ${ROCDL_BUILD_DIR}
     DEPENDS clang
-  )
-
-  # FIXME: We have to reset the state of the ROCDL before building
-  add_custom_command(TARGET rocdl PRE_BUILD
-    COMMAND git checkout -- .
-    WORKING_DIRECTORY ${ROCDL_SRC_DIR}
   )
 
   file(MAKE_DIRECTORY ${ROCDL_BUILD_DIR}/lib)

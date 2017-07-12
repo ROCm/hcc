@@ -1268,11 +1268,17 @@ public:
             local = tmp_local;
         dispatch->setLaunchConfiguration(nr_dim, global, local, dynamic_group_size);
 
-        // wait for previous kernel dispatches be completed
-        std::for_each(std::begin(kernelBufferMap[ker]), std::end(kernelBufferMap[ker]),
+
+        bool hasArrayViewBufferDeps = (kernelBufferMap.find(ker) != kernelBufferMap.end());
+
+
+	    if (hasArrayViewBufferDeps) {
+            // wait for previous kernel dispatches be completed
+            std::for_each(std::begin(kernelBufferMap[ker]), std::end(kernelBufferMap[ker]),
                       [&] (void* buffer) {
                         waitForDependentAsyncOps(buffer);
-                      });
+                     });
+	    }
 
         waitForStreamDeps(dispatch);
 
@@ -1287,15 +1293,17 @@ public:
         // associate the kernel dispatch with this queue
         pushAsyncOp(sp_dispatch);
 
-        // associate all buffers used by the kernel with the kernel dispatch instance
-        std::for_each(std::begin(kernelBufferMap[ker]), std::end(kernelBufferMap[ker]),
-                      [&] (void* buffer) {
-                        bufferKernelMap[buffer].push_back(sp_dispatch);
-                      });
+	    if (hasArrayViewBufferDeps) {
+            // associate all buffers used by the kernel with the kernel dispatch instance
+            std::for_each(std::begin(kernelBufferMap[ker]), std::end(kernelBufferMap[ker]),
+                          [&] (void* buffer) {
+                            bufferKernelMap[buffer].push_back(sp_dispatch);
+                          });
 
-        // clear data in kernelBufferMap
-        kernelBufferMap[ker].clear();
-        kernelBufferMap.erase(ker);
+            // clear data in kernelBufferMap
+            kernelBufferMap[ker].clear();
+            kernelBufferMap.erase(ker);
+        }
 
         return sp_dispatch;
     }
@@ -3179,7 +3187,7 @@ HSADevice::HSADevice(hsa_agent_t a, hsa_agent_t host, int x_accSeqNum) : KalmarD
         wchar_t path_wchar[128] {0};
         wchar_t description_wchar[128] {0};
         swprintf(path_wchar, 128, L"%s%u", name, node);
-        swprintf(description_wchar, 128, L"AMD HSA Agent %s%u", name, node);
+        swprintf(description_wchar, 128, L"AMD HSA Agent %s, Node %u", name, node);
 
         path = std::wstring(path_wchar);
         description = std::wstring(description_wchar);
