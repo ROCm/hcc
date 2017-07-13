@@ -318,7 +318,6 @@ add_custom_target(clang
           -DAMDGPU_TARGET=${AMDGPU_TARGET}
           -DLLVM_TARGETS_TO_BUILD="AMDGPU\;X86"
           -DLLVM_INCLUDE_EXAMPLES=off
-          -DLLVM_EXTERNAL_PROJECTS="clang;compiler-rt;lld;clang-tools-extra"
           -DLLVM_EXTERNAL_CLANG_SOURCE_DIR="${PROJECT_SOURCE_DIR}/clang"
           -DLLVM_EXTERNAL_COMPILER_RT_SOURCE_DIR="${PROJECT_SOURCE_DIR}/compiler-rt"
           -DLLVM_EXTERNAL_LLD_SOURCE_DIR="${PROJECT_SOURCE_DIR}/lld"
