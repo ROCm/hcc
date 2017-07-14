@@ -792,7 +792,7 @@ private:
             printf("%02X ", ptr[i]);
 #endif
         }
-#if KALMAR_DEBU && HCC_DEBUG_KARG
+#if KALMAR_DEBUG && HCC_DEBUG_KARG
         printf("\n");
 #endif
         arg_count++;
