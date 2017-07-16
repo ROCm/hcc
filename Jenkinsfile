@@ -29,7 +29,7 @@ node ('rocmtest')
       $class: 'GitSCM',
       branches: scm.branches,
       doGenerateSubmoduleConfigurations: scm.doGenerateSubmoduleConfigurations,
-      extensions: scm.extensions + [[$class: 'CleanCheckout'], [$class: 'SubmoduleOption', disableSubmodules: false, parentCredentials: false, recursiveSubmodules: true, reference: '', timeout: 20, trackingSubmodules: false]],
+      extensions: scm.extensions + [[$class: 'CleanCheckout'], [$class: 'SubmoduleOption', disableSubmodules: false, parentCredentials: false, recursiveSubmodules: true, reference: '', timeout: 60, trackingSubmodules: false]],
       userRemoteConfigs: scm.userRemoteConfigs
     ])
   }
@@ -43,7 +43,8 @@ node ('rocmtest')
     def build_image_name = "${build_type_name}"
     dir('docker')
     {
-      hcc_build_image = docker.build( "${build_org}/${build_image_name}:latest", "-f ${dockerfile_name} --build-arg build_type=Release --build-arg rocm_install_path=/opt/rocm ." )
+      // The --build-arg REPO_RADEON= is a temporary fix to get around a DNS issue with our build machines
+      hcc_build_image = docker.build( "${build_org}/${build_image_name}:latest", "-f ${dockerfile_name} --build-arg REPO_RADEON=10.255.8.5 --build-arg build_type=Release --build-arg rocm_install_path=/opt/rocm ." )
     }
   }
 
@@ -113,16 +114,26 @@ node ('rocmtest')
       //  We copy the docker files into the bin directory where the .deb lives so that it's a clean
       //  build everytime
       sh "cp -r ${workspace_dir_abs}/docker/* .; cp ${build_dir_release_abs}/*.deb ."
-      hcc_install_image = docker.build( "${artifactory_org}/${image_name}:${env.BUILD_NUMBER}", "-f dockerfile-${image_name} ." )
+
+      // The --build-arg REPO_RADEON= is a temporary fix to get around a DNS issue with our build machines
+      hcc_install_image = docker.build( "${artifactory_org}/${image_name}:${env.BUILD_NUMBER}", "-f dockerfile-${image_name} --build-arg REPO_RADEON=10.255.8.5 ." )
     }
 
     // The connection to artifactory can fail sometimes, but this should not be treated as a build fail
     try
     {
-      docker.withRegistry('http://compute-artifactory:5001', 'artifactory-cred' )
+      // Don't push pull requests to artifactory, these tend to accumulate over time with little use
+      if( env.BRANCH_NAME.toLowerCase( ).startsWith( 'pr-' ) )
       {
-        hcc_install_image.push( "${env.BUILD_NUMBER}" )
-        hcc_install_image.push( 'latest' )
+        println 'Pull Request (PR-xxx) detected; NOT pushing to artifactory'
+      }
+      else
+      {
+        docker.withRegistry('http://compute-artifactory:5001', 'artifactory-cred' )
+        {
+          hcc_install_image.push( "${env.BUILD_NUMBER}" )
+          hcc_install_image.push( 'latest' )
+        }
       }
     }
     catch( err )
