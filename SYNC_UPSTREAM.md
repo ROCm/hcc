@@ -172,7 +172,7 @@ There will be an `hcc-fork` directory inside the repo. It would be referred as
 - `cd clang-tools-extra`
 - `git fetch --all`
 - `git checkout -b merge_YYYYMMDD origin/amd-hcc`
-- `git merge --no-ff clang-tools-extra/master --no-edit`
+- `git merge clang-tools-extra/master --no-edit`
 - Resolve any merge conflicts encountered here
 
 ### Merge amd-common Clang commits
