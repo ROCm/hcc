@@ -302,6 +302,11 @@ else ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
   set(LLVM_ENABLE_ASSERTIONS "Off" CACHE BOOL "Compile with assertion checks enabled")
 endif ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
 
+set(CLANG_TOOL_EXTRA_BUILD_ARG)
+if(EXISTS ${PROJECT_SOURCE_DIR}/clang-tools-extra/CMakeLists.txt)
+  set(CLANG_TOOL_EXTRA_BUILD_ARG -DLLVM_EXTERNAL_CLANG_TOOLS_EXTRA_SOURCE_DIR="${PROJECT_SOURCE_DIR}/clang-tools-extra")
+endif()
+
 file(MAKE_DIRECTORY ${CLANG_BIN_DIR})
 add_custom_target(clang
   COMMAND ${CMAKE_COMMAND} ${CLANG_SRC_DIR}
@@ -321,7 +326,7 @@ add_custom_target(clang
           -DLLVM_EXTERNAL_CLANG_SOURCE_DIR="${PROJECT_SOURCE_DIR}/clang"
           -DLLVM_EXTERNAL_COMPILER_RT_SOURCE_DIR="${PROJECT_SOURCE_DIR}/compiler-rt"
           -DLLVM_EXTERNAL_LLD_SOURCE_DIR="${PROJECT_SOURCE_DIR}/lld"
-          -DLLVM_EXTERNAL_CLANG_TOOLS_EXTRA_SOURCE_DIR="${PROJECT_SOURCE_DIR}/clang-tools-extra"
+          ${CLANG_TOOL_EXTRA_BUILD_ARG}
   COMMAND make -j ${NUM_BUILD_THREADS} # not portable, but we need it this way
   WORKING_DIRECTORY ${CLANG_BIN_DIR}
 )
