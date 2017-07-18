@@ -347,8 +347,8 @@ install(FILES ${CLANG_BIN_DIR}/lib/clang/5.0.0/lib/linux/libclang_rt.builtins-x8
         DESTINATION  ${CMAKE_INSTALL_LIBDIR}
         COMPONENT compiler)
 
-install( FILES ${CMAKE_CURRENT_SOURCE_DIR}/scripts/cmake/ImportedTargets.cmake
-         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/hcc )
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/scripts/cmake/ImportedTargets.cmake
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/hcc )
 
 add_custom_target(world DEPENDS clang_links)
 
