@@ -25,14 +25,13 @@ node ('rocmtest')
   // The client workspace is shared with the docker container
   stage('HCC Checkout')
   {
-    deleteDir( )
-    checkout scm
-
-    // list the commit hash of the submodules
-    sh 'git ls-tree HEAD | grep commit'
-
-    // clone the submodules
-    sh 'git submodule update --init'
+    checkout([
+      $class: 'GitSCM',
+      branches: scm.branches,
+      doGenerateSubmoduleConfigurations: scm.doGenerateSubmoduleConfigurations,
+      extensions: scm.extensions + [[$class: 'CleanCheckout'], [$class: 'SubmoduleOption', disableSubmodules: false, parentCredentials: false, recursiveSubmodules: true, reference: '', timeout: 60, trackingSubmodules: false]],
+      userRemoteConfigs: scm.userRemoteConfigs
+    ])
   }
 
   def hcc_build_image = null
@@ -45,7 +44,7 @@ node ('rocmtest')
     dir('docker')
     {
       // The --build-arg REPO_RADEON= is a temporary fix to get around a DNS issue with our build machines
-      hcc_build_image = docker.build( "${build_org}/${build_image_name}:latest", "-f ${dockerfile_name} --build-arg REPO_RADEON=10.255.8.5 --build-arg build_type=Release --build-arg rocm_install_path=/opt/rocm ." )
+      hcc_build_image = docker.build( "${build_org}/${build_image_name}:latest", "-f ${dockerfile_name} --build-arg build_type=Release --build-arg rocm_install_path=/opt/rocm ." )
     }
   }
 
@@ -116,7 +115,7 @@ node ('rocmtest')
       sh "cp -r ${workspace_dir_abs}/docker/* .; cp ${build_dir_release_abs}/*.deb ."
 
       // The --build-arg REPO_RADEON= is a temporary fix to get around a DNS issue with our build machines
-      hcc_install_image = docker.build( "${artifactory_org}/${image_name}:${env.BUILD_NUMBER}", "-f dockerfile-${image_name} --build-arg REPO_RADEON=10.255.8.5 ." )
+      hcc_install_image = docker.build( "${artifactory_org}/${image_name}:${env.BUILD_NUMBER}", "-f dockerfile-${image_name} ." )
     }
 
     // The connection to artifactory can fail sometimes, but this should not be treated as a build fail
