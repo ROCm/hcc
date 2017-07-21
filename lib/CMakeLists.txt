@@ -24,8 +24,12 @@ add_library(hccrt INTERFACE)
 target_compile_options(hccrt INTERFACE -hc)
 target_link_libraries(hccrt INTERFACE "-hc -L $<TARGET_FILE_DIR:$<TARGET_NAME:mcwamp>> -Wl,-rpath $<TARGET_FILE_DIR:$<TARGET_NAME:mcwamp>>" "-Wl,--whole-archive" mcwamp "-Wl,--no-whole-archive")
 target_link_libraries(hccrt INTERFACE dl m)
+
 if (USE_LIBCXX)
-  target_link_libraries(hccrt INTERFACE c++ c++abi)
+  target_link_libraries(hccrt INTERFACE -stdlib=libc++)
+  if (NOT HCC_TOOLCHAIN_RHEL)
+    target_link_libraries(hccrt INTERFACE c++abi)
+  endif()
 endif (USE_LIBCXX)
 
 # Library interface for building shared libraries
