@@ -152,7 +152,10 @@ void ldflags(void) {
 
     // extra libraries if using libc++ for C++ runtime   
 #ifdef USE_LIBCXX
-    std::cout << " -lc++ -lc++abi";
+    std::cout << " -stdlib=libc++ ";
+    #ifndef HCC_TOOLCHAIN_RHEL
+      std::cout << " -lc++abi ";
+    #endif
 #endif
     std::cout << " -ldl -lm -lpthread";
 
