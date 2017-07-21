@@ -33,12 +33,20 @@ endif( )
 
 # Accepted values for DISTRO_ID: trusty (Ubuntu 14.04), xenial (Ubuntu 16.06), fd23 (Fedora 23)
 string(TOLOWER "${DISTRO_ID}" DISTRO_ID )
-if( DISTRO_ID MATCHES "ubuntu" OR DISTRO_ID MATCHES "fedora" )
+if( DISTRO_ID MATCHES "ubuntu" OR DISTRO_ID MATCHES "fedora" 
+   OR DISTRO_ID MATCHES "centos" OR DISTRO_ID MATCHES "redhatenterpriseserver")
   message( STATUS "Detected distribution: ${DISTRO_ID}:${DISTRO_RELEASE}" )
 else()
   message( "This cmakefile does not natively support ${DISTRO_ID}:${DISTRO_RELEASE}.  Continuing with Ubuntu logic" )
   set( DISTRO_ID "ubuntu" )
   set( DISTRO_RELEASE "16.04" )
+endif()
+
+# Need special handling for RHEL 7 or CentOS 7
+if (DISTRO_ID MATCHES "centos" OR DISTRO_ID MATCHES "redhatenterpriseserver")
+  set(HCC_TOOLCHAIN_RHEL ON) 
+else()
+  set(HCC_TOOLCHAIN_RHEL OFF) 
 endif()
 
 include (MCWAMP)
@@ -320,6 +328,7 @@ add_custom_target(clang
           -DKALMAR_BACKEND_COMMIT=${KALMAR_BACKEND_COMMIT}
           -DKALMAR_BACKEND=${KALMAR_BACKEND}
           -DAMDGPU_TARGET=${AMDGPU_TARGET}
+          -DHCC_TOOLCHAIN_RHEL=${HCC_TOOLCHAIN_RHEL}
           -DLLVM_TARGETS_TO_BUILD="AMDGPU\;X86"
           -DLLVM_INCLUDE_EXAMPLES=off
   COMMAND make -j ${NUM_BUILD_THREADS} # not portable, but we need it this way
