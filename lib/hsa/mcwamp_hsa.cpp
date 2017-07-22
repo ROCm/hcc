@@ -97,8 +97,7 @@ long int HCC_D2H_PININPLACE_THRESHOLD = 1024;
 int HCC_SERIALIZE_KERNEL = 0;
 int HCC_SERIALIZE_COPY = 0;
 
-// turn OFF HCC_OPT_FLUSH by default
-int HCC_OPT_FLUSH=0;
+int HCC_OPT_FLUSH=1;
 
 
 unsigned HCC_DB = 0;
