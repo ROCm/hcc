@@ -1178,7 +1178,10 @@ public:
 					if (v != 0) {
 						return false;
 					}
-				}
+                } else {
+                    // no signal, have to assume the command is still running
+                    return false;
+                }
             }
         };
         return true;
