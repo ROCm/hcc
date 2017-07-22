@@ -23,6 +23,7 @@ macro(add_libcxx_option_if_needed name)
     if (NOT HCC_TOOLCHAIN_RHEL)
       target_link_libraries(${name} INTERFACE c++abi)
     endif()
+    add_definitions(-DUSE_LIBCXX)
   endif (USE_LIBCXX)
 endmacro(add_libcxx_option_if_needed name)
 

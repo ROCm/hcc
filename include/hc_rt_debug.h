@@ -4,7 +4,9 @@
 #include <cstdio>
 #define UNW_LOCAL_ONLY
 #include <libunwind.h>
+#ifndef USE_LIBCXX
 #include <cxxabi.h>
+#endif
 #include <string>
 #include <sstream>
 #include <iostream>
@@ -93,7 +95,9 @@ namespace hc {
       unw_word_t offp;
       if (unw_get_proc_name(&cursor, func, sizeof(func), &offp) == 0) {
         int status;
+#ifndef USE_LIBCXX
         demangled = abi::__cxa_demangle(func, nullptr, nullptr, &status);
+#endif
         print_func_name = demangled ? demangled : func;
       }
       else {
