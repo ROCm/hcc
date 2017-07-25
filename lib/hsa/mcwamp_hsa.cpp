@@ -1632,7 +1632,7 @@ public:
 
 
         {
-            std::lock_guard<std::mutex> (this->qmutex);
+            std::lock_guard<std::mutex> l(this->qmutex);
 
 
             this->cu_arrays.clear();
@@ -1877,7 +1877,7 @@ public:
     // Creates or steals a rocrQueue and returns it in theif->rocrQueue
     void createOrstealRocrQueue(Kalmar::HSAQueue *thief) {
         
-        std::lock_guard<std::mutex> (this->rocrQueuesMutex);
+        std::lock_guard<std::mutex> l(this->rocrQueuesMutex);
 
         if (rocrQueues.size() < HCC_MAX_QUEUES) {
 
@@ -1905,7 +1905,7 @@ public:
                         if (rq->_hccQueue != thief)  {
                             auto victimHccQueue = rq->_hccQueue;
                             // victimHccQueue==nullptr should be detected by above loop.
-                            std::lock_guard<std::mutex> (victimHccQueue->qmutex);
+                            std::lock_guard<std::mutex> l(victimHccQueue->qmutex);
                             if (victimHccQueue->isEmpty()) {
                                 DBOUT(DB_LOCK, " ptr:" << this << " lock_guard...\n");
 
@@ -1940,7 +1940,7 @@ public:
         size_t hccSize = queues.size();
 
         { 
-            std::lock_guard<std::mutex> (this->rocrQueuesMutex);
+            std::lock_guard<std::mutex> l(this->rocrQueuesMutex);
 
             // a perf optimization to keep the HSA queue if we have more HCC queues that might want it.
             // This defers expensive queue deallocation if an hccQueue that holds an hwQueue is destroyed - 
@@ -3409,7 +3409,7 @@ HSAQueue::HSAQueue(KalmarDevice* pDev, hsa_agent_t agent, execute_order order) :
         // Protect the HSA queue we can steal it.
         DBOUT(DB_LOCK, " ptr:" << this << " create lock_guard...\n");
 
-        std::lock_guard<std::mutex> (this->qmutex);
+        std::lock_guard<std::mutex> l(this->qmutex);
 
         auto device = static_cast<Kalmar::HSADevice*>(this->getDev());
         device->createOrstealRocrQueue(this);
@@ -3430,7 +3430,7 @@ void HSAQueue::dispose() override {
     {
         DBOUT(DB_LOCK, " ptr:" << this << " dispose lock_guard...\n");
 
-        std::lock_guard<std::mutex> (this->qmutex);
+        std::lock_guard<std::mutex> l(this->qmutex);
 
         // wait on all existing kernel dispatches and barriers to complete
         wait();
