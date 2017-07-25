@@ -35,6 +35,13 @@ endif( )
 string(TOLOWER "${DISTRO_ID}" DISTRO_ID )
 if( DISTRO_ID MATCHES "ubuntu" OR DISTRO_ID MATCHES "fedora" )
   message( STATUS "Detected distribution: ${DISTRO_ID}:${DISTRO_RELEASE}" )
+  if (${DISTRO_ID} STREQUAL "ubuntu" AND ${DISTRO_RELEASE} STREQUAL "14.04")
+    message(
+        DEPRECATION
+        "Be advised that support for version 14.04 of the Ubuntu OS is \
+        deprecated. Please consider upgrading to a supported version (e.g. \
+        16.04) as soon as possible")
+  endif (${DISTRO_ID} STREQUAL "ubuntu" AND ${DISTRO_RELEASE} STREQUAL "14.04")
 else()
   message( "This cmakefile does not natively support ${DISTRO_ID}:${DISTRO_RELEASE}.  Continuing with Ubuntu logic" )
   set( DISTRO_ID "ubuntu" )
@@ -218,7 +225,7 @@ set(INSTALL_DIR_NAME "hcc-${KALMAR_VERSION_MAJOR}.${KALMAR_VERSION_MINOR}")
 if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT AND CMAKE_INSTALL_PREFIX MATCHES "/usr/local")
   set(CMAKE_INSTALL_PREFIX "/opt/rocm/${INSTALL_DIR_NAME}" CACHE PATH "Default installation path of hcc" FORCE)
 endif ()
-MESSAGE("Installation path: ${CMAKE_INSTALL_PREFIX}")
+message("Installation path: ${CMAKE_INSTALL_PREFIX}")
 
 # set the installation path for the installer package
 set(CPACK_SET_DESTDIR ON CACHE BOOL "Installer package will install hcc to CMAKE_INSTALL_PREFIX instead of CPACK_PACKAGING_INSTALL_PREFIX")
@@ -250,7 +257,7 @@ else ((NOT HSA_HEADER) OR (NOT HSA_LIBRARY))
 endif ((NOT HSA_HEADER) OR (NOT HSA_LIBRARY))
 
 if (HAS_ROCM EQUAL 0)
-  MESSAGE(FATAL_ERROR "ROCm is NOT available on the system!")
+  message(FATAL_ERROR "ROCm is NOT available on the system!")
 endif (HAS_ROCM EQUAL 0)
 
 #################
@@ -263,22 +270,31 @@ set(HSA_AMDGPU_GPU_TARGET "auto" CACHE STRING "Target AMDGPU ISA version")
 
 # Temporary workaround for use of old long-form GFX_ip names, to be removed once
 # we fully deprecate them.
-string(REGEX MATCHALL "AMD:AMDGPU:(7:0:0|7:0:1|8:0:1|8:0:2|8:0:3|9:0:0|9:0:1)"
-                      tmp
-                      ${HSA_AMDGPU_GPU_TARGET})
+string(
+    REGEX MATCHALL "AMD:AMDGPU:(7:0:0|7:0:1|8:0:1|8:0:2|8:0:3|9:0:0|9:0:1)"
+    tmp
+    ${HSA_AMDGPU_GPU_TARGET})
 foreach(long_form IN LISTS tmp)
   string(REPLACE "AMD:AMDGPU:" "gfx" short_form ${long_form})
   string(REPLACE ":" "" short_form ${short_form})
-  message(DEPRECATION "Be advised that use of long-form GFX_ip names, such as \
-                       ${long_form}, is deprecated. Please use the short-form: \
-                       ${short_form}.")
+  message(
+      DEPRECATION
+      "Be advised that use of long-form GFX_ip names, such as ${long_form}, is \
+      deprecated. Please use the short-form: ${short_form}.")
+  if (${short_form} STREQUAL "gfx700")
+    message(
+        DEPRECATION
+        "Be advised that support for the Kaveri family of APUs (gfx700) is \
+         deprecated. Please consider upgrading to supported hardware as soon as\
+         possible")
+  endif (${short_form} STREQUAL "gfx700")
   list(REMOVE_ITEM HSA_AMDGPU_GPU_TARGET ${long_form})
   list(APPEND HSA_AMDGPU_GPU_TARGET ${short_form})
 endforeach()
 
 # join list
 string(REPLACE ";" " " AMDGPU_TARGET "${HSA_AMDGPU_GPU_TARGET}")
-MESSAGE(STATUS "HCC configured with AMDGPU targets: ${AMDGPU_TARGET}")
+message(STATUS "HCC configured with AMDGPU targets: ${AMDGPU_TARGET}")
 
 #################
 # Setup HCC backend macro string
@@ -316,6 +332,7 @@ add_custom_target(clang
           -DKALMAR_BACKEND_COMMIT=${KALMAR_BACKEND_COMMIT}
           -DKALMAR_BACKEND=${KALMAR_BACKEND}
           -DAMDGPU_TARGET=${AMDGPU_TARGET}
+          -DROCM_ROOT=${ROCM_ROOT}
           -DLLVM_TARGETS_TO_BUILD="AMDGPU\;X86"
           -DLLVM_INCLUDE_EXAMPLES=off
           -DLLVM_EXTERNAL_PROJECTS="clang;compiler-rt;lld"
