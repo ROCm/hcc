@@ -22,7 +22,10 @@
 #include <utility>
 #include <vector>
 #include <algorithm>
+
+#ifndef USE_LIBCXX
 #include <cxxabi.h>
+#endif
 
 #include <hsa/hsa.h>
 #include <hsa/hsa_ext_finalize.h>
@@ -2292,8 +2295,9 @@ public:
 
         if (!kernel) {
             int demangleStatus = 0;
+#ifndef USE_LIBCXX
             demangled = abi::__cxa_demangle(fun, nullptr, nullptr, &demangleStatus);
-
+#endif
             std::string shortName = demangleStatus ? fun : std::string(demangled);
             try {
                 if (demangleStatus == 0) {

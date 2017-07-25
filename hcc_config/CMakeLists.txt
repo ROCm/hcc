@@ -8,7 +8,10 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR}/../hcc_config)
 set(CMAKE_CXX_FLAGS "-std=c++11" )
 
 if (USE_LIBCXX)
-  add_definitions(-DUSE_LIBCXX  -DLIBCXX_HEADER=${LIBCXX_HEADER}) 
+  add_definitions(-DUSE_LIBCXX  -DLIBCXX_HEADER=${LIBCXX_HEADER})
+  if (HCC_TOOLCHAIN_RHEL)
+    add_definitions(-DHCC_TOOLCHAIN_RHEL)
+  endif()
 endif (USE_LIBCXX)
 
 
