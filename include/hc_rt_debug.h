@@ -7,6 +7,7 @@
 #ifndef USE_LIBCXX
 #include <cxxabi.h>
 #endif
+#include <cstring>
 #include <string>
 #include <sstream>
 #include <iostream>
@@ -60,6 +61,8 @@ if (COMPILE_HCC_DB && (HCC_DB & (1<<(db_flag)))) { \
     DBSTREAM << sstream.str();\
 };
 
+// get a the current filename without the path
+#define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/')+1 : __FILE__)
 
 // Class with a constructor that gets called when new thread is created:
 struct ShortTid {
