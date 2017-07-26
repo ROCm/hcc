@@ -33,12 +33,20 @@ endif( )
 
 # Accepted values for DISTRO_ID: trusty (Ubuntu 14.04), xenial (Ubuntu 16.06), fd23 (Fedora 23)
 string(TOLOWER "${DISTRO_ID}" DISTRO_ID )
-if( DISTRO_ID MATCHES "ubuntu" OR DISTRO_ID MATCHES "fedora" )
+if( DISTRO_ID MATCHES "ubuntu" OR DISTRO_ID MATCHES "fedora" 
+   OR DISTRO_ID MATCHES "centos" OR DISTRO_ID MATCHES "redhatenterpriseserver")
   message( STATUS "Detected distribution: ${DISTRO_ID}:${DISTRO_RELEASE}" )
 else()
   message( "This cmakefile does not natively support ${DISTRO_ID}:${DISTRO_RELEASE}.  Continuing with Ubuntu logic" )
   set( DISTRO_ID "ubuntu" )
   set( DISTRO_RELEASE "16.04" )
+endif()
+
+# Need special handling for RHEL 7 or CentOS 7
+if (DISTRO_ID MATCHES "centos" OR DISTRO_ID MATCHES "redhatenterpriseserver")
+  set(HCC_TOOLCHAIN_RHEL ON) 
+else()
+  set(HCC_TOOLCHAIN_RHEL OFF) 
 endif()
 
 include (MCWAMP)
@@ -307,6 +315,10 @@ set(LLVM_EXTERNAL_COMPILER_RT_SOURCE_DIR "${PROJECT_SOURCE_DIR}/compiler-rt")
 set(LLVM_EXTERNAL_LLD_SOURCE_DIR "${PROJECT_SOURCE_DIR}/lld")
 set(LLVM_TARGETS_TO_BUILD "AMDGPU" "X86" CACHE STRING "" FORCE)
 set(LLVM_INSTALL_TOOLCHAIN_ONLY ON CACHE BOOL "" FORCE)
+
+if(EXISTS ${PROJECT_SOURCE_DIR}/clang-tools-extra/CMakeLists.txt)
+  set(LLVM_EXTERNAL_CLANG_TOOLS_EXTRA_SOURCE_DIR "${PROJECT_SOURCE_DIR}/clang-tools-extra")
+endif()
 
 add_subdirectory(${CLANG_SRC_DIR})
 

@@ -44,7 +44,7 @@ node ('rocmtest')
     dir('docker')
     {
       // The --build-arg REPO_RADEON= is a temporary fix to get around a DNS issue with our build machines
-      hcc_build_image = docker.build( "${build_org}/${build_image_name}:latest", "-f ${dockerfile_name} --build-arg REPO_RADEON=10.255.8.5 --build-arg build_type=Release --build-arg rocm_install_path=/opt/rocm ." )
+      hcc_build_image = docker.build( "${build_org}/${build_image_name}:latest", "-f ${dockerfile_name} --build-arg build_type=Release --build-arg rocm_install_path=/opt/rocm ." )
     }
   }
 
@@ -61,6 +61,7 @@ node ('rocmtest')
       // This is necessary because cmake seemingly randomly generates build makefile into the docker
       // workspace instead of the current set directory.  Not sure why, but it seems like a bug
       sh  """
+          rm -rf ${build_dir_release_rel}
           mkdir -p ${build_dir_release_rel}
           cd ${build_dir_release_rel}
           cmake -B${build_dir_release_abs} \
@@ -115,7 +116,7 @@ node ('rocmtest')
       sh "cp -r ${workspace_dir_abs}/docker/* .; cp ${build_dir_release_abs}/*.deb ."
 
       // The --build-arg REPO_RADEON= is a temporary fix to get around a DNS issue with our build machines
-      hcc_install_image = docker.build( "${artifactory_org}/${image_name}:${env.BUILD_NUMBER}", "-f dockerfile-${image_name} --build-arg REPO_RADEON=10.255.8.5 ." )
+      hcc_install_image = docker.build( "${artifactory_org}/${image_name}:${env.BUILD_NUMBER}", "-f dockerfile-${image_name} ." )
     }
 
     // The connection to artifactory can fail sometimes, but this should not be treated as a build fail
