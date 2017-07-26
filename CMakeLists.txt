@@ -62,7 +62,7 @@ SET(LOCAL_LLVM_INCLUDE compiler/include)
 set(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}/bin" )
 set(LIBRARY_OUTPUT_PATH "${CMAKE_BINARY_DIR}/lib" )
 
-SET(PROJ_SEARCH_PATH "${PROJECT_BINARY_DIR}/include" "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/${LOCAL_LLVM_INCLUDE}" "${PROJECT_BINARY_DIR}/${LOCAL_LLVM_INCLUDE}") #  "${PROJECT_SOURCE_DIR}/compiler/utils/unittest/googletest/include")
+SET(PROJ_SEARCH_PATH "${PROJECT_BINARY_DIR}/include" "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/${LOCAL_LLVM_INCLUDE}") #  "${PROJECT_SOURCE_DIR}/compiler/utils/unittest/googletest/include" "${PROJECT_BINARY_DIR}/${LOCAL_LLVM_INCLUDE}"
 include_directories( ${PROJ_SEARCH_PATH} )
 
 LINK_DIRECTORIES( ${LLVM_LIB_DIR} )
@@ -310,114 +310,59 @@ else ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
   set(LLVM_ENABLE_ASSERTIONS "Off" CACHE BOOL "Compile with assertion checks enabled")
 endif ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
 
-set(CLANG_TOOL_EXTRA_BUILD_ARG)
+set(LLVM_EXTERNAL_CLANG_SOURCE_DIR "${PROJECT_SOURCE_DIR}/clang")
+set(LLVM_EXTERNAL_COMPILER_RT_SOURCE_DIR "${PROJECT_SOURCE_DIR}/compiler-rt")
+set(LLVM_EXTERNAL_LLD_SOURCE_DIR "${PROJECT_SOURCE_DIR}/lld")
+set(LLVM_TARGETS_TO_BUILD "AMDGPU" "X86" CACHE STRING "" FORCE)
+set(LLVM_INSTALL_TOOLCHAIN_ONLY ON CACHE BOOL "" FORCE)
+
 if(EXISTS ${PROJECT_SOURCE_DIR}/clang-tools-extra/CMakeLists.txt)
-  set(CLANG_TOOL_EXTRA_BUILD_ARG -DLLVM_EXTERNAL_CLANG_TOOLS_EXTRA_SOURCE_DIR="${PROJECT_SOURCE_DIR}/clang-tools-extra")
+  set(LLVM_EXTERNAL_CLANG_TOOLS_EXTRA_SOURCE_DIR "${PROJECT_SOURCE_DIR}/clang-tools-extra")
 endif()
 
-file(MAKE_DIRECTORY ${CLANG_BIN_DIR})
-add_custom_target(clang
-  COMMAND ${CMAKE_COMMAND} ${CLANG_SRC_DIR}
-          -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-          -DLLVM_ENABLE_ASSERTIONS=${LLVM_ENABLE_ASSERTIONS}
-          -DKALMAR_VERSION_STRING=${KALMAR_VERSION_STRING}
-          -DKALMAR_VERSION_MAJOR=${KALMAR_VERSION_MAJOR}
-          -DKALMAR_VERSION_MINOR=${KALMAR_VERSION_MINOR}
-          -DKALMAR_VERSION_PATCH=${KALMAR_VERSION_PATCH}
-          -DKALMAR_SDK_COMMIT=${KALMAR_SDK_COMMIT}
-          -DKALMAR_FRONTEND_COMMIT=${KALMAR_FRONTEND_COMMIT}
-          -DKALMAR_BACKEND_COMMIT=${KALMAR_BACKEND_COMMIT}
-          -DKALMAR_BACKEND=${KALMAR_BACKEND}
-          -DAMDGPU_TARGET=${AMDGPU_TARGET}
-          -DHCC_TOOLCHAIN_RHEL=${HCC_TOOLCHAIN_RHEL}
-          -DLLVM_TARGETS_TO_BUILD="AMDGPU\;X86"
-          -DLLVM_INCLUDE_EXAMPLES=off
-          -DLLVM_EXTERNAL_CLANG_SOURCE_DIR="${PROJECT_SOURCE_DIR}/clang"
-          -DLLVM_EXTERNAL_COMPILER_RT_SOURCE_DIR="${PROJECT_SOURCE_DIR}/compiler-rt"
-          -DLLVM_EXTERNAL_LLD_SOURCE_DIR="${PROJECT_SOURCE_DIR}/lld"
-          ${CLANG_TOOL_EXTRA_BUILD_ARG}
-  COMMAND make -j ${NUM_BUILD_THREADS} # not portable, but we need it this way
-  WORKING_DIRECTORY ${CLANG_BIN_DIR}
-)
+add_subdirectory(${CLANG_SRC_DIR})
 
-# create symlink of mostly used commands in clang to bin/
-# - hcc
-# - clang++
-# - clang
+install(PROGRAMS $<TARGET_FILE:llvm-as>
+                 $<TARGET_FILE:llvm-dis>
+                 $<TARGET_FILE:llvm-link>
+                 $<TARGET_FILE:llvm-objdump>
+                 $<TARGET_FILE:llvm-mc>
+                 $<TARGET_FILE:opt>
+                 $<TARGET_FILE:llc>
+        DESTINATION bin
+        COMPONENT compiler)
 
-add_custom_command(TARGET clang POST_BUILD
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ../compiler/bin/hcc ${PROJECT_BINARY_DIR}/bin/hcc
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ../compiler/bin/clang++ ${PROJECT_BINARY_DIR}/bin/clang++
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ../compiler/bin/clang ${PROJECT_BINARY_DIR}/bin/clang
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ../compiler/bin/llvm-mc ${PROJECT_BINARY_DIR}/bin/llvm-mc
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ../compiler/bin/llvm-objdump ${PROJECT_BINARY_DIR}/bin/llvm-objdump
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ../compiler/bin/lld ${PROJECT_BINARY_DIR}/bin/lld
-  WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/bin
-)
-
-add_custom_command(TARGET clang POST_BUILD
+add_custom_target(clang_links DEPENDS clang)
+add_custom_command(TARGET clang_links POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E create_symlink ${CLANG_BIN_DIR}/lib/clang/5.0.0/lib/linux/libclang_rt.builtins-x86_64.a ${PROJECT_BINARY_DIR}/lib/libclang_rt.builtins-x86_64.a
 )
 
-install(FILES ${PROJECT_BINARY_DIR}/bin/hcc
-              ${PROJECT_BINARY_DIR}/bin/clang++
-              ${PROJECT_BINARY_DIR}/bin/clang
-              ${PROJECT_BINARY_DIR}/bin/llvm-mc
-              ${PROJECT_BINARY_DIR}/bin/llvm-objdump
-              ${PROJECT_BINARY_DIR}/bin/lld
-        DESTINATION bin)
-
-# install clang along with HCC
-# stored under compiler/
-install(DIRECTORY ${CLANG_BIN_DIR}/bin
-        DESTINATION compiler
-        COMPONENT compiler
-        PATTERN * PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
-
-install(DIRECTORY ${CLANG_BIN_DIR}/lib
-        DESTINATION compiler
-        COMPONENT compiler
-        PATTERN CMakeFiles EXCLUDE
-        PATTERN *tmp EXCLUDE
-        PATTERN *inc EXCLUDE
-        PATTERN Makefile EXCLUDE
-        PATTERN *.a EXCLUDE
-        PATTERN lib*
-        PATTERN LLVM*
-        PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+#install(TARGETS llvm-as llvm-dis opt llc COMPONENT compiler)
 
 # install certain LLVM libraries needed by HIP
-install(FILES  ${CLANG_BIN_DIR}/lib/libLLVMAMDGPUDesc.a
-               ${CLANG_BIN_DIR}/lib/libLLVMAMDGPUUtils.a
-               ${CLANG_BIN_DIR}/lib/libLLVMMC.a
-               ${CLANG_BIN_DIR}/lib/libLLVMCore.a
-               ${CLANG_BIN_DIR}/lib/libLLVMSupport.a
-        DESTINATION compiler/lib
+install(PROGRAMS $<TARGET_FILE:LLVMAMDGPUDesc>
+                 $<TARGET_FILE:LLVMAMDGPUUtils>
+                 $<TARGET_FILE:LLVMMC>
+                 $<TARGET_FILE:LLVMCore>
+                 $<TARGET_FILE:LLVMSupport>
+                 $<TARGET_FILE:LLVMCpuRename>
+                 $<TARGET_FILE:LLVMDirectFuncCall>
+                 $<TARGET_FILE:LLVMEraseNonkernel>
+                 $<TARGET_FILE:LLVMHello>
+                 $<TARGET_FILE:LLVMTileUniform>
+                 $<TARGET_FILE:LLVMWrapperGen>
+        DESTINATION lib
         COMPONENT compiler
-        PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+)
 
 install(FILES ${CLANG_BIN_DIR}/lib/clang/5.0.0/lib/linux/libclang_rt.builtins-x86_64.a
         DESTINATION  ${CMAKE_INSTALL_LIBDIR}
         COMPONENT compiler)
 
-install(DIRECTORY ${CLANG_BIN_DIR}/include
-        DESTINATION compiler
-        COMPONENT compiler
-        PATTERN CMakeFiles EXCLUDE
-        PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
-
-install(DIRECTORY ${CLANG_SRC_DIR}/include
-        DESTINATION compiler
-        COMPONENT compiler
-        PATTERN CMakeFiles EXCLUDE
-        PATTERN CMakeLists* EXCLUDE
-        PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
-
 install( FILES ${CMAKE_CURRENT_SOURCE_DIR}/scripts/cmake/ImportedTargets.cmake
          DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/hcc )
 
-add_custom_target(world DEPENDS clang)
-
+add_custom_target(world DEPENDS clang_links)
 
 # build the integrated ROCm Device Library
 set(AMDHSACOD ${ROCM_ROOT}/bin/amdhsacod CACHE FILEPATH "Specify the amdhsacod tool")
@@ -429,14 +374,14 @@ if (HCC_INTEGRATE_ROCDL)
 
   # custom commands to build rocdl
   add_custom_target(rocdl
-    COMMAND CC=${CLANG_BIN_DIR}/bin/clang  ${CMAKE_COMMAND} ${ROCDL_SRC_DIR}
+    COMMAND ${CMAKE_COMMAND} ${ROCDL_SRC_DIR}
             -DLLVM_DIR=${CLANG_BIN_DIR}
             -DAMDHSACOD=${AMDHSACOD}
             -DGENERIC_IS_ZERO=ON
             -DBUILD_HC_LIB=ON
     COMMAND make -j ${NUM_BUILD_THREADS} # not portable, but we need it this way
     WORKING_DIRECTORY ${ROCDL_BUILD_DIR}
-    DEPENDS clang
+    DEPENDS clang_links llvm-link
   )
 
   file(MAKE_DIRECTORY ${ROCDL_BUILD_DIR}/lib)

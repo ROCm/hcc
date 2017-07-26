@@ -121,12 +121,12 @@ else {
 
   my $rocm_path = "@ROCM_ROOT@";
   # set the default to rocm path
-  my $llvm_objdump = "$rocm_path/hcc/compiler/bin/llvm-objdump";
-  my $clang_offload_bundler = "$rocm_path/hcc/compiler/bin/clang-offload-bundler";
+  my $llvm_objdump = "$rocm_path/hcc/bin/llvm-objdump";
+  my $clang_offload_bundler = "$rocm_path/hcc/bin/clang-offload-bundler";
 
   if (defined $ENV{'HCC_HOME'}) {
-    $llvm_objdump = "$ENV{'HCC_HOME'}/compiler/bin/llvm-objdump";
-    $clang_offload_bundler = "$ENV{'HCC_HOME'}/compiler/bin/clang-offload-bundler";
+    $llvm_objdump = "$ENV{'HCC_HOME'}/bin/llvm-objdump";
+    $clang_offload_bundler = "$ENV{'HCC_HOME'}/bin/clang-offload-bundler";
   }
 
   if (-f $clang_offload_bundler) {
