@@ -211,7 +211,7 @@ static const char* getHSAErrorString(hsa_status_t s) {
 #define STATUS_CHECK(s,line) if (s != HSA_STATUS_SUCCESS && s != HSA_STATUS_INFO_BREAK) {\
     hc::print_backtrace(); \
     const char* error_string = getHSAErrorString(s);\
-		printf("### HCC STATUS_CHECK Error: %s (0x%x) at file:%s line:%d\n", error_string, s, __FILE__, line);\
+		printf("### HCC STATUS_CHECK Error: %s (0x%x) at file:%s line:%d\n", error_string, s, __FILENAME__, line);\
                 assert(HSA_STATUS_SUCCESS == hsa_shut_down());\
 		abort();\
 	}
@@ -219,7 +219,7 @@ static const char* getHSAErrorString(hsa_status_t s) {
 #define STATUS_CHECK_SYMBOL(s,symbol,line) if (s != HSA_STATUS_SUCCESS && s != HSA_STATUS_INFO_BREAK) {\
     hc::print_backtrace(); \
     const char* error_string = getHSAErrorString(s);\
-		printf("### HCC STATUS_CHECK_SYMBOL Error: %s (0x%x), symbol name:%s at file:%s line:%d\n", error_string, s, (symbol)!=nullptr?symbol:(const char*)"is a nullptr", __FILE__, line);\
+		printf("### HCC STATUS_CHECK_SYMBOL Error: %s (0x%x), symbol name:%s at file:%s line:%d\n", error_string, s, (symbol)!=nullptr?symbol:(const char*)"is a nullptr", __FILENAME__, line);\
                 assert(HSA_STATUS_SUCCESS == hsa_shut_down());\
 		abort();\
 	}
@@ -284,7 +284,7 @@ const char* getHCCRuntimeStatusMessage(const HCCRuntimeStatus status) {
 
 inline static void checkHCCRuntimeStatus(const HCCRuntimeStatus status, const unsigned int line, hsa_queue_t* q=nullptr) {
   if (status != HCCRuntimeStatus::HCCRT_STATUS_SUCCESS) {
-    fprintf(stderr, "### HCC runtime error: %s at %s line:%d\n", getHCCRuntimeStatusMessage(status), __FILE__, line);
+    fprintf(stderr, "### HCC runtime error: %s at %s line:%d\n", getHCCRuntimeStatusMessage(status), __FILENAME__, line);
     std::string m("HCC Runtime Error - ");
     m += getHCCRuntimeStatusMessage(status);
     throw Kalmar::runtime_exception(m.c_str(), 0);
