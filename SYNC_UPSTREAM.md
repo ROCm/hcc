@@ -34,16 +34,17 @@ Generally speaking, the process goes like this:
  6. Merge amd-common LLD commits
  7. Merge amd-common LLVM commits
  8. Merge master COMPILER-RT commits from llvm-mirror
- 9. Merge amd-common Clang commits
-10. Build merged HCC
-11. Full sanity tests on merged HCC (optional)
-12. Quick sanity tests on merged HCC
-13. Push and Create Pull Request for HCC Clang submodule
-14. Push and Create Pull Request for amd-hcc LLD submodule
-15. Push and Create Pull Request for amd-hcc LLVM submodule
-16. Push and Create Pull Request for amd-hcc COMPILER-RT submodule
-17. Update HCC git submodules configuration
-18. Update HCC repo manifest
+ 9. Merge master CLANG-TOOLS-EXTRA commits from llvm-mirror
+10. Merge amd-common Clang commits
+11. Build merged HCC
+12. Full sanity tests on merged HCC (optional)
+13. Quick sanity tests on merged HCC
+14. Push and Create Pull Request for HCC Clang submodule
+15. Push and Create Pull Request for amd-hcc LLD submodule
+16. Push and Create Pull Request for amd-hcc LLVM submodule
+17. Push and Create Pull Request for amd-hcc COMPILER-RT submodule
+18. Update HCC git submodules configuration
+19. Update HCC repo manifest
 
 Detailed step-by-step instructions are in following sections.
 
@@ -62,6 +63,9 @@ git locations of repositories used in the merge process are:
 - master COMPILER-RT
   - URL: https://github.com/llvm-mirror/compiler-rt.git
   - branch : master
+- amd-common CLANG-TOOLS-EXTRA
+  - URL: git@github.com:llvm-mirror/clang-tools-extra.git
+  - branch : master
 - amd-common Clang
   - URL: https://github.com/RadeonOpenCompute/clang.git
   - branch : amd-common
@@ -73,7 +77,8 @@ Go to these links and fork onto personal account:
 2) https://github.com/RadeonOpenCompute/hcc-clang-upgrade
 3) https://github.com/RadeonOpenCompute/llvm
 4) https://github.com/RadeonOpenCompute/compiler-rt
-5) https://github.com/RadeonOpenCompute/lld
+5) https://github.com/RadeonOpenCompute/clang-tools-extra
+6) https://github.com/RadeonOpenCompute/lld
 Note, you'd won't need to do this for rocdl, since we will use its master branch.
 
 This only needs to be done once.
@@ -117,6 +122,9 @@ There will be an `hcc-fork` directory inside the repo. It would be referred as
 - `cd ../compiler-rt`
 - `git remote add compiler-rt_fork https://github.com/aaronenyeshi/compiler-rt.git`
 - `git remote add compiler-rt https://github.com/llvm-mirror/compiler-rt`
+- `cd ../clang-tools-extra`
+- `git remote add clang-tools-extra_fork https://github.com/aaronenyeshi/clang-tools-extra.git`
+- `git remote add clang-tools-extra https://github.com/llvm-mirror/compiler-rt`
 - `cd ../clang`
 - `git remote add clang_fork https://github.com/aaronenyeshi/hcc-clang-upgrade.git`
 - `git remote add clang https://github.com/RadeonOpenCompute/clang`
@@ -156,6 +164,15 @@ There will be an `hcc-fork` directory inside the repo. It would be referred as
 - `git fetch --all`
 - `git checkout -b merge_YYYYMMDD origin/amd-hcc`
 - `git merge --no-ff compiler-rt/master --no-edit`
+- Resolve any merge conflicts encountered here
+
+### Merge amd-common CLANG-TOOLS-EXTRA commits from llvm-mirror
+
+- change to HCC directory
+- `cd clang-tools-extra`
+- `git fetch --all`
+- `git checkout -b merge_YYYYMMDD origin/amd-hcc`
+- `git merge clang-tools-extra/master --no-edit`
 - Resolve any merge conflicts encountered here
 
 ### Merge amd-common Clang commits
@@ -245,6 +262,14 @@ Create a pull request to merge `merge_YYYYMMDD` from your compiler-rt fork
 into https://github.com/RadeonOpenCompute/compiler-rt
 on branch `amd-hcc`.
 
+### Push and Create Pull Request for amd-hcc CLANG-TOOLS-EXTRA submodule
+
+- change to HCC directory
+- `cd clang-tools-extra`
+- `git push clang-tools-extra_fork merge_YYYYMMDD:merge_YYYYMMDD`
+Create a pull request to merge `merge_YYYYMMDD` from your clang-tools-extra fork
+into https://github.com/RadeonOpenCompute/clang-tools-extra
+on branch `amd-hcc`.
 
 *** Wait until all Pull Requests are approved and merged. ***
 On github when making a pull request, the repository you are trying to update
@@ -268,6 +293,8 @@ conflicts so that the PR is ready for merge.
 - `git fetch --all`
 - `git checkout origin/amd-hcc`
 - `cd compiler-rt`
+- `git fetch --all`
+- `cd clang-tools-extra`
 - `git fetch --all`
 - `git checkout origin/amd-hcc`
 - `cd lld`

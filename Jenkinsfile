@@ -61,6 +61,7 @@ node ('rocmtest')
       // This is necessary because cmake seemingly randomly generates build makefile into the docker
       // workspace instead of the current set directory.  Not sure why, but it seems like a bug
       sh  """
+          rm -rf ${build_dir_release_rel}
           mkdir -p ${build_dir_release_rel}
           cd ${build_dir_release_rel}
           cmake -B${build_dir_release_abs} \
