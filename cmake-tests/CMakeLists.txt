@@ -4,7 +4,6 @@ if(NOT CMAKE_CXX_COMPILER MATCHES ".*hcc")
 endif()
 
 add_executable(cmake-test cmake-test.cpp)
-add_dependencies(cmake-test clang_links rocdl_links)
 
 # Explicitly set the GPU architecture so that
 # cmake_test could be cross-compiled on a system
@@ -18,6 +17,7 @@ endif()
 set_target_properties(cmake-test PROPERTIES LINK_FLAGS ${new_cmake_test_link_flags})
 
 if(TARGET hccrt)
+    add_dependencies(cmake-test clang_links rocdl_links)
     target_link_libraries(cmake-test hccrt hc_am)
 else()
     # Append default hcc installation
