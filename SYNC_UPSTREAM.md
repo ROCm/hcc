@@ -124,7 +124,7 @@ There will be an `hcc-fork` directory inside the repo. It would be referred as
 - `git remote add compiler-rt https://github.com/llvm-mirror/compiler-rt`
 - `cd ../clang-tools-extra`
 - `git remote add clang-tools-extra_fork https://github.com/aaronenyeshi/clang-tools-extra.git`
-- `git remote add clang-tools-extra https://github.com/llvm-mirror/compiler-rt`
+- `git remote add clang-tools-extra https://github.com/llvm-mirror/clang-tools-extra`
 - `cd ../clang`
 - `git remote add clang_fork https://github.com/aaronenyeshi/hcc-clang-upgrade.git`
 - `git remote add clang https://github.com/RadeonOpenCompute/clang`
