@@ -942,7 +942,6 @@ private:
     //
     std::vector< std::shared_ptr<KalmarAsyncOp> > asyncOps;
 
-    uint64_t                                      opSeqNums;
     uint64_t                                      queueSeqNum; // sequence-number of this queue.
 
     // Valid is used to prevent the fields of the HSAQueue from being disposed 
@@ -1069,15 +1068,16 @@ public:
     // Save the command and type
     // TODO - can convert to reference?
     void pushAsyncOp(std::shared_ptr<KalmarAsyncOp> op) {
-        op->setSeqNum(++opSeqNums);
+
+        op->setSeqNumFromQueue();
 
         DBOUT(DB_CMD, "  pushing op=" << op << "  #" << op->getSeqNum() << " signal="<< std::hex  << ((hsa_signal_t*)op->getNativeHandle())->handle << std::dec
                     << "  commandKind=" << getHcCommandKindString(op->getCommandKind()) << std::endl);
 
 
         if (asyncOps.size() >= MAX_INFLIGHT_COMMANDS_PER_QUEUE) {
-            DBOUT(DB_WAIT, "*** Hit max inflight ops asyncOps.size=" << asyncOps.size() << ". op#" << opSeqNums << " force sync\n");
-            DBOUT(DB_RESOURCE, "*** Hit max inflight ops asyncOps.size=" << asyncOps.size() << ". op#" << opSeqNums << " force sync\n");
+            DBOUT(DB_WAIT, "*** Hit max inflight ops asyncOps.size=" << asyncOps.size() << ". op#" << op->getSeqNum() << " force sync\n");
+            DBOUT(DB_RESOURCE, "*** Hit max inflight ops asyncOps.size=" << asyncOps.size() << ". op#" << op->getSeqNum() << " force sync\n");
 
             wait();
         }
@@ -1269,10 +1269,6 @@ public:
         HSADispatch *dispatch =
             reinterpret_cast<HSADispatch*>(ker);
 
-        size_t tmp_local[] = {0, 0, 0};
-        if (!local)
-            local = tmp_local;
-        dispatch->setLaunchConfiguration(nr_dim, global, local, dynamic_group_size);
 
 
         bool hasArrayViewBufferDeps = (kernelBufferMap.find(ker) != kernelBufferMap.end());
@@ -1289,22 +1285,26 @@ public:
         waitForStreamDeps(dispatch);
 
 
+        // create a shared_ptr instance
+        std::shared_ptr<KalmarAsyncOp> sp_dispatch(dispatch);
+        // associate the kernel dispatch with this queue
+        pushAsyncOp(sp_dispatch);
+
+        size_t tmp_local[] = {0, 0, 0};
+        if (!local)
+            local = tmp_local;
+        dispatch->setLaunchConfiguration(nr_dim, global, local, dynamic_group_size);
+
         // dispatch the kernel
         status = dispatch->dispatchKernelAsyncFromOp();
         STATUS_CHECK(status, __LINE__);
 
-        // create a shared_ptr instance
-        std::shared_ptr<KalmarAsyncOp> sp_dispatch(dispatch);
 
-        // associate the kernel dispatch with this queue
-        pushAsyncOp(sp_dispatch);
-
-	    if (hasArrayViewBufferDeps) {
-            // associate all buffers used by the kernel with the kernel dispatch instance
-            std::for_each(std::begin(kernelBufferMap[ker]), std::end(kernelBufferMap[ker]),
-                          [&] (void* buffer) {
-                            bufferKernelMap[buffer].push_back(sp_dispatch);
-                          });
+        // associate all buffers used by the kernel with the kernel dispatch instance
+        std::for_each(std::begin(kernelBufferMap[ker]), std::end(kernelBufferMap[ker]),
+                      [&] (void* buffer) {
+                        bufferKernelMap[buffer].push_back(sp_dispatch);
+                      });
 
             // clear data in kernelBufferMap
             kernelBufferMap[ker].clear();
@@ -1665,13 +1665,13 @@ public:
 
         // create shared_ptr instance
         std::shared_ptr<HSABarrier> barrier = std::make_shared<HSABarrier>(this, 0, nullptr);
+        // associate the barrier with this queue
+        pushAsyncOp(barrier);
 
         // enqueue the barrier
         status = barrier.get()->enqueueAsync(release_scope);
         STATUS_CHECK(status, __LINE__);
 
-        // associate the barrier with this queue
-        pushAsyncOp(barrier);
 
         return barrier;
     }
@@ -1697,6 +1697,8 @@ public:
 
             // create shared_ptr instance
             std::shared_ptr<HSABarrier> barrier = std::make_shared<HSABarrier>(this, count, depOps);
+            // associate the barrier with this queue
+            pushAsyncOp(barrier);
 
             for (int i=0; i<count; i++) {
                 if (barrier->depAsyncOps[i] != nullptr) {
@@ -1735,8 +1737,6 @@ public:
             status = barrier.get()->enqueueAsync(releaseScope);
             STATUS_CHECK(status, __LINE__);
 
-            // associate the barrier with this queue
-            pushAsyncOp(barrier);
 
             return barrier;
         } else {
@@ -3403,7 +3403,7 @@ inline std::ostream& operator<<(std::ostream& os, const HSADispatch & op)
 HSAQueue::HSAQueue(KalmarDevice* pDev, hsa_agent_t agent, execute_order order) : 
     KalmarQueue(pDev, queuing_mode_automatic, order), 
     rocrQueue(nullptr),
-    asyncOps(), opSeqNums(0), valid(true), _nextSyncNeedsSysRelease(false), _nextKernelNeedsSysAcquire(false), bufferKernelMap(), kernelBufferMap() 
+    asyncOps(), valid(true), _nextSyncNeedsSysRelease(false), _nextKernelNeedsSysAcquire(false), bufferKernelMap(), kernelBufferMap() 
 {
     { 
         // Protect the HSA queue we can steal it.
@@ -3650,6 +3650,7 @@ HSAQueue::dispatch_hsa_kernel(const hsa_kernel_dispatch_packet_t *aql,
     Kalmar::HSADevice* device = static_cast<Kalmar::HSADevice*>(this->getDev());
     //HSADispatch *dispatch = new HSADispatch(device, nullptr, aql);
     std::shared_ptr<HSADispatch> sp_dispatch = std::make_shared<HSADispatch>(device, this/*queue*/, nullptr, aql);
+    pushAsyncOp(sp_dispatch);
     HSADispatch *dispatch = sp_dispatch.get();
     dispatch->setKernelName(kernelName);
 
@@ -3665,7 +3666,6 @@ HSAQueue::dispatch_hsa_kernel(const hsa_kernel_dispatch_packet_t *aql,
 
     dispatch->dispatchKernelAsync(args, argSize, needsSignal);
 
-    pushAsyncOp(sp_dispatch);
 
     if (cf) {
         *cf = hc::completion_future(sp_dispatch);
@@ -3880,7 +3880,7 @@ HSADispatch::dispatchKernel(hsa_queue_t* lockedHsaQueue, const void *hostKernarg
     q_aql->header = header;
 
     hsa_queue_store_write_index_relaxed(lockedHsaQueue, index + 1);
-    DBOUTL(DB_AQL, " dispatch_aql into " << *hsaQueue() << "(" << lockedHsaQueue << ") " << *q_aql );
+    DBOUTL(DB_AQL, " dispatch_aql op#" << this->getSeqNum() <<" into " << *hsaQueue() << "(" << lockedHsaQueue << ") " << *q_aql );
     DBOUTL(DB_AQL2, rawAql(*q_aql));
 
     if (DBFLAG(DB_KERNARG)) { 
@@ -4277,7 +4277,7 @@ HSABarrier::enqueueAsync(hc::memory_scope releaseScope) {
         // Set header last:
         barrier->header = header;
 
-        DBOUTL(DB_AQL, " barrier_aql  into " << *hsaQueue() << "(" << rocrQueue << ") " << *barrier );
+        DBOUTL(DB_AQL, " barrier_aql op#" << getSeqNum() << " into " << *hsaQueue() << "(" << rocrQueue << ") " << *barrier );
         DBOUTL(DB_AQL2, rawAql(*barrier));
 
 

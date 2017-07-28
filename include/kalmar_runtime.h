@@ -164,8 +164,8 @@ public:
    */
   virtual void setWaitMode(hcWaitMode mode) {}
 
+  void setSeqNumFromQueue();
   uint64_t getSeqNum () const { return seqNum;};
-  void     setSeqNum (uint64_t s) {seqNum = s;};
 
   hcCommandKind getCommandKind() const { return commandKind; };
   void          setCommandKind(hcCommandKind xCommandKind) { commandKind = xCommandKind; };
@@ -192,7 +192,7 @@ class KalmarQueue
 public:
 
   KalmarQueue(KalmarDevice* pDev, queuing_mode mode = queuing_mode_automatic, execute_order order = execute_in_order)
-      : pDev(pDev), mode(mode), order(order) {}
+      : pDev(pDev), mode(mode), order(order), opSeqNums(0) {}
 
   virtual ~KalmarQueue() {}
 
@@ -303,10 +303,15 @@ public:
   /// is called.
   virtual bool set_cu_mask(const std::vector<bool>& cu_mask) { return false; };
 
+
+  uint64_t assign_op_seq_num() { return ++opSeqNums; };
+
 private:
   KalmarDevice* pDev;
   queuing_mode mode;
   execute_order order;
+
+  uint64_t      opSeqNums; // last seqnum assigned to an op in this queue
 };
 
 /// KalmarDevice
@@ -943,6 +948,12 @@ struct rw_info
         }
     }
 };
+
+
+//--- Implementation:
+//
+
+inline void KalmarAsyncOp::setSeqNumFromQueue()  { seqNum = queue->assign_op_seq_num(); };
 
 } // namespace Kalmar
 
