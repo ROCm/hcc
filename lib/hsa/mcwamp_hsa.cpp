@@ -107,16 +107,20 @@ unsigned HCC_DB = 0;
 
 int HCC_MAX_QUEUES = 20;
 
+#define HCC_PROFILE_SUMMARY (1<<0)
+#define HCC_PROFILE_TRACE   (1<<1)
+int HCC_PROFILE=0;
 
 
 #define HCC_PROFILE_VERBOSE_BASIC                   (1 << 0)   // 0x1
 #define HCC_PROFILE_VERBOSE_TIMESTAMP               (1 << 1)   // 0x2
 #define HCC_PROFILE_VERBOSE_OPSEQNUM                (1 << 2)   // 0x4
-#define HCC_PROFILE_VERBOSE_BARRIER                 (1 << 3)   // 0x8
-
-
-int HCC_PROFILE=0;
+#define HCC_PROFILE_VERBOSE_TID                     (1 << 3)   // 0x8
+#define HCC_PROFILE_VERBOSE_BARRIER                 (1 << 4)   // 0x10
 int HCC_PROFILE_VERBOSE=0;
+
+
+
 char * HCC_PROFILE_FILE=nullptr;
 
 // Profiler:
@@ -1310,15 +1314,16 @@ public:
         STATUS_CHECK(status, __LINE__);
 
 
-        // associate all buffers used by the kernel with the kernel dispatch instance
-        std::for_each(std::begin(kernelBufferMap[ker]), std::end(kernelBufferMap[ker]),
-                      [&] (void* buffer) {
-                        bufferKernelMap[buffer].push_back(sp_dispatch);
-                      });
+        if (hasArrayViewBufferDeps) {
+            // associate all buffers used by the kernel with the kernel dispatch instance
+            std::for_each(std::begin(kernelBufferMap[ker]), std::end(kernelBufferMap[ker]),
+                          [&] (void* buffer) {
+                            bufferKernelMap[buffer].push_back(sp_dispatch);
+                          });
 
-            // clear data in kernelBufferMap
-            kernelBufferMap[ker].clear();
-            kernelBufferMap.erase(ker);
+                // clear data in kernelBufferMap
+                kernelBufferMap[ker].clear();
+                kernelBufferMap.erase(ker);
         }
 
         return sp_dispatch;
@@ -4045,7 +4050,7 @@ HSADispatch::dispose() {
     clearArgs();
     std::vector<uint8_t>().swap(arg_vec);
 
-    if (HCC_PROFILE) {
+    if (HCC_PROFILE & HCC_PROFILE_TRACE) {
         uint64_t start = getBeginTimestamp();
         uint64_t end   = getEndTimestamp();
         //std::string kname = kernel ? (kernel->kernelName + "+++" + kernel->shortKernelName) : "hmm";
@@ -4326,7 +4331,7 @@ static std::string fenceToString(int fenceBits)
 
 inline void
 HSABarrier::dispose() {
-    if (HCC_PROFILE && (HCC_PROFILE_VERBOSE & HCC_PROFILE_VERBOSE_BARRIER)) {
+    if ((HCC_PROFILE & HCC_PROFILE_TRACE) && (HCC_PROFILE_VERBOSE & HCC_PROFILE_VERBOSE_BARRIER)) {
         uint64_t start = getBeginTimestamp();
         uint64_t end   = getEndTimestamp();
         int acqBits = extractBits(header, HSA_PACKET_HEADER_SCACQUIRE_FENCE_SCOPE, HSA_PACKET_HEADER_WIDTH_SCACQUIRE_FENCE_SCOPE);
@@ -4636,7 +4641,7 @@ HSACopy::dispose() {
     // HSA signal may not necessarily be allocated by HSACopy instance
     // only release the signal if it was really allocated (signalIndex >= 0)
     if (signalIndex >= 0) {
-        if (HCC_PROFILE) {
+        if (HCC_PROFILE & HCC_PROFILE_TRACE) {
             uint64_t start = getBeginTimestamp();
             uint64_t end   = getEndTimestamp();
 
@@ -4646,7 +4651,7 @@ HSACopy::dispose() {
         }
         Kalmar::ctx.releaseSignal(signal, signalIndex);
     } else {
-        if (HCC_PROFILE) {
+        if (HCC_PROFILE & HCC_PROFILE_TRACE) {
             uint64_t start = apiStartTick;
             uint64_t end   = Kalmar::ctx.getSystemTicks();
             double bw = (double)(sizeBytes)/(end-start) * (1000.0/1024.0) * (1000.0/1024.0);
