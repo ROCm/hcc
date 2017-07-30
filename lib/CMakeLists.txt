@@ -34,7 +34,7 @@ endif (USE_LIBCXX)
 
 # Library interface for building shared libraries
 add_library(hccshared INTERFACE)
-target_link_libraries(hccshared INTERFACE -fPIC -Wl,-Bsymbolic)
+target_link_libraries(hccshared INTERFACE -fPIC)
 
 ####################
 # C++AMP tools

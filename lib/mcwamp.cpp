@@ -4,20 +4,23 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-
-#include <iostream>
-#include <string>
-#include <cassert>
-#include <cstddef>
-#include <tuple>
-
-#include <amp.h>
-#include <mutex>
-
 #include "mcwamp_impl.hpp"
 #include "hc_rt_debug.h"
 
+#include "../hc2/external/elfio/elfio.hpp"
+
+#include <amp.h>
+
 #include <dlfcn.h>
+#include <link.h>
+
+#include <cassert>
+#include <cstddef>
+#include <iostream>
+#include <mutex>
+#include <string>
+#include <tuple>
+#include <vector>
 
 namespace Concurrency {
 
@@ -29,8 +32,8 @@ const wchar_t accelerator::default_accelerator[] = L"default";
 // weak symbols of kernel codes
 
 // Kernel bundle
-extern "C" char * kernel_bundle_source[] asm ("_binary_kernel_bundle_start") __attribute__((weak));
-extern "C" char * kernel_bundle_end[] asm ("_binary_kernel_bundle_end") __attribute__((weak));
+extern "C" char * kernel_bundle_source[] asm ("_binary_kernel_bundle_start") __attribute__((visibility("hidden")));
+extern "C" char * kernel_bundle_end[] asm ("_binary_kernel_bundle_end") __attribute__((visibility("hidden")));
 
 // interface of HCC runtime implementation
 struct RuntimeImpl {
@@ -268,18 +271,24 @@ static inline uint64_t Read8byteIntegerFromBuffer(const char *data, size_t pos) 
 #define HCC_TRIPLE_PREFIX "hcc-amdgcn--amdhsa-"
 #define HCC_TRIPLE_PREFIX_LENGTH (19)
 
-inline void DetermineAndGetProgram(KalmarQueue* pQueue, size_t* kernel_size, void** kernel_source) {
-
+inline 
+void DetermineAndGetProgram(
+    const void* kernel_bundle_f, 
+    const void* kernel_bundle_l,
+    KalmarQueue* pQueue, 
+    size_t* kernel_size, 
+    void** kernel_source) 
+{
   bool FoundCompatibleKernel = false;
 
   // walk through bundle header
   // get bundle file size
-  size_t bundle_size =
-    (std::ptrdiff_t)((void *)kernel_bundle_end) -
-    (std::ptrdiff_t)((void *)kernel_bundle_source);
+  size_t bundle_size = 
+      static_cast<const char*>(kernel_bundle_l) - 
+      static_cast<const char*>(kernel_bundle_f);
 
   // point to bundle file data
-  const char *data = (const char *)kernel_bundle_source;
+  const char *data = static_cast<const char*>(kernel_bundle_f);
 
   // skip OFFLOAD_BUNDLER_MAGIC_STR
   size_t pos = 0;
@@ -287,8 +296,9 @@ inline void DetermineAndGetProgram(KalmarQueue* pQueue, size_t* kernel_size, voi
     RUNTIME_ERROR(1, "Bundle size too small", __LINE__)
   }
   std::string MagicStr(data + pos, OFFLOAD_BUNDLER_MAGIC_STR_LENGTH);
+  //std::cerr << MagicStr << std::endl;
   if (MagicStr.compare(OFFLOAD_BUNDLER_MAGIC_STR) != 0) {
-    RUNTIME_ERROR(1, "Incorrect magic string", __LINE__)
+    return; //RUNTIME_ERROR(1, "Incorrect magic string", __LINE__)
   }
   pos += OFFLOAD_BUNDLER_MAGIC_STR_LENGTH;
 
@@ -346,13 +356,63 @@ inline void DetermineAndGetProgram(KalmarQueue* pQueue, size_t* kernel_size, voi
     RUNTIME_ERROR(1, "Fail to find compatible kernel", __LINE__)
   }
 }
+        
+namespace
+{
+    template<typename T = std::vector<std::vector<char>>>
+    int copy_kernel_sections(dl_phdr_info* x, size_t, void* kernels)
+    {
+        static constexpr const char kernel[] = ".kernel";
 
+        auto out = static_cast<T*>(kernels);
+
+        ELFIO::elfio tmp;
+        if (tmp.load(x->dlpi_name)) {
+            for (auto&& y : tmp.sections) {
+                if (y->get_name() == kernel) {
+                    out->emplace_back(
+                        y->get_data(), y->get_data() + y->get_size());
+                }
+            }
+        }
+
+        return 0;
+    }
+
+    static
+    const std::vector<std::vector<char>>& shared_object_kernel_sections()
+    {
+        static std::vector<std::vector<char>> r;
+
+        static std::once_flag f;
+        std::call_once(f, []() { dl_iterate_phdr(copy_kernel_sections, &r); });
+
+        return r;
+    }
+}
 void BuildProgram(KalmarQueue* pQueue) {
-  size_t kernel_size = 0;
-  void* kernel_source = nullptr;
-
-  DetermineAndGetProgram(pQueue, &kernel_size, &kernel_source);
-  pQueue->getDev()->BuildProgram((void*)kernel_size, kernel_source);
+  std::vector<std::vector<char>> bundles{
+      {reinterpret_cast<char*>(&kernel_bundle_source), 
+       reinterpret_cast<char*>(&kernel_bundle_end)}};
+  bundles.insert(
+      bundles.end(), 
+      shared_object_kernel_sections().cbegin(), 
+      shared_object_kernel_sections().cend());
+  
+  for (auto&& x : bundles) {
+      size_t kernel_size = 0;
+      void* kernel_source = nullptr;
+    
+      DetermineAndGetProgram(
+          x.data(),
+          x.data() + x.size(),
+          pQueue, 
+          &kernel_size, 
+          &kernel_source);
+      if (kernel_source) {
+          pQueue->getDev()->BuildProgram((void*)kernel_size, kernel_source);
+      }
+  }
 }
 
 // used in parallel_for_each.h
@@ -424,7 +484,7 @@ static inline std::uint32_t f32_as_u32(float f) { union { float f; std::uint32_t
 static inline float u32_as_f32(std::uint32_t u) { union { float f; std::uint32_t u; } v; v.u = u; return v.f; }
 static inline int clamp_int(int i, int l, int h) { return std::min(std::max(i, l), h); }
 
-// half à float, the f16 is in the low 16 bits of the input argument ¿a¿
+// half ï¿½ float, the f16 is in the low 16 bits of the input argument ï¿½aï¿½
 static inline float __convert_half_to_float(std::uint32_t a) noexcept {
   std::uint32_t u = ((a << 13) + 0x70000000U) & 0x8fffe000U;
   std::uint32_t v = f32_as_u32(u32_as_f32(u) * 0x1.0p+112f) + 0x38000000U;
@@ -432,7 +492,7 @@ static inline float __convert_half_to_float(std::uint32_t a) noexcept {
   return u32_as_f32(u) * 0x1.0p-112f;
 }
 
-// float à half with nearest even rounding
+// float ï¿½ half with nearest even rounding
 // The lower 16 bits of the result is the bit pattern for the f16
 static inline std::uint32_t __convert_float_to_half(float a) noexcept {
   std::uint32_t u = f32_as_u32(a);
