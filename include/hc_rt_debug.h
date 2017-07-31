@@ -4,7 +4,10 @@
 #include <cstdio>
 #define UNW_LOCAL_ONLY
 #include <libunwind.h>
+#ifndef USE_LIBCXX
 #include <cxxabi.h>
+#endif
+#include <cstring>
 #include <string>
 #include <sstream>
 #include <iostream>
@@ -58,6 +61,8 @@ if (COMPILE_HCC_DB && (HCC_DB & (1<<(db_flag)))) { \
     DBSTREAM << sstream.str();\
 };
 
+// get a the current filename without the path
+#define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/')+1 : __FILE__)
 
 // Class with a constructor that gets called when new thread is created:
 struct ShortTid {
@@ -96,7 +101,9 @@ namespace hc {
       unw_word_t offp;
       if (unw_get_proc_name(&cursor, func, sizeof(func), &offp) == 0) {
         int status;
+#ifndef USE_LIBCXX
         demangled = abi::__cxa_demangle(func, nullptr, nullptr, &status);
+#endif
         print_func_name = demangled ? demangled : func;
       }
       else {

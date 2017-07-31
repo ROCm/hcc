@@ -11,11 +11,12 @@ ARG build_type=Release
 ARG cmake_prefix=/opt/cmake
 ARG cmake_ver_major=3.7
 ARG cmake_ver_minor=3.7.2
+ARG REPO_RADEON=repo.radeon.com
 
 # Install Packages
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends curl && \
-    curl -sL http://packages.amd.com/rocm/apt/debian/rocm.gpg.key | apt-key add - && \
-    sh -c 'echo deb [arch=amd64] http://packages.amd.com/rocm/apt/debian/ xenial main > /etc/apt/sources.list.d/rocm.list' && \
+    curl -sL http://${REPO_RADEON}/rocm/apt/debian/rocm.gpg.key | apt-key add - && \
+    echo deb [arch=amd64] http://${REPO_RADEON}/rocm/apt/debian/ xenial main | tee /etc/apt/sources.list.d/rocm.list && \
     apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     sudo \
     file \
@@ -24,7 +25,6 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
     software-properties-common \
     wget \
     python \
-    rpm \
     pkg-config \
     gcc-multilib \
     g++-multilib \
