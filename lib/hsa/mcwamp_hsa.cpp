@@ -2218,61 +2218,6 @@ public:
         std::string str(fun);
         HSAKernel *kernel = programs[str];
         if (!kernel) {
-            int demangleStatus = 0;
-#ifndef USE_LIBCXX
-            demangled = abi::__cxa_demangle(fun, nullptr, nullptr, &demangleStatus);
-#endif
-            std::string shortName = demangleStatus ? fun : std::string(demangled);
-            try {
-                if (demangleStatus == 0) {
-                    // strip off hip launch template wrapper:
-                    std::string hipImplString ("void hip_impl::grid_launch_hip_impl_<");
-                    int begin = shortName.find(hipImplString);
-                    if ((begin != std::string::npos)) {
-                        begin += hipImplString.length() ;
-                    } else {
-                        begin = 0;
-                    }
-
-                    // trim everything after first (
-                    int end = shortName.find("(");
-                    // Maybe no return type
-                    if (begin > end) {
-                       begin = 0;
-                    }
-
-                    if (end != std::string::npos) {
-                        shortName = shortName.substr(begin, end-begin);
-                    } else {
-                        // didn't find (, just trim the beginning:
-                        shortName = shortName.substr(begin);
-                    }
-
-
-
-                    // Strip off any leading return type:
-                    begin = shortName.find(" ", 0);
-                    if (begin == std::string::npos) {
-                        begin = 0;
-                    } else {
-                        begin +=1; // skip the space
-                    }
-                    shortName = shortName.substr(begin);
-
-
-                    
-                    DBOUTL(DB_CODE, "shortKernel processing demangled.  beginChar=" << begin << " endChar=" << end );
-
-
-                }
-            } catch (std::out_of_range& exception) {
-                // Do something sensible if string pattern is not what we expect
-                shortName = fun;
-            };
-            DBOUT (DB_CODE, "CreateKernel_short=      " << shortName << "\n");
-            DBOUT (DB_CODE, "CreateKernel_demangled=  " << demangled << "\n");
-            DBOUT (DB_CODE, "CreateKernel_raw=       " << fun << "\n");
-
             if (executables.size() != 0) {
                 for (auto executable_iterator : executables) {
                     HSAExecutable *executable = executable_iterator.second;
