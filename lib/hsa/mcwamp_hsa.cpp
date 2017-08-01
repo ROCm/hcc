@@ -2241,7 +2241,10 @@ public:
             if (!kernel) {
                 hc::print_backtrace();
                 int status = 0;
-                const char *demangled = abi::__cxa_demangle(fun, nullptr, nullptr, &status);
+                const char *demangled = nullptr;
+#ifndef USE_LIBCXX
+                demangled = abi::__cxa_demangle(fun, nullptr, nullptr, &status);
+#endif
                 std::cerr << "HSADevice::CreateKernel(): Unable to create kernel '" <<  (status ? fun : demangled) << "'\n";
 
                 if (demangled) {
