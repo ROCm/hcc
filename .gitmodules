@@ -1,14 +1,14 @@
 [submodule "llvm"]
 	path = compiler
-	url = https://github.com/RadeonOpenCompute/llvm.git
+	url = https://github.com/vsytch/llvm.git
 	branch = amd-hcc
 [submodule "lld"]
 	path = lld
-	url = https://github.com/RadeonOpenCompute/lld.git
+	url = https://github.com/vsytch/lld.git
 	branch = amd-hcc
 [submodule "clang"]
 	path = clang
-	url = https://github.com/RadeonOpenCompute/hcc-clang-upgrade.git
+	url = https://github.com/vsytch/hcc-clang-upgrade.git
 	branch = clang_tot_upgrade
 [submodule "compiler-rt"]
 	path = compiler-rt
@@ -16,7 +16,7 @@
     branch = amd-hcc
 [submodule "rocdl"]
 	path = rocdl
-	url = http://github.com/RadeonOpenCompute/ROCm-Device-Libs.git
+	url = http://github.com/vsytch/ROCm-Device-Libs.git
     branch = master
 [submodule "clang-tools-extra"]
 	path = clang-tools-extra
