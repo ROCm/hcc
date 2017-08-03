@@ -3569,8 +3569,8 @@ std::shared_ptr<KalmarAsyncOp> HSAQueue::EnqueueAsyncCopy(const void *src, void 
 
 
     hc::accelerator acc;
-    hc::AmPointerInfo srcPtrInfo(NULL, NULL, 0, acc, 0, 0);
-    hc::AmPointerInfo dstPtrInfo(NULL, NULL, 0, acc, 0, 0);
+    hc::AmPointerInfo srcPtrInfo(NULL, NULL, NULL, 0, acc, 0, 0);
+    hc::AmPointerInfo dstPtrInfo(NULL, NULL, NULL, 0, acc, 0, 0);
 
     bool srcInTracker = (hc::am_memtracker_getinfo(&srcPtrInfo, src) == AM_SUCCESS);
     bool dstInTracker = (hc::am_memtracker_getinfo(&dstPtrInfo, dst) == AM_SUCCESS);
@@ -4789,8 +4789,8 @@ HSACopy::syncCopy() {
     bool dstInDeviceMem = false;
 
     hc::accelerator acc;
-    hc::AmPointerInfo srcPtrInfo(NULL, NULL, 0, acc, 0, 0);
-    hc::AmPointerInfo dstPtrInfo(NULL, NULL, 0, acc, 0, 0);
+    hc::AmPointerInfo srcPtrInfo(NULL, NULL, NULL, 0, acc, 0, 0);
+    hc::AmPointerInfo dstPtrInfo(NULL, NULL, NULL, 0, acc, 0, 0);
 
     if (hc::am_memtracker_getinfo(&srcPtrInfo, src) == AM_SUCCESS) {
         srcInTracker = true;
