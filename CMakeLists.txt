@@ -364,6 +364,9 @@ install( FILES ${CMAKE_CURRENT_SOURCE_DIR}/scripts/cmake/ImportedTargets.cmake
 
 add_custom_target(world DEPENDS clang_links)
 
+# move headers to build dir before building rocdl and hcc lib
+add_subdirectory(include)
+
 # build the integrated ROCm Device Library
 set(AMDHSACOD ${ROCM_ROOT}/bin/amdhsacod CACHE FILEPATH "Specify the amdhsacod tool")
 if (HCC_INTEGRATE_ROCDL)
@@ -447,7 +450,6 @@ add_subdirectory(hcc_config)
 add_subdirectory(lib)
 add_subdirectory(utils)
 add_subdirectory(tests)
-add_subdirectory(include)
 add_subdirectory(amp-conformance)
 add_subdirectory(stl-test)
 add_subdirectory(cmake-tests)
