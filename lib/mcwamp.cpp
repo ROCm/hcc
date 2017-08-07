@@ -4,23 +4,20 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-#include "mcwamp_impl.hpp"
+
 #include "hc_rt_debug.h"
+#include "mcwamp_impl.hpp"
 
-#include "../hc2/external/elfio/elfio.hpp"
-
-#include <amp.h>
-
-#include <dlfcn.h>
-#include <link.h>
-
+#include <iostream>
+#include <string>
 #include <cassert>
 #include <cstddef>
-#include <iostream>
-#include <mutex>
-#include <string>
 #include <tuple>
-#include <vector>
+
+#include <amp.h>
+#include <mutex>
+
+#include <dlfcn.h>
 
 namespace Concurrency {
 
@@ -271,24 +268,18 @@ static inline uint64_t Read8byteIntegerFromBuffer(const char *data, size_t pos) 
 #define HCC_TRIPLE_PREFIX "hcc-amdgcn--amdhsa-"
 #define HCC_TRIPLE_PREFIX_LENGTH (19)
 
-inline 
-void DetermineAndGetProgram(
-    const void* kernel_bundle_f, 
-    const void* kernel_bundle_l,
-    KalmarQueue* pQueue, 
-    size_t* kernel_size, 
-    void** kernel_source) 
-{
+inline void DetermineAndGetProgram(KalmarQueue* pQueue, size_t* kernel_size, void** kernel_source) {
+
   bool FoundCompatibleKernel = false;
 
   // walk through bundle header
   // get bundle file size
-  size_t bundle_size = 
-      static_cast<const char*>(kernel_bundle_l) - 
-      static_cast<const char*>(kernel_bundle_f);
+  size_t bundle_size =
+    (std::ptrdiff_t)((void *)kernel_bundle_end) -
+    (std::ptrdiff_t)((void *)kernel_bundle_source);
 
   // point to bundle file data
-  const char *data = static_cast<const char*>(kernel_bundle_f);
+  const char *data = (const char *)kernel_bundle_source;
 
   // skip OFFLOAD_BUNDLER_MAGIC_STR
   size_t pos = 0;
@@ -296,9 +287,8 @@ void DetermineAndGetProgram(
     RUNTIME_ERROR(1, "Bundle size too small", __LINE__)
   }
   std::string MagicStr(data + pos, OFFLOAD_BUNDLER_MAGIC_STR_LENGTH);
-  //std::cerr << MagicStr << std::endl;
   if (MagicStr.compare(OFFLOAD_BUNDLER_MAGIC_STR) != 0) {
-    return; //RUNTIME_ERROR(1, "Incorrect magic string", __LINE__)
+    RUNTIME_ERROR(1, "Incorrect magic string", __LINE__)
   }
   pos += OFFLOAD_BUNDLER_MAGIC_STR_LENGTH;
 
@@ -356,63 +346,13 @@ void DetermineAndGetProgram(
     RUNTIME_ERROR(1, "Fail to find compatible kernel", __LINE__)
   }
 }
-        
-namespace
-{
-    template<typename T = std::vector<std::vector<char>>>
-    int copy_kernel_sections(dl_phdr_info* x, size_t, void* kernels)
-    {
-        static constexpr const char kernel[] = ".kernel";
 
-        auto out = static_cast<T*>(kernels);
-
-        ELFIO::elfio tmp;
-        if (tmp.load(x->dlpi_name)) {
-            for (auto&& y : tmp.sections) {
-                if (y->get_name() == kernel) {
-                    out->emplace_back(
-                        y->get_data(), y->get_data() + y->get_size());
-                }
-            }
-        }
-
-        return 0;
-    }
-
-    static
-    const std::vector<std::vector<char>>& shared_object_kernel_sections()
-    {
-        static std::vector<std::vector<char>> r;
-
-        static std::once_flag f;
-        std::call_once(f, []() { dl_iterate_phdr(copy_kernel_sections, &r); });
-
-        return r;
-    }
-}
 void BuildProgram(KalmarQueue* pQueue) {
-  std::vector<std::vector<char>> bundles{
-      {reinterpret_cast<char*>(&kernel_bundle_source), 
-       reinterpret_cast<char*>(&kernel_bundle_end)}};
-  bundles.insert(
-      bundles.end(), 
-      shared_object_kernel_sections().cbegin(), 
-      shared_object_kernel_sections().cend());
-  
-  for (auto&& x : bundles) {
-      size_t kernel_size = 0;
-      void* kernel_source = nullptr;
-    
-      DetermineAndGetProgram(
-          x.data(),
-          x.data() + x.size(),
-          pQueue, 
-          &kernel_size, 
-          &kernel_source);
-      if (kernel_source) {
-          pQueue->getDev()->BuildProgram((void*)kernel_size, kernel_source);
-      }
-  }
+  size_t kernel_size = 0;
+  void* kernel_source = nullptr;
+
+  DetermineAndGetProgram(pQueue, &kernel_size, &kernel_source);
+  pQueue->getDev()->BuildProgram((void*)kernel_size, kernel_source);
 }
 
 // used in parallel_for_each.h
@@ -454,14 +394,14 @@ public:
 
       // get context
       KalmarContext* context = static_cast<KalmarContext*>(runtime->m_GetContextImpl());
-    
+
       const std::vector<KalmarDevice*> devices = context->getDevices();
 
       for (auto dev = devices.begin(); dev != devices.end(); dev++) {
 
         // get default queue on the default device
         std::shared_ptr<KalmarQueue> queue = (*dev)->get_default_queue();
-  
+
         // build kernels on the default queue on the default device
         CLAMP::BuildProgram(queue.get());
       }
