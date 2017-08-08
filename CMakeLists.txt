@@ -334,7 +334,7 @@ install(PROGRAMS $<TARGET_FILE:llvm-as>
 
 add_custom_target(clang_links DEPENDS clang)
 add_custom_command(TARGET clang_links POST_BUILD
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ${CLANG_BIN_DIR}/lib/clang/5.0.0/lib/linux/libclang_rt.builtins-x86_64.a ${PROJECT_BINARY_DIR}/lib/libclang_rt.builtins-x86_64.a
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ${CLANG_BIN_DIR}/lib/clang/6.0.0/lib/linux/libclang_rt.builtins-x86_64.a ${PROJECT_BINARY_DIR}/lib/libclang_rt.builtins-x86_64.a
 )
 
 #install(TARGETS llvm-as llvm-dis opt llc COMPONENT compiler)
@@ -355,7 +355,7 @@ install(PROGRAMS $<TARGET_FILE:LLVMAMDGPUDesc>
         COMPONENT compiler
 )
 
-install(FILES ${CLANG_BIN_DIR}/lib/clang/5.0.0/lib/linux/libclang_rt.builtins-x86_64.a
+install(FILES ${CLANG_BIN_DIR}/lib/clang/6.0.0/lib/linux/libclang_rt.builtins-x86_64.a
         DESTINATION  ${CMAKE_INSTALL_LIBDIR}
         COMPONENT compiler)
 
@@ -363,6 +363,9 @@ install( FILES ${CMAKE_CURRENT_SOURCE_DIR}/scripts/cmake/ImportedTargets.cmake
          DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/hcc )
 
 add_custom_target(world DEPENDS clang_links)
+
+# move headers to build dir before building rocdl and hcc lib
+add_subdirectory(include)
 
 # build the integrated ROCm Device Library
 set(AMDHSACOD ${ROCM_ROOT}/bin/amdhsacod CACHE FILEPATH "Specify the amdhsacod tool")
@@ -447,7 +450,6 @@ add_subdirectory(hcc_config)
 add_subdirectory(lib)
 add_subdirectory(utils)
 add_subdirectory(tests)
-add_subdirectory(include)
 add_subdirectory(amp-conformance)
 add_subdirectory(stl-test)
 add_subdirectory(cmake-tests)
