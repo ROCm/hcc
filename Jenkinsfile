@@ -11,7 +11,8 @@ properties([buildDiscarder(logRotator(
     [$class: 'CopyArtifactPermissionProperty', projectNames: '*']
   ])
 
-node ('rocmtest')
+// NOTE: Remove fiji qualifier when HSA_AMDGPU_GPU_TARGET is fixed
+node ('rocmtest && fiji')
 {
   // Convenience variables for common paths used in building
   def workspace_dir_abs = pwd()
@@ -68,7 +69,7 @@ node ('rocmtest')
             -DCMAKE_INSTALL_PREFIX=${hcc_install_prefix} \
             -DCPACK_SET_DESTDIR=OFF \
             -DCMAKE_BUILD_TYPE=${build_config} \
-            -DHSA_AMDGPU_GPU_TARGET="gfx701;gfx803" \
+            -DHSA_AMDGPU_GPU_TARGET="gfx900;gfx803" \
             ../..
           make -j\$(nproc)
         """
