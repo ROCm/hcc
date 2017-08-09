@@ -19,7 +19,8 @@ namespace hc {
 class AmPointerInfo {
 public:
     void *      _hostPointer;   ///< Host pointer.  If host access is not allowed, NULL.
-    void *      _devicePointer; ///< Device pointer.  
+    void *      _devicePointer; ///< Device pointer.
+    void *      _unalignedDevicePointer; ///< Unaligned device pointer
     size_t      _sizeBytes;     ///< Size of allocation.
     hc::accelerator _acc;       ///< Accelerator where allocation is physically located.
     bool        _isInDeviceMem; ///< Memory is physically resident on a device (if false, memory is located on host)
@@ -31,9 +32,10 @@ public:
     void *      _appPtr;             ///< App-specific pointer to additional information.
 
 
-    AmPointerInfo(void *hostPointer, void *devicePointer, size_t sizeBytes, hc::accelerator &acc,  bool isInDeviceMem=false, bool isAmManaged=false) :
+    AmPointerInfo(void *hostPointer, void *devicePointer, void* unalignedDevicePointer, size_t sizeBytes, hc::accelerator &acc,  bool isInDeviceMem=false, bool isAmManaged=false) :
         _hostPointer(hostPointer),
         _devicePointer(devicePointer),
+        _unalignedDevicePointer(unalignedDevicePointer),
         _sizeBytes(sizeBytes),
         _acc(acc),
         _isInDeviceMem(isInDeviceMem),
@@ -73,7 +75,7 @@ namespace hc {
  *
  * @see am_free, am_copy
  */
-auto_voidp am_alloc(size_t size, hc::accelerator &acc, unsigned flags);
+auto_voidp am_alloc(size_t size, hc::accelerator &acc, unsigned flags, size_t alignment = 0);
 
 /**
  * Free a block of memory previously allocated with am_alloc.
