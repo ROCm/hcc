@@ -504,6 +504,9 @@ protected:
     KalmarDevice* def;
     std::vector<KalmarDevice*> Devices;
     KalmarContext() : def(nullptr), Devices() { Devices.push_back(new CPUDevice); }
+
+    bool init_success = false; 
+
 public:
     virtual ~KalmarContext() {}
 
