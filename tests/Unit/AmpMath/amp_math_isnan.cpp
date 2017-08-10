@@ -4,20 +4,23 @@
 #include <iostream>
 #include <limits>
 #include <amp_math.h>
+#include <cmath>
+#include <cassert>
 
 using namespace concurrency;
 
-int main(void) {
+template<typename _Tp>
+bool test() {
   const int vecSize = 3;
 
   // Alloc & init input data
   extent<1> e(vecSize);
-  array_view<float, 1> in(vecSize);
+  array_view<_Tp, 1> in(vecSize);
   array_view<int, 1> out(vecSize);
 
-  in[0] = std::numeric_limits<float>::quiet_NaN();
+  in[0] = std::numeric_limits<_Tp>::quiet_NaN();
   in[1] = 413.612;
-  in[2] = std::numeric_limits<float>::signaling_NaN();
+  in[2] = std::numeric_limits<_Tp>::signaling_NaN();
 
   parallel_for_each(
     e,
@@ -28,15 +31,22 @@ int main(void) {
   //check accelerator results
   for (int i=0; i<vecSize; ++i) {
     if (std::isnan(in[i]) != (out[i] ? true : false))
-      return 1;
+      return false;
   }
 
   //check on cpu
   for (int i=0; i<vecSize; ++i) {
     if (std::isnan(in[i]) != (fast_math::isnan(in[i]) ? true : false))
-      return 1;
+      return false;
   }
 
+  return true;
+}
 
-  return 0;
+int main(void) {
+  bool ret = true;
+
+  ret &= test<float>();
+
+  return !(ret == true);
 }

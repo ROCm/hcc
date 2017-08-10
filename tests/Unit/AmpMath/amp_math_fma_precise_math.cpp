@@ -4,6 +4,8 @@
 
 #include <iostream>
 #include <random>
+#include <cmath>
+#include <cassert>
 
 using namespace concurrency;
 
@@ -49,7 +51,12 @@ bool test() {
 
   _Tp sum = 0;
   for(unsigned i = 0; i < vecSize; i++) {
-    sum += precise_math::fabs(precise_math::fabs(ge[i]) - precise_math::fabs(gd[i]));
+    if (std::isnan(gd[i])) {
+      printf("gc[%d] is NaN!\n", i);
+      assert(false);
+    }
+    _Tp diff = precise_math::fabs(ge[i] - ge[i]);
+    sum += diff;
   }
   return (sum < ERROR_THRESHOLD);
 }

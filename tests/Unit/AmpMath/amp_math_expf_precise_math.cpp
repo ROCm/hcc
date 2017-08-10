@@ -5,6 +5,7 @@
 #include <iostream>
 #include <random>
 #include <cmath>
+#include <cassert>
 
 using namespace concurrency;
 
