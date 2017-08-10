@@ -29,12 +29,7 @@ Build HCC from source
 To configure and build HCC from source, use the following steps:
 ```bash
 mkdir -p build; cd build
-# NUM_BUILD_THREADS is optional
-# set the number to your CPU core numbers time 2 is recommended
-# in this example we set it to 96
-cmake -DNUM_BUILD_THREADS=96 \
-      -DCMAKE_BUILD_TYPE=Release \
-      ..
+cmake -DCMAKE_BUILD_TYPE=Release ..
 make
 ```
 

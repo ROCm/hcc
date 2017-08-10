@@ -11,11 +11,6 @@ IF (NOT CMAKE_BUILD_TYPE)
   SET(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build, options are: Release Debug" FORCE)
 ENDIF(NOT CMAKE_BUILD_TYPE)
 
-IF (NOT NUM_BUILD_THREADS)
-  include(ProcessorCount)
-  ProcessorCount(NUM_BUILD_THREADS)
-ENDIF(NOT NUM_BUILD_THREADS)
-
 # Use two different methods to determine host distribution: lsb_release and if that fails grep /etc/os-release
 find_program( lsb_executable lsb_release )
 
@@ -33,7 +28,7 @@ endif( )
 
 # Accepted values for DISTRO_ID: trusty (Ubuntu 14.04), xenial (Ubuntu 16.06), fd23 (Fedora 23)
 string(TOLOWER "${DISTRO_ID}" DISTRO_ID )
-if( DISTRO_ID MATCHES "ubuntu" OR DISTRO_ID MATCHES "fedora" 
+if( DISTRO_ID MATCHES "ubuntu" OR DISTRO_ID MATCHES "fedora"
    OR DISTRO_ID MATCHES "centos" OR DISTRO_ID MATCHES "redhatenterpriseserver")
   message( STATUS "Detected distribution: ${DISTRO_ID}:${DISTRO_RELEASE}" )
 else()
@@ -44,9 +39,9 @@ endif()
 
 # Need special handling for RHEL 7 or CentOS 7
 if (DISTRO_ID MATCHES "centos" OR DISTRO_ID MATCHES "redhatenterpriseserver")
-  set(HCC_TOOLCHAIN_RHEL ON) 
+  set(HCC_TOOLCHAIN_RHEL ON)
 else()
-  set(HCC_TOOLCHAIN_RHEL OFF) 
+  set(HCC_TOOLCHAIN_RHEL OFF)
 endif()
 
 include (MCWAMP)
@@ -337,8 +332,6 @@ add_custom_command(TARGET clang_links POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E create_symlink ${CLANG_BIN_DIR}/lib/clang/6.0.0/lib/linux/libclang_rt.builtins-x86_64.a ${PROJECT_BINARY_DIR}/lib/libclang_rt.builtins-x86_64.a
 )
 
-#install(TARGETS llvm-as llvm-dis opt llc COMPONENT compiler)
-
 # install certain LLVM libraries needed by HIP
 install(PROGRAMS $<TARGET_FILE:LLVMAMDGPUDesc>
                  $<TARGET_FILE:LLVMAMDGPUUtils>
@@ -375,20 +368,24 @@ if (HCC_INTEGRATE_ROCDL)
   set(ROCDL_BUILD_DIR "${PROJECT_BINARY_DIR}/rocdl")
   file(MAKE_DIRECTORY ${ROCDL_BUILD_DIR})
 
-  # custom commands to build rocdl
-  add_custom_target(rocdl
-    COMMAND ${CMAKE_COMMAND} ${ROCDL_SRC_DIR}
-            -DLLVM_DIR=${CLANG_BIN_DIR}
-            -DAMDHSACOD=${AMDHSACOD}
-            -DGENERIC_IS_ZERO=ON
-            -DBUILD_HC_LIB=ON
-    COMMAND make -j ${NUM_BUILD_THREADS} # not portable, but we need it this way
-    WORKING_DIRECTORY ${ROCDL_BUILD_DIR}
-    DEPENDS clang_links llvm-link
-  )
+  set(LLVM_DIR ${CLANG_BIN_DIR})
+  set(AMDHSACOD ${AMDHSACOD})
+  set(GENERIC_IS_ZERO ON)
+  set(BUILD_HC_LIB ON)
+  set(AMDGCN_TARGETS_LIB_LIST "AMDGCN_LIB_TARGETS")
+  find_package(LLVM REQUIRED CONFIG PATHS ${CMAKE_BINARY_DIR}/compiler NO_DEFAULT_PATH)
+
+  list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
+  include(AddLLVM)
+
+  add_definitions(${LLVM_DEFINITIONS})
+
+  # build rocdl
+  add_subdirectory(${ROCDL_SRC_DIR})
 
   file(MAKE_DIRECTORY ${ROCDL_BUILD_DIR}/lib)
-  add_custom_command(TARGET rocdl POST_BUILD
+  add_custom_target(rocdl_links DEPENDS ${AMDGCN_LIB_TARGETS})
+  add_custom_command(TARGET rocdl_links POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E create_symlink ../irif/irif.amdgcn.bc                              irif.amdgcn.bc
     COMMAND ${CMAKE_COMMAND} -E create_symlink ../opencl/opencl.amdgcn.bc                          opencl.amdgcn.bc
     COMMAND ${CMAKE_COMMAND} -E create_symlink ../ockl/ockl.amdgcn.bc                              ockl.amdgcn.bc
@@ -414,7 +411,6 @@ if (HCC_INTEGRATE_ROCDL)
     COMMAND ${CMAKE_COMMAND} -E create_symlink ../ocml/ocml.amdgcn.bc                              ocml.amdgcn.bc
     WORKING_DIRECTORY ${ROCDL_BUILD_DIR}/lib
   )
-
   # install ROCm Device Library in hcc
   install(DIRECTORY ${ROCDL_BUILD_DIR}/hc
                     ${ROCDL_BUILD_DIR}/irif
@@ -434,8 +430,9 @@ if (HCC_INTEGRATE_ROCDL)
           PATTERN *.optout.bc EXCLUDE
           PATTERN src EXCLUDE
           PATTERN CMakeFiles EXCLUDE
+          PATTERN transformed_src EXCLUDE
           PATTERN utils EXCLUDE
-          )
+  )
 
   # create search paths for ROCDL
   list(APPEND ROCM_DEVICE_LIB_PATHS ${ROCDL_BUILD_DIR}/lib)
@@ -555,4 +552,3 @@ MESSAGE("** For the first time:")
 MESSAGE("   'make' to build all")
 MESSAGE("   'make docs' to build the HTML API reference")
 MESSAGE("")
-
