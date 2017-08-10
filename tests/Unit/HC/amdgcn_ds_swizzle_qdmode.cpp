@@ -1,24 +1,24 @@
 
 // RUN: %hc %s -o %t.out && %t.out
 
-#include <climits>
-#include <cassert>
-#include <cstdio>
-#include <iostream>
-#include <vector>
-#include <random>
-#include <algorithm>
-#include <type_traits>
-
-
 #include <hc.hpp>
+
+#include <algorithm>
+#include <cassert>
+#include <climits>
+#include <cstdio>
+#include <functional>
+#include <iostream>
+#include <random>
+#include <type_traits>
+#include <vector>
 
 //#define DEBUG 1
 
 #ifdef DEBUG
   #define DEBUG_MSG(MSG,...)  fprintf(stderr,"%s:%d ", __FILE__,__LINE__); fprintf(stderr, MSG, __VA_ARGS__); fprintf(stderr, "\n");
 #else
-  #define DEBUG_MSG(MSG,...)   
+  #define DEBUG_MSG(MSG,...)
 #endif
 
 
@@ -43,14 +43,14 @@ bool run_test(const int num) {
 
   std::vector<T> actual(num);
   hc::array_view<T,1> av_actual(num, actual);
-  hc::parallel_for_each(av_input_x.get_extent(), 
+  hc::parallel_for_each(av_input_x.get_extent(),
                         [=](hc::index<1> idx) [[hc]] {
     av_actual[idx] = hc::__amdgcn_ds_swizzle(av_input_x[idx],pattern);
   });
   av_actual.synchronize();
 
   std::vector<T> expected(num);
- 
+
   static_assert((pattern & 0x00008000) != 0, "The pattern provided is not in QDMode and therefore incompatible with this test!");
   std::vector<int> patterns(4);
   patterns[0] = pattern & 0x03;
@@ -62,7 +62,7 @@ bool run_test(const int num) {
       expected[j+i] = input_x[j+patterns[i]];
     }
   }
- 
+
   return std::equal(expected.begin(), expected.end(), actual.begin());
 }
 

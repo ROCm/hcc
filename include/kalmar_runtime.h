@@ -41,9 +41,21 @@ enum execute_order
 // Flags to specify visibility of previous commands after a marker is executed.
 enum memory_scope
 {
-    accelerator_scope,  // One accelerator scope 
-    system_scope,       // CPU + All accelerators
+    no_scope=0,           // No release operation applied
+    accelerator_scope=1,  // Release to current accelerator
+    system_scope=2,       // Release to system (CPU + all accelerators)
 };
+
+static inline memory_scope greater_scope(memory_scope scope1, memory_scope scope2)
+{
+    if ((scope1==system_scope) || (scope2 == system_scope)) {
+        return system_scope;
+    } else if ((scope1==accelerator_scope) || (scope2 == accelerator_scope)) {
+        return accelerator_scope;
+    } else {
+        return no_scope;
+    }
+}
 
 
 enum hcCommandKind {
@@ -58,6 +70,7 @@ enum hcCommandKind {
 };
 
 
+// Commands sent to copy queues:
 static inline bool isCopyCommand(hcCommandKind k) 
 {
     switch (k) {
@@ -70,6 +83,13 @@ static inline bool isCopyCommand(hcCommandKind k)
             return false;
     };
 };
+
+
+// Commands sent to compute queue:
+static inline bool isComputeQueueCommand(hcCommandKind k) {
+    return (k == hcCommandKernel) || (k == hcCommandMarker);
+};
+
 
 
 
@@ -95,6 +115,7 @@ using namespace Kalmar::enums;
 
 /// forward declaration
 class KalmarDevice;
+class KalmarQueue;
 struct rw_info;
 
 /// KalmarAsyncOp
@@ -102,7 +123,7 @@ struct rw_info;
 /// This is an abstraction of all asynchronous operations within Kalmar
 class KalmarAsyncOp {
 public:
-  KalmarAsyncOp(hcCommandKind xCommandKind) : commandKind(xCommandKind), seqNum(0) {} 
+  KalmarAsyncOp(KalmarQueue *xqueue, hcCommandKind xCommandKind) : queue(xqueue), commandKind(xCommandKind), seqNum(0) {} 
 
   virtual ~KalmarAsyncOp() {} 
   virtual std::shared_future<void>* getFuture() { return nullptr; }
@@ -149,9 +170,14 @@ public:
   hcCommandKind getCommandKind() const { return commandKind; };
   void          setCommandKind(hcCommandKind xCommandKind) { commandKind = xCommandKind; };
 
+  KalmarQueue  *getQueue() const { return queue; };
+
 private:
+  KalmarQueue    *queue;
+
   // Kind of this command - copy, kernel, barrier, etc:
   hcCommandKind  commandKind;
+
 
   // Sequence number of this op in the queue it is dispatched into.
   uint64_t       seqNum;
@@ -243,7 +269,8 @@ public:
 
   /// enqueue marker with prior dependency
   virtual std::shared_ptr<KalmarAsyncOp> EnqueueMarkerWithDependency(int count, std::shared_ptr <KalmarAsyncOp> *depOps, memory_scope scope) { return nullptr; }
-  virtual std::shared_ptr<KalmarAsyncOp> EnqueueMarkerWithDependency(std::shared_ptr <KalmarAsyncOp> depOp, memory_scope scope) { return EnqueueMarkerWithDependency(1, &depOp, scope); };
+
+  virtual std::shared_ptr<KalmarAsyncOp> detectStreamDeps(hcCommandKind commandKind, KalmarAsyncOp *newCopyOp) { return nullptr; };
 
 
   /// copy src to dst asynchronously
@@ -269,7 +296,7 @@ public:
 
   virtual void dispatch_hsa_kernel(const hsa_kernel_dispatch_packet_t *aql, 
                                    const void * args, size_t argsize,
-                                   hc::completion_future *cf)  { };
+                                   hc::completion_future *cf, const char *kernel_name)  { };
  
   /// set CU affinity of this queue.
   /// the setting is permanent until the queue is destroyed or another setting
@@ -344,7 +371,7 @@ public:
     virtual void BuildProgram(void* size, void* source) {}
 
     /// create kernel
-    virtual void* CreateKernel(const char* fun) { return nullptr; }
+    virtual void* CreateKernel(const char* fun, KalmarQueue *queue) { return nullptr; }
 
     /// check if a given kernel is compatible with the device
     virtual bool IsCompatibleKernel(void* size, void* source) { return true; }
@@ -398,6 +425,8 @@ public:
     /// get device's compute unit count
     virtual unsigned int get_compute_unit_count() {return 0;}
 
+    virtual int get_seqnum() const {return -1;}
+
     virtual bool has_cpu_accessible_am() {return false;}
 
 };
@@ -448,7 +477,7 @@ public:
     std::shared_ptr<KalmarQueue> createQueue(execute_order order = execute_in_order) override { return std::shared_ptr<KalmarQueue>(new CPUQueue(this)); }
     void* create(size_t count, struct rw_info* /* not used */ ) override { return kalmar_aligned_alloc(0x1000, count); }
     void release(void* ptr, struct rw_info* /* nout used */) override { kalmar_aligned_free(ptr); }
-    void* CreateKernel(const char* fun) { return nullptr; }
+    void* CreateKernel(const char* fun, KalmarQueue *queue) { return nullptr; }
 };
 
 /// KalmarContext
@@ -894,6 +923,11 @@ struct rw_info
         /// 2. Because the data pointer cannout be released, erase itself from devs
         if (HostPtr)
             synchronize(false);
+        if (curr) {
+            // Wait issues a system-scope release:
+            // Need to make sure we write-back cache contents before deallocating the memory those writes might eventually touch
+            curr->wait();
+        }
         auto cpu_dev = get_cpu_queue()->getDev();
         if (devs.find(cpu_dev) != std::end(devs)) {
             if (!HostPtr)

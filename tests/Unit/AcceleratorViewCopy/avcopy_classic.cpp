@@ -95,11 +95,17 @@ bool simpleTest1(
     auto C_h = hostAlloc<T, usePinnedHost>(acc, N);
 
     std::unique_ptr<T[], decltype(hc::am_free)*> A_d{
-        hc::am_alloc(Nbytes, const_cast<hc::accelerator&>(acc), 0), hc::am_free};
+        static_cast<T*>(
+            hc::am_alloc(Nbytes, const_cast<hc::accelerator&>(acc), 0)),
+        hc::am_free};
     std::unique_ptr<T[], decltype(hc::am_free)*> B_d{
-        hc::am_alloc(Nbytes, const_cast<hc::accelerator&>(acc), 0), hc::am_free};
+        static_cast<T*>(
+            hc::am_alloc(Nbytes, const_cast<hc::accelerator&>(acc), 0)),
+        hc::am_free};
     std::unique_ptr<T[], decltype(hc::am_free)*> C_d{
-        hc::am_alloc(Nbytes, const_cast<hc::accelerator&>(acc), 0), hc::am_free};
+        static_cast<T*>(
+            hc::am_alloc(Nbytes, const_cast<hc::accelerator&>(acc), 0)),
+        hc::am_free};
 
     if (!A_d || !B_d || !C_d) return false;
 

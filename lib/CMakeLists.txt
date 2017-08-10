@@ -24,9 +24,17 @@ add_library(hccrt INTERFACE)
 target_compile_options(hccrt INTERFACE -hc)
 target_link_libraries(hccrt INTERFACE "-hc -L $<TARGET_FILE_DIR:$<TARGET_NAME:mcwamp>> -Wl,-rpath $<TARGET_FILE_DIR:$<TARGET_NAME:mcwamp>>" "-Wl,--whole-archive" mcwamp "-Wl,--no-whole-archive")
 target_link_libraries(hccrt INTERFACE dl m)
+
 if (USE_LIBCXX)
-  target_link_libraries(hccrt INTERFACE c++ c++abi)
+  target_link_libraries(hccrt INTERFACE -stdlib=libc++)
+  if (NOT HCC_TOOLCHAIN_RHEL)
+    target_link_libraries(hccrt INTERFACE c++abi)
+  endif()
 endif (USE_LIBCXX)
+
+# Library interface for building shared libraries
+add_library(hccshared INTERFACE)
+target_link_libraries(hccshared INTERFACE -fPIC -Wl,-Bsymbolic)
 
 ####################
 # C++AMP tools
@@ -37,7 +45,7 @@ install(PROGRAMS ${PROJECT_BINARY_DIR}/compiler/bin/clamp-device
     ${PROJECT_BINARY_DIR}/compiler/bin/clamp-link
     ${PROJECT_BINARY_DIR}/compiler/bin/hc-kernel-assemble
     ${PROJECT_BINARY_DIR}/compiler/bin/hc-host-assemble
-    DESTINATION compiler/bin)
+    DESTINATION bin)
 
 ####################
 # C++AMP tools (HSA-specific)
@@ -69,7 +77,7 @@ add_subdirectory(cpu)
 ####################
 # install targets
 ####################
-install(TARGETS mcwamp mcwamp_atomic hccrt
+install(TARGETS mcwamp mcwamp_atomic hccrt hccshared
     EXPORT hcc-targets
     RUNTIME DESTINATION bin
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}

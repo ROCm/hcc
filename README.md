@@ -1,9 +1,9 @@
 HCC : An open source C++ compiler for heterogeneous devices
 ===========================================================
-This repository hosts HCC compiler implementation project. The goal is to 
-implement a compiler that takes a program conforming parallel programming 
-standards such as C++ AMP, HC, C++ 17 ParallelSTL, or OpenMP and transforms it 
-into AMD GCN ISA.
+This repository hosts the HCC compiler implementation project. The goal is to 
+implement a compiler that takes a program that conforms to a parallel programming 
+standard such as C++ AMP, HC, C++ 17 ParallelSTL, or OpenMP, and transforms it 
+into the AMD GCN ISA.
 
 The project is based on LLVM+CLANG. For more information, please visit the 
 [hcc wiki][1]:
@@ -29,12 +29,7 @@ Build HCC from source
 To configure and build HCC from source, use the following steps:
 ```bash
 mkdir -p build; cd build
-# NUM_BUILD_THREADS is optional
-# set the number to your CPU core numbers time 2 is recommended
-# in this example we set it to 96
-cmake -DNUM_BUILD_THREADS=96 \
-      -DCMAKE_BUILD_TYPE=Release \
-      ..
+cmake -DCMAKE_BUILD_TYPE=Release ..
 make
 ```
 

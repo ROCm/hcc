@@ -114,6 +114,7 @@ void cxxflags(void) {
             std::cout << " -I" << p << "/include";
         } else {
             std::cout << " -I" << get_path(path_hcc_include);
+            std::cout << " -I" << CMAKE_ROCM_ROOT << "/include";
         }
     } else {
         assert(0 && "Unreacheable!");
@@ -151,9 +152,15 @@ void ldflags(void) {
 
     // extra libraries if using libc++ for C++ runtime   
 #ifdef USE_LIBCXX
-    std::cout << " -lc++ -lc++abi";
+    std::cout << " -stdlib=libc++ ";
+    #ifndef HCC_TOOLCHAIN_RHEL
+      std::cout << " -lc++abi ";
+    #endif
 #endif
     std::cout << " -ldl -lm -lpthread";
+
+    // backtrace support
+    std::cout << " -lunwind";
 
     if (const char *p = getenv("TEST_CPU"))
         if (p == std::string("ON"))

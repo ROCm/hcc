@@ -68,7 +68,7 @@ _find_object() {
 
   if [ -e $FILE ]; then
     local file_output=`file $FILE | grep 'ELF 64-bit LSB  relocatable, x86-64'`
-    local readelf_output=`readelf -h $FILE | grep 'Relocatable file'`
+    local readelf_output=`readelf -h $FILE 2>&1 | grep 'Relocatable file'`
 
     if [ ! -z "$file_output" ] && [ ! -z "$readelf_output" ]; then
       # remove postfix
@@ -97,7 +97,7 @@ LIB_SEARCH_PATHS=()
 for ARG in "$@"
 do
   # matches -L<path>
-  if [[ "$ARG" =~ ^-L* ]]; then
+  if [[ "$ARG" =~ ^-L.* ]]; then
     REAL_PATH="$(readlink -f "${ARG:2}")"
     if [ $VERBOSE == 2 ]; then
       echo "add library path: ${ARG:2}, canonical path: $REAL_PATH"
@@ -106,10 +106,32 @@ do
   fi
 done
 
-
-
-
+# gather input arguments from linker command files
+INPUT_ARGUMENTS=()
 for ARG in "$@"
+do
+  # matches @<path>
+  if [[ "$ARG" =~ ^@.* ]]; then
+    REAL_PATH="$(readlink -f "${ARG:1}")"
+    if [ $VERBOSE == 2 ]; then
+      echo "add linker command path: ${ARG:1}, canonical path: $REAL_PATH"
+    fi
+
+    # read from linker command file
+    IFS=$'\n' read -d '' -r -a LINES < "$REAL_PATH"
+    for LINE in ${LINES[@]}
+    do
+      if [ $VERBOSE == 2 ]; then
+        echo "add linker command: $LINE"
+      fi
+      INPUT_ARGUMENTS+=($LINE)
+    done
+  else
+    INPUT_ARGUMENTS+=("$ARG")
+  fi
+done
+
+for ARG in "${INPUT_ARGUMENTS[@]}"
 do
 
   case $ARG in
@@ -157,7 +179,7 @@ do
     fi
 
     OBJS_TO_PROCESS+=( "$ARG" )
-  elif [[ "$ARG" =~ ^-l[^[:space:]]+$ ]] || [[ "$ARG" =~ [^[:space:]]+.a$ ]]; then
+  elif [[ "$ARG" =~ ^-l[^[:space:]]+$ ]] || [[ "$ARG" =~ [^[:space:]]+.a$ ]] || [[ "$ARG" =~ [^[:space:]]+.lo$ ]]; then
 
     # proccess a static library
 
@@ -192,11 +214,11 @@ do
         fi
       done
     else
-      # this is .a static library file specified at the commad line
+      # this is .a or .lo static library file specified at the commad line
       if [ -f "$ARG" ]; then
         FULL_LIB_PATH=$(readlink -f "$ARG")
         if [ $VERBOSE == 2 ]; then
-          echo "use .a specified at: $FULL_LIB_PATH"
+          echo "use .a / .lo specified at: $FULL_LIB_PATH"
         fi
         DETECTED_STATIC_LIBRARY="$FULL_LIB_PATH"
       fi
@@ -263,7 +285,7 @@ do
   elif [ -f "$ARG" ]; then
     # an object file but doesn't have an .o extension??
     file_output=`file "$ARG" | grep 'ELF 64-bit LSB  relocatable, x86-64'`
-    readelf_output=`readelf -h "$ARG" | grep 'Relocatable file'`
+    readelf_output=`readelf -h "$ARG" 2>&1 | grep 'Relocatable file'`
     if [ ! -z "$file_output" ] && [ ! -z "$readelf_output" ]; then
       OBJS_TO_PROCESS+=( "$ARG" )
     fi
@@ -311,7 +333,12 @@ do
       # find cxxamp_serialize symbols and save them into symbol.txt
       objdump -t "$HOST_FILE" -j .text 2> /dev/null | grep "g.*__cxxamp_serialize" | awk '{print "-L"$6}' >> $CXXAMP_SERIALIZE_SYMBOL_FILE
 
-      LINK_KERNEL_ARGS+=( "$KERNEL_FILE" )
+      # if the kernel file is empty, just throw it away
+      KERNEL_FILE_SIZE=$(wc -c < "$KERNEL_FILE")
+      if [ "$KERNEL_FILE_SIZE" -ne "0" ]; then
+        LINK_KERNEL_ARGS+=( "$KERNEL_FILE" )
+      fi
+
       LINK_HOST_ARGS+=( "$HOST_FILE" )
     else
       LINK_OTHER_ARGS+=( "$OBJ" )

@@ -11,11 +11,6 @@ IF (NOT CMAKE_BUILD_TYPE)
   SET(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build, options are: Release Debug" FORCE)
 ENDIF(NOT CMAKE_BUILD_TYPE)
 
-IF (NOT NUM_BUILD_THREADS)
-  include(ProcessorCount)
-  ProcessorCount(NUM_BUILD_THREADS)
-ENDIF(NOT NUM_BUILD_THREADS)
-
 # Use two different methods to determine host distribution: lsb_release and if that fails grep /etc/os-release
 find_program( lsb_executable lsb_release )
 
@@ -33,7 +28,8 @@ endif( )
 
 # Accepted values for DISTRO_ID: trusty (Ubuntu 14.04), xenial (Ubuntu 16.06), fd23 (Fedora 23)
 string(TOLOWER "${DISTRO_ID}" DISTRO_ID )
-if( DISTRO_ID MATCHES "ubuntu" OR DISTRO_ID MATCHES "fedora" )
+if( DISTRO_ID MATCHES "ubuntu" OR DISTRO_ID MATCHES "fedora"
+   OR DISTRO_ID MATCHES "centos" OR DISTRO_ID MATCHES "redhatenterpriseserver")
   message( STATUS "Detected distribution: ${DISTRO_ID}:${DISTRO_RELEASE}" )
 else()
   message( "This cmakefile does not natively support ${DISTRO_ID}:${DISTRO_RELEASE}.  Continuing with Ubuntu logic" )
@@ -41,11 +37,14 @@ else()
   set( DISTRO_RELEASE "16.04" )
 endif()
 
-include (MCWAMP)
+# Need special handling for RHEL 7 or CentOS 7
+if (DISTRO_ID MATCHES "centos" OR DISTRO_ID MATCHES "redhatenterpriseserver")
+  set(HCC_TOOLCHAIN_RHEL ON)
+else()
+  set(HCC_TOOLCHAIN_RHEL OFF)
+endif()
 
-execute_process(COMMAND ln -sf ../../lld WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/compiler/tools)
-execute_process(COMMAND ln -sf ../../clang WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/compiler/tools)
-execute_process(COMMAND ln -sf ../../compiler-rt WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/compiler/projects)
+include (MCWAMP)
 
 # Regression test
 set(LLVM_SRC "${PROJECT_SOURCE_DIR}/compiler")
@@ -58,7 +57,7 @@ SET(LOCAL_LLVM_INCLUDE compiler/include)
 set(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}/bin" )
 set(LIBRARY_OUTPUT_PATH "${CMAKE_BINARY_DIR}/lib" )
 
-SET(PROJ_SEARCH_PATH "${PROJECT_BINARY_DIR}/include" "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/${LOCAL_LLVM_INCLUDE}" "${PROJECT_BINARY_DIR}/${LOCAL_LLVM_INCLUDE}") #  "${PROJECT_SOURCE_DIR}/compiler/utils/unittest/googletest/include")
+SET(PROJ_SEARCH_PATH "${PROJECT_BINARY_DIR}/include" "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/${LOCAL_LLVM_INCLUDE}") #  "${PROJECT_SOURCE_DIR}/compiler/utils/unittest/googletest/include" "${PROJECT_BINARY_DIR}/${LOCAL_LLVM_INCLUDE}"
 include_directories( ${PROJ_SEARCH_PATH} )
 
 LINK_DIRECTORIES( ${LLVM_LIB_DIR} )
@@ -218,8 +217,8 @@ add_version_info_from_git(KALMAR_VERSION_STRING
   KALMAR_VERSION_PATCH KALMAR_SDK_COMMIT KALMAR_FRONTEND_COMMIT KALMAR_BACKEND_COMMIT)
 
 # set default installation path
+set(INSTALL_DIR_NAME "hcc-${KALMAR_VERSION_MAJOR}.${KALMAR_VERSION_MINOR}")
 if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT AND CMAKE_INSTALL_PREFIX MATCHES "/usr/local")
-  set(INSTALL_DIR_NAME "hcc-${KALMAR_VERSION_MAJOR}.${KALMAR_VERSION_MINOR}")
   set(CMAKE_INSTALL_PREFIX "/opt/rocm/${INSTALL_DIR_NAME}" CACHE PATH "Default installation path of hcc" FORCE)
 endif ()
 MESSAGE("Installation path: ${CMAKE_INSTALL_PREFIX}")
@@ -229,6 +228,7 @@ set(CPACK_SET_DESTDIR ON CACHE BOOL "Installer package will install hcc to CMAKE
 if (CPACK_SET_DESTDIR)
   set(HCC_PACKAGE_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX})
 else (CPACK_SET_DESTDIR)
+  set(CPACK_PACKAGING_INSTALL_PREFIX "/opt/rocm/${INSTALL_DIR_NAME}" CACHE PATH "Default installation path of hcc installer package")
   set(HCC_PACKAGE_INSTALL_PREFIX ${CPACK_PACKAGING_INSTALL_PREFIX})
 endif (CPACK_SET_DESTDIR)
 MESSAGE("Installer package installation path: ${HCC_PACKAGE_INSTALL_PREFIX}")
@@ -260,7 +260,7 @@ endif (HAS_ROCM EQUAL 0)
 # Detect AMDGPU backend for native codegen
 #################
 
-set(HSA_AMDGPU_GPU_TARGET "gfx803" CACHE STRING "Target AMDGPU ISA version")
+set(HSA_AMDGPU_GPU_TARGET "auto" CACHE STRING "Target AMDGPU ISA version")
 
 # Tokenize HSA_AMDGPU_GPU_TARGET
 
@@ -305,100 +305,60 @@ else ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
   set(LLVM_ENABLE_ASSERTIONS "Off" CACHE BOOL "Compile with assertion checks enabled")
 endif ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
 
-file(MAKE_DIRECTORY ${CLANG_BIN_DIR})
-add_custom_target(clang
-  COMMAND ${CMAKE_COMMAND} ${CLANG_SRC_DIR}
-          -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-          -DLLVM_ENABLE_ASSERTIONS=${LLVM_ENABLE_ASSERTIONS}
-          -DKALMAR_VERSION_STRING=${KALMAR_VERSION_STRING}
-          -DKALMAR_VERSION_MAJOR=${KALMAR_VERSION_MAJOR}
-          -DKALMAR_VERSION_MINOR=${KALMAR_VERSION_MINOR}
-          -DKALMAR_VERSION_PATCH=${KALMAR_VERSION_PATCH}
-          -DKALMAR_SDK_COMMIT=${KALMAR_SDK_COMMIT}
-          -DKALMAR_FRONTEND_COMMIT=${KALMAR_FRONTEND_COMMIT}
-          -DKALMAR_BACKEND_COMMIT=${KALMAR_BACKEND_COMMIT}
-          -DKALMAR_BACKEND=${KALMAR_BACKEND}
-          -DLLVM_TARGETS_TO_BUILD="AMDGPU\;X86"
-          -DLLVM_INCLUDE_EXAMPLES=off
-  COMMAND make -j ${NUM_BUILD_THREADS} # not portable, but we need it this way
-  WORKING_DIRECTORY ${CLANG_BIN_DIR}
+set(LLVM_EXTERNAL_CLANG_SOURCE_DIR "${PROJECT_SOURCE_DIR}/clang")
+set(LLVM_EXTERNAL_COMPILER_RT_SOURCE_DIR "${PROJECT_SOURCE_DIR}/compiler-rt")
+set(LLVM_EXTERNAL_LLD_SOURCE_DIR "${PROJECT_SOURCE_DIR}/lld")
+set(LLVM_TARGETS_TO_BUILD "AMDGPU" "X86" CACHE STRING "" FORCE)
+set(LLVM_INSTALL_TOOLCHAIN_ONLY ON CACHE BOOL "" FORCE)
+
+if(EXISTS ${PROJECT_SOURCE_DIR}/clang-tools-extra/CMakeLists.txt)
+  set(LLVM_EXTERNAL_CLANG_TOOLS_EXTRA_SOURCE_DIR "${PROJECT_SOURCE_DIR}/clang-tools-extra")
+endif()
+
+add_subdirectory(${CLANG_SRC_DIR})
+
+install(PROGRAMS $<TARGET_FILE:llvm-as>
+                 $<TARGET_FILE:llvm-dis>
+                 $<TARGET_FILE:llvm-link>
+                 $<TARGET_FILE:llvm-objdump>
+                 $<TARGET_FILE:llvm-mc>
+                 $<TARGET_FILE:opt>
+                 $<TARGET_FILE:llc>
+        DESTINATION bin
+        COMPONENT compiler)
+
+add_custom_target(clang_links DEPENDS clang)
+add_custom_command(TARGET clang_links POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ${CLANG_BIN_DIR}/lib/clang/6.0.0/lib/linux/libclang_rt.builtins-x86_64.a ${PROJECT_BINARY_DIR}/lib/libclang_rt.builtins-x86_64.a
 )
-
-# create symlink of mostly used commands in clang to bin/
-# - hcc
-# - clang++
-# - clang
-
-add_custom_command(TARGET clang POST_BUILD
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ../compiler/bin/hcc ${PROJECT_BINARY_DIR}/bin/hcc
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ../compiler/bin/clang++ ${PROJECT_BINARY_DIR}/bin/clang++
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ../compiler/bin/clang ${PROJECT_BINARY_DIR}/bin/clang
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ../compiler/bin/llvm-mc ${PROJECT_BINARY_DIR}/bin/llvm-mc
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ../compiler/bin/llvm-objdump ${PROJECT_BINARY_DIR}/bin/llvm-objdump
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ../compiler/bin/lld ${PROJECT_BINARY_DIR}/bin/lld
-  WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/bin
-)
-
-add_custom_command(TARGET clang POST_BUILD
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ${CLANG_BIN_DIR}/lib/clang/5.0.0/lib/linux/libclang_rt.builtins-x86_64.a ${PROJECT_BINARY_DIR}/lib/libclang_rt.builtins-x86_64.a
-)
-
-install(FILES ${PROJECT_BINARY_DIR}/bin/hcc
-              ${PROJECT_BINARY_DIR}/bin/clang++
-              ${PROJECT_BINARY_DIR}/bin/clang
-              ${PROJECT_BINARY_DIR}/bin/llvm-mc
-              ${PROJECT_BINARY_DIR}/bin/llvm-objdump
-              ${PROJECT_BINARY_DIR}/bin/lld
-        DESTINATION bin)
-
-# install clang along with HCC
-# stored under compiler/
-install(DIRECTORY ${CLANG_BIN_DIR}/bin
-        DESTINATION compiler
-        COMPONENT compiler
-        PATTERN * PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
-
-install(DIRECTORY ${CLANG_BIN_DIR}/lib
-        DESTINATION compiler
-        COMPONENT compiler
-        PATTERN CMakeFiles EXCLUDE
-        PATTERN *tmp EXCLUDE
-        PATTERN *inc EXCLUDE
-        PATTERN Makefile EXCLUDE
-        PATTERN *.a EXCLUDE
-        PATTERN lib*
-        PATTERN LLVM*
-        PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 
 # install certain LLVM libraries needed by HIP
-install(FILES  ${CLANG_BIN_DIR}/lib/libLLVMAMDGPUDesc.a
-               ${CLANG_BIN_DIR}/lib/libLLVMAMDGPUUtils.a
-               ${CLANG_BIN_DIR}/lib/libLLVMMC.a
-               ${CLANG_BIN_DIR}/lib/libLLVMCore.a
-               ${CLANG_BIN_DIR}/lib/libLLVMSupport.a
-        DESTINATION compiler/lib
+install(PROGRAMS $<TARGET_FILE:LLVMAMDGPUDesc>
+                 $<TARGET_FILE:LLVMAMDGPUUtils>
+                 $<TARGET_FILE:LLVMMC>
+                 $<TARGET_FILE:LLVMCore>
+                 $<TARGET_FILE:LLVMSupport>
+                 $<TARGET_FILE:LLVMCpuRename>
+                 $<TARGET_FILE:LLVMDirectFuncCall>
+                 $<TARGET_FILE:LLVMEraseNonkernel>
+                 $<TARGET_FILE:LLVMHello>
+                 $<TARGET_FILE:LLVMTileUniform>
+                 $<TARGET_FILE:LLVMWrapperGen>
+        DESTINATION lib
         COMPONENT compiler
-        PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+)
 
-install(FILES ${CLANG_BIN_DIR}/lib/clang/5.0.0/lib/linux/libclang_rt.builtins-x86_64.a
+install(FILES ${CLANG_BIN_DIR}/lib/clang/6.0.0/lib/linux/libclang_rt.builtins-x86_64.a
         DESTINATION  ${CMAKE_INSTALL_LIBDIR}
         COMPONENT compiler)
 
-install(DIRECTORY ${CLANG_BIN_DIR}/include
-        DESTINATION compiler
-        COMPONENT compiler
-        PATTERN CMakeFiles EXCLUDE
-        PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
+install( FILES ${CMAKE_CURRENT_SOURCE_DIR}/scripts/cmake/ImportedTargets.cmake
+         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/hcc )
 
-install(DIRECTORY ${CLANG_SRC_DIR}/include
-        DESTINATION compiler
-        COMPONENT compiler
-        PATTERN CMakeFiles EXCLUDE
-        PATTERN CMakeLists* EXCLUDE
-        PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
+add_custom_target(world DEPENDS clang_links)
 
-add_custom_target(world DEPENDS clang)
-
+# move headers to build dir before building rocdl and hcc lib
+add_subdirectory(include)
 
 # build the integrated ROCm Device Library
 set(AMDHSACOD ${ROCM_ROOT}/bin/amdhsacod CACHE FILEPATH "Specify the amdhsacod tool")
@@ -408,26 +368,24 @@ if (HCC_INTEGRATE_ROCDL)
   set(ROCDL_BUILD_DIR "${PROJECT_BINARY_DIR}/rocdl")
   file(MAKE_DIRECTORY ${ROCDL_BUILD_DIR})
 
-  # custom commands to build rocdl
-  add_custom_target(rocdl
-    COMMAND CC=${CLANG_BIN_DIR}/bin/clang  ${CMAKE_COMMAND} ${ROCDL_SRC_DIR}
-            -DLLVM_DIR=${CLANG_BIN_DIR}
-            -DAMDHSACOD=${AMDHSACOD}
-            -DGENERIC_IS_ZERO=ON
-            -DBUILD_HC_LIB=ON
-    COMMAND make -j ${NUM_BUILD_THREADS} # not portable, but we need it this way
-    WORKING_DIRECTORY ${ROCDL_BUILD_DIR}
-    DEPENDS clang
-  )
+  set(LLVM_DIR ${CLANG_BIN_DIR})
+  set(AMDHSACOD ${AMDHSACOD})
+  set(GENERIC_IS_ZERO ON)
+  set(BUILD_HC_LIB ON)
+  set(AMDGCN_TARGETS_LIB_LIST "AMDGCN_LIB_TARGETS")
+  find_package(LLVM REQUIRED CONFIG PATHS ${CMAKE_BINARY_DIR}/compiler NO_DEFAULT_PATH)
 
-  # FIXME: We have to reset the state of the ROCDL before building
-  add_custom_command(TARGET rocdl PRE_BUILD
-    COMMAND git checkout -- .
-    WORKING_DIRECTORY ${ROCDL_SRC_DIR}
-  )
+  list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
+  include(AddLLVM)
+
+  add_definitions(${LLVM_DEFINITIONS})
+
+  # build rocdl
+  add_subdirectory(${ROCDL_SRC_DIR})
 
   file(MAKE_DIRECTORY ${ROCDL_BUILD_DIR}/lib)
-  add_custom_command(TARGET rocdl POST_BUILD
+  add_custom_target(rocdl_links DEPENDS ${AMDGCN_LIB_TARGETS})
+  add_custom_command(TARGET rocdl_links POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E create_symlink ../irif/irif.amdgcn.bc                              irif.amdgcn.bc
     COMMAND ${CMAKE_COMMAND} -E create_symlink ../opencl/opencl.amdgcn.bc                          opencl.amdgcn.bc
     COMMAND ${CMAKE_COMMAND} -E create_symlink ../ockl/ockl.amdgcn.bc                              ockl.amdgcn.bc
@@ -453,7 +411,6 @@ if (HCC_INTEGRATE_ROCDL)
     COMMAND ${CMAKE_COMMAND} -E create_symlink ../ocml/ocml.amdgcn.bc                              ocml.amdgcn.bc
     WORKING_DIRECTORY ${ROCDL_BUILD_DIR}/lib
   )
-
   # install ROCm Device Library in hcc
   install(DIRECTORY ${ROCDL_BUILD_DIR}/hc
                     ${ROCDL_BUILD_DIR}/irif
@@ -473,8 +430,9 @@ if (HCC_INTEGRATE_ROCDL)
           PATTERN *.optout.bc EXCLUDE
           PATTERN src EXCLUDE
           PATTERN CMakeFiles EXCLUDE
+          PATTERN transformed_src EXCLUDE
           PATTERN utils EXCLUDE
-          )
+  )
 
   # create search paths for ROCDL
   list(APPEND ROCM_DEVICE_LIB_PATHS ${ROCDL_BUILD_DIR}/lib)
@@ -489,16 +447,9 @@ add_subdirectory(hcc_config)
 add_subdirectory(lib)
 add_subdirectory(utils)
 add_subdirectory(tests)
-add_subdirectory(include)
 add_subdirectory(amp-conformance)
 add_subdirectory(stl-test)
 add_subdirectory(cmake-tests)
-
-# create a "hcc" symlink in the include directory
-# that points to itself so we could support
-# include <hcc.hpp> and include<hcc/hcc.hpp>
-execute_process(COMMAND ln -sf ../include hcc
-                WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/include)
 
 # create documentation
 configure_file(
@@ -539,22 +490,18 @@ set(CPACK_PACKAGE_VERSION_PATCH ${KALMAR_VERSION_PATCH})
 
 set(PACKAGE_DESCRIPTION "HCC: An Open Source, Optimizing C++ Compiler for Heterogeneous Compute")
 
-set(OFFICIAL_RELEASE_BUILD 0)
+set(OFFICIAL_RELEASE_BUILD 1)
 
-option(CPACK_GENERATOR "Specify the installer package generator")
-
-# If no CPACK generator was specified, then set the default generator according to the distro 
-if (NOT CPACK_GENERATOR)
-    if ( "${DISTRO_ID}" MATCHES "ubuntu" )
-    set(CPACK_GENERATOR "DEB")
-  elseif ("${DISTRO_ID}" MATCHES "fedora")
-    set(CPACK_GENERATOR "RPM")
-  else ()
-    # generate a tarball for unknown DISTRO_ID
-    set(CPACK_GENERATOR "TGZ")
-  endif ()
-endif (NOT CPACK_GENERATOR)
-
+# Default to generate a package appropriate for a distro; users override using command line with -D
+# -D writes variables into the cmake cache, and setting CACHE variables won't overwrite variables already in the CACHE
+if( "${DISTRO_ID}" MATCHES "ubuntu" )
+  set( CPACK_GENERATOR "DEB" CACHE STRING "cpack list: 7Z, DEB, IFW, NSIS, NSIS64, RPM, STGZ, TBZ2, TGZ, TXZ, TZ, ZIP" )
+elseif ("${DISTRO_ID}" MATCHES "fedora")
+  set( CPACK_GENERATOR "RPM" CACHE STRING "cpack list: 7Z, DEB, IFW, NSIS, NSIS64, RPM, STGZ, TBZ2, TGZ, TXZ, TZ, ZIP" )
+else()
+  # generate a tarball for unknown DISTRO_ID
+  set( CPACK_GENERATOR "TGZ" CACHE STRING "cpack list: 7Z, DEB, IFW, NSIS, NSIS64, RPM, STGZ, TBZ2, TGZ, TXZ, TZ, ZIP" )
+endif ()
 
 # DEB package settings
 set(CPACK_DEBIAN_PACKAGE_DESCRIPTION ${PACKAGE_DESCRIPTION})
@@ -564,7 +511,7 @@ set(CPACK_DEBIAN_PACKAGE_SECTION "devel")
 set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA
   "${PROJECT_BINARY_DIR}/packaging/debian/postinst;${PROJECT_BINARY_DIR}/packaging/debian/prerm")
 
-set(HCC_GENERAL_DEBIAN_DEP "g++-multilib, gcc-multilib, findutils, libelf1, libpci3, file")
+set(HCC_GENERAL_DEBIAN_DEP "g++-multilib, gcc-multilib, findutils, libelf1, libpci3, file, libunwind8, libunwind-dev")
 
 if ( USE_LIBCXX )
   set(HCC_LIBCXX_DEBIAN_DEP ", libc++1, libc++-dev, libc++abi1, libc++abi-dev")
@@ -576,10 +523,10 @@ endif( USE_LIBCXX )
 # for non-official release build, we want to relax the dependency on rocr runtime
 if (OFFICIAL_RELEASE_BUILD)
   if (HCC_INTEGRATE_ROCDL)
-    set(HCC_ROCR_DEP ", hsa-rocr-dev, hsa-ext-rocr-dev")
-  else (NOT HCC_INTEGRATE_ROCDL)
-    set(HCC_ROCR_DEP ", hsa-rocr-dev, hsa-ext-rocr-dev, rocm-device-libs")
-  endif(NOT HCC_INTEGRATE_ROCDL)
+    set(HCC_ROCR_DEP ", hsa-rocr-dev, hsa-ext-rocr-dev, rocm-utils")
+  else (HCC_INTEGRATE_ROCDL)
+    set(HCC_ROCR_DEP ", hsa-rocr-dev, hsa-ext-rocr-dev, rocm-device-libs, rocm-utils")
+  endif(HCC_INTEGRATE_ROCDL)
 else (OFFICIAL_RELEASE_BUILD)
   set(HCC_ROCR_DEP "")
 endif (OFFICIAL_RELEASE_BUILD)
@@ -594,7 +541,7 @@ set(CPACK_RPM_PRE_UNINSTALL_SCRIPT_FILE "${PROJECT_BINARY_DIR}/packaging/debian/
 # disable automatic shared libraries dependency detection
 set(CPACK_RPM_PACKAGE_AUTOREQ 0)
 
-set(HCC_GENERAL_RPM_DEP "findutils, elfutils-libelf, pciutils-libs, file, pth")
+set(HCC_GENERAL_RPM_DEP "findutils, elfutils-libelf, pciutils-libs, file, pth, libunwind")
 set(CPACK_RPM_PACKAGE_REQUIRES "${HCC_GENERAL_RPM_DEP} ${HCC_ROCR_DEP}" )
 
 set(CPACK_COMPONENTS_ALL compiler)
@@ -605,4 +552,3 @@ MESSAGE("** For the first time:")
 MESSAGE("   'make' to build all")
 MESSAGE("   'make docs' to build the HTML API reference")
 MESSAGE("")
-

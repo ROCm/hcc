@@ -38,12 +38,13 @@ bool test() {
   });
 
   for(unsigned i = 0; i < vecSize; i++) {
-    gb[i] = precise_math::rsqrt(ga[i]);
+    gb[i] = static_cast<_Tp>(1) / precise_math::sqrt(ga[i]);
   }
 
   _Tp sum = 0.0;
   for(unsigned i = 0; i < vecSize; i++) {
-    sum += precise_math::fabs(precise_math::fabs(gc[i]) - precise_math::fabs(gb[i]));
+    sum += precise_math::fabs(
+        precise_math::fabs(gc[i]) - precise_math::fabs(gb[i]));
   }
   return (sum < ERROR_THRESHOLD);
 }

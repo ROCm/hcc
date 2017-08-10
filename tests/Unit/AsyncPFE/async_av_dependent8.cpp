@@ -6,16 +6,18 @@
 #include <iostream>
 
 // loop to deliberately slow down kernel execution
-#define LOOP_COUNT (1024)
+#define LOOP_COUNT (10240)
 
 #define TEST_DEBUG (0)
+
+// Number of async-ops changes if flush-opt is enabled since we may need to add extra ops in some places.
+#define HCC_OPT_FLUSH 1
 
 /// test implicit synchronization of array_view and kernel dispatches
 ///
 template<size_t grid_size, size_t tile_size>
-bool test1D() {
+void test1D() {
 
-  bool ret = true;
 
   // dependency graph
   // pfe1: av1 + av2 -> av3
@@ -52,7 +54,9 @@ bool test1D() {
   });
 
 #if TEST_DEBUG
-  std::cout << "after pfe1\n";
+  std::cout << "after pfe1    get_pending_async_ops=" 
+            << hc::accelerator().get_default_view().get_pending_async_ops()
+            << "\n";
 #endif
 
 #if TEST_DEBUG
@@ -68,12 +72,17 @@ bool test1D() {
   });
 
 #if TEST_DEBUG
-  std::cout << "after pfe2\n";
+  std::cout << "after pfe2    get_pending_async_ops=" 
+            << hc::accelerator().get_default_view().get_pending_async_ops()
+            << "\n";
 #endif
+
+  // HCC_OPT_FLUSH adds extra barrier to flush before a write copy:
+  const int expectedPendingOps = HCC_OPT_FLUSH ? 3 : 2;
 
   // now there must be 2 pending async operations for the accelerator_view
   // because pfe1 and pfe2 are independent
-  ret &= (hc::accelerator().get_default_view().get_pending_async_ops() == 2);
+  assert (hc::accelerator().get_default_view().get_pending_async_ops() == expectedPendingOps);
 
 #if TEST_DEBUG
   std::cout << "launch pfe3\n";
@@ -88,36 +97,36 @@ bool test1D() {
   });
 
 #if TEST_DEBUG
-  std::cout << "after pfe3\n";
+  std::cout << "after pfe3    get_pending_async_ops=" 
+            << hc::accelerator().get_default_view().get_pending_async_ops()
+            << "\n";
 #endif
 
   // now there must be 1 pending async operations for the accelerator_view
   // pfe1 and pfe2 must be completed by now
-  ret &= (hc::accelerator().get_default_view().get_pending_async_ops() == 1);
+  assert (hc::accelerator().get_default_view().get_pending_async_ops() == 1);
 
   // for this test case we deliberately NOT wait on kernels
   // we want to check when array_view instances go to destruction
   // would all dependent kernels be waited or not 
 
-  return ret;
 }
 
 int main() {
-  bool ret = true;
 
   hc::accelerator_view av = hc::accelerator().get_default_view();
 
-  ret &= test1D<32, 16>();
-  ret &= (av.get_pending_async_ops() == 0);
-  ret &= test1D<64, 8>();
-  ret &= (av.get_pending_async_ops() == 0);
-  ret &= test1D<128, 32>();
-  ret &= (av.get_pending_async_ops() == 0);
-  ret &= test1D<256, 64>();
-  ret &= (av.get_pending_async_ops() == 0);
-  ret &= test1D<1024, 256>();
-  ret &= (av.get_pending_async_ops() == 0);
+  test1D<32, 16>() ;
+  assert( (av.get_pending_async_ops() == 0) );
+  test1D<64, 8>() ;
+  assert( (av.get_pending_async_ops() == 0) );
+  test1D<128, 32>() ;
+  assert( (av.get_pending_async_ops() == 0) );
+  test1D<256, 64>() ;
+  assert( (av.get_pending_async_ops() == 0) );
+  test1D<1024, 256>() ;
+  assert( (av.get_pending_async_ops() == 0) );
 
-  return !(ret == true);
+  return 0;
 }
 
