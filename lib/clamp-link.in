@@ -333,7 +333,12 @@ do
       # find cxxamp_serialize symbols and save them into symbol.txt
       objdump -t "$HOST_FILE" -j .text 2> /dev/null | grep "g.*__cxxamp_serialize" | awk '{print "-L"$6}' >> $CXXAMP_SERIALIZE_SYMBOL_FILE
 
-      LINK_KERNEL_ARGS+=( "$KERNEL_FILE" )
+      # if the kernel file is empty, just throw it away
+      KERNEL_FILE_SIZE=$(wc -c < "$KERNEL_FILE")
+      if [ "$KERNEL_FILE_SIZE" -ne "0" ]; then
+        LINK_KERNEL_ARGS+=( "$KERNEL_FILE" )
+      fi
+
       LINK_HOST_ARGS+=( "$HOST_FILE" )
     else
       LINK_OTHER_ARGS+=( "$OBJ" )
