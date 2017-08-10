@@ -4,6 +4,8 @@
 
 #include <iostream>
 #include <random>
+#include <cmath>
+#include <cassert>
 
 using namespace concurrency;
 
@@ -22,7 +24,7 @@ bool test() {
   // setup RNG
   std::random_device rd;
   std::default_random_engine gen(rd());
-  std::uniform_real_distribution<_Tp> dis(0, 1);
+  std::uniform_real_distribution<_Tp> dis(-1, 1);
   array_view<_Tp> ga(a);
   array_view<_Tp> gb(b);
   array_view<_Tp> gc(c);
@@ -41,7 +43,12 @@ bool test() {
 
   _Tp sum = 0.0;
   for(unsigned i = 0; i < vecSize; i++) {
-    sum += precise_math::fabs(precise_math::fabs(gc[i]) - precise_math::fabs(gb[i]));
+    if (std::isnan(gc[i])) {
+      printf("gc[%d] is NaN!\n", i);
+      assert(false);
+    }
+    _Tp diff = precise_math::fabs(gc[i] - gb[i]);
+    sum += diff;
   }
   return (sum < ERROR_THRESHOLD);
 }
