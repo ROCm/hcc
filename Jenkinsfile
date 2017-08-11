@@ -44,7 +44,6 @@ node ('rocmtest && fiji')
     def build_image_name = "${build_type_name}"
     dir('docker')
     {
-      // The --build-arg REPO_RADEON= is a temporary fix to get around a DNS issue with our build machines
       hcc_build_image = docker.build( "${build_org}/${build_image_name}:latest", "-f ${dockerfile_name} --build-arg build_type=Release --build-arg rocm_install_path=/opt/rocm ." )
     }
   }
@@ -147,4 +146,38 @@ node ('rocmtest && fiji')
     sh "docker images | grep \"${artifactory_org}/${image_name}\" | awk '{print \$1 \":\" \$2}' | xargs docker rmi"
   }
 
+  ////////////////////////////////////////////////////////////////////////
+  // hcc integration testing
+  // This stage sets up integration testing of HiP with this particular build
+  // Integration testing is built upon docker uses clean build & test environments every time
+
+  // NOTES: There are at least two methods to do integration testing, both have pros and cons
+  // 1.  Inside the HCC container, clone, build & test HiP
+  //     a.  This is simplest method to get integration testing running
+  //     b.  This solution doesn't scale well.  When HCC wants to start building other projects in addition to HiP
+  //        such as libraries, this solution implies those projects CI code will be duplicated in HCC jenkinsfile
+  //     c.  This solution breaks transitivity A->B->C chain.  The build instructions for B & C are duplicated in A,
+  //        so a change in B will not automatically rebuild C
+  // 2.  When this build archives artifacts, kick off a downstream HiP build using Jenkins API
+  //    a.  This is slightly more complicated because you have to transfer build artifacts, possibly
+  //      different between machines (mechanics handled by jenkins build step)
+  //    b.  The build file in HiP needs extra logic to handle hcc integration testing logic
+  //    c.  Assuming transitive dependencies are set up between projects A->B->C, submitting a change to A will rebuild
+  //        B, which then rebuilds C.  Submitting a change to B rebuilds C.  However, each project requires special
+  //        integration testing paths/logic
+
+  // I've implemented solution #2 above
+  stage('hip integration')
+  {
+    // If this a clang_tot_upgrade build, kick off downstream hip build so that the two projects are in sync
+    if( env.BRANCH_NAME.toLowerCase( ).startsWith( 'clang_tot_upgrade' ) )
+    {
+      build( job: 'ROCm-Developer-Tools/HIP/master', wait: false )
+    }
+    // If this is a PR build, test compiler against downstream hip project
+    else if( env.BRANCH_NAME.toLowerCase( ).startsWith( 'pr-' ) )
+    {
+      build( job: 'ROCm-Developer-Tools/HIP/master', parameters: [booleanParam( name: 'hcc_integration_test', value: true )] )
+    }
+  }
 }
