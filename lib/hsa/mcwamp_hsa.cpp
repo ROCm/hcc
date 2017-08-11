@@ -1173,8 +1173,12 @@ public:
 
             if (asyncOp != nullptr) {
                 hsa_signal_t signal = *(static_cast <hsa_signal_t*> (asyncOp->getNativeHandle()));
-                hsa_signal_value_t v = hsa_signal_load_relaxed(signal);
-                if (v != 0) {
+                if (signal.handle) {
+                    hsa_signal_value_t v = hsa_signal_load_relaxed(signal);
+                    if (v != 0) {
+                        ++count;
+                    }
+                } else {
                     ++count;
                 }
             }
