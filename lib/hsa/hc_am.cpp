@@ -26,6 +26,7 @@ AmPointerInfo & AmPointerInfo::operator= (const AmPointerInfo &other)
 {
     _hostPointer = other._hostPointer;
     _devicePointer = other._devicePointer;
+    _unalignedDevicePointer = other._unalignedDevicePointer;
     _sizeBytes = other._sizeBytes;
     _acc = other._acc;
     _isInDeviceMem = other._isInDeviceMem;
@@ -192,7 +193,7 @@ size_t AmPointerTracker::reset (const hc::accelerator &acc)
     for (auto iter = _tracker.begin() ; iter != _tracker.end(); ) {
         if (iter->second._acc == acc) {
             if (iter->second._isAmManaged) {
-                hsa_amd_memory_pool_free(const_cast<void*> (iter->first._basePointer));
+                hsa_amd_memory_pool_free(const_cast<void*> (iter->second._unalignedDevicePointer));
             }
             count++;
 
@@ -238,9 +239,8 @@ AmPointerTracker g_amPointerTracker;  // Track all am pointer allocations.
 namespace hc {
 
 // Allocate accelerator memory, return NULL if memory could not be allocated:
-auto_voidp am_alloc(size_t sizeBytes, hc::accelerator &acc, unsigned flags) 
+auto_voidp am_aligned_alloc(size_t sizeBytes, hc::accelerator &acc, unsigned flags, size_t alignment)
 {
-
     void *ptr = NULL;
 
     if (sizeBytes != 0 ) {
@@ -256,8 +256,13 @@ auto_voidp am_alloc(size_t sizeBytes, hc::accelerator &acc, unsigned flags)
             }
 
             if (alloc_region && alloc_region->handle != -1) {
-
+                sizeBytes = alignment != 0 ? sizeBytes + alignment : sizeBytes;
                 hsa_status_t s1 = hsa_amd_memory_pool_allocate(*alloc_region, sizeBytes, 0, &ptr);
+
+                void *unalignedPtr = ptr;
+                if (alignment != 0) {
+                    ptr = reinterpret_cast<void*>((reinterpret_cast<uintptr_t>(ptr) + alignment - 1) & ~(alignment - 1));
+                }
 
                 if (s1 != HSA_STATUS_SUCCESS) {
                     ptr = NULL;
@@ -267,7 +272,7 @@ auto_voidp am_alloc(size_t sizeBytes, hc::accelerator &acc, unsigned flags)
                             hsa_amd_memory_pool_free(ptr);
                             ptr = NULL;
                         } else {
-                            hc::AmPointerInfo ampi(ptr/*hostPointer*/, ptr /*devicePointer*/, sizeBytes, acc, false/*isDevice*/, true /*isAMManaged*/);
+                            hc::AmPointerInfo ampi(ptr/*hostPointer*/, ptr /*devicePointer*/, unalignedPtr, sizeBytes, acc, false/*isDevice*/, true /*isAMManaged*/);
                             g_amPointerTracker.insert(ptr,ampi);
 
                             // Host memory is always mapped to all possible peers:
@@ -279,7 +284,7 @@ auto_voidp am_alloc(size_t sizeBytes, hc::accelerator &acc, unsigned flags)
                             }
                         }
                     } else {
-                        hc::AmPointerInfo ampi(NULL/*hostPointer*/, ptr /*devicePointer*/, sizeBytes, acc, true/*isDevice*/, true /*isAMManaged*/);
+                        hc::AmPointerInfo ampi(NULL/*hostPointer*/, ptr /*devicePointer*/, unalignedPtr, sizeBytes, acc, true/*isDevice*/, true /*isAMManaged*/);
                         g_amPointerTracker.insert(ptr,ampi);
                     }
                 }
@@ -290,19 +295,23 @@ auto_voidp am_alloc(size_t sizeBytes, hc::accelerator &acc, unsigned flags)
     return ptr;
 };
 
+auto_voidp am_alloc(size_t sizeBytes, hc::accelerator &acc, unsigned flags)
+{
+    return am_aligned_alloc(sizeBytes, acc, flags, 0);
+};
 
 am_status_t am_free(void* ptr) 
 {
     am_status_t status = AM_SUCCESS;
 
     if (ptr != NULL) {
-
+        auto info = g_amPointerTracker.find(ptr);
+        if (info != g_amPointerTracker.end()) {
+            hsa_amd_memory_pool_free(info->second._unalignedDevicePointer);
+        }
         int numRemoved = g_amPointerTracker.remove(ptr) ;
         if (numRemoved == 0) {
             status = AM_ERROR_MISC;
-        } else {
-            // See also tracker::reset which can free memory.
-            hsa_amd_memory_pool_free(ptr);
         }
     }
     return status;
@@ -489,7 +498,7 @@ am_status_t am_map_to_peers(void* ptr, size_t num_peer, const hc::accelerator* p
         return AM_ERROR_MISC;
 
     hc::accelerator ptrAcc;
-    AmPointerInfo info(nullptr, nullptr, 0, ptrAcc, false, false);
+    AmPointerInfo info(nullptr, nullptr, nullptr, 0, ptrAcc, false, false);
     auto status = am_memtracker_getinfo(&info, ptr);
     if(AM_SUCCESS != status)
         return status;
@@ -582,7 +591,7 @@ am_status_t am_memory_host_lock(hc::accelerator &ac, void *hostPtr, size_t size,
     hsa_status_t hsa_status = hsa_amd_memory_lock(hostPtr, size, &agents[0], num_visible_ac, &devPtr);
     if(hsa_status == HSA_STATUS_SUCCESS)
     {
-       hc::AmPointerInfo ampi(hostPtr, devPtr, size, ac, false, false);
+       hc::AmPointerInfo ampi(hostPtr, devPtr, devPtr, size, ac, false, false);
        g_amPointerTracker.insert(hostPtr, ampi);
        am_status = AM_SUCCESS;
     }
@@ -592,7 +601,7 @@ am_status_t am_memory_host_lock(hc::accelerator &ac, void *hostPtr, size_t size,
 am_status_t am_memory_host_unlock(hc::accelerator &ac, void *hostPtr)
 {
     am_status_t am_status = AM_ERROR_MISC;
-    hc::AmPointerInfo amPointerInfo(NULL, NULL, 0, ac, 0, 0);
+    hc::AmPointerInfo amPointerInfo(NULL, NULL, NULL, 0, ac, 0, 0);
     am_status = am_memtracker_getinfo(&amPointerInfo, hostPtr);
     if(am_status == AM_SUCCESS)
     {
