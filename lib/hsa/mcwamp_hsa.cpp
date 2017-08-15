@@ -4454,30 +4454,61 @@ hsa_status_t HSACopy::hcc_memory_async_copy(Kalmar::hcCommandKind copyKind, cons
 
     hsa_agent_t hostAgent = const_cast<Kalmar::HSADevice *> (copyDeviceArg)->getHostAgent();
 
-    void *dstPtr = dstPtrInfo._devicePointer;
-    void *srcPtr = srcPtrInfo._devicePointer;
+    /* Determine src and dst pointer passed to ROCR runtime.
+     *
+     * Pre-condition:
+     * - this->dst and this->src must be tracked by AM API implemantation.
+     * - dstPtrInfo and srcPtrInfo must be valid.
+     */
+    void *dstPtr = nullptr;
+    void *srcPtr = nullptr;
 
     hsa_agent_t srcAgent, dstAgent;
     switch (copyKind) {
         case Kalmar::hcMemcpyHostToHost: 
             srcAgent=hostAgent; dstAgent=hostAgent;
 
-            // Use host pointers since this copy will be performed with CPU.
-            // If pointers are registered, then devicePointer may not match host pointer.
-            dstPtr = dstPtrInfo._hostPointer;
-            srcPtr = srcPtrInfo._hostPointer;
-            
-            //throw Kalmar::runtime_exception("HCC should not use hsa_memory_async_copy for host-to-host copy");
+            /* H2H case
+             * Simply pass this->src and this->dst to ROCR runtime.
+             */
+            dstPtr = this->dst;
+            srcPtr = const_cast<void*>(this->src);
             break;
         case Kalmar::hcMemcpyHostToDevice: 
             srcAgent=hostAgent; dstAgent=copyAgent;
+
+            /* H2D case
+             * Destination is simply this->dst.
+             * Source has to be calculated by adding mapped GPU device pointer
+             * with potential offsets specified in user codes.
+             */
+            dstPtr = this->dst;
+            srcPtr = reinterpret_cast<unsigned char*>(srcPtrInfo._devicePointer) +
+                     (reinterpret_cast<unsigned char*>(const_cast<void*>(this->src)) -
+                      reinterpret_cast<unsigned char*>(srcPtrInfo._hostPointer));
             break;
         case Kalmar::hcMemcpyDeviceToHost: 
             srcAgent=copyAgent; dstAgent=hostAgent;
+
+            /* H2D case
+             * Source is simply this->src.
+             * Desination has to be calculated by adding mapped GPU device
+             * pointer with potential offsets specified in user codes.
+             */
+            dstPtr = reinterpret_cast<unsigned char*>(dstPtrInfo._devicePointer) +
+                     (reinterpret_cast<unsigned char*>(this->dst) -
+                      reinterpret_cast<unsigned char*>(dstPtrInfo._hostPointer));
+            srcPtr = const_cast<void*>(this->src);
             break;
         case Kalmar::hcMemcpyDeviceToDevice: 
             this->isPeerToPeer = (dstPtrInfo._acc != srcPtrInfo._acc);
             srcAgent=copyAgent; dstAgent=copyAgent;
+
+            /* D2D case
+             * Simply pass this->src and this->dst to ROCR runtime.
+             */
+            dstPtr = this->dst;
+            srcPtr = const_cast<void*>(this->src);
             break;
         default:
             throw Kalmar::runtime_exception("bad copyKind in hcc_memory_async_copy", copyKind);
