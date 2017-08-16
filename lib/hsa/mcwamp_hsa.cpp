@@ -4469,7 +4469,8 @@ hsa_status_t HSACopy::hcc_memory_async_copy(Kalmar::hcCommandKind copyKind, cons
             srcAgent=hostAgent; dstAgent=hostAgent;
 
             /* H2H case
-             * Simply pass this->src and this->dst to ROCR runtime.
+             * We expect ROCR runtime to continue use the CPU for host to host
+             * copies, and thus must pass host pointers here.
              */
             dstPtr = this->dst;
             srcPtr = const_cast<void*>(this->src);
@@ -4479,8 +4480,8 @@ hsa_status_t HSACopy::hcc_memory_async_copy(Kalmar::hcCommandKind copyKind, cons
 
             /* H2D case
              * Destination is simply this->dst.
-             * Source has to be calculated by adding mapped GPU device pointer
-             * with potential offsets specified in user codes.
+             * Source has to be calculated by adding the offset to the pinned
+             * host pointer.
              */
             dstPtr = this->dst;
             srcPtr = reinterpret_cast<unsigned char*>(srcPtrInfo._devicePointer) +
@@ -4490,10 +4491,10 @@ hsa_status_t HSACopy::hcc_memory_async_copy(Kalmar::hcCommandKind copyKind, cons
         case Kalmar::hcMemcpyDeviceToHost: 
             srcAgent=copyAgent; dstAgent=hostAgent;
 
-            /* H2D case
+            /* D2H case
              * Source is simply this->src.
-             * Desination has to be calculated by adding mapped GPU device
-             * pointer with potential offsets specified in user codes.
+             * Desination has to be calculated by adding the offset to the
+             * pinned host pointer.
              */
             dstPtr = reinterpret_cast<unsigned char*>(dstPtrInfo._devicePointer) +
                      (reinterpret_cast<unsigned char*>(this->dst) -
