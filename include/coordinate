@@ -186,7 +186,7 @@ public:
     }
 };
  
-extern "C" __attribute__((const)) __int64_t amp_get_global_id(unsigned int n) restrict(amp);
+extern "C" __attribute__((const)) uint32_t amp_get_global_id(unsigned int n) restrict(amp);
 
 template<size_t N> class offset;
 
