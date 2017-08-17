@@ -78,7 +78,7 @@
 // If limit is exceeded, HCC will force a queue wait to reclaim
 // resources (signals, kernarg)
 // MUST be a power of 2.
-#define MAX_INFLIGHT_COMMANDS_PER_QUEUE  8192
+#define MAX_INFLIGHT_COMMANDS_PER_QUEUE  (8192)
 
 // threshold to clean up finished kernel in HSAQueue.asyncOps
 #define ASYNCOPS_VECTOR_GC_SIZE (8192)
@@ -106,6 +106,8 @@ int HCC_OPT_FLUSH=1;
 unsigned HCC_DB = 0;
 
 int HCC_MAX_QUEUES = 20;
+
+#define FORCE_COMPLETION_FUTURE 0
 
 #define HCC_PROFILE_SUMMARY (1<<0)
 #define HCC_PROFILE_TRACE   (1<<1)
@@ -625,6 +627,8 @@ public:
         } else {
             depCount = 0;
         }
+        signal.handle = 0;
+        signalIndex = -1;
     }
 
     // constructor with at most 5 prior dependencies
@@ -641,6 +645,8 @@ public:
             // throw an exception
             throw Kalmar::runtime_exception("Incorrect number of dependent signals passed to HSABarrier constructor", count);
         }
+        signal.handle = 0;
+        signalIndex = -1;
     }
 
     ~HSABarrier() {
@@ -940,6 +946,9 @@ private:
 
     std::mutex   qmutex;  // Protect structures for this KalmarQueue.  Currently just the hsaQueue.
 
+
+    bool         drainingQueue_;  // mode that we are draining queue, used to allow barrier ops to be enqueued.
+
     //
     // kernel dispatches and barriers associated with this HSAQueue instance
     //
@@ -1089,15 +1098,19 @@ public:
 
 
 
-        if (asyncOps.size() >= MAX_INFLIGHT_COMMANDS_PER_QUEUE) {
+        if (!drainingQueue_ && (asyncOps.size() >= MAX_INFLIGHT_COMMANDS_PER_QUEUE-1)) {
             DBOUT(DB_WAIT, "*** Hit max inflight ops asyncOps.size=" << asyncOps.size() << ". op#" << op->getSeqNum() << " force sync\n");
             DBOUT(DB_RESOURCE, "*** Hit max inflight ops asyncOps.size=" << asyncOps.size() << ". op#" << op->getSeqNum() << " force sync\n");
+
+            drainingQueue_ = true;
 
             wait();
         }
         asyncOps.push_back(op);
 
         youngestCommandKind = op->getCommandKind();
+
+        drainingQueue_ = false;
 
         if (DBFLAG(DB_QUEUE)) {
             printAsyncOps(std::cerr);
@@ -1209,6 +1222,8 @@ public:
     };
 
 
+    // Must retain this exact function signature here even though mode not used since virtual interface in 
+    // runtime depends on this signature.
     void wait(hcWaitMode mode = hcWaitModeBlocked) override {
         // wait on all previous async operations to complete
         // Go in reverse order (from youngest to oldest).
@@ -1230,12 +1245,21 @@ public:
             printAsyncOps(std::cerr);
         }
 
+
+
+        bool foundFirstValidOp = false;
+
         for (int i = asyncOps.size()-1; i >= 0;  i--) {
             if (asyncOps[i] != nullptr) {
                 auto asyncOp = asyncOps[i];
+                if (!foundFirstValidOp) {
+                    hsa_signal_t sig =  *(static_cast <hsa_signal_t*> (asyncOp->getNativeHandle()));
+                    assert(sig->handle != 0);
+                    foundFirstValidOp = false;
+                }
                 // wait on valid futures only
                 std::shared_future<void>* future = asyncOp->getFuture();
-                if (future->valid()) {
+                if (future && future->valid()) {
                     future->wait();
                 }
             }
@@ -3420,7 +3444,8 @@ inline std::ostream& operator<<(std::ostream& os, const KalmarAsyncOp & op)
 HSAQueue::HSAQueue(KalmarDevice* pDev, hsa_agent_t agent, execute_order order) : 
     KalmarQueue(pDev, queuing_mode_automatic, order), 
     rocrQueue(nullptr),
-    asyncOps(), valid(true), _nextSyncNeedsSysRelease(false), _nextKernelNeedsSysAcquire(false), bufferKernelMap(), kernelBufferMap() 
+    asyncOps(), drainingQueue_(false), 
+    valid(true), _nextSyncNeedsSysRelease(false), _nextKernelNeedsSysAcquire(false), bufferKernelMap(), kernelBufferMap() 
 {
     { 
         // Protect the HSA queue we can steal it.
@@ -3677,7 +3702,7 @@ HSAQueue::dispatch_hsa_kernel(const hsa_kernel_dispatch_packet_t *aql,
     // May be faster to create signals for each dispatch than to use markers.
     // Perhaps could check HSA queue pointers.
     bool needsSignal = true;
-    if (HCC_OPT_FLUSH && !HCC_PROFILE && (cf==nullptr)) {
+    if (HCC_OPT_FLUSH && !HCC_PROFILE && (cf==nullptr) && !FORCE_COMPLETION_FUTURE) {
         // Only allocate a signal if the caller requested a completion_future to track status.
         needsSignal = false;
     };
@@ -3708,6 +3733,8 @@ HSADispatch::HSADispatch(Kalmar::HSADevice* _device, Kalmar::KalmarQueue *queue,
     future(nullptr),
     kernargMemory(nullptr)
 {
+    signal.handle = 0;
+    signalIndex = -1;
     if (aql) {
         this->aql = *aql;
     }
@@ -4392,7 +4419,8 @@ HSACopy::HSACopy(Kalmar::KalmarQueue *queue, const void* src_, void* dst_, size_
     signalIndex(-1) {
 
 
-        apiStartTick = Kalmar::ctx.getSystemTicks();
+    signal.handle = 0;
+    apiStartTick = Kalmar::ctx.getSystemTicks();
 }
 
 // wait for the async copy to complete
