@@ -427,6 +427,7 @@ public:
 
     //TODO - fix this so all Kernels set the _kernelName to something sensible.
     const std::string &getKernelName() const { return shortKernelName; }
+    const std::string &getLongKernelName() const { return kernelName; }
 
     ~HSAKernel() {
         DBOUT(DB_INIT, "HSAKernel::~HSAKernel\n");
@@ -707,6 +708,7 @@ public:
 
     void setKernelName(const char *x_kernel_name) { kernel_name = x_kernel_name;};
     const char *getKernelName() { return kernel_name ? kernel_name : (kernel ? kernel->shortKernelName.c_str() : "<unknown_kernel>"); };
+    const char *getLongKernelName() { return (kernel ? kernel->getLongKernelName().c_str() : "<unknown_kernel>"); };
 
     void* getNativeHandle() override { return &signal; }
 
@@ -1090,7 +1092,7 @@ public:
         DBOUT(DB_CMD, "  pushing op=" << op << "  #" << op->getSeqNum() << " signal="<< std::hex  << ((hsa_signal_t*)op->getNativeHandle())->handle << std::dec
                     << "  commandKind=" << getHcCommandKindString(op->getCommandKind())
                     << " " 
-                    << (op->getCommandKind() == hcCommandKernel ? ((static_cast<HSADispatch*> (op.get()))->getKernelName()) : "")
+                    << (op->getCommandKind() == hcCommandKernel ? ((static_cast<HSADispatch*> (op.get()))->getKernelName()) : "")  // change to getLongKernelName() for mangled name
                     << std::endl);
 
 
@@ -2586,6 +2588,27 @@ public:
          }
     }
 
+    void growKernargBuffer()
+    {
+		uint8_t * kernargMemory = nullptr;
+		// increase kernarg pool on demand by KERNARG_POOL_SIZE
+		hsa_amd_memory_pool_t kernarg_region = getHSAKernargRegion();
+
+		hsa_status_t status = hsa_amd_memory_pool_allocate(kernarg_region, KERNARG_POOL_SIZE * KERNARG_BUFFER_SIZE, 0, (void**)(&kernargMemory));
+		STATUS_CHECK(status, __LINE__);
+
+		status = hsa_amd_agents_allow_access(1, &agent, NULL, kernargMemory);
+		STATUS_CHECK(status, __LINE__);
+
+		for (size_t i = 0; i < KERNARG_POOL_SIZE * KERNARG_BUFFER_SIZE; i+=KERNARG_BUFFER_SIZE) {
+			kernargPool.push_back(kernargMemory+i);
+			kernargPoolFlag.push_back(false);
+		};
+
+
+
+    }
+
     std::pair<void*, int> getKernargBuffer(int size) {
         void* ret = nullptr;
         int cursor = 0;
@@ -2644,23 +2667,10 @@ public:
                     int oldKernargPoolFlagSize = kernargPoolFlag.size();
                     assert(oldKernargPoolSize == oldKernargPoolFlagSize);
 
-                    DBOUTL(DB_RESOURCE, "Growing kernarg pool from " << kernargPool.size() << " to " << kernargPool.size() + KERNARG_POOL_SIZE);
 
-                    // pre-allocate kernarg buffers
-                    void* kernargMemory = nullptr;
-                    for (int i = 0; i < KERNARG_POOL_SIZE; ++i) {
-                        status = hsa_amd_memory_pool_allocate(kernarg_region, KERNARG_BUFFER_SIZE, 0, &kernargMemory);
-                        STATUS_CHECK(status, __LINE__);
-
-                        status = hsa_amd_agents_allow_access(1, &agent, NULL, kernargMemory);
-                        STATUS_CHECK(status, __LINE__);
-
-                        kernargPool.push_back(kernargMemory);
-                        kernargPoolFlag.push_back(false);
-                    }
-
-                    assert(kernargPool.size() == oldKernargPoolSize + KERNARG_POOL_SIZE);
-                    assert(kernargPoolFlag.size() == oldKernargPoolFlagSize + KERNARG_POOL_SIZE);
+					growKernargBuffer();
+					assert(kernargPool.size() == oldKernargPoolSize + KERNARG_POOL_SIZE);
+					assert(kernargPoolFlag.size() == oldKernargPoolFlagSize + KERNARG_POOL_SIZE);
 
                     // set return values, after the pool has been increased
 
@@ -3330,21 +3340,7 @@ HSADevice::HSADevice(hsa_agent_t a, hsa_agent_t host, int x_accSeqNum) : KalmarD
     /// - kernarg region is available
     /// - compile-time macro KERNARG_POOL_SIZE is larger than 0
 #if KERNARG_POOL_SIZE > 0
-    hsa_amd_memory_pool_t kernarg_region = getHSAKernargRegion();
-
-    // pre-allocate kernarg buffers
-    void* kernargMemory = nullptr;
-    for (int i = 0; i < KERNARG_POOL_SIZE; ++i) {
-        status = hsa_amd_memory_pool_allocate(kernarg_region, KERNARG_BUFFER_SIZE, 0, &kernargMemory);
-        STATUS_CHECK(status, __LINE__);
-
-        // Allow device to access to it once it is allocated. Normally, this memory pool is on system memory.
-        status = hsa_amd_agents_allow_access(1, &agent, NULL, kernargMemory);
-        STATUS_CHECK(status, __LINE__);
-
-        kernargPool.push_back(kernargMemory);
-        kernargPoolFlag.push_back(false);
-    }
+	growKernargBuffer();
 #endif
 
     // Setup AM pool.
