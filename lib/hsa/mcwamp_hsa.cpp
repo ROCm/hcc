@@ -221,18 +221,18 @@ static const char* getHSAErrorString(hsa_status_t s) {
 #define STATUS_CHECK(s,line) if (s != HSA_STATUS_SUCCESS && s != HSA_STATUS_INFO_BREAK) {\
     hc::print_backtrace(); \
     const char* error_string = getHSAErrorString(s);\
-		printf("### HCC STATUS_CHECK Error: %s (0x%x) at file:%s line:%d\n", error_string, s, __FILENAME__, line);\
+        printf("### HCC STATUS_CHECK Error: %s (0x%x) at file:%s line:%d\n", error_string, s, __FILENAME__, line);\
                 assert(HSA_STATUS_SUCCESS == hsa_shut_down());\
-		abort();\
-	}
+        abort();\
+    }
 
 #define STATUS_CHECK_SYMBOL(s,symbol,line) if (s != HSA_STATUS_SUCCESS && s != HSA_STATUS_INFO_BREAK) {\
     hc::print_backtrace(); \
     const char* error_string = getHSAErrorString(s);\
-		printf("### HCC STATUS_CHECK_SYMBOL Error: %s (0x%x), symbol name:%s at file:%s line:%d\n", error_string, s, (symbol)!=nullptr?symbol:(const char*)"is a nullptr", __FILENAME__, line);\
+        printf("### HCC STATUS_CHECK_SYMBOL Error: %s (0x%x), symbol name:%s at file:%s line:%d\n", error_string, s, (symbol)!=nullptr?symbol:(const char*)"is a nullptr", __FILENAME__, line);\
                 assert(HSA_STATUS_SUCCESS == hsa_shut_down());\
-		abort();\
-	}
+        abort();\
+    }
 
 
 // debug function to dump information on an HSA agent
@@ -610,9 +610,7 @@ public:
         }
     }
 
-    bool isReady() override {
-        return (hsa_signal_load_acquire(signal) == 0);
-    }
+    bool isReady() override;
 
 
     Kalmar::HSAQueue * hsaQueue() const;
@@ -1208,10 +1206,10 @@ public:
                 auto &asyncOp = asyncOps[i];
                 hsa_signal_t signal = *(static_cast <hsa_signal_t*> (asyncOp->getNativeHandle()));
                 if (signal.handle) {
-					hsa_signal_value_t v = hsa_signal_load_relaxed(signal);
-					if (v != 0) {
-						return false;
-					}
+                    hsa_signal_value_t v = hsa_signal_load_relaxed(signal);
+                    if (v != 0) {
+                        return false;
+                    }
                 } else {
                     // no signal, have to assume the command is still running
                     return false;
@@ -1316,13 +1314,13 @@ public:
         bool hasArrayViewBufferDeps = (kernelBufferMap.find(ker) != kernelBufferMap.end());
 
 
-	    if (hasArrayViewBufferDeps) {
+        if (hasArrayViewBufferDeps) {
             // wait for previous kernel dispatches be completed
             std::for_each(std::begin(kernelBufferMap[ker]), std::end(kernelBufferMap[ker]),
                       [&] (void* buffer) {
                         waitForDependentAsyncOps(buffer);
                      });
-	    }
+        }
 
         waitForStreamDeps(dispatch);
 
@@ -1825,11 +1823,35 @@ public:
 
     // remove finished async operation from waiting list
     void removeAsyncOp(KalmarAsyncOp* asyncOp) {
+        int targetIndex = -1;
         for (int i = 0; i < asyncOps.size(); ++i) {
-            if (asyncOps[i].get() == asyncOp) {
+            Kalmar::KalmarAsyncOp *op = asyncOps[i].get();
+            if (op == asyncOp) {
+                targetIndex = i;
+                //std::cerr << "remove targetd asyncOp[" << i << "] #" << op->getSeqNum() <<  "use_count=" << asyncOps[i].use_count() << "(1 indicates last)\n";
                 asyncOps[i] = nullptr;
             }
         }
+
+         // All older ops are known to be done and we can reclaim their resources here:
+         // Note if not found above targetIndex=-1 and we skip the loop:
+         for (int i = targetIndex; i>=0; i--) {
+             Kalmar::KalmarAsyncOp *op = asyncOps[i].get();
+             // opportunistically update status for any ops we encounter along the way:
+             if (op) {
+                 hsa_signal_t signal =  *(static_cast<hsa_signal_t*> (op->getNativeHandle()));
+
+                 // v<0 : no signal, v==0 signal and done, v>0 : signal and not done:
+                 hsa_signal_value_t v = -1;
+                 if (signal.handle)
+                    v = hsa_signal_load_acquire(signal);
+                 assert (v <=0);
+
+                 //std::cerr << "remove opportunistic asyncOp[" << i << "] #" << op->getSeqNum() <<  "use_count=" << asyncOps[i].use_count() << "\n";
+                 asyncOps[i] = nullptr;
+             }
+         }
+    
 
         // GC for finished kernels
         if (asyncOps.size() > ASYNCOPS_VECTOR_GC_SIZE) {
@@ -3702,7 +3724,7 @@ HSAQueue::dispatch_hsa_kernel(const hsa_kernel_dispatch_packet_t *aql,
     // May be faster to create signals for each dispatch than to use markers.
     // Perhaps could check HSA queue pointers.
     bool needsSignal = true;
-    if (HCC_OPT_FLUSH && !HCC_PROFILE && (cf==nullptr) && !FORCE_COMPLETION_FUTURE) {
+    if (HCC_OPT_FLUSH && !HCC_PROFILE && (cf==nullptr) && !FORCE_COMPLETION_FUTURE && !HCC_SERIALIZE_KERNEL) {
         // Only allocate a signal if the caller requested a completion_future to track status.
         needsSignal = false;
     };
@@ -4356,6 +4378,17 @@ static std::string fenceToString(int fenceBits)
         default: return "???";
     };
 }
+
+
+bool HSABarrier::isReady() override {
+    bool ready = (hsa_signal_load_acquire(signal) == 0);
+    if (ready) {
+        hsaQueue()->removeAsyncOp(this);
+    }
+
+    return ready;
+}
+
 
 
 inline void
