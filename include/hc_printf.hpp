@@ -57,18 +57,13 @@ enum PrintfError {
 static inline PrintfPacket* createPrintfBuffer(hc::accelerator& a, const unsigned int numElements) {
   PrintfPacket* printfBuffer = NULL;
   if (numElements > 3) {
-    printfBuffer = hc::am_alloc(sizeof(PrintfPacket) * numElements, a, 0);
+    printfBuffer = hc::am_alloc(sizeof(PrintfPacket) * numElements, a, amHostCoherent);
 
     // initialize the printf buffer header
-    PrintfPacket header[2];
-    header[0].type = PRINTF_BUFFER_SIZE;
-    header[0].data.ui = numElements;
-    header[1].type = PRINTF_BUFFER_CURSOR;
-    header[1].data.ui = 2;
-
-    // initialize the accelerator_view object
-    static hc::accelerator_view av = a.get_default_view();
-    av.copy(header, printfBuffer, sizeof(PrintfPacket) * 2);
+    printfBuffer[0].type = PRINTF_BUFFER_SIZE;
+    printfBuffer[0].data.ui = numElements;
+    printfBuffer[1].type = PRINTF_BUFFER_CURSOR;
+    printfBuffer[1].data.ui = 2;
   }
   return printfBuffer;
 }
@@ -104,7 +99,7 @@ static inline PrintfError printf(PrintfPacket* queue, All... all) [[hc,cpu]] {
 
   PrintfError error = PRINTF_SUCCESS;
 
-  if (count + 1 + queue[1].data.ui > queue[0].data.ui) {
+  if (!queue || count + 1 + queue[1].data.ui > queue[0].data.ui) {
     error = PRINTF_BUFFER_OVERFLOW;
   } else {
 
@@ -197,22 +192,14 @@ static inline void processPrintfBuffer(PrintfPacket* gpuBuffer) {
   auto acc = hc::accelerator();
   static hc::accelerator_view av = acc.get_default_view();
 
-  PrintfPacket header[2];
-  av.copy(gpuBuffer, header, sizeof(PrintfPacket)*2);
-  unsigned int bufferSize = header[0].data.ui;
-  unsigned int cursor = header[1].data.ui;
+  unsigned int bufferSize = gpuBuffer[0].data.ui;
+  unsigned int cursor = gpuBuffer[1].data.ui;
   unsigned int numPackets = ((bufferSize<cursor)?bufferSize:cursor) - 2;
   if (numPackets > 0) {
-    PrintfPacket* hostBuffer = (PrintfPacket*)malloc(sizeof(PrintfPacket) * numPackets);
-    if (hostBuffer) {
-      av.copy(gpuBuffer+2, hostBuffer, sizeof(PrintfPacket) * numPackets);
-      processPrintfPackets(hostBuffer, numPackets);
-      free(hostBuffer);
-    }
+    processPrintfPackets(gpuBuffer+2, numPackets);
   }
   // reset the printf buffer
-  header[1].data.ui = 2;
-  av.copy(header,gpuBuffer,sizeof(PrintfPacket) * 2);
+  gpuBuffer[1].data.ui = 2;
 }
 
 
