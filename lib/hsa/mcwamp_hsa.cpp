@@ -483,9 +483,7 @@ public:
         }
     }
 
-    bool isReady() override {
-        return (hsa_signal_load_acquire(signal) == 0);
-    }
+    bool isReady() override ;
 
     std::string getCopyCommandString()
     {
@@ -723,9 +721,7 @@ public:
         }
     }
 
-    bool isReady() override {
-        return (hsa_signal_load_acquire(signal) == 0);
-    }
+    bool isReady() override;
 
     ~HSADispatch() {
 
@@ -1829,14 +1825,16 @@ public:
             Kalmar::KalmarAsyncOp *op = asyncOps[i].get();
             if (op == asyncOp) {
                 targetIndex = i;
-                //std::cerr << "remove targetd asyncOp[" << i << "] #" << op->getSeqNum() <<  "use_count=" << asyncOps[i].use_count() << "(1 indicates last)\n";
+                //std::cerr << "remove targeted asyncOp[" << i << "] #" << op->getSeqNum() <<  " use_count=" << asyncOps[i].use_count() << " (1 indicates last)\n";
                 asyncOps[i] = nullptr;
             }
         }
 
          // All older ops are known to be done and we can reclaim their resources here:
+         // Both execute_in_order and execute_any_order flags always remove ops in-order at the end of the pipe.
          // Note if not found above targetIndex=-1 and we skip the loop:
-         for (int i = targetIndex; i>=0; i--) {
+         bool foundNull = false;
+         for (int i = targetIndex-1; i>=0; i--) {
              Kalmar::KalmarAsyncOp *op = asyncOps[i].get();
              // opportunistically update status for any ops we encounter along the way:
              if (op) {
@@ -1848,8 +1846,22 @@ public:
                     v = hsa_signal_load_acquire(signal);
                  assert (v <=0);
 
-                 //std::cerr << "remove opportunistic asyncOp[" << i << "] #" << op->getSeqNum() <<  "use_count=" << asyncOps[i].use_count() << "\n";
+                 if (foundNull) {
+                     // printAsyncOps()
+                    DBOUTL(DB_RESOURCE, "in removeAsyncOp, found unexpected nonnull asyncop after another null at position:" << i);
+                    //assert(!foundNull);
+                    
+                 }
+                 //std::cerr << "remove opportunistic asyncOp[" << i << "] #" << op->getSeqNum() <<  " use_count=" << asyncOps[i].use_count() << "\n";
                  asyncOps[i] = nullptr;
+             } else {
+                 foundNull = true;
+                 // The queue is retired in-order, and ops only inserted at "top", and ops can only be removed at two defined points:
+                 //   - Draining the entire queue in HSAQueue::wait() - this calls asyncOps.clear()
+                 //   - Events in the middle of the queue can be removed, but will call this function which removes all older ops.
+                 //   So once we remove the asyncOps, there is no way for an older async op to be come non-null and we can stop search here:
+                 // 
+                 break; // stop searching if we find null, there cannot be any more valid pointers below.
              }
          }
     
@@ -4379,6 +4391,24 @@ static std::string fenceToString(int fenceBits)
 
 
 bool HSABarrier::isReady() override {
+    bool ready = (hsa_signal_load_acquire(signal) == 0);
+    if (ready) {
+        hsaQueue()->removeAsyncOp(this);
+    }
+
+    return ready;
+}
+
+bool HSACopy::isReady() override {
+    bool ready = (hsa_signal_load_acquire(signal) == 0);
+    if (ready) {
+        hsaQueue()->removeAsyncOp(this);
+    }
+
+    return ready;
+}
+
+bool HSADispatch::isReady() override {
     bool ready = (hsa_signal_load_acquire(signal) == 0);
     if (ready) {
         hsaQueue()->removeAsyncOp(this);
