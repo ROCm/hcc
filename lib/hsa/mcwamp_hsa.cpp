@@ -117,7 +117,7 @@ int HCC_PROFILE=0;
 #define HCC_PROFILE_VERBOSE_OPSEQNUM                (1 << 2)   // 0x4
 #define HCC_PROFILE_VERBOSE_TID                     (1 << 3)   // 0x8
 #define HCC_PROFILE_VERBOSE_BARRIER                 (1 << 4)   // 0x10
-int HCC_PROFILE_VERBOSE=0;
+int HCC_PROFILE_VERBOSE=0x1F;
 
 
 
@@ -3407,14 +3407,12 @@ std::ostream& operator<<(std::ostream& os, const HSAQueue & hav)
 }
 
 
-inline void printOp(std::ostream& os, const HSAQueue &hav, uint64_t opNum)
+inline std::ostream& operator<<(std::ostream& os, const KalmarAsyncOp & op) 
 {
-    os << "op\n" ;
-}
-
-inline std::ostream& operator<<(std::ostream& os, const HSADispatch & op) 
-{
-    //printOp(os, *op.hsaQueue(), op.getSeqNum());
+    auto hsaQ = static_cast<Kalmar::HSAQueue*> (op.getQueue());
+     os << "#" << hsaQ->getDev()->get_seqnum() << "." 
+        << hsaQ->getSeqNum() << "." 
+        << op.getSeqNum(); 
     return os;
 }
 
@@ -4340,7 +4338,17 @@ HSABarrier::dispose() {
         uint64_t end   = getEndTimestamp();
         int acqBits = extractBits(header, HSA_PACKET_HEADER_SCACQUIRE_FENCE_SCOPE, HSA_PACKET_HEADER_WIDTH_SCACQUIRE_FENCE_SCOPE);
         int relBits = extractBits(header, HSA_PACKET_HEADER_SCRELEASE_FENCE_SCOPE, HSA_PACKET_HEADER_WIDTH_SCRELEASE_FENCE_SCOPE);
-        LOG_PROFILE(this, start, end, "barrier", "deps:" + std::to_string(depCount) + "_acq:" + fenceToString(acqBits) + "_rel:" + fenceToString(relBits), "")
+
+        std::stringstream depss;
+        for (int i=0; i<depCount; i++) {
+            if (i==0) {
+                depss << " deps=";
+            } else {
+                depss << ",";
+            }
+            depss << *depAsyncOps[i];
+        };
+        LOG_PROFILE(this, start, end, "barrier", "depcnt=" + std::to_string(depCount) + ",acq=" + fenceToString(acqBits) + ",rel=" + fenceToString(relBits), depss.str())
     }
     Kalmar::ctx.releaseSignal(signal, signalIndex);
 
