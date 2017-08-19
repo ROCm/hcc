@@ -124,18 +124,21 @@ int HCC_PROFILE_VERBOSE=0x1F;
 char * HCC_PROFILE_FILE=nullptr;
 
 // Profiler:
+// Use str::stream so output is atomic wrt other threads:
 #define LOG_PROFILE(op, start, end, type, tag, msg) \
 {\
-    Kalmar::ctx.getHccProfileStream() << "profile: " << std::setw(7) << type << ";\t" \
+    std::stringstream sstream;\
+    sstream << "profile: " << std::setw(7) << type << ";\t" \
                          << std::setw(40) << tag\
                          << ";\t" << std::fixed << std::setw(6) << std::setprecision(1) << (end-start)/1000.0 << " us;";\
     if (HCC_PROFILE_VERBOSE & (HCC_PROFILE_VERBOSE_TIMESTAMP)) {\
-            Kalmar::ctx.getHccProfileStream() << "\t" << start << ";\t" << end << ";";\
+            sstream << "\t" << start << ";\t" << end << ";";\
     }\
     if (HCC_PROFILE_VERBOSE & (HCC_PROFILE_VERBOSE_OPSEQNUM)) {\
-            Kalmar::ctx.getHccProfileStream() << "\t#" << op->hsaQueue()->getHSADev()->get_seqnum() << "." <<  op->hsaQueue()->getSeqNum() << "." << op->getSeqNum() <<";";\
+            sstream << "\t#" << op->hsaQueue()->getHSADev()->get_seqnum() << "." <<  op->hsaQueue()->getSeqNum() << "." << op->getSeqNum() <<";";\
     }\
-   Kalmar::ctx.getHccProfileStream() <<  msg << "\n";\
+   sstream <<  msg << "\n";\
+   Kalmar::ctx.getHccProfileStream() << sstream.str();\
 }
 
 
