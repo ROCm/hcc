@@ -125,18 +125,21 @@ int HCC_PROFILE_VERBOSE=0x1F;
 char * HCC_PROFILE_FILE=nullptr;
 
 // Profiler:
+// Use str::stream so output is atomic wrt other threads:
 #define LOG_PROFILE(op, start, end, type, tag, msg) \
 {\
-    Kalmar::ctx.getHccProfileStream() << "profile: " << std::setw(7) << type << ";\t" \
+    std::stringstream sstream;\
+    sstream << "profile: " << std::setw(7) << type << ";\t" \
                          << std::setw(40) << tag\
                          << ";\t" << std::fixed << std::setw(6) << std::setprecision(1) << (end-start)/1000.0 << " us;";\
     if (HCC_PROFILE_VERBOSE & (HCC_PROFILE_VERBOSE_TIMESTAMP)) {\
-            Kalmar::ctx.getHccProfileStream() << "\t" << start << ";\t" << end << ";";\
+            sstream << "\t" << op->apiStartTick << ";\t" << start << ";\t" << end << ";";\
     }\
     if (HCC_PROFILE_VERBOSE & (HCC_PROFILE_VERBOSE_OPSEQNUM)) {\
-            Kalmar::ctx.getHccProfileStream() << "\t#" << op->hsaQueue()->getHSADev()->get_seqnum() << "." <<  op->hsaQueue()->getSeqNum() << "." << op->getSeqNum() <<";";\
+            sstream << "\t#" << op->hsaQueue()->getHSADev()->get_seqnum() << "." <<  op->hsaQueue()->getSeqNum() << "." << op->getSeqNum() <<";";\
     }\
-   Kalmar::ctx.getHccProfileStream() <<  msg << "\n";\
+   sstream <<  msg << "\n";\
+   Kalmar::ctx.getHccProfileStream() << sstream.str();\
 }
 
 
@@ -568,7 +571,7 @@ private:
 
 }; // end of HSACopy
 
-class HSABarrier : public Kalmar::KalmarAsyncOp {
+class HSABarrier : public HSAOp {
 private:
     hsa_signal_t signal;
     int signalIndex;
@@ -616,7 +619,7 @@ public:
 
 
     // constructor with 1 prior dependency
-    HSABarrier(Kalmar::KalmarQueue *queue, std::shared_ptr <Kalmar::KalmarAsyncOp> dependent_op) : KalmarAsyncOp(queue, Kalmar::hcCommandMarker), isDispatched(false), future(nullptr), _acquire_scope(hc::no_scope), waitMode(HSA_WAIT_STATE_BLOCKED) {
+    HSABarrier(Kalmar::KalmarQueue *queue, std::shared_ptr <Kalmar::KalmarAsyncOp> dependent_op) : HSAOp(queue, Kalmar::hcCommandMarker), isDispatched(false), future(nullptr), _acquire_scope(hc::no_scope), waitMode(HSA_WAIT_STATE_BLOCKED) {
         if (dependent_op != nullptr) {
             depAsyncOps[0] = dependent_op;
             depCount = 1;
@@ -628,7 +631,7 @@ public:
     }
 
     // constructor with at most 5 prior dependencies
-    HSABarrier(Kalmar::KalmarQueue *queue, int count, std::shared_ptr <Kalmar::KalmarAsyncOp> *dependent_op_array) : KalmarAsyncOp(queue, Kalmar::hcCommandMarker), isDispatched(false), future(nullptr), _acquire_scope(hc::no_scope), waitMode(HSA_WAIT_STATE_BLOCKED), depCount(0) {
+    HSABarrier(Kalmar::KalmarQueue *queue, int count, std::shared_ptr <Kalmar::KalmarAsyncOp> *dependent_op_array) : HSAOp(queue, Kalmar::hcCommandMarker), isDispatched(false), future(nullptr), _acquire_scope(hc::no_scope), waitMode(HSA_WAIT_STATE_BLOCKED), depCount(0) {
         if ((count >= 0) && (count <= 5)) {
             for (int i = 0; i < count; ++i) {
                 if (dependent_op_array[i]) {
@@ -675,8 +678,7 @@ public:
 
 }; // end of HSABarrier
 
-class HSADispatch : public Kalmar::KalmarAsyncOp {
-    friend std::ostream& operator<<(std::ostream& os, const HSADispatch & op);
+class HSADispatch : public HSAOp {
 private:
     Kalmar::HSADevice* device;
     hsa_agent_t agent;
@@ -1035,7 +1037,7 @@ public:
             dispose();
         }
 
-        DBOUT(DB_INIT, "HSAQueue::~HSAQueue() out\n");
+        DBOUT(DB_INIT, "HSAQueue::~HSAQueue() " << this << "out\n");
     }
 
     // FIXME: implement flush
@@ -3465,12 +3467,14 @@ std::ostream& operator<<(std::ostream& os, const HSAQueue & hav)
 }
 
 
+// op printer
 inline std::ostream& operator<<(std::ostream& os, const KalmarAsyncOp & op) 
 {
     auto hsaQ = static_cast<Kalmar::HSAQueue*> (op.getQueue());
-     os << "#" << hsaQ->getDev()->get_seqnum() << "." 
-        << hsaQ->getSeqNum() << "." 
-        << op.getSeqNum(); 
+     os << "#" << hsaQ->getDev() << "--\n";;
+     os << "#" << hsaQ->getDev()->get_seqnum() << "." ;
+     os   << hsaQ->getSeqNum() << "." ;
+     os << op.getSeqNum(); 
     return os;
 }
 
@@ -3502,7 +3506,7 @@ HSAQueue::HSAQueue(KalmarDevice* pDev, hsa_agent_t agent, execute_order order) :
 void HSAQueue::dispose() override {
     hsa_status_t status;
 
-    DBOUT(DB_INIT, "HSAQueue::dispose() in\n");
+    DBOUT(DB_INIT, "HSAQueue::dispose() " << this << "in\n");
     {
         DBOUT(DB_LOCK, " ptr:" << this << " dispose lock_guard...\n");
 
@@ -3538,7 +3542,7 @@ void HSAQueue::dispose() override {
 
     STATUS_CHECK(status, __LINE__);
 
-    DBOUT(DB_INIT, "HSAQueue::dispose() out\n");
+    DBOUT(DB_INIT, "HSAQueue::dispose() " << this <<  " out\n");
 }
 
 Kalmar::HSADevice * HSAQueue::getHSADev() const { 
@@ -3757,7 +3761,7 @@ HSAQueue::dispatch_hsa_kernel(const hsa_kernel_dispatch_packet_t *aql,
 
 HSADispatch::HSADispatch(Kalmar::HSADevice* _device, Kalmar::KalmarQueue *queue, HSAKernel* _kernel,
                          const hsa_kernel_dispatch_packet_t *aql) :
-    KalmarAsyncOp(queue, Kalmar::hcCommandKernel),
+    HSAOp(queue, Kalmar::hcCommandKernel),
     device(_device),
     agent(_device->getAgent()),
     kernel_name(nullptr),
