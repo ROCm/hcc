@@ -33,6 +33,8 @@ enum PrintfPacketDataType {
   ,PRINTF_FLOAT
   ,PRINTF_VOID_PTR
   ,PRINTF_CONST_VOID_PTR
+  ,PRINTF_CHAR_PTR
+  ,PRINTF_CONST_CHAR_PTR
   ,PRINTF_BUFFER_CURSOR
   ,PRINTF_BUFFER_SIZE
   ,PRINTF_FORMAT_BUFFER_SIZE
@@ -47,6 +49,8 @@ public:
   void set(float d)        [[hc,cpu]] { type = PRINTF_FLOAT;          data.f = d; }
   void set(void* d)        [[hc,cpu]] { type = PRINTF_VOID_PTR;       data.ptr = d; }
   void set(const void* d)  [[hc,cpu]] { type = PRINTF_CONST_VOID_PTR; data.cptr = d; }
+  void set(char* d)        [[hc,cpu]] { type = PRINTF_CHAR_PTR;       data.ptr = d; }
+  void set(const char* d)  [[hc,cpu]] { type = PRINTF_CONST_CHAR_PTR; data.cptr = d; }
   PrintfPacketDataType type;
   PrintfPacketData data;
 };
@@ -112,31 +116,27 @@ static inline PrintfError process_str_batch(PrintfPacket* queue, char* fbuffer, 
   if (queue[3].data.ui > queue[2].data.ui){
     return PRINTF_FORMAT_BUFFER_OVERFLOW;
   }
-  copy_n(&fbuffer[fb_offset], fstring, fstr_len);
-  fbuffer[fb_offset + fstr_len] = '\0';
+  copy_n(&fbuffer[fb_offset], fstring, fstr_len + 1);
   queue[offset].set(&fbuffer[fb_offset]);
   return PRINTF_SUCCESS;
 }
 
 template <typename T>
 static inline PrintfError set_batch(PrintfPacket* queue, char* fbuffer, int offset, const T t) [[hc,cpu]] {
-  if (std::is_pointer<T>::value){
-    if (process_str_batch(queue, fbuffer, offset, (char*)t) == PRINTF_FORMAT_BUFFER_OVERFLOW)
-      return PRINTF_FORMAT_BUFFER_OVERFLOW;
+  PrintfError err = PRINTF_SUCCESS;
+  queue[offset].set(t);
+  if (queue[offset].type == PRINTF_CHAR_PTR || queue[offset].type == PRINTF_CONST_CHAR_PTR){
+    err = process_str_batch(queue, fbuffer, offset, (char*)t);
   }
-  else
-    queue[offset].set(t);
-
-  return PRINTF_SUCCESS;
+  return err;
 }
 template <typename T, typename... Rest>
 static inline PrintfError set_batch(PrintfPacket* queue, char* fbuffer, int offset, const T t, Rest... rest) [[hc,cpu]] {
-  if (std::is_pointer<T>::value){
-    if (process_str_batch(queue, fbuffer, offset, (char*)t) == PRINTF_FORMAT_BUFFER_OVERFLOW)
-      return PRINTF_FORMAT_BUFFER_OVERFLOW;
-  }
-  else {
-    queue[offset].set(t);
+  PrintfError err = PRINTF_SUCCESS;
+  queue[offset].set(t);
+  if (queue[offset].type == PRINTF_CHAR_PTR || queue[offset].type == PRINTF_CONST_CHAR_PTR){
+    if ((err = process_str_batch(queue, fbuffer, offset, (char*)t)) != PRINTF_SUCCESS)
+      return err;
   }
   return set_batch(queue, fbuffer, offset + 1, rest...);
 }
@@ -183,8 +183,8 @@ static inline void processPrintfPackets(PrintfPacket* packets, char* fbuffer, co
 
     // get the format
     unsigned int formatStringIndex = i++;
-    assert(packets[formatStringIndex].type == PRINTF_VOID_PTR
-           || packets[formatStringIndex].type == PRINTF_CONST_VOID_PTR);
+    assert(packets[formatStringIndex].type == PRINTF_CHAR_PTR
+           || packets[formatStringIndex].type == PRINTF_CONST_CHAR_PTR);
     std::string formatString((const char*)packets[formatStringIndex].data.cptr);
 
     unsigned int formatStringCursor = 0;
