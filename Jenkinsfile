@@ -11,8 +11,7 @@ properties([buildDiscarder(logRotator(
     [$class: 'CopyArtifactPermissionProperty', projectNames: '*']
   ])
 
-// NOTE: Remove fiji qualifier when HSA_AMDGPU_GPU_TARGET is fixed
-node ('rocmtest && fiji')
+node( 'rocmtest' )
 {
   // Convenience variables for common paths used in building
   def workspace_dir_abs = pwd()
