@@ -65,7 +65,7 @@ static inline PrintfPacket* createPrintfBuffer(hc::accelerator& a, const unsigne
   PrintfPacket* printfBuffer = NULL;
   if (numElements > 5) {
     printfBuffer = hc::am_alloc(sizeof(PrintfPacket) * numElements, a, amHostCoherent);
-    printfFormatBuffer = hc::am_alloc(sizeof(char) * numElements, a, amHostCoherent);
+    printfFormatBuffer = hc::am_alloc(sizeof(char) * numElements * 8, a, amHostCoherent);
 
     // initialize the printf buffer header
     printfBuffer[0].type = PRINTF_BUFFER_SIZE;
