@@ -59,6 +59,16 @@ parser.add_argument('--roi_stop',
         action="store", 
         help="Specify stop point to use for Region-of-Interest. See roi_start for ROI_STOP format. ")
 
+
+parser.add_argument('--topn', 
+        type=int, nargs=1,   # TODO - fix this so it is int
+        default=10,
+        help="print top N entries in summary.  Default=10.  -1=all")
+
+parser.add_argument('--gen_json', 
+        metavar='JSON_FILE', type=argparse.FileType('w'), 
+        help="Generate a JSON file suitable for viewing with chrome trace viewer")
+
 parser.add_argument('--db_print_raw', 
         action="store_true",
         help="print raw log records as read from file")
@@ -73,7 +83,8 @@ ROT_HELP2= "  @LINENUM : specify a line number from the input file.  Example: @1
 
 def processArgs():
     # hack to allow controlling args inside the script:
-    myargs = "overfeat.fiji.bwd.txt --print_timeline"
+    #myargs = "overfeat.fiji.bwd.txt --print_timeline"
+    myargs = "barrier_test.prof"
 
     if len(sys.argv) > 1:
         myargs = sys.argv[1:]
@@ -93,7 +104,7 @@ def processArgs():
 #---
 class TextLogRecord:
     """ Text preceding a profile record"""
-    def __init__(self, linenum, textLine):
+    def __init__(self, lineNum, textLine):
         self.text = []
         self.text.append(textLine)
         self.startLineNum = lineNum
@@ -155,24 +166,38 @@ class ProfileLogRecord:
             self.startTime =  (int)(fields[3])
             self.stopTime  =  (int)(fields[4])
             try:
-                (self.device, self.queue, self.cmdNum) = fields[5].lstrip("#").split(".")
+                (self.device, self.queue, self.cmdNum) = [int(f) for f in fields[5].lstrip("#").split(".")]
             except:
+                print "warning: unknown opid tag=", fields[5]
                 self.device = 0
 
 
             if self.type == 'barrier':
                 self.name = "barrier=" + self.name
-            if self.isCopyCmd():
                 try:
-                    sz = (int)(fields[6].split()[0])
-                    self.name = self.name + "_" + str(sz) + "_bytes"
-                    #print "copy_name=", self.name
+                    (self.depcnt, self.acqFence, self.releaseFence) = self.name.split(",")
+                    #print "found depcnt=", self.depcnt
+                    if (self.depcnt > 0):
+                        # hack to prevent barriers from appears to start before their dependents which hides the dependenets on the critical path.
+                        # Really should do bette critical path analsysis here to add the elem
+                        self.startTime = self.stopTime
                 except:
-                    print "can't find copy size in", fields[5]
+                    # legacy trace formats.
+                    self.depcnt = 0
+
+
+            if self.isCopyCmd():
+                copyField = 6
+                try:
+                    self.sizeBytes = (int)(fields[copyField].split()[0])
+                    self.name = self.name + "_" + str(self.sizeBytes) + "_bytes"
+                    #self.bandwidthGBps = (float)(sizeBytes*1000.0/1024.0*1000.0/1024.0) / (self.stopTime - self.startTime)
+                except:
+                    print "can't find copy size in", fields[copyField]
 
             # these structures filled in after sorting the records:
             self.criticalTime = None
-            self.gapFromPrev  = 0     # gap in ms from previous command.
+            self.gapFromPrev  = 0     # gap in ns from previous command.
 
             self.valid = True
         except:
@@ -227,7 +252,6 @@ class ProfileLogRecord:
 
         if (not args.no_gaps) and self.gapFromPrev > 0:
             markers = 0
-            print "gap=", self.gapFromPrev
             if self.gapFromPrev:
                 markers = min(30, int(math.log(self.gapFromPrev/1000.0,2))+1 ) * "#"
             print "%4s %16.6f: %+10.2f %-7s %10s %-30s" % \
@@ -259,7 +283,16 @@ class ProfileLogRecord:
         print ""
 
 
-
+    def printJSON(self, file, isLast, timeOffset=0):
+        tid = self.queue
+        file.write('{ "pid":1, "tid":%d, "ts":%d, "dur":%d, "ph":"X", "name":"%s", "args":{"dev.queue.op":"%d.%d.%d", "stop":%d } }' %\
+                (tid, self.startTime/1000, (self.stopTime - self.startTime)/1000, self.name, \
+                    self.device, self.queue, self.cmdNum, self.stopTime/1000) ) 
+        if not isLast:
+            file.write(',\n')
+        else:
+            file.write('\n')
+            
 
     def update(self, maxStopTime, gapFromPrev):
 
@@ -354,8 +387,6 @@ Resource can be a GPU, Bus, or CPU (eventually)
 """
 class Resource:
     def __init__(self, resourceName):
-
-
         self.name = resourceName
 
         # dictionary indexed by log record name 
@@ -374,6 +405,8 @@ class Resource:
         self.firstLogRecord = None
         self.lastLogRecord = None
 
+        self.opsPerQueue = {}  # counts of how many ops per queue
+
     @staticmethod
     def getName(lr):
         if lr.isGpuCmd():
@@ -389,7 +422,7 @@ class Resource:
         if args.no_gaps:
             return self.busyTime;
         #elif args.trim_gaps:
-        #    return self.lastLogRecord.stopTime - self.lastLogRecord.startTime
+        #    return self.lastLogRecord.stopTime - self.firstLogRecord.startTime
         else :
             return roiTime
 
@@ -413,147 +446,182 @@ class Resource:
 
     def printSummary(self, roiTime):
 
-        print "Resource=", self.name
         sortByTime = sorted(self.summaryByName.iteritems(), key=lambda x: x[1].totalCriticalTime, reverse=True)
+
+        maxToPrint = args.topn
+        if maxToPrint < 0 or maxToPrint > len(sortByTime) :
+            maxToPrint = len(sortByTime)
+
+        print "Resource=%s Showing %d/%d records  %6.2f%% busy" % \
+                (self.name, maxToPrint,  len(sortByTime), self.busyTime*100.0/roiTime)
 
         time = self.selectMaxTime(roiTime)
 
         ProfileSummaryRecord.printHeader()
-        maxToPrint=15
+        maxToPrint=args.topn;
         for k in sortByTime:
             self.summaryByName[k[0]].printMe(time)
-            if (--maxToPrint <=0):
+            maxToPrint -= 1
+            if (maxToPrint==0):
                 break
 
 
 
-def processRoi(sortedProfileLogRecords, roiArg, roiStartTime, default):
-    if (roiArg == None):
-        return (default, None)
-    else:
-        markerChar = roiArg[0]
-        try:
-            (roiStr, offset) = roiArg[1:].split("+")
-            offset=int(offset)
-        except ValueError:
-            try:
-                (roiStr, offset) = roiArg[1:].split("-")
-                offset = -int(offset)
-            except ValueError:
-                roiStr = roiArg[1:]
-                offset = 0;
 
-        print "roiStr=", roiStr, "offset=", offset
-        if markerChar == '@':
-            lineNum = int(roiStr)
-            # search for first record with exact match on line number:
-            for (lri,lr) in enumerate(sortedProfileLogRecords):
-                if lr.isInRange(lineNum):
-                    return (lri+offset, lineNum)
 
-            raise Exception ("roi line number invalid ", roiArg)
-            
-        elif markerChar == '^':
-            startTime = int(roiStr)
-            # search for first record past the ROI start time
-            for (lri,lr) in enumerate(sortedProfileLogRecords):
-                if startTime > (lr.startTime - roiStartTime) :
-                    return (lri+offset, None)
 
-            raise Exception ("roi time out-of-range=", roiArg)
+class FileParser:
+    def __init__(self, file):
+        # Parsing pass - extract profile lines from file, parse, and add to profileLogRecords array
+        self.profileLogRecords = []
 
-        elif markerChar == '%':
-            # search strings:
-            lineNum = None
-            for (lri,lr) in enumerate(sortedProfileLogRecords):
-                if lr.text:
-                    (lineNum, line) = lr.text.search(roiStr)
-                    if lineNum != None:
-                        print "info %roi matched '", line.rstrip(), "' + offset=", offset, offset
-                        return (lri+offset, lineNum) 
+        lineNum = 0
+        text = None
 
-            raise Exception ("roi search string not found=", roiArg)
+        for line in file:
+            lineNum = lineNum+1
+            if (line.startswith("profile:")):
+                #if text != None:
+                    #print "TTT=", 
+                    #text.printMe(True)
+                p = ProfileLogRecord(lineNum, line, text)
+                if p.valid and not (args.ignore_barriers and p.type == 'barrier'):
+                    #print "ProfileMarker", lineNum, ":", line,
+                    self.profileLogRecords.append (p)
+                    text = None  # reset to accumulate new text.
+                    continue
 
+            #print "Append:", lineNum, ":", line, 
+            # not a valid profile line, accumulate lines into text structure.
+            if (text == None):
+                text = TextLogRecord(lineNum, line)
+            else:
+                text.append(line)
+
+
+        # TODO - need to handle multiple devices here:
+        # Sort all records by start time:
+        self.profileLogRecords = sorted(self.profileLogRecords, key=lambda A: A.startTime)
+
+        self.setRoi(True)
+
+
+    def setRoi(self, show):
+        (self.roiStartIndex, roiStartLine) = self.processRoi(self.profileLogRecords, args.roi_start, self.profileLogRecords[0].startTime, 0)
+        (self.roiStopIndex,  roiStopLine)  = self.processRoi(self.profileLogRecords, args.roi_stop,  self.profileLogRecords[0].startTime, len(self.profileLogRecords)-1)
+
+        self.roiStart = self.profileLogRecords[self.roiStartIndex]
+        self.roiStop  = self.profileLogRecords[self.roiStopIndex]
+
+        if show:
+            print "ROI_START:",
+            self.roiStart.printMe(self.roiStart.startTime)
+            print "ROI_STOP :" ,
+            self.roiStop.printMe(self.roiStart.startTime)  # yes, this should be startTime
+            print "ROI_TIME=%8.3f secs" % ((self.roiStop.stopTime - self.roiStart.startTime)/1000000000.0)
+
+        assert (self.roiStartIndex <= self.roiStopIndex)
+        assert (self.roiStartIndex >=0 and self.roiStartIndex<len(self.profileLogRecords))
+        assert (self.roiStopIndex >=0 and self.roiStopIndex<len(self.profileLogRecords))
+
+
+
+    def generateSummary(self):
+
+        self.resources = {}
+        for lri in range(self.roiStartIndex,self.roiStopIndex):
+            lr = self.profileLogRecords[lri]
+            resourceName = Resource.getName(lr)
+
+            self.resources.setdefault(resourceName, Resource(resourceName))
+            self.resources[resourceName].addLogRecord(lr, self.roiStart.startTime)
+
+
+    def generateJSON(self, file):
+
+        file.write ('{\n')
+        file.write ('"traceEvents": [\n')
+        for lri in range(self.roiStartIndex,self.roiStopIndex):
+            lr = self.profileLogRecords[lri]
+            lr.printJSON(file, lri == self.roiStopIndex-1)
+
+        file.write(']\n')
+        file.write('}\n')
+
+
+
+
+    @staticmethod
+    def processRoi(sortedProfileLogRecords, roiArg, roiStartTime, default):
+        if (roiArg == None):
+            return (default, None)
         else:
-            raise Exception ("Invalid roi expression=", roiArg)
+            markerChar = roiArg[0]
+            try:
+                (roiStr, offset) = roiArg[1:].split("+")
+                offset=int(offset)
+            except ValueError:
+                try:
+                    (roiStr, offset) = roiArg[1:].split("-")
+                    offset = -int(offset)
+                except ValueError:
+                    roiStr = roiArg[1:]
+                    offset = 0;
+
+            print "roiStr=", roiStr, "offset=", offset
+            if markerChar == '@':
+                lineNum = int(roiStr)
+                # search for first record with exact match on line number:
+                for (lri,lr) in enumerate(sortedProfileLogRecords):
+                    if lr.isInRange(lineNum):
+                        return (lri+offset, lineNum)
+
+                raise Exception ("roi line number invalid ", roiArg)
+                
+            elif markerChar == '^':
+                startTime = int(roiStr)
+                # search for first record past the ROI start time
+                for (lri,lr) in enumerate(sortedProfileLogRecords):
+                    if startTime > (lr.startTime - roiStartTime) :
+                        return (lri+offset, None)
+
+                raise Exception ("roi time out-of-range=", roiArg)
+
+            elif markerChar == '%':
+                # search strings:
+                lineNum = None
+                for (lri,lr) in enumerate(sortedProfileLogRecords):
+                    if lr.text:
+                        (lineNum, line) = lr.text.search(roiStr)
+                        if lineNum != None:
+                            print "info %roi matched '", line.rstrip(), "' + offset=", offset, offset
+                            return (lri+offset, lineNum) 
+
+                raise Exception ("roi search string not found=", roiArg)
+
+            else:
+                raise Exception ("Invalid roi expression=", roiArg)
 
 
-        
+    def printSummary(self):
+        for r in self.resources:
+            self.resources[r].printSummary(self.roiStop.stopTime-self.roiStart.startTime)
 
+            
+def main():
+    p = FileParser(args.infile)
+
+    if (args.print_timeline):
+        ProfileLogRecord.printHeader(args.info)
+
+    if args.gen_json:
+        p.generateJSON(args.gen_json)
+
+    p.generateSummary()
+    p.printSummary()
 
 
 args = processArgs();
-
-#---
-# Parsing pass - extract profile lines from file, parse, and add to profileLogRecords array
-lineNum = 0
-f = args.infile
-profileLogRecords = []
-text = None
-for line in f:
-    lineNum = lineNum+1
-    if (line.startswith("profile:")):
-        #if text != None:
-            #print "TTT=", 
-            #text.printMe(True)
-        p = ProfileLogRecord(lineNum, line, text)
-        if p.valid and not (args.ignore_barriers and p.type == 'barrier'):
-            #print "ProfileMarker", lineNum, ":", line,
-            profileLogRecords.append (p)
-            text = None  # reset to accumulate new text.
-            continue
-
-    #print "Append:", lineNum, ":", line, 
-    # not a valid profile line, accumulate lines into text structure.
-    if (text == None):
-        text = TextLogRecord(lineNum, line)
-    else:
-        text.append(line)
-
-
-
-# TODO - need to handle multiple devices here:
-# Need to force trace collection of ops with HCC.
-# Sort all records and pass through to compute gaps
-profileLogRecords = sorted(profileLogRecords, key=lambda A: A.startTime)
-
-resources = {}
-
-(roiStartIndex, roiStartLine) = processRoi(profileLogRecords, args.roi_start, profileLogRecords[0].startTime, 0)
-(roiStopIndex,  roiStopLine)  = processRoi(profileLogRecords, args.roi_stop,  profileLogRecords[0].startTime, len(profileLogRecords)-1)
-
-
-roiStart = profileLogRecords[roiStartIndex]
-roiStop  = profileLogRecords[roiStopIndex]
-
-print "ROI_START:",
-roiStart.printMe(roiStart.startTime)
-print "\nROI_STOP :" 
-roiStop.printMe(roiStart.startTime)  # yes, this should be startTime
-print "ROI_TIME=%8.3f secs" % ((roiStop.stopTime - roiStart.startTime)/1000000000.0)
-
-assert (roiStartIndex <= roiStopIndex)
-assert (roiStartIndex >=0 and roiStartIndex<len(profileLogRecords))
-assert (roiStopIndex >=0 and roiStopIndex<len(profileLogRecords))
-
-if (args.print_timeline):
-    ProfileLogRecord.printHeader(args.info)
-
-for lri in range(roiStartIndex,roiStopIndex):
-    lr = profileLogRecords[lri]
-    resourceName = Resource.getName(lr)
-
-    resources.setdefault(resourceName, Resource(resourceName))
-    resources[resourceName].addLogRecord(lr, roiStart.startTime)
-
-
-for r in resources:
-    resources[r].printSummary(roiStop.stopTime-roiStart.startTime)
-
-
-def main():
-    None
-
 
 if  __name__ == "__main__":
     main()
