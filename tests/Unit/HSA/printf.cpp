@@ -14,20 +14,19 @@ int main() {
   using namespace hc;
 
   accelerator acc = accelerator();
-  char* printf_fbuf = NULL;
-  PrintfPacket* printf_buf = createPrintfBuffer(acc, PRINTF_BUFFER_SIZE, printf_fbuf);
+  PrintfPacket* printf_buf = createPrintfBuffer(acc, PRINTF_BUFFER_SIZE);
 
   parallel_for_each(extent<1>(GLOBAL).tile(TILE), [=](tiled_index<1> tidx) [[hc]] {
       const char* str1 = "Hello HC from %s: %03d\n";
       const char* str2 = "thread";
       const char* str3 = "Hello again from %s: %03d\n";
-      printf(printf_buf, printf_fbuf, str1, str2, tidx.global[0]);
-      printf(printf_buf, printf_fbuf, str3, "thread", tidx.global[0]);
+      printf(printf_buf, str1, str2, tidx.global[0]);
+      printf(printf_buf, str3, "thread", tidx.global[0]);
   }).wait();
 
-  processPrintfBuffer(printf_buf, printf_fbuf);
+  processPrintfBuffer(printf_buf);
 
-  deletePrintfBuffer(printf_buf, printf_fbuf);
+  deletePrintfBuffer(printf_buf);
 
   return 0;
 }
