@@ -29,7 +29,7 @@ int main() {
   return 0;
 }
 
-// CHECK-DAG: Thread: 000, String Address: [[ADDR:0x[0-9]+]]
+// CHECK-DAG: Thread: 000, String Address: [[ADDR:0x[0-9a-f]+]]
 // CHECK-DAG: Thread: 007, String Address: [[ADDR]]
 // CHECK-DAG: Thread: 008, String Address: [[ADDR]]
 // CHECK-DAG: Thread: 015, String Address: [[ADDR]]
