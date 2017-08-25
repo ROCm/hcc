@@ -437,7 +437,18 @@ public:
     }
 }; // end of HSAKernel
 
-class HSACopy : public Kalmar::KalmarAsyncOp {
+
+// Base class for the other HSA ops:
+class HSAOp : public Kalmar::KalmarAsyncOp {
+public:
+    HSAOp(Kalmar::KalmarQueue *queue, hc::hcCommandKind commandKind) ;
+protected:
+    std::shared_ptr<Kalmar::KalmarQueue> _queueRef;
+    uint64_t apiStartTick;
+};
+
+
+class HSACopy : public HSAOp {
 private:
     hsa_signal_t signal;
     int signalIndex;
@@ -1916,7 +1927,7 @@ private:
 
     size_t queue_size;
     std::mutex queues_mutex; // protects access to the queues vector:
-    std::vector< std::weak_ptr<KalmarQueue> > queues;
+    std::vector< std::shared_ptr<KalmarQueue> > queues;
 
     std::mutex                  rocrQueuesMutex; // protects rocrQueues
     std::vector< RocrQueue *>    rocrQueues;
@@ -2193,11 +2204,8 @@ public:
         // release all queues
         queues_mutex.lock();
 
-        for (auto queue_iterator : queues) {
-            if (!queue_iterator.expired()) {
-                auto queue = queue_iterator.lock();
-                queue->dispose();
-            }
+        for (auto queue: queues) {
+            queue->dispose();
         }
         queues.clear();
         queues_mutex.unlock();
@@ -2491,9 +2499,7 @@ public:
         std::vector< std::shared_ptr<KalmarQueue> > result;
         queues_mutex.lock();
         for (auto queue : queues) {
-            if (!queue.expired()) {
-                result.push_back(queue.lock());
-            }
+            result.push_back(queue);
         }
         queues_mutex.unlock();
         return result;
@@ -3471,7 +3477,7 @@ std::ostream& operator<<(std::ostream& os, const HSAQueue & hav)
 inline std::ostream& operator<<(std::ostream& os, const KalmarAsyncOp & op) 
 {
     auto hsaQ = static_cast<Kalmar::HSAQueue*> (op.getQueue());
-     os << "#" << hsaQ->getDev() << "--\n";;
+     //os << "#" << hsaQ->getDev() << "--\n";;
      os << "#" << hsaQ->getDev()->get_seqnum() << "." ;
      os   << hsaQ->getSeqNum() << "." ;
      os << op.getSeqNum(); 
@@ -4471,6 +4477,20 @@ HSABarrier::getEndTimestamp() override {
     return time.end;
 }
 
+<<<<<<< HEAD
+=======
+
+// ----------------------------------------------------------------------
+// member function implementation of HSAOp
+// ----------------------------------------------------------------------
+HSAOp::HSAOp(Kalmar::KalmarQueue *queue, hc::hcCommandKind commandKind) : 
+    KalmarAsyncOp(queue, Kalmar::hcCommandInvalid)
+    ///_queueRef(queue)
+{
+    apiStartTick = Kalmar::ctx.getSystemTicks();
+};
+
+>>>>>>> 2b009fd... Use shared_ptr for op reference to queue.
 // ----------------------------------------------------------------------
 // member function implementation of HSACopy
 // ----------------------------------------------------------------------
