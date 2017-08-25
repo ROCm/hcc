@@ -28,13 +28,14 @@
 #define DB_MISC      12  /* 0x1000  misc debug, not yet classified. */
 #define DB_AQL2      13  /* 0x2000  Show raw bytes of AQL packet */
 #define DB_CODE      14  /* 0x4000  Show CreateKernel and code creation debug */
+#define DB_CMD2      15  /* 0x8000  More detailed command info, including barrier commands created by hcc rt. */
 // If adding new define here update the table below:
 
 extern unsigned HCC_DB;
 
 
 // Keep close to debug defs above since these have to be kept in-sync
-static std::vector<std::string> g_DbStr = {"api", "cmd", "wait", "aql", "queue", "sig", "lock", "kernarg", "copy", "copy2", "resource", "init", "misc", "aql2", "code"};
+static std::vector<std::string> g_DbStr = {"api", "cmd", "wait", "aql", "queue", "sig", "lock", "kernarg", "copy", "copy2", "resource", "init", "misc", "aql2", "code", "cmd2"};
 
 
 // Macro for prettier debug messages, use like:
