@@ -37,9 +37,9 @@ enum PrintfPacketDataType {
   ,PRINTF_CONST_CHAR_PTR
   ,PRINTF_BUFFER_CURSOR
   ,PRINTF_BUFFER_SIZE
-  ,PRINTF_FORMAT_BUFFER
-  ,PRINTF_FORMAT_BUFFER_SIZE
-  ,PRINTF_FORMAT_BUFFER_CURSOR
+  ,PRINTF_STRING_BUFFER
+  ,PRINTF_STRING_BUFFER_SIZE
+  ,PRINTF_STRING_BUFFER_CURSOR
 };
 
 class PrintfPacket {
@@ -59,7 +59,7 @@ public:
 enum PrintfError {
    PRINTF_SUCCESS = 0
   ,PRINTF_BUFFER_OVERFLOW = 1
-  ,PRINTF_FORMAT_BUFFER_OVERFLOW = 2
+  ,PRINTF_STRING_BUFFER_OVERFLOW = 2
 };
 
 static inline PrintfPacket* createPrintfBuffer(hc::accelerator& a, const unsigned int numElements) {
@@ -72,11 +72,11 @@ static inline PrintfPacket* createPrintfBuffer(hc::accelerator& a, const unsigne
     printfBuffer[0].data.ui = numElements;
     printfBuffer[1].type = PRINTF_BUFFER_CURSOR;
     printfBuffer[1].data.ui = 5;
-    printfBuffer[2].type = PRINTF_FORMAT_BUFFER;
+    printfBuffer[2].type = PRINTF_STRING_BUFFER;
     printfBuffer[2].data.ptr = hc::am_alloc(sizeof(char) * numElements * 12, a, amHostCoherent);
-    printfBuffer[3].type = PRINTF_FORMAT_BUFFER_SIZE;
+    printfBuffer[3].type = PRINTF_STRING_BUFFER_SIZE;
     printfBuffer[3].data.ui = numElements * 12;
-    printfBuffer[4].type = PRINTF_FORMAT_BUFFER_CURSOR;
+    printfBuffer[4].type = PRINTF_STRING_BUFFER_CURSOR;
     printfBuffer[4].data.ui = 0;
   }
   return printfBuffer;
@@ -113,13 +113,13 @@ static inline void copy_n(char* dest, const char* src, unsigned int len) [[hc,cp
 
 static inline PrintfError process_str_batch(PrintfPacket* queue, int offset, const char* string) [[hc,cpu]] {
   unsigned int str_len = string_length(string);
-  unsigned int fb_offset = queue[4].data.ai.fetch_add(str_len + 1);
-  char* format_buffer = (char*) queue[2].data.ptr;
-  if (!format_buffer || queue[4].data.ui > queue[3].data.ui){
-    return PRINTF_FORMAT_BUFFER_OVERFLOW;
+  unsigned int sb_offset = queue[4].data.ai.fetch_add(str_len + 1);
+  char* string_buffer = (char*) queue[2].data.ptr;
+  if (!string_buffer || queue[4].data.ui > queue[3].data.ui){
+    return PRINTF_STRING_BUFFER_OVERFLOW;
   }
-  copy_n(&format_buffer[fb_offset], string, str_len + 1);
-  queue[offset].set(&format_buffer[fb_offset]);
+  copy_n(&string_buffer[sb_offset], string, str_len + 1);
+  queue[offset].set(&string_buffer[sb_offset]);
   return PRINTF_SUCCESS;
 }
 
@@ -157,7 +157,7 @@ static inline PrintfError printf(PrintfPacket* queue, All... all) [[hc,cpu]] {
     unsigned int offset = queue[1].data.ai.fetch_add(count + 1);
     if (offset + count + 1 < queue[0].data.ui) {
       if (set_batch(queue, offset, count, all...) != PRINTF_SUCCESS)
-        error = PRINTF_FORMAT_BUFFER_OVERFLOW;
+        error = PRINTF_STRING_BUFFER_OVERFLOW;
     }
     else {
       error = PRINTF_BUFFER_OVERFLOW;
@@ -246,7 +246,7 @@ static inline void processPrintfBuffer(PrintfPacket* gpuBuffer) {
   if (numPackets > 0) {
     processPrintfPackets(gpuBuffer+5, numPackets);
   }
-  // reset the printf buffer and format buffer
+  // reset the printf buffer and string buffer
   gpuBuffer[1].data.ui = 5;
   gpuBuffer[4].data.ui = 0;
 }
