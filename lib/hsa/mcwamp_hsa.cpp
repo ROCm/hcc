@@ -1250,7 +1250,7 @@ public:
                 if (!foundFirstValidOp) {
                     hsa_signal_t sig =  *(static_cast <hsa_signal_t*> (asyncOp->getNativeHandle()));
                     assert(sig->handle != 0);
-                    foundFirstValidOp = false;
+                    foundFirstValidOp = true;
                 }
                 // wait on valid futures only
                 std::shared_future<void>* future = asyncOp->getFuture();
