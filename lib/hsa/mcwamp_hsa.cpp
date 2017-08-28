@@ -443,7 +443,6 @@ class HSAOp : public Kalmar::KalmarAsyncOp {
 public:
     HSAOp(Kalmar::KalmarQueue *queue, hc::hcCommandKind commandKind) ;
 protected:
-    std::shared_ptr<Kalmar::KalmarQueue> _queueRef;
     uint64_t apiStartTick;
 };
 
@@ -3477,7 +3476,6 @@ std::ostream& operator<<(std::ostream& os, const HSAQueue & hav)
 inline std::ostream& operator<<(std::ostream& os, const KalmarAsyncOp & op) 
 {
     auto hsaQ = static_cast<Kalmar::HSAQueue*> (op.getQueue());
-     //os << "#" << hsaQ->getDev() << "--\n";;
      os << "#" << hsaQ->getDev()->get_seqnum() << "." ;
      os   << hsaQ->getSeqNum() << "." ;
      os << op.getSeqNum(); 
@@ -3970,12 +3968,12 @@ HSADispatch::dispatchKernel(hsa_queue_t* lockedHsaQueue, const void *hostKernarg
     q_aql->header = header;
 
     hsa_queue_store_write_index_relaxed(lockedHsaQueue, index + 1);
-    DBOUTL(DB_AQL, " dispatch_aql op#" << this->getSeqNum() <<" into " << *hsaQueue() << "(" << lockedHsaQueue << ") " << *q_aql );
+    DBOUTL(DB_AQL, " dispatch_aql op#" << this << "(hwq=" << lockedHsaQueue << ") kernargs=" << hostKernargSize << " " << *q_aql );
     DBOUTL(DB_AQL2, rawAql(*q_aql));
 
     if (DBFLAG(DB_KERNARG)) { 
         // TODO, perhaps someday we could determine size of kernarg block here:
-        printKernarg(q_aql->kernarg_address, 128);
+        printKernarg(q_aql->kernarg_address, hostKernargSize);
     }
 
 
@@ -4477,27 +4475,23 @@ HSABarrier::getEndTimestamp() override {
     return time.end;
 }
 
-<<<<<<< HEAD
-=======
 
 // ----------------------------------------------------------------------
 // member function implementation of HSAOp
 // ----------------------------------------------------------------------
 HSAOp::HSAOp(Kalmar::KalmarQueue *queue, hc::hcCommandKind commandKind) : 
     KalmarAsyncOp(queue, Kalmar::hcCommandInvalid)
-    ///_queueRef(queue)
 {
     apiStartTick = Kalmar::ctx.getSystemTicks();
 };
 
->>>>>>> 2b009fd... Use shared_ptr for op reference to queue.
 // ----------------------------------------------------------------------
 // member function implementation of HSACopy
 // ----------------------------------------------------------------------
 //
 // Copy mode will be set later on.
 // HSA signals would be waited in HSA_WAIT_STATE_ACTIVE by default for HSACopy instances
-HSACopy::HSACopy(Kalmar::KalmarQueue *queue, const void* src_, void* dst_, size_t sizeBytes_) : KalmarAsyncOp(queue, Kalmar::hcCommandInvalid),
+HSACopy::HSACopy(Kalmar::KalmarQueue *queue, const void* src_, void* dst_, size_t sizeBytes_) : HSAOp(queue, Kalmar::hcCommandInvalid),
     isSubmitted(false), isAsync(false), isSingleStepCopy(false), isPeerToPeer(false), future(nullptr), depAsyncOp(nullptr), copyDevice(nullptr), waitMode(HSA_WAIT_STATE_ACTIVE),
     src(src_), dst(dst_),
     sizeBytes(sizeBytes_),
