@@ -23,12 +23,23 @@ union PrintfPacketData {
   float           f;
   void*           ptr;
   const void*     cptr;
+
+  // Used by headers for atomic offset insts
   std::atomic_uint ai[2];
   std::atomic_ullong al;
+  unsigned int    uia[2];
+  unsigned long long ull;
 };
 
 enum PrintfPacketDataType {
-  PRINTF_UNUSED
+  // Header types
+  PRINTF_BUFFER_SIZE
+  ,PRINTF_STRING_BUFFER
+  ,PRINTF_STRING_BUFFER_SIZE
+  ,PRINTF_OFFSETS
+
+  // Packet Data types
+  ,PRINTF_UNUSED
   ,PRINTF_UNSIGNED_INT
   ,PRINTF_SIGNED_INT
   ,PRINTF_FLOAT
@@ -36,10 +47,6 @@ enum PrintfPacketDataType {
   ,PRINTF_CONST_VOID_PTR
   ,PRINTF_CHAR_PTR
   ,PRINTF_CONST_CHAR_PTR
-  ,PRINTF_BUFFER_SIZE
-  ,PRINTF_STRING_BUFFER
-  ,PRINTF_STRING_BUFFER_SIZE
-  ,PRINTF_OFFSETS
 };
 
 class PrintfPacket {
@@ -67,15 +74,17 @@ static inline PrintfPacket* createPrintfBuffer(hc::accelerator& a, const unsigne
   if (numElements > 5) {
     printfBuffer = hc::am_alloc(sizeof(PrintfPacket) * numElements, a, amHostCoherent);
 
-    // initialize the printf buffer header
+    // Initialize the Header elements of the Printf Buffer
     printfBuffer[0].type = PRINTF_BUFFER_SIZE;
     printfBuffer[0].data.ui = numElements;
+
+    // Header includes a helper string buffer which holds all char* args
     printfBuffer[1].type = PRINTF_STRING_BUFFER;
     printfBuffer[1].data.ptr = hc::am_alloc(sizeof(char) * numElements * 12, a, amHostCoherent);
     printfBuffer[2].type = PRINTF_STRING_BUFFER_SIZE;
     printfBuffer[2].data.ui = numElements * 12;
 
-    // Combine offsets into 1 atomic element to maintain order and atomicity
+    // Using one atomic offset to maintain order and atomicity
     printfBuffer[3].type = PRINTF_OFFSETS;
     printfBuffer[3].data.ai[0] = 4;
     printfBuffer[3].data.ai[1] = 0;
@@ -161,7 +170,6 @@ static inline PrintfError printf(PrintfPacket* queue, All... all) [[hc,cpu]] {
 
   PrintfError error = PRINTF_SUCCESS;
   PrintfPacketData old_off, try_off;
-  unsigned long long old_long;
 
   if (!queue || count_arg + 1 + queue[3].data.ai[0] > queue[0].data.ui) {
     error = PRINTF_BUFFER_OVERFLOW;
@@ -171,19 +179,18 @@ static inline PrintfError printf(PrintfPacket* queue, All... all) [[hc,cpu]] {
   }
   else {
     do {
-	  old_off.al = queue[3].data.al.load();
-	  old_long = old_off.al.load();
-	  try_off.ai[0] = old_off.ai[0] + count_arg + 1;
-	  try_off.ai[1] = old_off.ai[1] + count_char;
-    } while(!(queue[3].data.al.compare_exchange_weak(old_long, (unsigned long long)try_off.al.load())));
+      old_off.ull = queue[3].data.al.load();
+      try_off.uia[0] = old_off.uia[0] + count_arg + 1;
+      try_off.uia[1] = old_off.uia[1] + count_char;
+    } while(!(queue[3].data.al.compare_exchange_weak(old_off.ull, try_off.ull)));
 
-	unsigned int poffset = (unsigned int)old_off.ai[0];
-	unsigned int soffset = (unsigned int)old_off.ai[1];
+    unsigned int poffset = (unsigned int)old_off.uia[0];
+    unsigned int soffset = (unsigned int)old_off.uia[1];
 
     if (poffset + count_arg + 1 > queue[0].data.ui) {
       error = PRINTF_BUFFER_OVERFLOW;
     }
-	else if (soffset + count_char > queue[2].data.ui){
+    else if (soffset + count_char > queue[2].data.ui){
       error = PRINTF_STRING_BUFFER_OVERFLOW;
     }
     else {
