@@ -33,10 +33,11 @@ union PrintfPacketData {
 
 enum PrintfPacketDataType {
   // Header types
-  PRINTF_BUFFER_SIZE
-  ,PRINTF_STRING_BUFFER
-  ,PRINTF_STRING_BUFFER_SIZE
-  ,PRINTF_OFFSETS
+  PRINTF_BUFFER_SIZE = 0
+  ,PRINTF_STRING_BUFFER = 1
+  ,PRINTF_STRING_BUFFER_SIZE = 2
+  ,PRINTF_OFFSETS = 3
+  ,PRINTF_HEADER_SIZE = 4
 
   // Packet Data types
   ,PRINTF_UNUSED
@@ -75,25 +76,26 @@ static inline PrintfPacket* createPrintfBuffer(hc::accelerator& a, const unsigne
     printfBuffer = hc::am_alloc(sizeof(PrintfPacket) * numElements, a, amHostCoherent);
 
     // Initialize the Header elements of the Printf Buffer
-    printfBuffer[0].type = PRINTF_BUFFER_SIZE;
-    printfBuffer[0].data.ui = numElements;
+    printfBuffer[PRINTF_BUFFER_SIZE].type = PRINTF_BUFFER_SIZE;
+    printfBuffer[PRINTF_BUFFER_SIZE].data.ui = numElements;
 
     // Header includes a helper string buffer which holds all char* args
-    printfBuffer[1].type = PRINTF_STRING_BUFFER;
-    printfBuffer[1].data.ptr = hc::am_alloc(sizeof(char) * numElements * 12, a, amHostCoherent);
-    printfBuffer[2].type = PRINTF_STRING_BUFFER_SIZE;
-    printfBuffer[2].data.ui = numElements * 12;
+    // PrintfPacket is 12 bytes, equivalent string buffer size used
+    printfBuffer[PRINTF_STRING_BUFFER].type = PRINTF_STRING_BUFFER;
+    printfBuffer[PRINTF_STRING_BUFFER].data.ptr = hc::am_alloc(sizeof(char) * numElements * 12, a, amHostCoherent);
+    printfBuffer[PRINTF_STRING_BUFFER_SIZE].type = PRINTF_STRING_BUFFER_SIZE;
+    printfBuffer[PRINTF_STRING_BUFFER_SIZE].data.ui = numElements * 12;
 
     // Using one atomic offset to maintain order and atomicity
-    printfBuffer[3].type = PRINTF_OFFSETS;
-    printfBuffer[3].data.ai[0] = 4;
-    printfBuffer[3].data.ai[1] = 0;
+    printfBuffer[PRINTF_OFFSETS].type = PRINTF_OFFSETS;
+    printfBuffer[PRINTF_OFFSETS].data.ai[0] = PRINTF_HEADER_SIZE;
+    printfBuffer[PRINTF_OFFSETS].data.ai[1] = 0;
   }
   return printfBuffer;
 }
 
 void deletePrintfBuffer(PrintfPacket*& buffer) {
-  hc::am_free(buffer[1].data.ptr);
+  hc::am_free(buffer[PRINTF_STRING_BUFFER].data.ptr);
   hc::am_free(buffer);
   buffer = NULL;
 }
@@ -132,8 +134,8 @@ static inline void countArg(unsigned int& count_arg, unsigned int& count_char, c
 static inline PrintfError process_str_batch(PrintfPacket* queue, int poffset, unsigned int& soffset, const char* string) [[hc,cpu]] {
   unsigned int str_len = string_length(string);
   unsigned int sb_offset = soffset;
-  char* string_buffer = (char*) queue[1].data.ptr;
-  if (!string_buffer || soffset + str_len + 1 > queue[2].data.ui){
+  char* string_buffer = (char*) queue[PRINTF_STRING_BUFFER].data.ptr;
+  if (!string_buffer || soffset + str_len + 1 > queue[PRINTF_STRING_BUFFER_SIZE].data.ui){
     return PRINTF_STRING_BUFFER_OVERFLOW;
   }
   copy_n(&string_buffer[sb_offset], string, str_len + 1);
@@ -171,26 +173,26 @@ static inline PrintfError printf(PrintfPacket* queue, All... all) [[hc,cpu]] {
   PrintfError error = PRINTF_SUCCESS;
   PrintfPacketData old_off, try_off;
 
-  if (!queue || count_arg + 1 + queue[3].data.ai[0] > queue[0].data.ui) {
+  if (!queue || count_arg + 1 + queue[PRINTF_OFFSETS].data.ai[0] > queue[PRINTF_BUFFER_SIZE].data.ui) {
     error = PRINTF_BUFFER_OVERFLOW;
   }
-  else if (!queue[1].data.ptr || count_char + queue[3].data.ai[1] > queue[2].data.ui){
+  else if (!queue[PRINTF_STRING_BUFFER].data.ptr || count_char + queue[PRINTF_OFFSETS].data.ai[1] > queue[PRINTF_STRING_BUFFER_SIZE].data.ui){
     error = PRINTF_STRING_BUFFER_OVERFLOW;
   }
   else {
     do {
-      old_off.ull = queue[3].data.al.load();
+      old_off.ull = queue[PRINTF_OFFSETS].data.al.load();
       try_off.uia[0] = old_off.uia[0] + count_arg + 1;
       try_off.uia[1] = old_off.uia[1] + count_char;
-    } while(!(queue[3].data.al.compare_exchange_weak(old_off.ull, try_off.ull)));
+    } while(!(queue[PRINTF_OFFSETS].data.al.compare_exchange_weak(old_off.ull, try_off.ull)));
 
     unsigned int poffset = (unsigned int)old_off.uia[0];
     unsigned int soffset = (unsigned int)old_off.uia[1];
 
-    if (poffset + count_arg + 1 > queue[0].data.ui) {
+    if (poffset + count_arg + 1 > queue[PRINTF_BUFFER_SIZE].data.ui) {
       error = PRINTF_BUFFER_OVERFLOW;
     }
-    else if (soffset + count_char > queue[2].data.ui){
+    else if (soffset + count_char > queue[PRINTF_STRING_BUFFER_SIZE].data.ui){
       error = PRINTF_STRING_BUFFER_OVERFLOW;
     }
     else {
@@ -275,17 +277,16 @@ static inline void processPrintfPackets(PrintfPacket* packets, const unsigned in
 static inline void processPrintfBuffer(PrintfPacket* gpuBuffer) {
 
   if (gpuBuffer == NULL) return;
-  unsigned int bufferSize = gpuBuffer[0].data.ui;
-  unsigned int cursor = gpuBuffer[3].data.ai[0];
-  unsigned int numPackets = ((bufferSize<cursor)?bufferSize:cursor) - 4;
+  unsigned int bufferSize = gpuBuffer[PRINTF_BUFFER_SIZE].data.ui;
+  unsigned int cursor = gpuBuffer[PRINTF_OFFSETS].data.ai[0];
+  unsigned int numPackets = ((bufferSize<cursor)?bufferSize:cursor) - PRINTF_HEADER_SIZE;
   if (numPackets > 0) {
     processPrintfPackets(gpuBuffer+4, numPackets);
   }
   // reset the printf buffer and string buffer
-  gpuBuffer[3].data.ai[0] = 4;
-  gpuBuffer[3].data.ai[1] = 0;
+  gpuBuffer[PRINTF_OFFSETS].data.ai[0] = PRINTF_HEADER_SIZE;
+  gpuBuffer[PRINTF_OFFSETS].data.ai[1] = 0;
 }
 
 
 } // namespace hc
-
