@@ -50,7 +50,7 @@ bool test() {
       assert(false);
     }
     _Tp diff = precise_math::fabs(gc[i] - gb[i]);
-    sum+=diff;
+    sum += diff;
   }
   return (sum < ERROR_THRESHOLD);
 }
@@ -58,7 +58,7 @@ bool test() {
 int main(void) {
   bool ret = true;
 
-  //ret &= test<float>();
+  ret &= test<float>();
   ret &= test<double>();
 
   return !(ret == true);

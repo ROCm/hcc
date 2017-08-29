@@ -16,7 +16,7 @@ bool test_data_ptr() {
   // with expected values for some of its attributes.
   hc::pinned_vector<char> v(small_size);
   hc::accelerator acc;
-  hc::AmPointerInfo ap(nullptr, nullptr, 0, acc);
+  hc::AmPointerInfo ap(nullptr, nullptr, nullptr, 0, acc);
 
   if(am_memtracker_getinfo(&ap, v.data()) != AM_SUCCESS){
     std::cout << "pinned_vector memory not tracked by AmPointerTracker\n";

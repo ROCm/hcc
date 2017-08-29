@@ -33,8 +33,13 @@ enum PrintfPacketDataType {
   ,PRINTF_FLOAT
   ,PRINTF_VOID_PTR
   ,PRINTF_CONST_VOID_PTR
+  ,PRINTF_CHAR_PTR
+  ,PRINTF_CONST_CHAR_PTR
   ,PRINTF_BUFFER_CURSOR
   ,PRINTF_BUFFER_SIZE
+  ,PRINTF_STRING_BUFFER
+  ,PRINTF_STRING_BUFFER_SIZE
+  ,PRINTF_STRING_BUFFER_CURSOR
 };
 
 class PrintfPacket {
@@ -45,6 +50,8 @@ public:
   void set(float d)        [[hc,cpu]] { type = PRINTF_FLOAT;          data.f = d; }
   void set(void* d)        [[hc,cpu]] { type = PRINTF_VOID_PTR;       data.ptr = d; }
   void set(const void* d)  [[hc,cpu]] { type = PRINTF_CONST_VOID_PTR; data.cptr = d; }
+  void set(char* d)        [[hc,cpu]] { type = PRINTF_CHAR_PTR;       data.ptr = d; }
+  void set(const char* d)  [[hc,cpu]] { type = PRINTF_CONST_CHAR_PTR; data.cptr = d; }
   PrintfPacketDataType type;
   PrintfPacketData data;
 };
@@ -52,29 +59,33 @@ public:
 enum PrintfError {
    PRINTF_SUCCESS = 0
   ,PRINTF_BUFFER_OVERFLOW = 1
+  ,PRINTF_STRING_BUFFER_OVERFLOW = 2
 };
 
 static inline PrintfPacket* createPrintfBuffer(hc::accelerator& a, const unsigned int numElements) {
   PrintfPacket* printfBuffer = NULL;
-  if (numElements > 3) {
-    printfBuffer = hc::am_alloc(sizeof(PrintfPacket) * numElements, a, 0);
+  if (numElements > 6) {
+    printfBuffer = hc::am_alloc(sizeof(PrintfPacket) * numElements, a, amHostCoherent);
 
     // initialize the printf buffer header
-    PrintfPacket header[2];
-    header[0].type = PRINTF_BUFFER_SIZE;
-    header[0].data.ui = numElements;
-    header[1].type = PRINTF_BUFFER_CURSOR;
-    header[1].data.ui = 2;
-
-    // initialize the accelerator_view object
-    static hc::accelerator_view av = a.get_default_view();
-    av.copy(header, printfBuffer, sizeof(PrintfPacket) * 2);
+    printfBuffer[0].type = PRINTF_BUFFER_SIZE;
+    printfBuffer[0].data.ui = numElements;
+    printfBuffer[1].type = PRINTF_BUFFER_CURSOR;
+    printfBuffer[1].data.ui = 5;
+    printfBuffer[2].type = PRINTF_STRING_BUFFER;
+    printfBuffer[2].data.ptr = hc::am_alloc(sizeof(char) * numElements * 12, a, amHostCoherent);
+    printfBuffer[3].type = PRINTF_STRING_BUFFER_SIZE;
+    printfBuffer[3].data.ui = numElements * 12;
+    printfBuffer[4].type = PRINTF_STRING_BUFFER_CURSOR;
+    printfBuffer[4].data.ui = 0;
   }
   return printfBuffer;
 }
 
-void deletePrintfBuffer(PrintfPacket* buffer) {
+void deletePrintfBuffer(PrintfPacket*& buffer) {
+  hc::am_free(buffer[2].data.ptr);
   hc::am_free(buffer);
+  buffer = NULL;
 }
 
 // get the argument count
@@ -87,14 +98,49 @@ static inline void countArg(unsigned int& count, const T& t, const Rest&... rest
   countArg(count,rest...);
 }
 
+static inline unsigned int string_length(const char* str) [[hc,cpu]]{
+  unsigned int size = 0;
+  while(str[size]!='\0')
+    size++;
+  return size;
+}
+
+static inline void copy_n(char* dest, const char* src, unsigned int len) [[hc,cpu]] {
+  for(int i=0; i < len; i++){
+    dest[i] = src[i];
+  }
+}
+
+static inline PrintfError process_str_batch(PrintfPacket* queue, int offset, const char* string) [[hc,cpu]] {
+  unsigned int str_len = string_length(string);
+  unsigned int sb_offset = queue[4].data.ai.fetch_add(str_len + 1);
+  char* string_buffer = (char*) queue[2].data.ptr;
+  if (!string_buffer || queue[4].data.ui > queue[3].data.ui){
+    return PRINTF_STRING_BUFFER_OVERFLOW;
+  }
+  copy_n(&string_buffer[sb_offset], string, str_len + 1);
+  queue[offset].set(&string_buffer[sb_offset]);
+  return PRINTF_SUCCESS;
+}
+
 template <typename T>
-static inline void set_batch(PrintfPacket* queue, int offset, const T t) [[hc,cpu]] {
+static inline PrintfError set_batch(PrintfPacket* queue, int offset, const T t) [[hc,cpu]] {
+  PrintfError err = PRINTF_SUCCESS;
   queue[offset].set(t);
+  if (queue[offset].type == PRINTF_CHAR_PTR || queue[offset].type == PRINTF_CONST_CHAR_PTR){
+    err = process_str_batch(queue, offset, (char*)t);
+  }
+  return err;
 }
 template <typename T, typename... Rest>
-static inline void set_batch(PrintfPacket* queue, int offset, const T t, Rest... rest) [[hc,cpu]] {
+static inline PrintfError set_batch(PrintfPacket* queue, int offset, const T t, Rest... rest) [[hc,cpu]] {
+  PrintfError err = PRINTF_SUCCESS;
   queue[offset].set(t);
-  set_batch(queue, offset + 1, rest...);
+  if (queue[offset].type == PRINTF_CHAR_PTR || queue[offset].type == PRINTF_CONST_CHAR_PTR){
+    if ((err = process_str_batch(queue, offset, (char*)t)) != PRINTF_SUCCESS)
+      return err;
+  }
+  return set_batch(queue, offset + 1, rest...);
 }
 
 template <typename... All>
@@ -104,13 +150,14 @@ static inline PrintfError printf(PrintfPacket* queue, All... all) [[hc,cpu]] {
 
   PrintfError error = PRINTF_SUCCESS;
 
-  if (count + 1 + queue[1].data.ui > queue[0].data.ui) {
+  if (!queue || count + 1 + queue[1].data.ui > queue[0].data.ui) {
     error = PRINTF_BUFFER_OVERFLOW;
   } else {
 
     unsigned int offset = queue[1].data.ai.fetch_add(count + 1);
     if (offset + count + 1 < queue[0].data.ui) {
-      set_batch(queue, offset, count, all...);
+      if (set_batch(queue, offset, count, all...) != PRINTF_SUCCESS)
+        error = PRINTF_STRING_BUFFER_OVERFLOW;
     }
     else {
       error = PRINTF_BUFFER_OVERFLOW;
@@ -138,8 +185,8 @@ static inline void processPrintfPackets(PrintfPacket* packets, const unsigned in
 
     // get the format
     unsigned int formatStringIndex = i++;
-    assert(packets[formatStringIndex].type == PRINTF_VOID_PTR
-           || packets[formatStringIndex].type == PRINTF_CONST_VOID_PTR);
+    assert(packets[formatStringIndex].type == PRINTF_CHAR_PTR
+           || packets[formatStringIndex].type == PRINTF_CONST_CHAR_PTR);
     std::string formatString((const char*)packets[formatStringIndex].data.cptr);
 
     unsigned int formatStringCursor = 0;
@@ -193,27 +240,17 @@ static inline void processPrintfPackets(PrintfPacket* packets, const unsigned in
 static inline void processPrintfBuffer(PrintfPacket* gpuBuffer) {
 
   if (gpuBuffer == NULL) return;
-  // Get accelerator view
-  auto acc = hc::accelerator();
-  static hc::accelerator_view av = acc.get_default_view();
-
-  PrintfPacket header[2];
-  av.copy(gpuBuffer, header, sizeof(PrintfPacket)*2);
-  unsigned int bufferSize = header[0].data.ui;
-  unsigned int cursor = header[1].data.ui;
-  unsigned int numPackets = ((bufferSize<cursor)?bufferSize:cursor) - 2;
+  unsigned int bufferSize = gpuBuffer[0].data.ui;
+  unsigned int cursor = gpuBuffer[1].data.ui;
+  unsigned int numPackets = ((bufferSize<cursor)?bufferSize:cursor) - 5;
   if (numPackets > 0) {
-    PrintfPacket* hostBuffer = (PrintfPacket*)malloc(sizeof(PrintfPacket) * numPackets);
-    if (hostBuffer) {
-      av.copy(gpuBuffer+2, hostBuffer, sizeof(PrintfPacket) * numPackets);
-      processPrintfPackets(hostBuffer, numPackets);
-      free(hostBuffer);
-    }
+    processPrintfPackets(gpuBuffer+5, numPackets);
   }
-  // reset the printf buffer
-  header[1].data.ui = 2;
-  av.copy(header,gpuBuffer,sizeof(PrintfPacket) * 2);
+  // reset the printf buffer and string buffer
+  gpuBuffer[1].data.ui = 5;
+  gpuBuffer[4].data.ui = 0;
 }
 
 
 } // namespace hc
+
