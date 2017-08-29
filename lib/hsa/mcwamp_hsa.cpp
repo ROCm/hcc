@@ -3972,7 +3972,6 @@ HSADispatch::dispatchKernel(hsa_queue_t* lockedHsaQueue, const void *hostKernarg
     DBOUTL(DB_AQL2, rawAql(*q_aql));
 
     if (DBFLAG(DB_KERNARG)) { 
-        // TODO, perhaps someday we could determine size of kernarg block here:
         printKernarg(q_aql->kernarg_address, hostKernargSize);
     }
 
