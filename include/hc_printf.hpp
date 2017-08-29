@@ -24,8 +24,12 @@ union PrintfPacketData {
   void*           ptr;
   const void*     cptr;
 
-  // Used by headers for atomic offset insts
-  std::atomic_uint ai[2];
+  // Members al, uia, ull used by headers for buffer offset insts.
+  // There are two offsets, the PrintfPacket buffer offset uia[0] and
+  // the Printf string buffer offset uia[1]. We want to update a
+  // single atomic offset al, so that both buffers will increment
+  // in order with respect to each other. This way, offsets can be
+  // managed by single ullong 8B, which is divided into 2 4B uints.
   std::atomic_ullong al;
   unsigned int    uia[2];
   unsigned long long ull;
@@ -88,8 +92,8 @@ static inline PrintfPacket* createPrintfBuffer(hc::accelerator& a, const unsigne
 
     // Using one atomic offset to maintain order and atomicity
     printfBuffer[PRINTF_OFFSETS].type = PRINTF_OFFSETS;
-    printfBuffer[PRINTF_OFFSETS].data.ai[0] = PRINTF_HEADER_SIZE;
-    printfBuffer[PRINTF_OFFSETS].data.ai[1] = 0;
+    printfBuffer[PRINTF_OFFSETS].data.uia[0] = PRINTF_HEADER_SIZE;
+    printfBuffer[PRINTF_OFFSETS].data.uia[1] = 0;
   }
   return printfBuffer;
 }
@@ -173,10 +177,10 @@ static inline PrintfError printf(PrintfPacket* queue, All... all) [[hc,cpu]] {
   PrintfError error = PRINTF_SUCCESS;
   PrintfPacketData old_off, try_off;
 
-  if (!queue || count_arg + 1 + queue[PRINTF_OFFSETS].data.ai[0] > queue[PRINTF_BUFFER_SIZE].data.ui) {
+  if (!queue || count_arg + 1 + queue[PRINTF_OFFSETS].data.uia[0] > queue[PRINTF_BUFFER_SIZE].data.ui) {
     error = PRINTF_BUFFER_OVERFLOW;
   }
-  else if (!queue[PRINTF_STRING_BUFFER].data.ptr || count_char + queue[PRINTF_OFFSETS].data.ai[1] > queue[PRINTF_STRING_BUFFER_SIZE].data.ui){
+  else if (!queue[PRINTF_STRING_BUFFER].data.ptr || count_char + queue[PRINTF_OFFSETS].data.uia[1] > queue[PRINTF_STRING_BUFFER_SIZE].data.ui){
     error = PRINTF_STRING_BUFFER_OVERFLOW;
   }
   else {
@@ -278,14 +282,14 @@ static inline void processPrintfBuffer(PrintfPacket* gpuBuffer) {
 
   if (gpuBuffer == NULL) return;
   unsigned int bufferSize = gpuBuffer[PRINTF_BUFFER_SIZE].data.ui;
-  unsigned int cursor = gpuBuffer[PRINTF_OFFSETS].data.ai[0];
+  unsigned int cursor = gpuBuffer[PRINTF_OFFSETS].data.uia[0];
   unsigned int numPackets = ((bufferSize<cursor)?bufferSize:cursor) - PRINTF_HEADER_SIZE;
   if (numPackets > 0) {
-    processPrintfPackets(gpuBuffer+4, numPackets);
+    processPrintfPackets(gpuBuffer+PRINTF_HEADER_SIZE, numPackets);
   }
   // reset the printf buffer and string buffer
-  gpuBuffer[PRINTF_OFFSETS].data.ai[0] = PRINTF_HEADER_SIZE;
-  gpuBuffer[PRINTF_OFFSETS].data.ai[1] = 0;
+  gpuBuffer[PRINTF_OFFSETS].data.uia[0] = PRINTF_HEADER_SIZE;
+  gpuBuffer[PRINTF_OFFSETS].data.uia[1] = 0;
 }
 
 
