@@ -3858,7 +3858,7 @@ static void printKernarg(const void *kernarg_address, int bytesToPrint)
 
 
     std::stringstream ks;
-    ks << "kernarg_address: 0x" << kernarg_address << ", first " << bytesToPrint << " bytes:";
+    ks << "kernarg_address: 0x" << kernarg_address << ", total of " << bytesToPrint << " bytes:";
     for (int i=0; i<bytesToPrint/sizeof(unsigned int); i++) {
         bool newLine = ((i % 4) ==0);
         
