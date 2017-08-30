@@ -1250,7 +1250,7 @@ public:
                 auto asyncOp = asyncOps[i];
                 if (!foundFirstValidOp) {
                     hsa_signal_t sig =  *(static_cast <hsa_signal_t*> (asyncOp->getNativeHandle()));
-                    assert(sig->handle != 0);
+                    assert(sig.handle != 0);
                     foundFirstValidOp = true;
                 }
                 // wait on valid futures only
