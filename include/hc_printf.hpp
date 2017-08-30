@@ -23,13 +23,15 @@ union PrintfPacketData {
   float           f;
   void*           ptr;
   const void*     cptr;
-
-  // Members al, uia, ull used by headers for buffer offset insts.
-  // There are two offsets, the PrintfPacket buffer offset uia[0] and
-  // the Printf string buffer offset uia[1]. We want to update a
-  // single atomic offset al, so that both buffers will increment
-  // in order with respect to each other. This way, offsets can be
-  // managed by single ullong 8B, which is divided into 2 4B uints.
+  
+  // Header offset members (union uses same memory)
+  // uia[0] - PrintfPacket buffer offset
+  // uia[1] - Prtinf String buffer offset
+  // al - Using a single atomic offset of 8B, update
+  // both uias of 4B using single atomic operation.
+  // ull - used to load offsets non-atomically, and
+  // required to update atomic_ullong. Non-atomic
+  // use of ull will also run faster.
   std::atomic_ullong al;
   unsigned int    uia[2];
   unsigned long long ull;
@@ -42,6 +44,7 @@ enum PrintfPacketDataType {
   ,PRINTF_STRING_BUFFER_SIZE = 2
   ,PRINTF_OFFSETS = 3
   ,PRINTF_HEADER_SIZE = 4
+  ,PRINTF_MIN_SIZE = 5
 
   // Packet Data types
   ,PRINTF_UNUSED
@@ -76,7 +79,7 @@ enum PrintfError {
 
 static inline PrintfPacket* createPrintfBuffer(hc::accelerator& a, const unsigned int numElements) {
   PrintfPacket* printfBuffer = NULL;
-  if (numElements > 5) {
+  if (numElements > PRINTF_MIN_SIZE) {
     printfBuffer = hc::am_alloc(sizeof(PrintfPacket) * numElements, a, amHostCoherent);
 
     // Initialize the Header elements of the Printf Buffer
@@ -99,8 +102,11 @@ static inline PrintfPacket* createPrintfBuffer(hc::accelerator& a, const unsigne
 }
 
 void deletePrintfBuffer(PrintfPacket*& buffer) {
-  hc::am_free(buffer[PRINTF_STRING_BUFFER].data.ptr);
-  hc::am_free(buffer);
+  if (buffer){
+    if (buffer[PRINTF_STRING_BUFFER].data.ptr)
+      hc::am_free(buffer[PRINTF_STRING_BUFFER].data.ptr);
+    hc::am_free(buffer);
+  }
   buffer = NULL;
 }
 
@@ -185,6 +191,10 @@ static inline PrintfError printf(PrintfPacket* queue, All... all) [[hc,cpu]] {
   }
   else {
     do {
+      // Suggest an offset and compete with other kernels for a spot.
+      // One kernel will make it through at a time. Attempt
+      // to win a portion of printf buffer and printf string buffer.
+      // Otherwise, update to latest offset values, and try again.
       old_off.ull = queue[PRINTF_OFFSETS].data.al.load();
       try_off.uia[0] = old_off.uia[0] + count_arg + 1;
       try_off.uia[1] = old_off.uia[1] + count_char;

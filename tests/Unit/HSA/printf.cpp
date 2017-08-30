@@ -16,6 +16,10 @@ int main() {
   accelerator acc = accelerator();
   PrintfPacket* printf_buf = createPrintfBuffer(acc, PRINTF_BUFFER_SIZE);
 
+  if (!printf_buf) {
+    std::printf("createPrintfBuffer failed.\n");
+  }
+
   parallel_for_each(extent<1>(GLOBAL).tile(TILE), [=](tiled_index<1> tidx) [[hc]] {
       const char* str1 = "Hello HC from %s: %03d\n";
       const char* str2 = "thread";
@@ -30,6 +34,8 @@ int main() {
 
   return 0;
 }
+
+// CHECK-NOT: createPrintfBuffer failed.
 
 // CHECK-DAG: Hello HC from thread: 000
 // CHECK-DAG: Hello HC from thread: 063

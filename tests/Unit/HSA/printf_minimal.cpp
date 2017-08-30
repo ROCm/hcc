@@ -16,6 +16,10 @@ int main() {
   accelerator acc = accelerator();
   PrintfPacket* printf_buf = createPrintfBuffer(acc, PRINTF_BUFFER_SIZE);
 
+  if (!printf_buf) {
+    std::printf("createPrintfBuffer failed.\n");
+  }
+
   // Testing 16 threads with exact buffer size
   // Each printf here 2 args + 1 counter = 3
   // 3 args * 16 = 48 + 5 overhead = 53
@@ -30,6 +34,8 @@ int main() {
 
   return 0;
 }
+
+// CHECK-NOT: createPrintfBuffer failed.
 
 // CHECK-DAG: Thread 000
 // CHECK-DAG: Thread 007
