@@ -96,8 +96,10 @@ long int HCC_H2D_STAGING_THRESHOLD    = 64;
 long int HCC_H2D_PININPLACE_THRESHOLD = 4096;
 long int HCC_D2H_PININPLACE_THRESHOLD = 1024;
 
+// Chicken bits:
 int HCC_SERIALIZE_KERNEL = 0;
 int HCC_SERIALIZE_COPY = 0;
+int HCC_FORCE_COMPLETION_FUTURE = 0;
 
 int HCC_OPT_FLUSH=1;
 
@@ -106,7 +108,6 @@ unsigned HCC_DB = 0;
 
 int HCC_MAX_QUEUES = 20;
 
-#define FORCE_COMPLETION_FUTURE 0
 
 #define HCC_PROFILE_SUMMARY (1<<0)
 #define HCC_PROFILE_TRACE   (1<<1)
@@ -3219,6 +3220,8 @@ void HSAContext::ReadHccEnv()
     GET_ENV_INT(HCC_SERIALIZE_COPY,
                  "0x1=pre-serialize before each data copy, 0x2=post-serialize after each data copy, 0x3=both");
 
+    GET_ENV_INT(HCC_FORCE_COMPLETION_FUTURE, "Force all kernel commands to allocate a completion signal.");
+
 
     GET_ENV_INT(HCC_DB, "Enable HCC trace debug");
 
@@ -3736,7 +3739,7 @@ HSAQueue::dispatch_hsa_kernel(const hsa_kernel_dispatch_packet_t *aql,
     // May be faster to create signals for each dispatch than to use markers.
     // Perhaps could check HSA queue pointers.
     bool needsSignal = true;
-    if (HCC_OPT_FLUSH && !HCC_PROFILE && (cf==nullptr) && !FORCE_COMPLETION_FUTURE && !HCC_SERIALIZE_KERNEL) {
+    if (HCC_OPT_FLUSH && !HCC_PROFILE && (cf==nullptr) && !HCC_FORCE_COMPLETION_FUTURE && !HCC_SERIALIZE_KERNEL) {
         // Only allocate a signal if the caller requested a completion_future to track status.
         needsSignal = false;
     };
