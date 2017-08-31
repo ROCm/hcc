@@ -437,13 +437,24 @@ public:
     }
 }; // end of HSAKernel
 
+// Stores the device and queue for op coordinate:
+struct HSAOpCoord
+{
+    HSAOpCoord(Kalmar::HSAQueue *queue);
+
+    int         _deviceId;
+    uint64_t    _queueId;
+};
 
 // Base class for the other HSA ops:
 class HSAOp : public Kalmar::KalmarAsyncOp {
 public:
     HSAOp(Kalmar::KalmarQueue *queue, hc::hcCommandKind commandKind) ;
+
+    const HSAOpCoord opCoord() const { return _opCoord; };
 protected:
-    uint64_t apiStartTick;
+    uint64_t   apiStartTick;
+    HSAOpCoord _opCoord;
 };
 
 
@@ -463,7 +474,7 @@ private:
 
     // If copy is dependent on another operation, record reference here.
     // keep a reference which prevents those ops from being deleted until this op is deleted.
-    std::shared_ptr<KalmarAsyncOp> depAsyncOp;
+    std::shared_ptr<HSAOp> depAsyncOp;
 
     const Kalmar::HSADevice* copyDevice;  // Which device did the copy.
 
@@ -602,7 +613,7 @@ public:
 
     // array of all operations that this op depends on.
     // This array keeps a reference which prevents those ops from being deleted until this op is deleted.
-    std::shared_ptr<KalmarAsyncOp> depAsyncOps [HSA_BARRIER_DEP_SIGNAL_CNT];
+    std::shared_ptr<HSAOp> depAsyncOps [HSA_BARRIER_DEP_SIGNAL_CNT];
 
 public:
     std::shared_future<void>* getFuture() override { return future; }
@@ -631,7 +642,7 @@ public:
     // constructor with 1 prior dependency
     HSABarrier(Kalmar::KalmarQueue *queue, std::shared_ptr <Kalmar::KalmarAsyncOp> dependent_op) : HSAOp(queue, Kalmar::hcCommandMarker), isDispatched(false), future(nullptr), _acquire_scope(hc::no_scope), waitMode(HSA_WAIT_STATE_BLOCKED) {
         if (dependent_op != nullptr) {
-            depAsyncOps[0] = dependent_op;
+            depAsyncOps[0] = std::static_pointer_cast<HSAOp> (dependent_op);
             depCount = 1;
         } else {
             depCount = 0;
@@ -646,7 +657,7 @@ public:
             for (int i = 0; i < count; ++i) {
                 if (dependent_op_array[i]) {
                     // squish null ops 
-                    depAsyncOps[depCount] = dependent_op_array[i];
+                    depAsyncOps[depCount] = std::static_pointer_cast<HSAOp> (dependent_op_array[i]);
                     depCount++;
                 }
             }
@@ -964,7 +975,7 @@ private:
     // HSAQueue::wait(), and all future objects in the KalmarAsyncOp objects
     // will be waited on.
     //
-    std::vector< std::shared_ptr<KalmarAsyncOp> > asyncOps;
+    std::vector< std::shared_ptr<HSAOp> > asyncOps;
 
     uint64_t                                      queueSeqNum; // sequence-number of this queue.
 
@@ -1057,7 +1068,7 @@ public:
         hsa_signal_value_t oldv=0;
         s << *this << " : " << asyncOps.size() << " op entries\n";
         for (int i=0; i<asyncOps.size(); i++) {
-            const std::shared_ptr<Kalmar::KalmarAsyncOp> &op = asyncOps[i];
+            const std::shared_ptr<HSAOp> &op = asyncOps[i];
             s << "index:" << std::setw(4) << i ;
             if (op != nullptr) {
                 s << " op#"<< op->getSeqNum() ;
@@ -1093,7 +1104,7 @@ public:
 
     // Save the command and type
     // TODO - can convert to reference?
-    void pushAsyncOp(std::shared_ptr<KalmarAsyncOp> op) {
+    void pushAsyncOp(std::shared_ptr<HSAOp> op) {
 
         op->setSeqNumFromQueue();
 
@@ -1134,7 +1145,7 @@ public:
     //
     // Also different modes and optimizations can control when dependencies are added.
     // TODO - return reference if possible to avoid shared ptr overhead.
-    std::shared_ptr<KalmarAsyncOp> detectStreamDeps(hcCommandKind newCommandKind, KalmarAsyncOp *copyOp) {
+    std::shared_ptr<HSAOp> detectStreamDeps(hcCommandKind newCommandKind, HSAOp *copyOp) {
 
         assert (newCommandKind != hcCommandInvalid);
 
@@ -1178,8 +1189,8 @@ public:
     }
 
 
-    void waitForStreamDeps (KalmarAsyncOp *newOp) {
-        std::shared_ptr<KalmarAsyncOp> depOp = detectStreamDeps(newOp->getCommandKind(), newOp);
+    void waitForStreamDeps (HSAOp *newOp) {
+        std::shared_ptr<KalmarAsyncOp> depOp = std::static_pointer_cast<KalmarAsyncOp> (detectStreamDeps(newOp->getCommandKind(), newOp));
         if (depOp != nullptr) {
             EnqueueMarkerWithDependency(1, &depOp, HCC_OPT_FLUSH ? hc::no_scope : hc::system_scope);
         }
@@ -1337,7 +1348,7 @@ public:
         // create a shared_ptr instance
         std::shared_ptr<KalmarAsyncOp> sp_dispatch(dispatch);
         // associate the kernel dispatch with this queue
-        pushAsyncOp(sp_dispatch);
+        pushAsyncOp(std::static_pointer_cast<HSAOp> (sp_dispatch));
 
         size_t tmp_local[] = {0, 0, 0};
         if (!local)
@@ -1926,7 +1937,7 @@ private:
 
     size_t queue_size;
     std::mutex queues_mutex; // protects access to the queues vector:
-    std::vector< std::shared_ptr<KalmarQueue> > queues;
+    std::vector< std::weak_ptr<KalmarQueue> > queues;
 
     std::mutex                  rocrQueuesMutex; // protects rocrQueues
     std::vector< RocrQueue *>    rocrQueues;
@@ -2203,9 +2214,13 @@ public:
         // release all queues
         queues_mutex.lock();
 
-        for (auto queue: queues) {
-            queue->dispose();
+        for (auto queue_iterator : queues) {
+            if (!queue_iterator.expired()) {
+                auto queue = queue_iterator.lock();
+                queue->dispose();
+            }
         }
+
         queues.clear();
         queues_mutex.unlock();
 
@@ -2498,7 +2513,9 @@ public:
         std::vector< std::shared_ptr<KalmarQueue> > result;
         queues_mutex.lock();
         for (auto queue : queues) {
-            result.push_back(queue);
+            if (!queue.expired()) {
+                result.push_back(queue.lock());
+            }
         }
         queues_mutex.unlock();
         return result;
@@ -3473,11 +3490,10 @@ std::ostream& operator<<(std::ostream& os, const HSAQueue & hav)
 
 
 // op printer
-inline std::ostream& operator<<(std::ostream& os, const KalmarAsyncOp & op) 
+inline std::ostream& operator<<(std::ostream& os, const HSAOp & op) 
 {
-    auto hsaQ = static_cast<Kalmar::HSAQueue*> (op.getQueue());
-     os << "#" << hsaQ->getDev()->get_seqnum() << "." ;
-     os   << hsaQ->getSeqNum() << "." ;
+     os << "#" << op.opCoord()._deviceId << "." ;
+     os << op.opCoord()._queueId << "." ;
      os << op.getSeqNum(); 
     return os;
 }
@@ -4478,8 +4494,14 @@ HSABarrier::getEndTimestamp() override {
 // ----------------------------------------------------------------------
 // member function implementation of HSAOp
 // ----------------------------------------------------------------------
+HSAOpCoord::HSAOpCoord(Kalmar::HSAQueue *queue) :
+        _deviceId(queue->getDev()->get_seqnum()),
+        _queueId(queue->getSeqNum())
+        {} 
+
 HSAOp::HSAOp(Kalmar::KalmarQueue *queue, hc::hcCommandKind commandKind) : 
-    KalmarAsyncOp(queue, Kalmar::hcCommandInvalid)
+    KalmarAsyncOp(queue, Kalmar::hcCommandInvalid),
+    _opCoord(static_cast<Kalmar::HSAQueue*> (queue))
 {
     apiStartTick = Kalmar::ctx.getSystemTicks();
 };
@@ -4739,7 +4761,7 @@ HSACopy::enqueueAsyncCopyCommand(const Kalmar::HSADevice *copyDevice, const hc::
                 DBOUT( DB_CMD2, "  asyncCopy adding marker for needed dependency or release\n");
 
                 // Set depAsyncOp for use by the async copy below:
-                depAsyncOp = hsaQueue()->EnqueueMarkerWithDependency(0, nullptr, releaseScope);
+                depAsyncOp = std::static_pointer_cast<HSAOp> (hsaQueue()->EnqueueMarkerWithDependency(0, nullptr, releaseScope));
                 depSignal = * (static_cast <hsa_signal_t*> (depAsyncOp->getNativeHandle()));
             };
 
