@@ -3012,6 +3012,9 @@ public:
 
         hsa_status_t status;
         status = hsa_init();
+        if (status != HSA_STATUS_SUCCESS)
+          return;
+
         STATUS_CHECK(status, __LINE__);
 
         // Iterate over the agents to find out gpu device
@@ -3032,7 +3035,6 @@ public:
             Devices.push_back(Dev);
         }
 
-
 #if SIGNAL_POOL_SIZE > 0
         signalPoolMutex.lock();
 
@@ -3048,6 +3050,7 @@ public:
 
         signalPoolMutex.unlock();
 #endif
+        init_success = true;
     }
 
     void releaseSignal(hsa_signal_t signal, int signalIndex) {
@@ -3173,6 +3176,9 @@ public:
     ~HSAContext() {
         hsa_status_t status = HSA_STATUS_SUCCESS;
         DBOUT(DB_INIT, "HSAContext::~HSAContext() in\n");
+
+        if (!init_success)
+          return;
 
         // destroy all KalmarDevices associated with this context
         for (auto dev : Devices)
