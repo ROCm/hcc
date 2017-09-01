@@ -4504,7 +4504,7 @@ HSAOpCoord::HSAOpCoord(Kalmar::HSAQueue *queue) :
         {} 
 
 HSAOp::HSAOp(Kalmar::KalmarQueue *queue, hc::hcCommandKind commandKind) : 
-    KalmarAsyncOp(queue, Kalmar::hcCommandInvalid),
+    KalmarAsyncOp(queue, commandKind),
     _opCoord(static_cast<Kalmar::HSAQueue*> (queue))
 {
     apiStartTick = Kalmar::ctx.getSystemTicks();
