@@ -1146,7 +1146,7 @@ public:
     //
     // Also different modes and optimizations can control when dependencies are added.
     // TODO - return reference if possible to avoid shared ptr overhead.
-    std::shared_ptr<HSAOp> detectStreamDeps(hcCommandKind newCommandKind, HSAOp *copyOp) {
+    std::shared_ptr<KalmarAsyncOp> detectStreamDeps(hcCommandKind newCommandKind, KalmarAsyncOp *copyOp) {
 
         assert (newCommandKind != hcCommandInvalid);
 
@@ -1191,7 +1191,7 @@ public:
 
 
     void waitForStreamDeps (HSAOp *newOp) {
-        std::shared_ptr<KalmarAsyncOp> depOp = std::static_pointer_cast<KalmarAsyncOp> (detectStreamDeps(newOp->getCommandKind(), newOp));
+        std::shared_ptr<KalmarAsyncOp> depOp = detectStreamDeps(newOp->getCommandKind(), newOp);
         if (depOp != nullptr) {
             EnqueueMarkerWithDependency(1, &depOp, HCC_OPT_FLUSH ? hc::no_scope : hc::system_scope);
         }
@@ -3662,6 +3662,7 @@ std::shared_ptr<KalmarAsyncOp> HSAQueue::EnqueueAsyncCopyExt(const void* src, vo
                                                    hcCommandKind copyDir, const hc::AmPointerInfo &srcPtrInfo, const hc::AmPointerInfo &dstPtrInfo,
                                                    const Kalmar::KalmarDevice *copyDevice) override {
 
+
     hsa_status_t status = HSA_STATUS_SUCCESS;
 
     // create shared_ptr instance
@@ -4746,7 +4747,7 @@ HSACopy::enqueueAsyncCopyCommand(const Kalmar::HSADevice *copyDevice, const hc::
         setCommandKind (resolveMemcpyDirection(srcPtrInfo._isInDeviceMem, dstPtrInfo._isInDeviceMem));
 
         auto releaseScope = (hsaQueue()->nextSyncNeedsSysRelease()) ? hc::system_scope : hc::no_scope;
-        depAsyncOp = hsaQueue()->detectStreamDeps(this->getCommandKind(), this);
+        depAsyncOp = std::static_pointer_cast<HSAOp> (hsaQueue()->detectStreamDeps(this->getCommandKind(), this));
 
         // We need to ensure the copy waits for preceding commands the HCC queue to complete, if those commands exist.
         // The copy has to be set so that it depends on the completion_signal of the youngest command in the queue.
