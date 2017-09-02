@@ -44,16 +44,20 @@ parser.add_argument("--gaps",
         default=gaps_default,
         help = "Size of histogram buckets used for gaps breakdown, specified in us.  Default="+str(gaps_default));
 
+
+ROI_HELP = "ROI_POINTs can be specified with line numbers, start times, or search strings." +\
+            "  Additionaly, simple +/- arithmetic can be applied to the anchor point as well." +\
+            " Supported options include @LINENUM, ^START_TIME, %%SEARCH_STR.  Examples: @1234, ^45679.0123, %%some_marker_string+1";
+
+
 parser.add_argument('--info', 
         action="store_true",
         help="Print detailed explanation of how to interpet rpt data.")
 
-ROI_HELP = "ROI_POINTs can be specified with line numbers, start times, or search strings."\
-            "  Additionaly, simple +/- arithmetic can be applied to the anchor point as well."\
-            " Supported options include @LINENUM, ^START_TIME, %%SEARCH_STR.  Examples: @1234, ^45679.0123, %some_marker_string"
+
 parser.add_argument('--roi_start', 
         action="store", 
-        help="Specify start point to use for Region-of-Interest. " + ROI_HELP);
+        help=("Specify start point to use for Region-of-Interest. ROI is inclusive of the start point." + ROI_HELP));
 
 parser.add_argument('--roi_stop', 
         action="store", 
@@ -62,7 +66,7 @@ parser.add_argument('--roi_stop',
 
 parser.add_argument('--topn', 
         type=int, nargs=1,   # TODO - fix this so it is int
-        default=10,
+        default=20,
         help="print top N entries in summary.  Default=10.  -1=all")
 
 parser.add_argument('--gen_json', 
@@ -77,19 +81,26 @@ parser.add_argument('--db_print_raw',
 #        action="store_true",
 #        help='Number of summary items to print
 
-ROT_HELP2= "  @LINENUM : specify a line number from the input file.  Example: @1342.\n"\
-           "  ^TIME    : specify start time from the beginning of the file.  ie ^55.12345\n"
+
+ROI_HELP2= "  @LINENUM : specify a line number from the input file.  Example: @1342.\n"\
+           "  ^TIME    : specify start time from the beginning of the file.  ie ^55.12345\n"\
+           "  %SEARCH_STR : specify string, rpt will use the profile record after the found text. This allows applications to embed markers using simple stderr print statements. ie %MyStartMarker\n"
 
 
 def processArgs():
-    # hack to allow controlling args inside the script:
-    #myargs = "overfeat.fiji.bwd.txt --print_timeline"
-    myargs = "barrier_test.prof"
+    print "help="+ ROI_HELP 
 
     if len(sys.argv) > 1:
         myargs = sys.argv[1:]
     else:
-        myargs = myargs.split()
+        if 0:
+            # Debug mode to pass dummy args inside the script:
+            myargs = "overfeat.fiji.bwd.txt --print_timeline"
+            #myargs = "barrier_test.prof"
+            myargs = myargs.split()
+        else:
+            parser.print_help()
+            exit()
     args = parser.parse_args(myargs)
 
     args.gaps.sort()
@@ -164,23 +175,25 @@ class ProfileLogRecord:
             self.name = fields[1]
             self.time = (float)(fields[2].split(" ")[0])
 
-            fi = 3
             try:
                 self.enqTime   =  (int)(fields[3])
                 self.startTime =  (int)(fields[4])
                 self.stopTime  =  (int)(fields[5])
-                if (enqTime > startTime):
+                fi = 6
+                if (self.enqTime > self.startTime):
                     raise ValueError
             except:
                 # older traces did not have enq time, so set to start time here.
                 self.startTime =  (int)(fields[3])
                 self.stopTime  =  (int)(fields[4])
                 self.enqTime   = self.startTime-10
+                fi = 5
+
 
             try:
-                (self.device, self.queue, self.cmdNum) = [int(f) for f in fields[5].lstrip("#").split(".")]
+                (self.device, self.queue, self.cmdNum) = [int(f) for f in fields[fi].lstrip("#").split(".")]
             except:
-                print "warning: unknown opid tag=", fields[5]
+                print "warning: unknown opid tag=", fields[fi]
                 self.device = 0
 
 
@@ -199,7 +212,7 @@ class ProfileLogRecord:
 
 
             if self.isCopyCmd():
-                copyField = 6
+                copyField = fi+1
                 try:
                     self.sizeBytes = (int)(fields[copyField].split()[0])
                     self.name = self.name + "_" + str(self.sizeBytes) + "_bytes"
@@ -241,6 +254,7 @@ class ProfileLogRecord:
             print "  Start(ms) : Start time of the command, displayed in ms.  Command start from time 0"
             print "  Type  : Type of the command (kernel,barrier, copy)"
             print "  Line# : Line number from the input HCC_PROF_FILE"
+            print "  Name  : Name of the record.  For kernels, this is kernel name.  For copy commands, the name contains the size and direction.  For barrier commands this is contains dependency counts, acquire and release fences."
 
 
         print "%4s %16s %8s %7s %10s %-30s"  % \
