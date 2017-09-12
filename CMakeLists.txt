@@ -341,7 +341,7 @@ install(PROGRAMS $<TARGET_FILE:LLVMAMDGPUDesc>
                  $<TARGET_FILE:LLVMSupport>
                  $<TARGET_FILE:LLVMCpuRename>
                  $<TARGET_FILE:LLVMDirectFuncCall>
-                 $<TARGET_FILE:LLVMEraseNonkernel>
+                 $<TARGET_FILE:LLVMSelectAcceleratorCode>
                  $<TARGET_FILE:LLVMHello>
                  $<TARGET_FILE:LLVMTileUniform>
                  $<TARGET_FILE:LLVMWrapperGen>
