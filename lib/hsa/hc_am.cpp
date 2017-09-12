@@ -519,14 +519,13 @@ am_status_t am_map_to_peers(void* ptr, size_t num_peer, const hc::accelerator* p
         {
             // here, accelerator is the device, but used to query system memory pool
             ptrAcc = info._acc;
-            pool = static_cast<hsa_amd_memory_pool_t*>(ptrAcc.get_hsa_am_system_region()); 
+            pool = static_cast<hsa_amd_memory_pool_t*>(ptrAcc.get_hsa_am_system_region());
         }
         else
             return AM_ERROR_MISC;
     }
 
-    const size_t max_agent = hc::accelerator::get_all().size();
-    hsa_agent_t agents[max_agent];
+    std::vector<hsa_agent_t> agents{hc::accelerator::get_all().size()};
   
     int peer_count = 0;
 
@@ -572,7 +571,7 @@ am_status_t am_map_to_peers(void* ptr, size_t num_peer, const hc::accelerator* p
     // allow access to the agents
     if(peer_count)
     {
-        hsa_status_t status = hsa_amd_agents_allow_access(peer_count, agents, NULL, ptr);
+        hsa_status_t status = hsa_amd_agents_allow_access(peer_count, agents.data(), NULL, ptr);
         return status == HSA_STATUS_SUCCESS ? AM_SUCCESS : AM_ERROR_MISC;
     }
    
