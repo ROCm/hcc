@@ -105,6 +105,7 @@ int HCC_OPT_FLUSH=1;
 
 
 unsigned HCC_DB = 0;
+unsigned HCC_DB_SYMBOL_FORMAT=0x10;
 
 int HCC_MAX_QUEUES = 20;
 
@@ -137,7 +138,7 @@ char * HCC_PROFILE_FILE=nullptr;
             sstream << "\t" << op->apiStartTick << ";\t" << start << ";\t" << end << ";";\
     }\
     if (HCC_PROFILE_VERBOSE & (HCC_PROFILE_VERBOSE_OPSEQNUM)) {\
-            sstream << "\t#" << op->hsaQueue()->getHSADev()->get_seqnum() << "." <<  op->hsaQueue()->getSeqNum() << "." << op->getSeqNum() <<";";\
+            sstream << "\t" << *op <<";";\
     }\
    sstream <<  msg << "\n";\
    Kalmar::ctx.getHccProfileStream() << sstream.str();\
@@ -377,7 +378,7 @@ public:
 class HSAKernel {
 private:
     std::string kernelName;
-    std::string shortKernelName;
+    std::string shortKernelName; // short handle, format selectable with HCC_DB_KERNEL_NAME
     HSAExecutable* executable;
     uint64_t kernelCodeHandle;
     hsa_executable_symbol_t hsaExecutableSymbol;
@@ -427,6 +428,11 @@ public:
 
             workitem_vgpr_count = akc->workitem_vgpr_count;
         }
+
+        DBOUTL(DB_CODE, "Create kernel " << shortKernelName << " vpr_cnt=" << this->workitem_vgpr_count 
+                << " static_group_segment_size=" << this->static_group_segment_size 
+                << " private_segment_size=" << this->private_segment_size );
+
     }
 
     //TODO - fix this so all Kernels set the _kernelName to something sensible.
@@ -1109,7 +1115,7 @@ public:
 
         op->setSeqNumFromQueue();
 
-        DBOUT(DB_CMD, "  pushing op=" << op << "  #" << op->getSeqNum() << " signal="<< std::hex  << ((hsa_signal_t*)op->getNativeHandle())->handle << std::dec
+        DBOUT(DB_CMD, "  pushing " << op << " completion_signal="<< std::hex  << ((hsa_signal_t*)op->getNativeHandle())->handle << std::dec
                     << "  commandKind=" << getHcCommandKindString(op->getCommandKind())
                     << " " 
                     << (op->getCommandKind() == hcCommandKernel ? ((static_cast<HSADispatch*> (op.get()))->getKernelName()) : "")  // change to getLongKernelName() for mangled name
@@ -1118,8 +1124,8 @@ public:
 
 
         if (!drainingQueue_ && (asyncOps.size() >= MAX_INFLIGHT_COMMANDS_PER_QUEUE-1)) {
-            DBOUT(DB_WAIT, "*** Hit max inflight ops asyncOps.size=" << asyncOps.size() << ". op#" << op->getSeqNum() << " force sync\n");
-            DBOUT(DB_RESOURCE, "*** Hit max inflight ops asyncOps.size=" << asyncOps.size() << ". op#" << op->getSeqNum() << " force sync\n");
+            DBOUT(DB_WAIT, "*** Hit max inflight ops asyncOps.size=" << asyncOps.size() << ". " << op << " force sync\n");
+            DBOUT(DB_RESOURCE, "*** Hit max inflight ops asyncOps.size=" << asyncOps.size() << ". " << op << " force sync\n");
 
             drainingQueue_ = true;
 
@@ -2398,56 +2404,79 @@ public:
 
         if (!kernel) {
             int demangleStatus = 0;
+            int kernelNameFormat = HCC_DB_SYMBOL_FORMAT & 0xf;
+            if (kernelNameFormat == 1) {
+                shortName = fun; // mangled name
+            } else {
 #ifndef USE_LIBCXX
-            demangled = abi::__cxa_demangle(fun, nullptr, nullptr, &demangleStatus);
+                demangled = abi::__cxa_demangle(fun, nullptr, nullptr, &demangleStatus);
 #endif
-            std::string shortName = demangleStatus ? fun : std::string(demangled);
-            try {
-                if (demangleStatus == 0) {
-                    // strip off hip launch template wrapper:
-                    std::string hipImplString ("void hip_impl::grid_launch_hip_impl_<");
-                    int begin = shortName.find(hipImplString);
-                    if ((begin != std::string::npos)) {
-                        begin += hipImplString.length() ;
-                    } else {
-                        begin = 0;
+                shortName = demangleStatus ? fun : std::string(demangled);
+                try {
+                    if (demangleStatus == 0) {
+
+                        if (kernelNameFormat == 2) {
+                            shortName = demangled;
+                        } else {
+                            // kernelNameFormat == 0 or unspecified:
+
+                            // Example: HIP_kernel_functor_name_begin_unnamed_HIP_kernel_functor_name_end_5::__cxxamp_trampoline(unsigned int, unsigned int, unsigned int, unsigned int, unsigned int, unsigned int, float*, long long)"
+
+                            std::string hip_begin_str  ("::HIP_kernel_functor_name_begin_");
+                            std::string hip_end_str    ("_HIP_kernel_functor_name_end");
+                            int hip_begin = shortName.find(hip_begin_str);
+                            int hip_end   = shortName.find(hip_end_str);
+
+                            if ((hip_begin != -1) && (hip_end != -1) && (hip_end > hip_begin)) {
+                                // HIP kernel with markers
+                                int start_pos = hip_begin + hip_begin_str.length(); 
+                                std::string hipname = shortName.substr(start_pos, hip_end - start_pos) ;
+                                DBOUTL(DB_CODE, "hipname=" << hipname);
+                                if (hipname == "unnamed") {
+                                    shortName = shortName.substr(0, hip_begin);
+                                } else {
+                                    shortName = hipname;
+                                }
+
+                            } else {
+                                // PFE not from HIP:
+
+                                // strip off hip launch template wrapper:
+                                std::string hipImplString ("void hip_impl::grid_launch_hip_impl_<");
+                                int begin = shortName.find(hipImplString);
+                                if ((begin != std::string::npos)) {
+                                    begin += hipImplString.length() ;
+                                } else {
+                                    begin = 0;
+                                }
+
+                                shortName = shortName.substr(begin);
+
+                                // Strip off any leading return type:
+                                begin = shortName.find(" ", 0);
+                                if (begin == std::string::npos) {
+                                    begin = 0;
+                                } else {
+                                    begin +=1; // skip the space
+                                }
+                                shortName = shortName.substr(begin);
+
+                                DBOUTL(DB_CODE, "shortKernel processing demangled non-hip.  beginChar=" << begin << " shortName=" << shortName);
+                            }
+                            
+                        }
+
+                        if (HCC_DB_SYMBOL_FORMAT & 0x10) {
+                            // trim everything after first (
+                            int begin = shortName.find("(");
+                            shortName = shortName.substr(0, begin);
+                        }
                     }
-
-                    // trim everything after first (
-                    int end = shortName.find("(");
-                    // Maybe no return type
-                    if (begin > end) {
-                       begin = 0;
-                    }
-
-                    if (end != std::string::npos) {
-                        shortName = shortName.substr(begin, end-begin);
-                    } else {
-                        // didn't find (, just trim the beginning:
-                        shortName = shortName.substr(begin);
-                    }
-
-
-
-                    // Strip off any leading return type:
-                    begin = shortName.find(" ", 0);
-                    if (begin == std::string::npos) {
-                        begin = 0;
-                    } else {
-                        begin +=1; // skip the space
-                    }
-                    shortName = shortName.substr(begin);
-
-
-                    
-                    DBOUTL(DB_CODE, "shortKernel processing demangled.  beginChar=" << begin << " endChar=" << end );
-
-
-                }
-            } catch (std::out_of_range& exception) {
-                // Do something sensible if string pattern is not what we expect
-                shortName = fun;
-            };
+                } catch (std::out_of_range& exception) {
+                    // Do something sensible if string pattern is not what we expect
+                    shortName = fun;
+                };
+            }
             DBOUT (DB_CODE, "CreateKernel_short=      " << shortName << "\n");
             DBOUT (DB_CODE, "CreateKernel_demangled=  " << demangled << "\n");
             DBOUT (DB_CODE, "CreateKernel_raw=       " << fun << "\n");
@@ -3012,6 +3041,9 @@ public:
 
         hsa_status_t status;
         status = hsa_init();
+        if (status != HSA_STATUS_SUCCESS)
+          return;
+
         STATUS_CHECK(status, __LINE__);
 
         // Iterate over the agents to find out gpu device
@@ -3032,7 +3064,6 @@ public:
             Devices.push_back(Dev);
         }
 
-
 #if SIGNAL_POOL_SIZE > 0
         signalPoolMutex.lock();
 
@@ -3048,6 +3079,7 @@ public:
 
         signalPoolMutex.unlock();
 #endif
+        init_success = true;
     }
 
     void releaseSignal(hsa_signal_t signal, int signalIndex) {
@@ -3174,6 +3206,9 @@ public:
         hsa_status_t status = HSA_STATUS_SUCCESS;
         DBOUT(DB_INIT, "HSAContext::~HSAContext() in\n");
 
+        if (!init_success)
+          return;
+
         // destroy all KalmarDevices associated with this context
         for (auto dev : Devices)
             delete dev;
@@ -3248,6 +3283,7 @@ void HSAContext::ReadHccEnv()
 
 
     GET_ENV_INT(HCC_DB, "Enable HCC trace debug");
+    GET_ENV_INT(HCC_DB_SYMBOL_FORMAT, "Select format of symbol (kernel) name used in debug.  0=short,1=mangled,1=demangled.  Bit 0x10 removes arguments.");
 
     GET_ENV_INT(HCC_OPT_FLUSH, "Perform system-scope acquire/release only at CPU sync boundaries (rather than after each kernel)");
     GET_ENV_INT(HCC_MAX_QUEUES, "Set max number of HSA queues this process will use.  accelerator_views will share the allotted queues and steal from each other as necessary");
@@ -3988,7 +4024,7 @@ HSADispatch::dispatchKernel(hsa_queue_t* lockedHsaQueue, const void *hostKernarg
     q_aql->header = header;
 
     hsa_queue_store_write_index_relaxed(lockedHsaQueue, index + 1);
-    DBOUTL(DB_AQL, " dispatch_aql op#" << this << "(hwq=" << lockedHsaQueue << ") kernargs=" << hostKernargSize << " " << *q_aql );
+    DBOUTL(DB_AQL, " dispatch_aql " << *this << "(hwq=" << lockedHsaQueue << ") kernargs=" << hostKernargSize << " " << *q_aql );
     DBOUTL(DB_AQL2, rawAql(*q_aql));
 
     if (DBFLAG(DB_KERNARG)) { 
@@ -4017,7 +4053,7 @@ HSADispatch::waitComplete() {
 
 
     if (signal.handle) {
-        DBOUT(DB_MISC, "wait for kernel dispatch op#" << getSeqNum() << " completion with wait flag: " << waitMode << "  signal="<< std::hex  << signal.handle << std::dec << "\n");
+        DBOUT(DB_MISC, "wait for kernel dispatch op#" << *this  << " completion with wait flag: " << waitMode << "  signal="<< std::hex  << signal.handle << std::dec << "\n");
 
         // wait for completion
         if (hsa_signal_wait_acquire(signal, HSA_SIGNAL_CONDITION_LT, 1, uint64_t(-1), waitMode)!=0) {
@@ -4278,7 +4314,7 @@ HSABarrier::waitComplete() {
         return HSA_STATUS_ERROR_INVALID_ARGUMENT;
     }
 
-    DBOUT(DB_WAIT,  "  wait for barrier op#" << getSeqNum() << " completion with wait flag: " << waitMode << "  signal="<< std::hex  << signal.handle << std::dec <<"...\n");
+    DBOUT(DB_WAIT,  "  wait for barrier " << *this << " completion with wait flag: " << waitMode << "  signal="<< std::hex  << signal.handle << std::dec <<"...\n");
 
     // Wait on completion signal until the barrier is finished
     hsa_signal_wait_acquire(signal, HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX, waitMode);
@@ -4383,7 +4419,7 @@ HSABarrier::enqueueAsync(hc::memory_scope releaseScope) {
         // Set header last:
         barrier->header = header;
 
-        DBOUTL(DB_AQL, " barrier_aql op#" << getSeqNum() << " into " << *hsaQueue() << "(" << rocrQueue << ") " << *barrier );
+        DBOUTL(DB_AQL, " barrier_aql " << *this << " "<< *barrier );
         DBOUTL(DB_AQL2, rawAql(*barrier));
 
 
@@ -4504,7 +4540,7 @@ HSAOpCoord::HSAOpCoord(Kalmar::HSAQueue *queue) :
         {} 
 
 HSAOp::HSAOp(Kalmar::KalmarQueue *queue, hc::hcCommandKind commandKind) : 
-    KalmarAsyncOp(queue, Kalmar::hcCommandInvalid),
+    KalmarAsyncOp(queue, commandKind),
     _opCoord(static_cast<Kalmar::HSAQueue*> (queue))
 {
     apiStartTick = Kalmar::ctx.getSystemTicks();
