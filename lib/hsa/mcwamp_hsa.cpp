@@ -2518,7 +2518,8 @@ public:
                         if (hsa_executable_symbol_get_info(
                                 *k, HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_OBJECT, &h) ==
                             HSA_STATUS_SUCCESS) {
-                            kernel = new HSAKernel(str, shortName, *k, h);
+
+                            kernel = new HSAKernel(str, shortName, nullptr, *k, h);
                         }
                     }
                 }
