@@ -1,3 +1,5 @@
+// XFAIL: *
+// JIRA SWDEV-129742
 
 // RUN: %hc %s -o %t.out && %t.out
 

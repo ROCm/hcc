@@ -4,6 +4,8 @@
 #include <iostream>
 #include <limits>
 #include <amp_math.h>
+#include <cmath>
+#include <cassert>
 
 using namespace concurrency;
 

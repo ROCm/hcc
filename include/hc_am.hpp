@@ -19,7 +19,8 @@ namespace hc {
 class AmPointerInfo {
 public:
     void *      _hostPointer;   ///< Host pointer.  If host access is not allowed, NULL.
-    void *      _devicePointer; ///< Device pointer.  
+    void *      _devicePointer; ///< Device pointer.
+    void *      _unalignedDevicePointer; ///< Unaligned device pointer
     size_t      _sizeBytes;     ///< Size of allocation.
     hc::accelerator _acc;       ///< Accelerator where allocation is physically located.
     bool        _isInDeviceMem; ///< Memory is physically resident on a device (if false, memory is located on host)
@@ -31,9 +32,10 @@ public:
     void *      _appPtr;             ///< App-specific pointer to additional information.
 
 
-    AmPointerInfo(void *hostPointer, void *devicePointer, size_t sizeBytes, hc::accelerator &acc,  bool isInDeviceMem=false, bool isAmManaged=false) :
+    AmPointerInfo(void *hostPointer, void *devicePointer, void* unalignedDevicePointer, size_t sizeBytes, hc::accelerator &acc,  bool isInDeviceMem=false, bool isAmManaged=false) :
         _hostPointer(hostPointer),
         _devicePointer(devicePointer),
+        _unalignedDevicePointer(unalignedDevicePointer),
         _sizeBytes(sizeBytes),
         _acc(acc),
         _isInDeviceMem(isInDeviceMem),
@@ -54,6 +56,26 @@ struct hsa_agent_s;
 
 namespace hc {
 
+
+/**
+ * Allocate a block of @p size bytes of memory on the specified @p acc.
+ *
+ * The contents of the newly allocated block of memory are not initialized.
+ *
+ * If @p size == 0, 0 is returned.
+ *
+ * Flags:
+ *  amHostPinned : Allocated pinned host memory and map it into the address space of the specified accelerator.
+ *
+ *
+ * @return : On success, pointer to the newly allocated memory is returned.
+ * The pointer is typecast to the desired return type.
+ *
+ * If an error occurred trying to allocate the requested memory, 0 is returned.
+ *
+ * @see am_free, am_copy
+ */
+auto_voidp am_aligned_alloc(size_t size, hc::accelerator &acc, unsigned flags, size_t alignment = 0);
 
 /**
  * Allocate a block of @p size bytes of memory on the specified @p acc.

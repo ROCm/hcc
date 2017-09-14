@@ -53,7 +53,7 @@ endmacro(amp_target name )
 macro(add_mcwamp_library name )
   add_library( ${name} ${ARGN} )
   amp_target(${name})
-  target_link_libraries(${name} unwind)
+  target_link_libraries(${name} PRIVATE unwind)
   # LLVM and Clang shall be compiled beforehand
   add_dependencies(${name} llvm-link opt clang rocdl)
 endmacro(add_mcwamp_library name )
@@ -78,11 +78,11 @@ macro(add_mcwamp_library_hsa name )
   # LLVM and Clang shall be compiled beforehand
   add_dependencies(${name} llvm-link opt clang hc_am rocdl)
   # add HSA libraries
-  target_link_libraries(${name} hsa-runtime64)
-  target_link_libraries(${name} pthread)
-  target_link_libraries(${name} unwind)
+  target_link_libraries(${name} PUBLIC hsa-runtime64)
+  target_link_libraries(${name} PRIVATE pthread)
+  target_link_libraries(${name} PRIVATE unwind)
   add_libcxx_option_if_needed(${name})
-  target_link_libraries(${name} hc_am)
+  target_link_libraries(${name} PUBLIC hc_am)
 endmacro(add_mcwamp_library_hsa name )
 
 macro(add_mcwamp_library_hc_am name )
@@ -91,8 +91,8 @@ macro(add_mcwamp_library_hc_am name )
   # LLVM and Clang shall be compiled beforehand
   add_dependencies(${name} llvm-link opt clang rocdl)
   # add HSA libraries
-  target_link_libraries(${name} hsa-runtime64)
-  target_link_libraries(${name} pthread)
+  target_link_libraries(${name} PUBLIC hsa-runtime64)
+  target_link_libraries(${name} PRIVATE pthread)
   add_libcxx_option_if_needed(${name})
 endmacro(add_mcwamp_library_hc_am name )
 

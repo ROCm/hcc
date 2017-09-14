@@ -10,13 +10,14 @@ add_executable(cmake-test cmake-test.cpp)
 # without a GPU
 get_target_property(cmake_test_link_flags cmake-test LINK_FLAGS)
 if (cmake_test_link_flags)
-  set(new_cmake_test_link_flags "${cmake_test_link_flags} --amdgpu-target=gfx803 --amdgpu-target=gfx901")
+  set(new_cmake_test_link_flags "${cmake_test_link_flags} --amdgpu-target=gfx803 --amdgpu-target=gfx900")
 else()
-  set(new_cmake_test_link_flags "--amdgpu-target=gfx803 --amdgpu-target=gfx901")
+  set(new_cmake_test_link_flags "--amdgpu-target=gfx803 --amdgpu-target=gfx900")
 endif()
 set_target_properties(cmake-test PROPERTIES LINK_FLAGS ${new_cmake_test_link_flags})
 
 if(TARGET hccrt)
+    add_dependencies(cmake-test clang_links rocdl_links)
     target_link_libraries(cmake-test hccrt hc_am)
 else()
     # Append default hcc installation
