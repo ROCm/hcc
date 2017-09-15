@@ -99,7 +99,7 @@ void cxxflags(void) {
     // using the libc++ for C++ runtime
 #ifdef USE_LIBCXX
     // Add include path to the libcxx headers
-    std::cout << " -I" XSTR(LIBCXX_HEADER) ;
+    std::cout << " -isystem " XSTR(LIBCXX_HEADER) ;
     std::cout << " -stdlib=libc++";
 #endif
 
@@ -108,13 +108,13 @@ void cxxflags(void) {
 
     // clamp
     if (build_mode) {
-        std::cout << " -I" CMAKE_BUILD_INC_DIR;
+        std::cout << " -isystem " CMAKE_BUILD_INC_DIR;
     } else if (install_mode) {
         if (const char *p = getenv("HCC_HOME")) {
-            std::cout << " -I" << p << "/include";
+            std::cout << " -isystem " << p << "/include";
         } else {
-            std::cout << " -I" << get_path(path_hcc_include);
-            std::cout << " -I" << CMAKE_ROCM_ROOT << "/include";
+            std::cout << " -isystem " << get_path(path_hcc_include);
+            std::cout << " -isystem " << CMAKE_ROCM_ROOT << "/include";
         }
     } else {
         assert(0 && "Unreacheable!");
@@ -122,7 +122,7 @@ void cxxflags(void) {
 
 #ifdef CODEXL_ACTIVITY_LOGGER_ENABLED
     // CodeXL Activity Logger
-    std::cout << " -I" XSTR(CODEXL_ACTIVITY_LOGGER_HEADER);
+    std::cout << " -isystem " XSTR(CODEXL_ACTIVITY_LOGGER_HEADER);
 #endif
 }
 
