@@ -18,21 +18,23 @@
 #include <memory>
 #include <utility>
 
+static
 inline
-bool operator==(const hsa_agent_t& x, const hsa_agent_t& y)
+bool operator==(hsa_agent_t x, hsa_agent_t y)
 {
     return x.handle == y.handle;
 }
 
+static
 inline
-bool operator==(const hsa_isa_t& x, const hsa_isa_t& y)
+bool operator==(hsa_isa_t x, hsa_isa_t y)
 {
     return x.handle == y.handle;
 }
 
+static
 inline
-bool operator==(
-    const hsa_executable_symbol_t& x, const hsa_executable_symbol_t& y)
+bool operator==(hsa_executable_symbol_t x, hsa_executable_symbol_t y)
 {
     return x.handle == y.handle;
 }
