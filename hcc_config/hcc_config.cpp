@@ -198,7 +198,7 @@ void gtest(void) {
 
 // Compiling as a shared library
 void shared(void) {
-    std::cout << " -shared -fPIC -Wl,-Bsymbolic ";
+    std::cout << " -shared -fPIC ";
 }
 
 // print command line usage
