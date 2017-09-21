@@ -3,7 +3,6 @@ option(HCC_RUNTIME_DEBUG "Enable debug build for HCC Runtime" OFF)
 
 if (HCC_RUNTIME_DEBUG)
   add_compile_options(-g -O0)
-  add_definitions(-DKALMAR_DEBUG=1)
 endif (HCC_RUNTIME_DEBUG)
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
@@ -45,7 +44,7 @@ install(PROGRAMS ${PROJECT_BINARY_DIR}/compiler/bin/clamp-device
     ${PROJECT_BINARY_DIR}/compiler/bin/clamp-link
     ${PROJECT_BINARY_DIR}/compiler/bin/hc-kernel-assemble
     ${PROJECT_BINARY_DIR}/compiler/bin/hc-host-assemble
-    DESTINATION compiler/bin)
+    DESTINATION bin)
 
 ####################
 # C++AMP tools (HSA-specific)

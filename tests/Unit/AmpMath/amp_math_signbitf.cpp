@@ -4,39 +4,49 @@
 #include <iostream>
 #include <limits>
 #include <amp_math.h>
+#include <cmath>
+#include <cassert>
 
 using namespace concurrency;
 
-int main(void) {
+template<typename _Tp>
+bool test() {
   const int vecSize = 3;
 
   // Alloc & init input data
   extent<1> e(vecSize);
-  array_view<float, 1> in(vecSize);
+  array_view<_Tp, 1> in(vecSize);
   array_view<int, 1> out(vecSize);
 
-  in[0] = 1.0f;
-  in[1] = 0.0f;
-  in[2] = -1.0f;
-
+  in[0] = 1.0;
+  in[1] = 0.0;
+  in[2] = -1.0;
+  
   parallel_for_each(
     e,
     [=](index<1> idx) restrict(amp) {
-    out[idx] = fast_math::signbitf(in[idx]);
+    out[idx] = fast_math::signbit(in[idx]);
   });
 
   //check accelerator results
   for (int i=0; i<vecSize; ++i) {
     if (std::signbit(in[i]) != (out[i] ? true : false))
-      return 1;
+      return false;
   }
 
   //check on cpu
   for (int i=0; i<vecSize; ++i) {
     if (std::signbit(in[i]) != (fast_math::signbit(in[i]) ? true : false))
-      return 1;
+      return false;
   }
 
+  return true;
+}
 
-  return 0;
+int main(void) {
+  bool ret = true;
+
+  ret &= test<float>();
+
+  return !(ret == true);
 }

@@ -580,6 +580,9 @@ public:
      *          returned and the caller must use other synchronization techniqueues 
      *          such as calling accelerator_view::wait() or waiting on a younger command
      *          in the same queue.
+     * @p kernel_name : Optionally specify the name of the kernel for debug and profiling.  
+     * May be null.  If specified, the caller is responsible for ensuring the memory for the name remains allocated until the kernel completes.
+     *        
      *
      * The dispatch_hsa_kernel call will perform the following operations:
      *    - Efficiently allocate a kernarg region and copy the arguments.
@@ -589,9 +592,9 @@ public:
      */
     void dispatch_hsa_kernel(const hsa_kernel_dispatch_packet_t *aql, 
                            const void * args, size_t argsize,
-                           hc::completion_future *cf=NULL) 
+                           hc::completion_future *cf=nullptr, const char *kernel_name = nullptr) 
     {
-        pQueue->dispatch_hsa_kernel(aql, args, argsize, cf);
+        pQueue->dispatch_hsa_kernel(aql, args, argsize, cf, kernel_name);
     }
 
     /**

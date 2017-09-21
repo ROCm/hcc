@@ -32,7 +32,7 @@ void errorCheck(hsa_status_t hsa_error_code, int line_num, std::string str) {
   }
 }
 
-#define ErrorCheck(x) errorCheck(x, __LINE__, __FILE__)
+#define ErrorCheck(x) errorCheck(x, __LINE__, __FILENAME__)
 
 static hsa_status_t findGlobalPool(hsa_amd_memory_pool_t pool, void* data) 
 {

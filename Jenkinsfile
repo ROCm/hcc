@@ -11,7 +11,7 @@ properties([buildDiscarder(logRotator(
     [$class: 'CopyArtifactPermissionProperty', projectNames: '*']
   ])
 
-node ('rocmtest')
+node( 'rocmtest' )
 {
   // Convenience variables for common paths used in building
   def workspace_dir_abs = pwd()
@@ -61,13 +61,14 @@ node ('rocmtest')
       // This is necessary because cmake seemingly randomly generates build makefile into the docker
       // workspace instead of the current set directory.  Not sure why, but it seems like a bug
       sh  """
+          rm -rf ${build_dir_release_rel}
           mkdir -p ${build_dir_release_rel}
           cd ${build_dir_release_rel}
           cmake -B${build_dir_release_abs} \
             -DCMAKE_INSTALL_PREFIX=${hcc_install_prefix} \
             -DCPACK_SET_DESTDIR=OFF \
             -DCMAKE_BUILD_TYPE=${build_config} \
-            -DHSA_AMDGPU_GPU_TARGET="gfx701;gfx803" \
+            -DHSA_AMDGPU_GPU_TARGET="gfx900;gfx803" \
             ../..
           make -j\$(nproc)
         """
@@ -145,4 +146,38 @@ node ('rocmtest')
     sh "docker images | grep \"${artifactory_org}/${image_name}\" | awk '{print \$1 \":\" \$2}' | xargs docker rmi"
   }
 
+  ////////////////////////////////////////////////////////////////////////
+  // hcc integration testing
+  // This stage sets up integration testing of HiP with this particular build
+  // Integration testing is built upon docker uses clean build & test environments every time
+
+  // NOTES: There are at least two methods to do integration testing, both have pros and cons
+  // 1.  Inside the HCC container, clone, build & test HiP
+  //     a.  This is simplest method to get integration testing running
+  //     b.  This solution doesn't scale well.  When HCC wants to start building other projects in addition to HiP
+  //        such as libraries, this solution implies those projects CI code will be duplicated in HCC jenkinsfile
+  //     c.  This solution breaks transitivity A->B->C chain.  The build instructions for B & C are duplicated in A,
+  //        so a change in B will not automatically rebuild C
+  // 2.  When this build archives artifacts, kick off a downstream HiP build using Jenkins API
+  //    a.  This is slightly more complicated because you have to transfer build artifacts, possibly
+  //      different between machines (mechanics handled by jenkins build step)
+  //    b.  The build file in HiP needs extra logic to handle hcc integration testing logic
+  //    c.  Assuming transitive dependencies are set up between projects A->B->C, submitting a change to A will rebuild
+  //        B, which then rebuilds C.  Submitting a change to B rebuilds C.  However, each project requires special
+  //        integration testing paths/logic
+
+  // I've implemented solution #2 above
+  stage('hip integration')
+  {
+    // If this a clang_tot_upgrade build, kick off downstream hip build so that the two projects are in sync
+    if( env.BRANCH_NAME.toLowerCase( ).startsWith( 'clang_tot_upgrade' ) )
+    {
+      build( job: 'ROCm-Developer-Tools/HIP/master', wait: false )
+    }
+    // If this is a PR build, test compiler against downstream hip project
+    else if( env.BRANCH_NAME.toLowerCase( ).startsWith( 'pr-' ) )
+    {
+      build( job: 'ROCm-Developer-Tools/HIP/master', parameters: [booleanParam( name: 'hcc_integration_test', value: true )] )
+    }
+  }
 }

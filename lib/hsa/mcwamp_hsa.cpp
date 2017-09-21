@@ -63,8 +63,7 @@
 /////////////////////////////////////////////////
 
 // size of default kernarg buffer in the kernarg pool in HSAContext
-// default set as 128
-#define KERNARG_BUFFER_SIZE (128)
+#define KERNARG_BUFFER_SIZE (512)
 
 // number of pre-allocated kernarg buffers in HSAContext
 // Should be greater than SIGNAL_POOL_SIZE (some kernels don't allocate signals but nearly all need kernargs)
@@ -78,7 +77,7 @@
 // If limit is exceeded, HCC will force a queue wait to reclaim
 // resources (signals, kernarg)
 // MUST be a power of 2.
-#define MAX_INFLIGHT_COMMANDS_PER_QUEUE  8192
+#define MAX_INFLIGHT_COMMANDS_PER_QUEUE  (8192)
 
 // threshold to clean up finished kernel in HSAQueue.asyncOps
 #define ASYNCOPS_VECTOR_GC_SIZE (8192)
@@ -97,16 +96,54 @@ long int HCC_H2D_STAGING_THRESHOLD    = 64;
 long int HCC_H2D_PININPLACE_THRESHOLD = 4096;
 long int HCC_D2H_PININPLACE_THRESHOLD = 1024;
 
+// Chicken bits:
 int HCC_SERIALIZE_KERNEL = 0;
 int HCC_SERIALIZE_COPY = 0;
+int HCC_FORCE_COMPLETION_FUTURE = 0;
 
 // turn OFF HCC_OPT_FLUSH by default
 int HCC_OPT_FLUSH=0;
 
 
 unsigned HCC_DB = 0;
+unsigned HCC_DB_SYMBOL_FORMAT=0x10;
 
 int HCC_MAX_QUEUES = 20;
+
+
+#define HCC_PROFILE_SUMMARY (1<<0)
+#define HCC_PROFILE_TRACE   (1<<1)
+int HCC_PROFILE=0;
+
+
+#define HCC_PROFILE_VERBOSE_BASIC                   (1 << 0)   // 0x1
+#define HCC_PROFILE_VERBOSE_TIMESTAMP               (1 << 1)   // 0x2
+#define HCC_PROFILE_VERBOSE_OPSEQNUM                (1 << 2)   // 0x4
+#define HCC_PROFILE_VERBOSE_TID                     (1 << 3)   // 0x8
+#define HCC_PROFILE_VERBOSE_BARRIER                 (1 << 4)   // 0x10
+int HCC_PROFILE_VERBOSE=0x1F;
+
+
+
+char * HCC_PROFILE_FILE=nullptr;
+
+// Profiler:
+// Use str::stream so output is atomic wrt other threads:
+#define LOG_PROFILE(op, start, end, type, tag, msg) \
+{\
+    std::stringstream sstream;\
+    sstream << "profile: " << std::setw(7) << type << ";\t" \
+                         << std::setw(40) << tag\
+                         << ";\t" << std::fixed << std::setw(6) << std::setprecision(1) << (end-start)/1000.0 << " us;";\
+    if (HCC_PROFILE_VERBOSE & (HCC_PROFILE_VERBOSE_TIMESTAMP)) {\
+            sstream << "\t" << op->apiStartTick << ";\t" << start << ";\t" << end << ";";\
+    }\
+    if (HCC_PROFILE_VERBOSE & (HCC_PROFILE_VERBOSE_OPSEQNUM)) {\
+            sstream << "\t" << *op <<";";\
+    }\
+   sstream <<  msg << "\n";\
+   Kalmar::ctx.getHccProfileStream() << sstream.str();\
+}
 
 
 // Track a short thread-id, for debugging:
@@ -151,6 +188,8 @@ static const char* getHcCommandKindString(Kalmar::hcCommandKind k) {
     return case_string;
 };
 
+
+
 static const char* getHSAErrorString(hsa_status_t s) {
 
     const char* case_string;
@@ -187,18 +226,18 @@ static const char* getHSAErrorString(hsa_status_t s) {
 #define STATUS_CHECK(s,line) if (s != HSA_STATUS_SUCCESS && s != HSA_STATUS_INFO_BREAK) {\
     hc::print_backtrace(); \
     const char* error_string = getHSAErrorString(s);\
-		printf("### HCC STATUS_CHECK Error: %s (0x%x) at file:%s line:%d\n", error_string, s, __FILE__, line);\
+        printf("### HCC STATUS_CHECK Error: %s (0x%x) at file:%s line:%d\n", error_string, s, __FILENAME__, line);\
                 assert(HSA_STATUS_SUCCESS == hsa_shut_down());\
-		abort();\
-	}
+        abort();\
+    }
 
 #define STATUS_CHECK_SYMBOL(s,symbol,line) if (s != HSA_STATUS_SUCCESS && s != HSA_STATUS_INFO_BREAK) {\
     hc::print_backtrace(); \
     const char* error_string = getHSAErrorString(s);\
-		printf("### HCC STATUS_CHECK_SYMBOL Error: %s (0x%x), symbol name:%s at file:%s line:%d\n", error_string, s, (symbol)!=nullptr?symbol:(const char*)"is a nullptr", __FILE__, line);\
+        printf("### HCC STATUS_CHECK_SYMBOL Error: %s (0x%x), symbol name:%s at file:%s line:%d\n", error_string, s, (symbol)!=nullptr?symbol:(const char*)"is a nullptr", __FILENAME__, line);\
                 assert(HSA_STATUS_SUCCESS == hsa_shut_down());\
-		abort();\
-	}
+        abort();\
+    }
 
 
 // debug function to dump information on an HSA agent
@@ -260,7 +299,7 @@ const char* getHCCRuntimeStatusMessage(const HCCRuntimeStatus status) {
 
 inline static void checkHCCRuntimeStatus(const HCCRuntimeStatus status, const unsigned int line, hsa_queue_t* q=nullptr) {
   if (status != HCCRuntimeStatus::HCCRT_STATUS_SUCCESS) {
-    fprintf(stderr, "### HCC runtime error: %s at %s line:%d\n", getHCCRuntimeStatusMessage(status), __FILE__, line);
+    fprintf(stderr, "### HCC runtime error: %s at %s line:%d\n", getHCCRuntimeStatusMessage(status), __FILENAME__, line);
     std::string m("HCC Runtime Error - ");
     m += getHCCRuntimeStatusMessage(status);
     throw Kalmar::runtime_exception(m.c_str(), 0);
@@ -340,6 +379,7 @@ public:
 class HSAKernel {
 private:
     std::string kernelName;
+    std::string shortKernelName; // short handle, format selectable with HCC_DB_KERNEL_NAME
     HSAExecutable* executable;
     uint64_t kernelCodeHandle;
     hsa_executable_symbol_t hsaExecutableSymbol;
@@ -349,13 +389,18 @@ private:
     friend class HSADispatch;
 
 public:
-    HSAKernel(std::string &_kernelName, HSAExecutable* _executable,
+    HSAKernel(std::string &_kernelName, const std::string &x_shortKernelName, HSAExecutable* _executable,
               hsa_executable_symbol_t _hsaExecutableSymbol,
               uint64_t _kernelCodeHandle) :
         kernelName(_kernelName),
+        shortKernelName(x_shortKernelName),
         executable(_executable),
         hsaExecutableSymbol(_hsaExecutableSymbol),
         kernelCodeHandle(_kernelCodeHandle) {
+
+        if (shortKernelName.empty()) {
+            shortKernelName = "<unknown_kernel>";
+        }
 
         hsa_status_t status =
             hsa_executable_symbol_get_info(
@@ -384,21 +429,52 @@ public:
 
             workitem_vgpr_count = akc->workitem_vgpr_count;
         }
+
+        DBOUTL(DB_CODE, "Create kernel " << shortKernelName << " vpr_cnt=" << this->workitem_vgpr_count 
+                << " static_group_segment_size=" << this->static_group_segment_size 
+                << " private_segment_size=" << this->private_segment_size );
+
     }
 
     //TODO - fix this so all Kernels set the _kernelName to something sensible.
-    std::string getKernelName() const { return !kernelName.empty() ? kernelName : "<unknown>";}
+    const std::string &getKernelName() const { return shortKernelName; }
+    const std::string &getLongKernelName() const { return kernelName; }
 
     ~HSAKernel() {
         DBOUT(DB_INIT, "HSAKernel::~HSAKernel\n");
     }
 }; // end of HSAKernel
 
-class HSACopy : public Kalmar::KalmarAsyncOp {
+// Stores the device and queue for op coordinate:
+struct HSAOpCoord
+{
+    HSAOpCoord(Kalmar::HSAQueue *queue);
+
+    int         _deviceId;
+    uint64_t    _queueId;
+};
+
+// Base class for the other HSA ops:
+class HSAOp : public Kalmar::KalmarAsyncOp {
+public:
+    HSAOp(Kalmar::KalmarQueue *queue, hc::hcCommandKind commandKind) ;
+
+    const HSAOpCoord opCoord() const { return _opCoord; };
+protected:
+    uint64_t   apiStartTick;
+    HSAOpCoord _opCoord;
+};
+
+
+class HSACopy : public HSAOp {
 private:
     hsa_signal_t signal;
     int signalIndex;
     bool isSubmitted;
+    bool isAsync;          // copy was performed asynchronously
+    bool isSingleStepCopy;; // copy was performed on fast-path via a single call to the HSA copy routine
+    bool isPeerToPeer;
+    uint64_t apiStartTick;
     hsa_wait_state_t waitMode;
 
     std::shared_future<void>* future;
@@ -406,7 +482,7 @@ private:
 
     // If copy is dependent on another operation, record reference here.
     // keep a reference which prevents those ops from being deleted until this op is deleted.
-    std::shared_ptr<KalmarAsyncOp> depAsyncOp;
+    std::shared_ptr<HSAOp> depAsyncOp;
 
     const Kalmar::HSADevice* copyDevice;  // Which device did the copy.
 
@@ -439,19 +515,47 @@ public:
         }
     }
 
-    bool isReady() override {
-        return (hsa_signal_load_acquire(signal) == 0);
+    bool isReady() override ;
+
+    std::string getCopyCommandString()
+    {
+        using namespace Kalmar;
+
+        std::string s;
+        switch (getCommandKind()) {
+            case hcMemcpyHostToHost: 
+                s += "HostToHost";
+                break;
+            case hcMemcpyHostToDevice: 
+                s += "HostToDevice";
+                break;
+            case hcMemcpyDeviceToHost: 
+                s += "DeviceToHost";
+                break;
+            case hcMemcpyDeviceToDevice: 
+                if (isPeerToPeer) {
+                    s += "PeerToPeer";
+                } else {
+                    s += "DeviceToDevice";
+                }
+                break;
+            default:
+                s += "UnknownCopy";
+                break;
+        };
+        s += isAsync ? "_async" : "_sync";
+        s += isSingleStepCopy ? "_fast" : "_slow";
+
+        return s;
+
     }
 
 
     // Copy mode will be set later on.
     // HSA signals would be waited in HSA_WAIT_STATE_ACTIVE by default for HSACopy instances
-    HSACopy(Kalmar::KalmarQueue *queue, const void* src_, void* dst_, size_t sizeBytes_) : KalmarAsyncOp(queue, Kalmar::hcCommandInvalid),
-        isSubmitted(false), future(nullptr), depAsyncOp(nullptr), copyDevice(nullptr), waitMode(HSA_WAIT_STATE_ACTIVE),
-        src(src_), dst(dst_),
-        sizeBytes(sizeBytes_),
-        signalIndex(-1) {
-    }
+    HSACopy(Kalmar::KalmarQueue *queue, const void* src_, void* dst_, size_t sizeBytes_);
+
+    
 
 
     ~HSACopy() {
@@ -496,7 +600,7 @@ private:
 
 }; // end of HSACopy
 
-class HSABarrier : public Kalmar::KalmarAsyncOp {
+class HSABarrier : public HSAOp {
 private:
     hsa_signal_t signal;
     int signalIndex;
@@ -517,7 +621,7 @@ public:
 
     // array of all operations that this op depends on.
     // This array keeps a reference which prevents those ops from being deleted until this op is deleted.
-    std::shared_ptr<KalmarAsyncOp> depAsyncOps [HSA_BARRIER_DEP_SIGNAL_CNT];
+    std::shared_ptr<HSAOp> depAsyncOps [HSA_BARRIER_DEP_SIGNAL_CNT];
 
 public:
     std::shared_future<void>* getFuture() override { return future; }
@@ -536,9 +640,7 @@ public:
         }
     }
 
-    bool isReady() override {
-        return (hsa_signal_load_acquire(signal) == 0);
-    }
+    bool isReady() override;
 
 
     Kalmar::HSAQueue * hsaQueue() const;
@@ -546,22 +648,24 @@ public:
 
 
     // constructor with 1 prior dependency
-    HSABarrier(Kalmar::KalmarQueue *queue, std::shared_ptr <Kalmar::KalmarAsyncOp> dependent_op) : KalmarAsyncOp(queue, Kalmar::hcCommandMarker), isDispatched(false), future(nullptr), _acquire_scope(hc::no_scope), waitMode(HSA_WAIT_STATE_BLOCKED) {
+    HSABarrier(Kalmar::KalmarQueue *queue, std::shared_ptr <Kalmar::KalmarAsyncOp> dependent_op) : HSAOp(queue, Kalmar::hcCommandMarker), isDispatched(false), future(nullptr), _acquire_scope(hc::no_scope), waitMode(HSA_WAIT_STATE_BLOCKED) {
         if (dependent_op != nullptr) {
-            depAsyncOps[0] = dependent_op;
+            depAsyncOps[0] = std::static_pointer_cast<HSAOp> (dependent_op);
             depCount = 1;
         } else {
             depCount = 0;
         }
+        signal.handle = 0;
+        signalIndex = -1;
     }
 
     // constructor with at most 5 prior dependencies
-    HSABarrier(Kalmar::KalmarQueue *queue, int count, std::shared_ptr <Kalmar::KalmarAsyncOp> *dependent_op_array) : KalmarAsyncOp(queue, Kalmar::hcCommandMarker), isDispatched(false), future(nullptr), _acquire_scope(hc::no_scope), waitMode(HSA_WAIT_STATE_BLOCKED), depCount(0) {
+    HSABarrier(Kalmar::KalmarQueue *queue, int count, std::shared_ptr <Kalmar::KalmarAsyncOp> *dependent_op_array) : HSAOp(queue, Kalmar::hcCommandMarker), isDispatched(false), future(nullptr), _acquire_scope(hc::no_scope), waitMode(HSA_WAIT_STATE_BLOCKED), depCount(0) {
         if ((count >= 0) && (count <= 5)) {
             for (int i = 0; i < count; ++i) {
                 if (dependent_op_array[i]) {
                     // squish null ops 
-                    depAsyncOps[depCount] = dependent_op_array[i];
+                    depAsyncOps[depCount] = std::static_pointer_cast<HSAOp> (dependent_op_array[i]);
                     depCount++;
                 }
             }
@@ -569,6 +673,8 @@ public:
             // throw an exception
             throw Kalmar::runtime_exception("Incorrect number of dependent signals passed to HSABarrier constructor", count);
         }
+        signal.handle = 0;
+        signalIndex = -1;
     }
 
     ~HSABarrier() {
@@ -601,11 +707,12 @@ public:
 
 }; // end of HSABarrier
 
-class HSADispatch : public Kalmar::KalmarAsyncOp {
-    friend std::ostream& operator<<(std::ostream& os, const HSADispatch & op);
+class HSADispatch : public HSAOp {
 private:
     Kalmar::HSADevice* device;
     hsa_agent_t agent;
+
+    const char *kernel_name; 
     const HSAKernel* kernel;
 
     std::vector<uint8_t> arg_vec;
@@ -624,10 +731,13 @@ private:
 
     std::shared_future<void>* future;
 
-
 public:
     Kalmar::HSAQueue * hsaQueue() const;
     std::shared_future<void>* getFuture() override { return future; }
+
+    void setKernelName(const char *x_kernel_name) { kernel_name = x_kernel_name;};
+    const char *getKernelName() { return kernel_name ? kernel_name : (kernel ? kernel->shortKernelName.c_str() : "<unknown_kernel>"); };
+    const char *getLongKernelName() { return (kernel ? kernel->getLongKernelName().c_str() : "<unknown_kernel>"); };
 
     void* getNativeHandle() override { return &signal; }
 
@@ -642,9 +752,7 @@ public:
         }
     }
 
-    bool isReady() override {
-        return (hsa_signal_load_acquire(signal) == 0);
-    }
+    bool isReady() override;
 
     ~HSADispatch() {
 
@@ -726,7 +834,7 @@ private:
             printf("%02X ", ptr[i]);
 #endif
         }
-#if KALMAR_DEBU && HCC_DEBUG_KARG
+#if KALMAR_DEBUG && HCC_DEBUG_KARG
         printf("\n");
 #endif
         arg_count++;
@@ -818,6 +926,7 @@ struct RocrQueue {
 
         STATUS_CHECK(status, __LINE__);
 
+        // TODO - should we provide a mechanism to conditionally enable profiling as a performance optimization?
         status = hsa_amd_profiling_set_profiler_enabled(_hwQueue, 1);
 
         // Create the links between the queues:
@@ -863,6 +972,9 @@ private:
 
     std::mutex   qmutex;  // Protect structures for this KalmarQueue.  Currently just the hsaQueue.
 
+
+    bool         drainingQueue_;  // mode that we are draining queue, used to allow barrier ops to be enqueued.
+
     //
     // kernel dispatches and barriers associated with this HSAQueue instance
     //
@@ -871,9 +983,8 @@ private:
     // HSAQueue::wait(), and all future objects in the KalmarAsyncOp objects
     // will be waited on.
     //
-    std::vector< std::shared_ptr<KalmarAsyncOp> > asyncOps;
+    std::vector< std::shared_ptr<HSAOp> > asyncOps;
 
-    uint64_t                                      opSeqNums;
     uint64_t                                      queueSeqNum; // sequence-number of this queue.
 
     // Valid is used to prevent the fields of the HSAQueue from being disposed 
@@ -943,6 +1054,8 @@ public:
     bool nextSyncNeedsSysRelease() const { return _nextSyncNeedsSysRelease; };
     void setNextSyncNeedsSysRelease(bool r) { _nextSyncNeedsSysRelease = r; };
 
+    uint64_t getSeqNum() const { return queueSeqNum; };
+
     Kalmar::HSADevice * getHSADev() const;
 
     void dispose() override;
@@ -953,7 +1066,7 @@ public:
             dispose();
         }
 
-        DBOUT(DB_INIT, "HSAQueue::~HSAQueue() out\n");
+        DBOUT(DB_INIT, "HSAQueue::~HSAQueue() " << this << "out\n");
     }
 
     // FIXME: implement flush
@@ -963,7 +1076,7 @@ public:
         hsa_signal_value_t oldv=0;
         s << *this << " : " << asyncOps.size() << " op entries\n";
         for (int i=0; i<asyncOps.size(); i++) {
-            const std::shared_ptr<Kalmar::KalmarAsyncOp> &op = asyncOps[i];
+            const std::shared_ptr<HSAOp> &op = asyncOps[i];
             s << "index:" << std::setw(4) << i ;
             if (op != nullptr) {
                 s << " op#"<< op->getSeqNum() ;
@@ -999,22 +1112,31 @@ public:
 
     // Save the command and type
     // TODO - can convert to reference?
-    void pushAsyncOp(std::shared_ptr<KalmarAsyncOp> op) {
-        op->setSeqNum(++opSeqNums);
+    void pushAsyncOp(std::shared_ptr<HSAOp> op) {
 
-        DBOUT(DB_CMD, "  pushing op=" << op << "  #" << op->getSeqNum() << " signal="<< std::hex  << ((hsa_signal_t*)op->getNativeHandle())->handle << std::dec
-                    << "  commandKind=" << getHcCommandKindString(op->getCommandKind()) << std::endl);
+        op->setSeqNumFromQueue();
+
+        DBOUT(DB_CMD, "  pushing " << op << " completion_signal="<< std::hex  << ((hsa_signal_t*)op->getNativeHandle())->handle << std::dec
+                    << "  commandKind=" << getHcCommandKindString(op->getCommandKind())
+                    << " " 
+                    << (op->getCommandKind() == hcCommandKernel ? ((static_cast<HSADispatch*> (op.get()))->getKernelName()) : "")  // change to getLongKernelName() for mangled name
+                    << std::endl);
 
 
-        if (asyncOps.size() >= MAX_INFLIGHT_COMMANDS_PER_QUEUE) {
-            DBOUT(DB_WAIT, "*** Hit max inflight ops asyncOps.size=" << asyncOps.size() << ". op#" << opSeqNums << " force sync\n");
-            DBOUT(DB_RESOURCE, "*** Hit max inflight ops asyncOps.size=" << asyncOps.size() << ". op#" << opSeqNums << " force sync\n");
+
+        if (!drainingQueue_ && (asyncOps.size() >= MAX_INFLIGHT_COMMANDS_PER_QUEUE-1)) {
+            DBOUT(DB_WAIT, "*** Hit max inflight ops asyncOps.size=" << asyncOps.size() << ". " << op << " force sync\n");
+            DBOUT(DB_RESOURCE, "*** Hit max inflight ops asyncOps.size=" << asyncOps.size() << ". " << op << " force sync\n");
+
+            drainingQueue_ = true;
 
             wait();
         }
         asyncOps.push_back(op);
 
         youngestCommandKind = op->getCommandKind();
+
+        drainingQueue_ = false;
 
         if (DBFLAG(DB_QUEUE)) {
             printAsyncOps(std::cerr);
@@ -1066,7 +1188,7 @@ public:
             }
 
             if (needDep) {
-                DBOUT(DB_CMD, "command type changed " << getHcCommandKindString(youngestCommandKind) << "  ->  " << getHcCommandKindString(newCommandKind) << "\n") ;
+                DBOUT(DB_CMD2, "command type changed " << getHcCommandKindString(youngestCommandKind) << "  ->  " << getHcCommandKindString(newCommandKind) << "\n") ;
                 return asyncOps.back();
             }
         }
@@ -1075,7 +1197,7 @@ public:
     }
 
 
-    void waitForStreamDeps (KalmarAsyncOp *newOp) {
+    void waitForStreamDeps (HSAOp *newOp) {
         std::shared_ptr<KalmarAsyncOp> depOp = detectStreamDeps(newOp->getCommandKind(), newOp);
         if (depOp != nullptr) {
             EnqueueMarkerWithDependency(1, &depOp, HCC_OPT_FLUSH ? hc::no_scope : hc::system_scope);
@@ -1090,8 +1212,12 @@ public:
 
             if (asyncOp != nullptr) {
                 hsa_signal_t signal = *(static_cast <hsa_signal_t*> (asyncOp->getNativeHandle()));
-                hsa_signal_value_t v = hsa_signal_load_relaxed(signal);
-                if (v != 0) {
+                if (signal.handle) {
+                    hsa_signal_value_t v = hsa_signal_load_relaxed(signal);
+                    if (v != 0) {
+                        ++count;
+                    }
+                } else {
                     ++count;
                 }
             }
@@ -1108,17 +1234,22 @@ public:
                 auto &asyncOp = asyncOps[i];
                 hsa_signal_t signal = *(static_cast <hsa_signal_t*> (asyncOp->getNativeHandle()));
                 if (signal.handle) {
-					hsa_signal_value_t v = hsa_signal_load_relaxed(signal);
-					if (v != 0) {
-						return false;
-					}
-				}
+                    hsa_signal_value_t v = hsa_signal_load_relaxed(signal);
+                    if (v != 0) {
+                        return false;
+                    }
+                } else {
+                    // no signal, have to assume the command is still running
+                    return false;
+                }
             }
         };
         return true;
     };
 
 
+    // Must retain this exact function signature here even though mode not used since virtual interface in 
+    // runtime depends on this signature.
     void wait(hcWaitMode mode = hcWaitModeBlocked) override {
         // wait on all previous async operations to complete
         // Go in reverse order (from youngest to oldest).
@@ -1131,7 +1262,7 @@ public:
             // In the loop below, this will be the first op waited on
             auto marker = EnqueueMarker(hc::system_scope);
 
-            DBOUT(DB_CMD, " Sys-release needed, enqueued marker to release written data " << marker<<"\n");
+            DBOUT(DB_CMD2, " Sys-release needed, enqueued marker to release written data " << marker<<"\n");
             
         }
 
@@ -1140,12 +1271,21 @@ public:
             printAsyncOps(std::cerr);
         }
 
+
+
+        bool foundFirstValidOp = false;
+
         for (int i = asyncOps.size()-1; i >= 0;  i--) {
             if (asyncOps[i] != nullptr) {
                 auto asyncOp = asyncOps[i];
+                if (!foundFirstValidOp) {
+                    hsa_signal_t sig =  *(static_cast <hsa_signal_t*> (asyncOp->getNativeHandle()));
+                    assert(sig.handle != 0);
+                    foundFirstValidOp = true;
+                }
                 // wait on valid futures only
                 std::shared_future<void>* future = asyncOp->getFuture();
-                if (future->valid()) {
+                if (future && future->valid()) {
                     future->wait();
                 }
             }
@@ -1197,46 +1337,46 @@ public:
         HSADispatch *dispatch =
             reinterpret_cast<HSADispatch*>(ker);
 
-        size_t tmp_local[] = {0, 0, 0};
-        if (!local)
-            local = tmp_local;
-        dispatch->setLaunchConfiguration(nr_dim, global, local, dynamic_group_size);
 
 
         bool hasArrayViewBufferDeps = (kernelBufferMap.find(ker) != kernelBufferMap.end());
 
-
-	    if (hasArrayViewBufferDeps) {
+        if (hasArrayViewBufferDeps) {
             // wait for previous kernel dispatches be completed
             std::for_each(std::begin(kernelBufferMap[ker]), std::end(kernelBufferMap[ker]),
                       [&] (void* buffer) {
                         waitForDependentAsyncOps(buffer);
                      });
-	    }
+        }
 
         waitForStreamDeps(dispatch);
 
+
+        // create a shared_ptr instance
+        std::shared_ptr<KalmarAsyncOp> sp_dispatch(dispatch);
+        // associate the kernel dispatch with this queue
+        pushAsyncOp(std::static_pointer_cast<HSAOp> (sp_dispatch));
+
+        size_t tmp_local[] = {0, 0, 0};
+        if (!local)
+            local = tmp_local;
+        dispatch->setLaunchConfiguration(nr_dim, global, local, dynamic_group_size);
 
         // dispatch the kernel
         status = dispatch->dispatchKernelAsyncFromOp();
         STATUS_CHECK(status, __LINE__);
 
-        // create a shared_ptr instance
-        std::shared_ptr<KalmarAsyncOp> sp_dispatch(dispatch);
 
-        // associate the kernel dispatch with this queue
-        pushAsyncOp(sp_dispatch);
-
-	    if (hasArrayViewBufferDeps) {
+        if (hasArrayViewBufferDeps) {
             // associate all buffers used by the kernel with the kernel dispatch instance
             std::for_each(std::begin(kernelBufferMap[ker]), std::end(kernelBufferMap[ker]),
                           [&] (void* buffer) {
                             bufferKernelMap[buffer].push_back(sp_dispatch);
                           });
 
-            // clear data in kernelBufferMap
-            kernelBufferMap[ker].clear();
-            kernelBufferMap.erase(ker);
+                // clear data in kernelBufferMap
+                kernelBufferMap[ker].clear();
+                kernelBufferMap.erase(ker);
         }
 
         return sp_dispatch;
@@ -1249,7 +1389,7 @@ public:
             // In the loop below, this will be the first op waited on
             auto marker= EnqueueMarker(hc::system_scope);
 
-            DBOUT(DB_CMD, " In waitForDependentAsyncOps, sys-release needed: enqueued marker to release written data " << marker<<"\n");
+            DBOUT(DB_CMD2, " In waitForDependentAsyncOps, sys-release needed: enqueued marker to release written data " << marker<<"\n");
         };
     }
 
@@ -1544,7 +1684,7 @@ public:
 
     void dispatch_hsa_kernel(const hsa_kernel_dispatch_packet_t *aql,
                              const void * args, size_t argsize,
-                             hc::completion_future *cf) override ;
+                             hc::completion_future *cf, const char *kernelName) override ;
 
     bool set_cu_mask(const std::vector<bool>& cu_mask) override {
         // get device's total compute unit count
@@ -1593,13 +1733,13 @@ public:
 
         // create shared_ptr instance
         std::shared_ptr<HSABarrier> barrier = std::make_shared<HSABarrier>(this, 0, nullptr);
+        // associate the barrier with this queue
+        pushAsyncOp(barrier);
 
         // enqueue the barrier
         status = barrier.get()->enqueueAsync(release_scope);
         STATUS_CHECK(status, __LINE__);
 
-        // associate the barrier with this queue
-        pushAsyncOp(barrier);
 
         return barrier;
     }
@@ -1625,6 +1765,8 @@ public:
 
             // create shared_ptr instance
             std::shared_ptr<HSABarrier> barrier = std::make_shared<HSABarrier>(this, count, depOps);
+            // associate the barrier with this queue
+            pushAsyncOp(barrier);
 
             for (int i=0; i<count; i++) {
                 if (barrier->depAsyncOps[i] != nullptr) {
@@ -1663,8 +1805,6 @@ public:
             status = barrier.get()->enqueueAsync(releaseScope);
             STATUS_CHECK(status, __LINE__);
 
-            // associate the barrier with this queue
-            pushAsyncOp(barrier);
 
             return barrier;
         } else {
@@ -1710,11 +1850,51 @@ public:
 
     // remove finished async operation from waiting list
     void removeAsyncOp(KalmarAsyncOp* asyncOp) {
+        int targetIndex = -1;
         for (int i = 0; i < asyncOps.size(); ++i) {
-            if (asyncOps[i].get() == asyncOp) {
+            Kalmar::KalmarAsyncOp *op = asyncOps[i].get();
+            if (op == asyncOp) {
+                targetIndex = i;
+                //std::cerr << "remove targeted asyncOp[" << i << "] #" << op->getSeqNum() <<  " use_count=" << asyncOps[i].use_count() << " (1 indicates last)\n";
                 asyncOps[i] = nullptr;
             }
         }
+
+         // All older ops are known to be done and we can reclaim their resources here:
+         // Both execute_in_order and execute_any_order flags always remove ops in-order at the end of the pipe.
+         // Note if not found above targetIndex=-1 and we skip the loop:
+         bool foundNull = false;
+         for (int i = targetIndex-1; i>=0; i--) {
+             Kalmar::KalmarAsyncOp *op = asyncOps[i].get();
+             // opportunistically update status for any ops we encounter along the way:
+             if (op) {
+                 hsa_signal_t signal =  *(static_cast<hsa_signal_t*> (op->getNativeHandle()));
+
+                 // v<0 : no signal, v==0 signal and done, v>0 : signal and not done:
+                 hsa_signal_value_t v = -1;
+                 if (signal.handle)
+                    v = hsa_signal_load_acquire(signal);
+                 assert (v <=0);
+
+                 if (foundNull) {
+                     // printAsyncOps()
+                    DBOUTL(DB_RESOURCE, "in removeAsyncOp, found unexpected nonnull asyncop after another null at position:" << i);
+                    //assert(!foundNull);
+                    
+                 }
+                 //std::cerr << "remove opportunistic asyncOp[" << i << "] #" << op->getSeqNum() <<  " use_count=" << asyncOps[i].use_count() << "\n";
+                 asyncOps[i] = nullptr;
+             } else {
+                 foundNull = true;
+                 // The queue is retired in-order, and ops only inserted at "top", and ops can only be removed at two defined points:
+                 //   - Draining the entire queue in HSAQueue::wait() - this calls asyncOps.clear()
+                 //   - Events in the middle of the queue can be removed, but will call this function which removes all older ops.
+                 //   So once we remove the asyncOps, there is no way for an older async op to be come non-null and we can stop search here:
+                 // 
+                 break; // stop searching if we find null, there cannot be any more valid pointers below.
+             }
+         }
+    
 
         // GC for finished kernels
         if (asyncOps.size() > ASYNCOPS_VECTOR_GC_SIZE) {
@@ -2047,6 +2227,7 @@ public:
                 queue->dispose();
             }
         }
+
         queues.clear();
         queues_mutex.unlock();
 
@@ -2217,7 +2398,89 @@ public:
     void* CreateKernel(const char* fun, Kalmar::KalmarQueue *queue) override {
         std::string str(fun);
         HSAKernel *kernel = programs[str];
+
+        const char *demangled = "<demangle_error>";
+        std::string shortName;
+
         if (!kernel) {
+            int demangleStatus = 0;
+            int kernelNameFormat = HCC_DB_SYMBOL_FORMAT & 0xf;
+            if (kernelNameFormat == 1) {
+                shortName = fun; // mangled name
+            } else {
+#ifndef USE_LIBCXX
+                demangled = abi::__cxa_demangle(fun, nullptr, nullptr, &demangleStatus);
+#endif
+                shortName = demangleStatus ? fun : std::string(demangled);
+                try {
+                    if (demangleStatus == 0) {
+
+                        if (kernelNameFormat == 2) {
+                            shortName = demangled;
+                        } else {
+                            // kernelNameFormat == 0 or unspecified:
+
+                            // Example: HIP_kernel_functor_name_begin_unnamed_HIP_kernel_functor_name_end_5::__cxxamp_trampoline(unsigned int, unsigned int, unsigned int, unsigned int, unsigned int, unsigned int, float*, long long)"
+
+                            std::string hip_begin_str  ("::HIP_kernel_functor_name_begin_");
+                            std::string hip_end_str    ("_HIP_kernel_functor_name_end");
+                            int hip_begin = shortName.find(hip_begin_str);
+                            int hip_end   = shortName.find(hip_end_str);
+
+                            if ((hip_begin != -1) && (hip_end != -1) && (hip_end > hip_begin)) {
+                                // HIP kernel with markers
+                                int start_pos = hip_begin + hip_begin_str.length(); 
+                                std::string hipname = shortName.substr(start_pos, hip_end - start_pos) ;
+                                DBOUTL(DB_CODE, "hipname=" << hipname);
+                                if (hipname == "unnamed") {
+                                    shortName = shortName.substr(0, hip_begin);
+                                } else {
+                                    shortName = hipname;
+                                }
+
+                            } else {
+                                // PFE not from HIP:
+
+                                // strip off hip launch template wrapper:
+                                std::string hipImplString ("void hip_impl::grid_launch_hip_impl_<");
+                                int begin = shortName.find(hipImplString);
+                                if ((begin != std::string::npos)) {
+                                    begin += hipImplString.length() ;
+                                } else {
+                                    begin = 0;
+                                }
+
+                                shortName = shortName.substr(begin);
+
+                                // Strip off any leading return type:
+                                begin = shortName.find(" ", 0);
+                                if (begin == std::string::npos) {
+                                    begin = 0;
+                                } else {
+                                    begin +=1; // skip the space
+                                }
+                                shortName = shortName.substr(begin);
+
+                                DBOUTL(DB_CODE, "shortKernel processing demangled non-hip.  beginChar=" << begin << " shortName=" << shortName);
+                            }
+                            
+                        }
+
+                        if (HCC_DB_SYMBOL_FORMAT & 0x10) {
+                            // trim everything after first (
+                            int begin = shortName.find("(");
+                            shortName = shortName.substr(0, begin);
+                        }
+                    }
+                } catch (std::out_of_range& exception) {
+                    // Do something sensible if string pattern is not what we expect
+                    shortName = fun;
+                };
+            }
+            DBOUT (DB_CODE, "CreateKernel_short=      " << shortName << "\n");
+            DBOUT (DB_CODE, "CreateKernel_demangled=  " << demangled << "\n");
+            DBOUT (DB_CODE, "CreateKernel_raw=       " << fun << "\n");
+
             if (executables.size() != 0) {
                 for (auto executable_iterator : executables) {
                     HSAExecutable *executable = executable_iterator.second;
@@ -2231,7 +2494,7 @@ public:
                         uint64_t kernelCodeHandle;
                         status = hsa_executable_symbol_get_info(kernelSymbol, HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_OBJECT, &kernelCodeHandle);
                         if (status == HSA_STATUS_SUCCESS) {
-                            kernel =  new HSAKernel(str, executable, kernelSymbol, kernelCodeHandle);
+                            kernel =  new HSAKernel(str, shortName, executable, kernelSymbol, kernelCodeHandle);
                             break;
                         }
                     }
@@ -2240,12 +2503,9 @@ public:
 
             if (!kernel) {
                 hc::print_backtrace();
-                int status = 0;
-                const char *demangled = nullptr;
-#ifndef USE_LIBCXX
-                demangled = abi::__cxa_demangle(fun, nullptr, nullptr, &status);
-#endif
-                std::cerr << "HSADevice::CreateKernel(): Unable to create kernel '" <<  (status ? fun : demangled) << "'\n";
+                std::cerr << "HSADevice::CreateKernel(): Unable to create kernel " << shortName << " \n";
+                std::cerr << "  CreateKernel_raw=  " << fun << "\n";
+                std::cerr << "  CreateKernel_demangled=  " << demangled << "\n";
 
                 if (demangled) {
                     free((void*)demangled); // cxa_dmangle mallocs memory.
@@ -2382,6 +2642,7 @@ public:
         if ( (KERNARG_POOL_SIZE > 0) && (kernargBufferIndex >= 0) ) {
             kernargPoolMutex.lock();
 
+
             // mark the kernarg buffer pointed by kernelBufferIndex as available
             kernargPoolFlag[kernargBufferIndex] = false;
 
@@ -2391,6 +2652,27 @@ public:
                 hsa_amd_memory_pool_free(kernargBuffer);
             }
          }
+    }
+
+    void growKernargBuffer()
+    {
+		uint8_t * kernargMemory = nullptr;
+		// increase kernarg pool on demand by KERNARG_POOL_SIZE
+		hsa_amd_memory_pool_t kernarg_region = getHSAKernargRegion();
+
+		hsa_status_t status = hsa_amd_memory_pool_allocate(kernarg_region, KERNARG_POOL_SIZE * KERNARG_BUFFER_SIZE, 0, (void**)(&kernargMemory));
+		STATUS_CHECK(status, __LINE__);
+
+		status = hsa_amd_agents_allow_access(1, &agent, NULL, kernargMemory);
+		STATUS_CHECK(status, __LINE__);
+
+		for (size_t i = 0; i < KERNARG_POOL_SIZE * KERNARG_BUFFER_SIZE; i+=KERNARG_BUFFER_SIZE) {
+			kernargPool.push_back(kernargMemory+i);
+			kernargPoolFlag.push_back(false);
+		};
+
+
+
     }
 
     std::pair<void*, int> getKernargBuffer(int size) {
@@ -2451,23 +2733,10 @@ public:
                     int oldKernargPoolFlagSize = kernargPoolFlag.size();
                     assert(oldKernargPoolSize == oldKernargPoolFlagSize);
 
-                    DBOUTL(DB_RESOURCE, "Growing kernarg pool from " << kernargPool.size() << " to " << kernargPool.size() + KERNARG_POOL_SIZE);
 
-                    // pre-allocate kernarg buffers
-                    void* kernargMemory = nullptr;
-                    for (int i = 0; i < KERNARG_POOL_SIZE; ++i) {
-                        status = hsa_amd_memory_pool_allocate(kernarg_region, KERNARG_BUFFER_SIZE, 0, &kernargMemory);
-                        STATUS_CHECK(status, __LINE__);
-
-                        status = hsa_amd_agents_allow_access(1, &agent, NULL, kernargMemory);
-                        STATUS_CHECK(status, __LINE__);
-
-                        kernargPool.push_back(kernargMemory);
-                        kernargPoolFlag.push_back(false);
-                    }
-
-                    assert(kernargPool.size() == oldKernargPoolSize + KERNARG_POOL_SIZE);
-                    assert(kernargPoolFlag.size() == oldKernargPoolFlagSize + KERNARG_POOL_SIZE);
+					growKernargBuffer();
+					assert(kernargPool.size() == oldKernargPoolSize + KERNARG_POOL_SIZE);
+					assert(kernargPoolFlag.size() == oldKernargPoolFlagSize + KERNARG_POOL_SIZE);
 
                     // set return values, after the pool has been increased
 
@@ -2490,6 +2759,7 @@ public:
             }
 
             kernargPoolMutex.unlock();
+            memset (ret, 0x00, KERNARG_BUFFER_SIZE);
         } else {
             // allocate new buffers in case:
             // - the kernarg pool is set at compile-time
@@ -2510,7 +2780,10 @@ public:
             // set cursor value as -1 to notice the buffer would be deallocated
             // instead of recycled back into the pool
             cursor = -1;
+            memset (ret, 0x00, size);  
         }
+
+
 
         return std::make_pair(ret, cursor);
     }
@@ -2649,42 +2922,28 @@ static void hccgetenv(const char *var_name, T *var, const char *usage)
     };
 }
 
+
+// specialize for char*
+template <>
+void hccgetenv(const char *var_name, char **var, const char *usage)
+{
+    char * env = getenv(var_name);
+
+    if (env != NULL) {
+        *var = env;
+    }
+
+    if (HCC_PRINT_ENV) {
+        std::cout << std::left << std::setw(30) << var_name << " = " << *var << " : " << usage << std::endl;
+    };
+}
+
 // Helper function to return environment var:
 // Handles signed int or long int types, note call to strol above:
 #define GET_ENV_INT(envVar, usage)  hccgetenv (#envVar, &envVar, usage)
+#define GET_ENV_STRING(envVar, usage)  hccgetenv (#envVar, &envVar, usage)
 
 
-// Global free function to read HCC_ENV vars.  Really this should be called once per process not once-per-event.
-// Global so HCC clients or debuggers can force a re-read of the environment variables.
-void ReadHccEnv() 
-{
-    GET_ENV_INT(HCC_PRINT_ENV, "Print values of HCC environment variables");
-
-   // 0x1=pre-serialize, 0x2=post-serialize , 0x3= pre- and post- serialize.
-   // HCC_SERIALIZE_KERNEL serializes PFE, GL, and dispatch_hsa_kernel calls.
-   // HCC_SERIALIZE_COPY serializes av::copy_async operations.  (array_view copies are not currently impacted))
-    GET_ENV_INT(HCC_SERIALIZE_KERNEL, 
-                 "0x1=pre-serialize before each kernel launch, 0x2=post-serialize after each kernel launch, 0x3=both");
-    GET_ENV_INT(HCC_SERIALIZE_COPY,
-                 "0x1=pre-serialize before each data copy, 0x2=post-serialize after each data copy, 0x3=both");
-
-
-    GET_ENV_INT(HCC_DB, "Enable HCC trace debug");
-
-    GET_ENV_INT(HCC_OPT_FLUSH, "Perform system-scope acquire/release only at CPU sync boundaries (rather than after each kernel)");
-    GET_ENV_INT(HCC_MAX_QUEUES, "Set max number of HSA queues this process will use.  accelerator_views will share the allotted queues and steal from each other as necessary");
-
-
-    GET_ENV_INT(HCC_UNPINNED_COPY_MODE, "Select algorithm for unpinned copies. 0=ChooseBest(see thresholds), 1=PinInPlace, 2=StagingBuffer, 3=Memcpy");
-
-    GET_ENV_INT(HCC_CHECK_COPY, "Check dst == src after each copy operation.  Only works on large-bar systems.");
-
-   
-    // Select thresholds to use for unpinned copies
-    GET_ENV_INT (HCC_H2D_STAGING_THRESHOLD,    "Min size (in KB) to use staging buffer algorithm for H2D copy if ChooseBest algorithm selected");
-    GET_ENV_INT (HCC_H2D_PININPLACE_THRESHOLD, "Min size (in KB) to use pin-in-place algorithm for H2D copy if ChooseBest algorithm selected");
-    GET_ENV_INT (HCC_D2H_PININPLACE_THRESHOLD, "Min size (in KB) to use pin-in-place for D2H copy if ChooseBest algorithm selected");
-};
 
 class HSAContext final : public KalmarContext
 {
@@ -2704,6 +2963,10 @@ private:
     HSADevice class to assign it the host memory pool to GPU agent.
     */
     hsa_agent_t host;
+
+
+    std::ofstream hccProfileFile; // if using a file open it here
+    std::ostream *hccProfileStream = nullptr; // point at file or default stream
 
     /// Determines if the given agent is of type HSA_DEVICE_TYPE_GPU
     /// If so, cache to input data
@@ -2764,6 +3027,9 @@ private:
 
 
 public:
+    void ReadHccEnv() ;
+    std::ostream &getHccProfileStream() const { return *hccProfileStream; };
+
     HSAContext() : KalmarContext(), signalPool(), signalPoolFlag(), signalCursor(0), signalPoolMutex() {
         host.handle = (uint64_t)-1;
 
@@ -2775,6 +3041,9 @@ public:
 
         hsa_status_t status;
         status = hsa_init();
+        if (status != HSA_STATUS_SUCCESS)
+          return;
+
         STATUS_CHECK(status, __LINE__);
 
         // Iterate over the agents to find out gpu device
@@ -2795,7 +3064,6 @@ public:
             Devices.push_back(Dev);
         }
 
-
 #if SIGNAL_POOL_SIZE > 0
         signalPoolMutex.lock();
 
@@ -2811,6 +3079,7 @@ public:
 
         signalPoolMutex.unlock();
 #endif
+        init_success = true;
     }
 
     void releaseSignal(hsa_signal_t signal, int signalIndex) {
@@ -2937,6 +3206,9 @@ public:
         hsa_status_t status = HSA_STATUS_SUCCESS;
         DBOUT(DB_INIT, "HSAContext::~HSAContext() in\n");
 
+        if (!init_success)
+          return;
+
         // destroy all KalmarDevices associated with this context
         for (auto dev : Devices)
             delete dev;
@@ -2993,6 +3265,61 @@ static HSAContext ctx;
 namespace Kalmar {
 
 
+// Global free function to read HCC_ENV vars.  Really this should be called once per process not once-per-event.
+// Global so HCC clients or debuggers can force a re-read of the environment variables.
+void HSAContext::ReadHccEnv() 
+{
+    GET_ENV_INT(HCC_PRINT_ENV, "Print values of HCC environment variables");
+
+   // 0x1=pre-serialize, 0x2=post-serialize , 0x3= pre- and post- serialize.
+   // HCC_SERIALIZE_KERNEL serializes PFE, GL, and dispatch_hsa_kernel calls.
+   // HCC_SERIALIZE_COPY serializes av::copy_async operations.  (array_view copies are not currently impacted))
+    GET_ENV_INT(HCC_SERIALIZE_KERNEL, 
+                 "0x1=pre-serialize before each kernel launch, 0x2=post-serialize after each kernel launch, 0x3=both");
+    GET_ENV_INT(HCC_SERIALIZE_COPY,
+                 "0x1=pre-serialize before each data copy, 0x2=post-serialize after each data copy, 0x3=both");
+
+    GET_ENV_INT(HCC_FORCE_COMPLETION_FUTURE, "Force all kernel commands to allocate a completion signal.");
+
+
+    GET_ENV_INT(HCC_DB, "Enable HCC trace debug");
+    GET_ENV_INT(HCC_DB_SYMBOL_FORMAT, "Select format of symbol (kernel) name used in debug.  0=short,1=mangled,1=demangled.  Bit 0x10 removes arguments.");
+
+    GET_ENV_INT(HCC_OPT_FLUSH, "Perform system-scope acquire/release only at CPU sync boundaries (rather than after each kernel)");
+    GET_ENV_INT(HCC_MAX_QUEUES, "Set max number of HSA queues this process will use.  accelerator_views will share the allotted queues and steal from each other as necessary");
+
+
+    GET_ENV_INT(HCC_UNPINNED_COPY_MODE, "Select algorithm for unpinned copies. 0=ChooseBest(see thresholds), 1=PinInPlace, 2=StagingBuffer, 3=Memcpy");
+
+    GET_ENV_INT(HCC_CHECK_COPY, "Check dst == src after each copy operation.  Only works on large-bar systems.");
+
+   
+    // Select thresholds to use for unpinned copies
+    GET_ENV_INT (HCC_H2D_STAGING_THRESHOLD,    "Min size (in KB) to use staging buffer algorithm for H2D copy if ChooseBest algorithm selected");
+    GET_ENV_INT (HCC_H2D_PININPLACE_THRESHOLD, "Min size (in KB) to use pin-in-place algorithm for H2D copy if ChooseBest algorithm selected");
+    GET_ENV_INT (HCC_D2H_PININPLACE_THRESHOLD, "Min size (in KB) to use pin-in-place for D2H copy if ChooseBest algorithm selected");
+
+
+    GET_ENV_INT    (HCC_PROFILE,         "Enable HCC kernel and data profiling.  1=summary, 2=trace");
+    GET_ENV_INT    (HCC_PROFILE_VERBOSE, "Bitmark to control profile verbosity and format. 0x1=default, 0x2=show begin/end, 0x4=show barrier");
+    GET_ENV_STRING (HCC_PROFILE_FILE,    "Set file name for HCC_PROFILE mode.  Default=stderr");
+
+    if (HCC_PROFILE) {
+        if (HCC_PROFILE_FILE==nullptr || !strcmp(HCC_PROFILE_FILE, "stderr")) {
+            ctx.hccProfileStream = &std::cerr;
+        } else if (!strcmp(HCC_PROFILE_FILE, "stdout")) {
+            ctx.hccProfileStream = &std::cout;
+        } else {
+            ctx.hccProfileFile.open(HCC_PROFILE_FILE, std::ios::out);
+            assert (!ctx.hccProfileFile.fail());
+
+            ctx.hccProfileStream = &ctx.hccProfileFile;
+        }
+    }
+
+};
+
+
 HSADevice::HSADevice(hsa_agent_t a, hsa_agent_t host, int x_accSeqNum) : KalmarDevice(access_type_read_write),
                                agent(a), programs(), max_tile_static_size(0),
                                queue_size(0), queues(), queues_mutex(),
@@ -3021,7 +3348,7 @@ HSADevice::HSADevice(hsa_agent_t a, hsa_agent_t host, int x_accSeqNum) : KalmarD
         wchar_t path_wchar[128] {0};
         wchar_t description_wchar[128] {0};
         swprintf(path_wchar, 128, L"%s%u", name, node);
-        swprintf(description_wchar, 128, L"AMD HSA Agent %s%u", name, node);
+        swprintf(description_wchar, 128, L"AMD HSA Agent %s, Node %u", name, node);
 
         path = std::wstring(path_wchar);
         description = std::wstring(description_wchar);
@@ -3054,6 +3381,9 @@ HSADevice::HSADevice(hsa_agent_t a, hsa_agent_t host, int x_accSeqNum) : KalmarD
         assert (__builtin_popcount(MAX_INFLIGHT_COMMANDS_PER_QUEUE) == 1); // make sure this is power of 2.
     }
 
+    status = hsa_amd_profiling_async_copy_enable(1);
+    STATUS_CHECK(status, __LINE__);
+
 
 
     /// Iterate over memory pool of the device and its host
@@ -3085,21 +3415,7 @@ HSADevice::HSADevice(hsa_agent_t a, hsa_agent_t host, int x_accSeqNum) : KalmarD
     /// - kernarg region is available
     /// - compile-time macro KERNARG_POOL_SIZE is larger than 0
 #if KERNARG_POOL_SIZE > 0
-    hsa_amd_memory_pool_t kernarg_region = getHSAKernargRegion();
-
-    // pre-allocate kernarg buffers
-    void* kernargMemory = nullptr;
-    for (int i = 0; i < KERNARG_POOL_SIZE; ++i) {
-        status = hsa_amd_memory_pool_allocate(kernarg_region, KERNARG_BUFFER_SIZE, 0, &kernargMemory);
-        STATUS_CHECK(status, __LINE__);
-
-        // Allow device to access to it once it is allocated. Normally, this memory pool is on system memory.
-        status = hsa_amd_agents_allow_access(1, &agent, NULL, kernargMemory);
-        STATUS_CHECK(status, __LINE__);
-
-        kernargPool.push_back(kernargMemory);
-        kernargPoolFlag.push_back(false);
-    }
+	growKernargBuffer();
 #endif
 
     // Setup AM pool.
@@ -3212,14 +3528,12 @@ std::ostream& operator<<(std::ostream& os, const HSAQueue & hav)
 }
 
 
-inline void printOp(std::ostream& os, const HSAQueue &hav, uint64_t opNum)
+// op printer
+inline std::ostream& operator<<(std::ostream& os, const HSAOp & op) 
 {
-    os << "op\n" ;
-}
-
-inline std::ostream& operator<<(std::ostream& os, const HSADispatch & op) 
-{
-    //printOp(os, *op.hsaQueue(), op.getSeqNum());
+     os << "#" << op.opCoord()._deviceId << "." ;
+     os << op.opCoord()._queueId << "." ;
+     os << op.getSeqNum(); 
     return os;
 }
 
@@ -3227,7 +3541,8 @@ inline std::ostream& operator<<(std::ostream& os, const HSADispatch & op)
 HSAQueue::HSAQueue(KalmarDevice* pDev, hsa_agent_t agent, execute_order order) : 
     KalmarQueue(pDev, queuing_mode_automatic, order), 
     rocrQueue(nullptr),
-    asyncOps(), opSeqNums(0), valid(true), _nextSyncNeedsSysRelease(false), _nextKernelNeedsSysAcquire(false), bufferKernelMap(), kernelBufferMap() 
+    asyncOps(), drainingQueue_(false), 
+    valid(true), _nextSyncNeedsSysRelease(false), _nextKernelNeedsSysAcquire(false), bufferKernelMap(), kernelBufferMap() 
 {
     { 
         // Protect the HSA queue we can steal it.
@@ -3250,7 +3565,7 @@ HSAQueue::HSAQueue(KalmarDevice* pDev, hsa_agent_t agent, execute_order order) :
 void HSAQueue::dispose() override {
     hsa_status_t status;
 
-    DBOUT(DB_INIT, "HSAQueue::dispose() in\n");
+    DBOUT(DB_INIT, "HSAQueue::dispose() " << this << "in\n");
     {
         DBOUT(DB_LOCK, " ptr:" << this << " dispose lock_guard...\n");
 
@@ -3286,7 +3601,7 @@ void HSAQueue::dispose() override {
 
     STATUS_CHECK(status, __LINE__);
 
-    DBOUT(DB_INIT, "HSAQueue::dispose() out\n");
+    DBOUT(DB_INIT, "HSAQueue::dispose() " << this <<  " out\n");
 }
 
 Kalmar::HSADevice * HSAQueue::getHSADev() const { 
@@ -3343,6 +3658,7 @@ HSAQueue::getHSAKernargRegion() override {
 void HSAQueue::copy_ext(const void *src, void *dst, size_t size_bytes, hc::hcCommandKind copyDir, const hc::AmPointerInfo &srcPtrInfo, const hc::AmPointerInfo &dstPtrInfo,
               const Kalmar::KalmarDevice *copyDevice, bool forceUnpinnedCopy) override {
     // wait for all previous async commands in this queue to finish
+    // TODO - can remove this synchronization, copy is tail-synchronous not required on front end.
     this->wait();
 
 
@@ -3350,6 +3666,7 @@ void HSAQueue::copy_ext(const void *src, void *dst, size_t size_bytes, hc::hcCom
 
     // create a HSACopy instance
     HSACopy* copyCommand = new HSACopy(this, src, dst, size_bytes);
+    copyCommand->setCommandKind(copyDir);
 
     // synchronously do copy
     // FIX me, pull from constructor.
@@ -3381,6 +3698,7 @@ std::shared_ptr<KalmarAsyncOp> HSAQueue::EnqueueAsyncCopyExt(const void* src, vo
                                                    hcCommandKind copyDir, const hc::AmPointerInfo &srcPtrInfo, const hc::AmPointerInfo &dstPtrInfo,
                                                    const Kalmar::KalmarDevice *copyDevice) override {
 
+
     hsa_status_t status = HSA_STATUS_SUCCESS;
 
     // create shared_ptr instance
@@ -3407,8 +3725,8 @@ std::shared_ptr<KalmarAsyncOp> HSAQueue::EnqueueAsyncCopy(const void *src, void 
 
 
     hc::accelerator acc;
-    hc::AmPointerInfo srcPtrInfo(NULL, NULL, 0, acc, 0, 0);
-    hc::AmPointerInfo dstPtrInfo(NULL, NULL, 0, acc, 0, 0);
+    hc::AmPointerInfo srcPtrInfo(NULL, NULL, NULL, 0, acc, 0, 0);
+    hc::AmPointerInfo dstPtrInfo(NULL, NULL, NULL, 0, acc, 0, 0);
 
     bool srcInTracker = (hc::am_memtracker_getinfo(&srcPtrInfo, src) == AM_SUCCESS);
     bool dstInTracker = (hc::am_memtracker_getinfo(&dstPtrInfo, dst) == AM_SUCCESS);
@@ -3452,7 +3770,7 @@ std::shared_ptr<KalmarAsyncOp> HSAQueue::EnqueueAsyncCopy(const void *src, void 
 void
 HSAQueue::dispatch_hsa_kernel(const hsa_kernel_dispatch_packet_t *aql,
                          const void * args, size_t argSize,
-                         hc::completion_future *cf) override
+                         hc::completion_future *cf, const char *kernelName) override
 {
     uint16_t dims = (aql->setup >> HSA_KERNEL_DISPATCH_PACKET_SETUP_DIMENSIONS) &
                     ((1 << HSA_KERNEL_DISPATCH_PACKET_SETUP_WIDTH_DIMENSIONS) - 1);
@@ -3473,21 +3791,22 @@ HSAQueue::dispatch_hsa_kernel(const hsa_kernel_dispatch_packet_t *aql,
     Kalmar::HSADevice* device = static_cast<Kalmar::HSADevice*>(this->getDev());
     //HSADispatch *dispatch = new HSADispatch(device, nullptr, aql);
     std::shared_ptr<HSADispatch> sp_dispatch = std::make_shared<HSADispatch>(device, this/*queue*/, nullptr, aql);
+    pushAsyncOp(sp_dispatch);
     HSADispatch *dispatch = sp_dispatch.get();
+    dispatch->setKernelName(kernelName);
 
     waitForStreamDeps(dispatch);
 
     // May be faster to create signals for each dispatch than to use markers.
     // Perhaps could check HSA queue pointers.
     bool needsSignal = true;
-    if (HCC_OPT_FLUSH) {
+    if (HCC_OPT_FLUSH && !HCC_PROFILE && (cf==nullptr) && !HCC_FORCE_COMPLETION_FUTURE && !HCC_SERIALIZE_KERNEL) {
         // Only allocate a signal if the caller requested a completion_future to track status.
-        needsSignal = (cf != nullptr);
+        needsSignal = false;
     };
 
     dispatch->dispatchKernelAsync(args, argSize, needsSignal);
 
-    pushAsyncOp(sp_dispatch);
 
     if (cf) {
         *cf = hc::completion_future(sp_dispatch);
@@ -3502,15 +3821,18 @@ HSAQueue::dispatch_hsa_kernel(const hsa_kernel_dispatch_packet_t *aql,
 
 HSADispatch::HSADispatch(Kalmar::HSADevice* _device, Kalmar::KalmarQueue *queue, HSAKernel* _kernel,
                          const hsa_kernel_dispatch_packet_t *aql) :
-    KalmarAsyncOp(queue, Kalmar::hcCommandKernel),
+    HSAOp(queue, Kalmar::hcCommandKernel),
     device(_device),
     agent(_device->getAgent()),
+    kernel_name(nullptr),
     kernel(_kernel),
     isDispatched(false),
     waitMode(HSA_WAIT_STATE_BLOCKED),
     future(nullptr),
     kernargMemory(nullptr)
 {
+    signal.handle = 0;
+    signalIndex = -1;
     if (aql) {
         this->aql = *aql;
     }
@@ -3543,39 +3865,54 @@ static std::ostream& operator<<(std::ostream& os, const hsa_kernel_dispatch_pack
        << " group=[" << std::dec << aql.workgroup_size_x << "." <<  aql.workgroup_size_y << "." <<  aql.workgroup_size_z << "]"
        << " private_seg_size=" <<  aql.private_segment_size
        << " group_seg_size=" <<  aql.group_segment_size 
-       << " kernel_object=" << std::hex <<  aql.kernel_object 
-       << " kernarg_address=" <<  aql.kernarg_address
-       << " completion_signal=" <<  aql.completion_signal.handle;
+       << " kernel_object=0x" << std::hex <<  aql.kernel_object 
+       << " kernarg_address=0x" <<  aql.kernarg_address
+       << " completion_signal=0x" <<  aql.completion_signal.handle
+       << std::dec;
 
-    const unsigned *aqlBytes = (unsigned*)&aql;
-     os << "    raw_aql=[" << std::hex << std::setfill('0'); 
-     for (int i=0; i<sizeof(aql)/sizeof(unsigned); i++) {
-         os << " 0x" << std::setw(8) << aqlBytes[i];
-     }
-     os << " ]" << std::dec;
 
     return os;
+}
+
+static std::string rawAql(const hsa_kernel_dispatch_packet_t &aql)
+{
+    std::stringstream ss;
+    const unsigned *aqlBytes = (unsigned*)&aql;
+     ss << "    raw_aql=[" << std::hex << std::setfill('0'); 
+     for (int i=0; i<sizeof(aql)/sizeof(unsigned); i++) {
+         ss << " 0x" << std::setw(8) << aqlBytes[i];
+     }
+     ss << " ]" ;
+     return ss.str();
 }
 
 
 static std::ostream& operator<<(std::ostream& os, const hsa_barrier_and_packet_t &aql)
 {
     PrintHeader(os, aql.header);
-    os << " dep_signal[0]=" <<  aql.dep_signal[0].handle
-       << " dep_signal[1]=" <<  aql.dep_signal[1].handle
-       << " dep_signal[2]=" <<  aql.dep_signal[2].handle
-       << " dep_signal[3]=" <<  aql.dep_signal[3].handle
-       << " dep_signal[4]=" <<  aql.dep_signal[4].handle
-       << " completion_signal=" <<  aql.completion_signal.handle;
+    os << " dep_signal[0]=0x" <<  aql.dep_signal[0].handle
+       << " dep_signal[1]=0x" <<  aql.dep_signal[1].handle
+       << " dep_signal[2]=0x" <<  aql.dep_signal[2].handle
+       << " dep_signal[3]=0x" <<  aql.dep_signal[3].handle
+       << " dep_signal[4]=0x" <<  aql.dep_signal[4].handle
+       << " completion_signal=0x" <<  aql.completion_signal.handle
+       << std::dec;
 
-    const unsigned *aqlBytes = (unsigned*)&aql;
-     os << "    raw_aql=[" << std::hex << std::setfill('0'); 
-     for (int i=0; i<sizeof(aql)/sizeof(unsigned); i++) {
-         os << " 0x" << std::setw(8) << aqlBytes[i];
-     }
-     os << " ]" << std::dec;
 
    return os;
+}
+
+//static std::ostream& rawAql(std::ostream& os, const hsa_barrier_and_packet_t &aql)
+static std::string rawAql(const hsa_barrier_and_packet_t &aql)
+{
+    std::stringstream ss;
+    const unsigned *aqlBytes = (unsigned*)&aql;
+     ss << "    raw_aql=[" << std::hex << std::setfill('0'); 
+     for (int i=0; i<sizeof(aql)/sizeof(unsigned); i++) {
+         ss << " 0x" << std::setw(8) << aqlBytes[i];
+     }
+     ss << " ]" ;
+     return ss.str();
 }
 
 
@@ -3585,7 +3922,7 @@ static void printKernarg(const void *kernarg_address, int bytesToPrint)
 
 
     std::stringstream ks;
-    ks << "kernarg_address: 0x" << kernarg_address << ", first " << bytesToPrint << " bytes:";
+    ks << "kernarg_address: 0x" << kernarg_address << ", total of " << bytesToPrint << " bytes:";
     for (int i=0; i<bytesToPrint/sizeof(unsigned int); i++) {
         bool newLine = ((i % 4) ==0);
         
@@ -3642,6 +3979,7 @@ HSADispatch::dispatchKernel(hsa_queue_t* lockedHsaQueue, const void *hostKernarg
         std::pair<void*, int> ret = device->getKernargBuffer(hostKernargSize);
         kernargMemory = ret.first;
         kernargMemoryIndex = ret.second;
+        //std::cerr << "op #" << getSeqNum() << " allocated kernarg cursor=" << kernargMemoryIndex << "\n";
 
         // as kernarg buffers are fine-grained, we can directly use memcpy
         memcpy(kernargMemory, hostKernarg, hostKernargSize);
@@ -3686,12 +4024,11 @@ HSADispatch::dispatchKernel(hsa_queue_t* lockedHsaQueue, const void *hostKernarg
     q_aql->header = header;
 
     hsa_queue_store_write_index_relaxed(lockedHsaQueue, index + 1);
-    DBOUT(DB_AQL, " dispatch_aql into " << *hsaQueue() << "(" << lockedHsaQueue << ")\n");
-    DBOUTL(DB_AQL2, *q_aql);
+    DBOUTL(DB_AQL, " dispatch_aql " << *this << "(hwq=" << lockedHsaQueue << ") kernargs=" << hostKernargSize << " " << *q_aql );
+    DBOUTL(DB_AQL2, rawAql(*q_aql));
 
     if (DBFLAG(DB_KERNARG)) { 
-        // TODO, perhaps someday we could determine size of kernarg block here:
-        printKernarg(q_aql->kernarg_address, 128);
+        printKernarg(q_aql->kernarg_address, hostKernargSize);
     }
 
 
@@ -3716,7 +4053,7 @@ HSADispatch::waitComplete() {
 
 
     if (signal.handle) {
-        DBOUT(DB_MISC, "wait for kernel dispatch op#" << getSeqNum() << " completion with wait flag: " << waitMode << "  signal="<< std::hex  << signal.handle << std::dec << "\n");
+        DBOUT(DB_MISC, "wait for kernel dispatch op#" << *this  << " completion with wait flag: " << waitMode << "  signal="<< std::hex  << signal.handle << std::dec << "\n");
 
         // wait for completion
         if (hsa_signal_wait_acquire(signal, HSA_SIGNAL_CONDITION_LT, 1, uint64_t(-1), waitMode)!=0) {
@@ -3732,10 +4069,6 @@ HSADispatch::waitComplete() {
         DBOUT (DB_MISC, "null signal, considered complete\n");
     }
 
-    if (kernargMemory != nullptr) {
-      device->releaseKernargBuffer(kernargMemory, kernargMemoryIndex);
-      kernargMemory = nullptr;
-    }
 
     // unregister this async operation from HSAQueue
     if (this->hsaQueue() != nullptr) {
@@ -3833,6 +4166,7 @@ inline void
 HSADispatch::dispose() {
     hsa_status_t status;
     if (kernargMemory != nullptr) {
+      //std::cerr << "op#" << getSeqNum() << " releasing kernal arg buffer index=" << kernargMemoryIndex<< "\n";
       device->releaseKernargBuffer(kernargMemory, kernargMemoryIndex);
       kernargMemory = nullptr;
     }
@@ -3840,6 +4174,13 @@ HSADispatch::dispose() {
     clearArgs();
     std::vector<uint8_t>().swap(arg_vec);
 
+    if (HCC_PROFILE & HCC_PROFILE_TRACE) {
+        uint64_t start = getBeginTimestamp();
+        uint64_t end   = getEndTimestamp();
+        //std::string kname = kernel ? (kernel->kernelName + "+++" + kernel->shortKernelName) : "hmm";
+        //LOG_PROFILE(this, start, end, "kernel", kname.c_str(), std::hex << "kernel="<< kernel << " " << (kernel? kernel->kernelCodeHandle:0x0) << " aql.kernel_object=" << aql.kernel_object << std::dec);
+        LOG_PROFILE(this, start, end, "kernel", getKernelName(), "");
+    }
     Kalmar::ctx.releaseSignal(signal, signalIndex);
 
     if (future != nullptr) {
@@ -3925,7 +4266,7 @@ HSADispatch::setLaunchConfiguration(int dims, size_t *globalDims, size_t *localD
     if (max_num_work_items_per_cu < workgroup_total_size) {
         std::string msg;
         msg = "The number of VGPRs (" + std::to_string(kernel->workitem_vgpr_count) + ") needed by this launch (" + 
-              (kernel?kernel->getKernelName():"<unknown>") + ") exceeds HW limit due to big work group size (" + 
+              (kernel->getKernelName()) + ") exceeds HW limit due to big work group size (" + 
               std::to_string(workgroup_total_size) + ") workitems!";
         throw Kalmar::runtime_exception(msg.c_str(), 0);
     }
@@ -3939,7 +4280,7 @@ HSADispatch::setLaunchConfiguration(int dims, size_t *globalDims, size_t *localD
     aql.header = 0;
     if (HCC_OPT_FLUSH) {
         if (hsaQueue()->nextKernelNeedsSysAcquire())  {
-            DBOUT( DB_CMD, "  kernel AQL packet adding system-scope acquire\n");
+            DBOUT( DB_CMD2, "  kernel AQL packet adding system-scope acquire\n");
             // Pick up system acquire if needed.
             aql.header |= ((HSA_FENCE_SCOPE_SYSTEM) << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) ;
             hsaQueue()->setNextKernelNeedsSysAcquire(false);
@@ -3973,7 +4314,7 @@ HSABarrier::waitComplete() {
         return HSA_STATUS_ERROR_INVALID_ARGUMENT;
     }
 
-    DBOUT(DB_WAIT,  "  wait for barrier op#" << getSeqNum() << " completion with wait flag: " << waitMode << "  signal="<< std::hex  << signal.handle << std::dec <<"...\n");
+    DBOUT(DB_WAIT,  "  wait for barrier " << *this << " completion with wait flag: " << waitMode << "  signal="<< std::hex  << signal.handle << std::dec <<"...\n");
 
     // Wait on completion signal until the barrier is finished
     hsa_signal_wait_acquire(signal, HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX, waitMode);
@@ -4078,8 +4419,8 @@ HSABarrier::enqueueAsync(hc::memory_scope releaseScope) {
         // Set header last:
         barrier->header = header;
 
-        DBOUTL(DB_AQL, " barrier_aql  into " << *hsaQueue() << "(" << rocrQueue << ")");
-        DBOUTL(DB_AQL2, *barrier);
+        DBOUTL(DB_AQL, " barrier_aql " << *this << " "<< *barrier );
+        DBOUTL(DB_AQL2, rawAql(*barrier));
 
 
         // Increment write index and ring doorbell to dispatch the kernel
@@ -4100,10 +4441,66 @@ HSABarrier::enqueueAsync(hc::memory_scope releaseScope) {
 }
 
 
+static std::string fenceToString(int fenceBits)
+{
+    switch (fenceBits) {
+        case 0: return "none";
+        case 1: return "acc";
+        case 2: return "sys";
+        case 3: return "sys";
+        default: return "???";
+    };
+}
+
+
+bool HSABarrier::isReady() override {
+    bool ready = (hsa_signal_load_acquire(signal) == 0);
+    if (ready) {
+        hsaQueue()->removeAsyncOp(this);
+    }
+
+    return ready;
+}
+
+bool HSACopy::isReady() override {
+    bool ready = (hsa_signal_load_acquire(signal) == 0);
+    if (ready) {
+        hsaQueue()->removeAsyncOp(this);
+    }
+
+    return ready;
+}
+
+bool HSADispatch::isReady() override {
+    bool ready = (hsa_signal_load_acquire(signal) == 0);
+    if (ready) {
+        hsaQueue()->removeAsyncOp(this);
+    }
+
+    return ready;
+}
+
 
 
 inline void
 HSABarrier::dispose() {
+    if ((HCC_PROFILE & HCC_PROFILE_TRACE) && (HCC_PROFILE_VERBOSE & HCC_PROFILE_VERBOSE_BARRIER)) {
+        uint64_t start = getBeginTimestamp();
+        uint64_t end   = getEndTimestamp();
+        int acqBits = extractBits(header, HSA_PACKET_HEADER_SCACQUIRE_FENCE_SCOPE, HSA_PACKET_HEADER_WIDTH_SCACQUIRE_FENCE_SCOPE);
+        int relBits = extractBits(header, HSA_PACKET_HEADER_SCRELEASE_FENCE_SCOPE, HSA_PACKET_HEADER_WIDTH_SCRELEASE_FENCE_SCOPE);
+
+        std::stringstream depss;
+        for (int i=0; i<depCount; i++) {
+            if (i==0) {
+                depss << " deps=";
+            } else {
+                depss << ",";
+            }
+            depss << *depAsyncOps[i];
+        };
+        LOG_PROFILE(this, start, end, "barrier", "depcnt=" + std::to_string(depCount) + ",acq=" + fenceToString(acqBits) + ",rel=" + fenceToString(relBits), depss.str())
+    }
     Kalmar::ctx.releaseSignal(signal, signalIndex);
 
     // Release referecne to our dependent ops:
@@ -4133,10 +4530,38 @@ HSABarrier::getEndTimestamp() override {
     return time.end;
 }
 
+
+// ----------------------------------------------------------------------
+// member function implementation of HSAOp
+// ----------------------------------------------------------------------
+HSAOpCoord::HSAOpCoord(Kalmar::HSAQueue *queue) :
+        _deviceId(queue->getDev()->get_seqnum()),
+        _queueId(queue->getSeqNum())
+        {} 
+
+HSAOp::HSAOp(Kalmar::KalmarQueue *queue, hc::hcCommandKind commandKind) : 
+    KalmarAsyncOp(queue, commandKind),
+    _opCoord(static_cast<Kalmar::HSAQueue*> (queue))
+{
+    apiStartTick = Kalmar::ctx.getSystemTicks();
+};
+
 // ----------------------------------------------------------------------
 // member function implementation of HSACopy
 // ----------------------------------------------------------------------
 //
+// Copy mode will be set later on.
+// HSA signals would be waited in HSA_WAIT_STATE_ACTIVE by default for HSACopy instances
+HSACopy::HSACopy(Kalmar::KalmarQueue *queue, const void* src_, void* dst_, size_t sizeBytes_) : HSAOp(queue, Kalmar::hcCommandInvalid),
+    isSubmitted(false), isAsync(false), isSingleStepCopy(false), isPeerToPeer(false), future(nullptr), depAsyncOp(nullptr), copyDevice(nullptr), waitMode(HSA_WAIT_STATE_ACTIVE),
+    src(src_), dst(dst_),
+    sizeBytes(sizeBytes_),
+    signalIndex(-1) {
+
+
+    signal.handle = 0;
+    apiStartTick = Kalmar::ctx.getSystemTicks();
+}
 
 // wait for the async copy to complete
 inline hsa_status_t
@@ -4188,6 +4613,7 @@ hsa_status_t HSACopy::hcc_memory_async_copy(Kalmar::hcCommandKind copyKind, cons
                       int depSignalCnt, const hsa_signal_t *depSignals,
                       hsa_signal_t completion_signal)
 {
+    this->isSingleStepCopy = true;
     this->copyDevice = copyDeviceArg;
 
     // beautiful...:
@@ -4204,29 +4630,62 @@ hsa_status_t HSACopy::hcc_memory_async_copy(Kalmar::hcCommandKind copyKind, cons
 
     hsa_agent_t hostAgent = const_cast<Kalmar::HSADevice *> (copyDeviceArg)->getHostAgent();
 
-    void *dstPtr = dstPtrInfo._devicePointer;
-    void *srcPtr = srcPtrInfo._devicePointer;
+    /* Determine src and dst pointer passed to ROCR runtime.
+     *
+     * Pre-condition:
+     * - this->dst and this->src must be tracked by AM API implemantation.
+     * - dstPtrInfo and srcPtrInfo must be valid.
+     */
+    void *dstPtr = nullptr;
+    void *srcPtr = nullptr;
 
     hsa_agent_t srcAgent, dstAgent;
     switch (copyKind) {
         case Kalmar::hcMemcpyHostToHost: 
             srcAgent=hostAgent; dstAgent=hostAgent;
 
-            // Use host pointers since this copy will be performed with CPU.
-            // If pointers are registered, then devicePointer may not match host pointer.
-            dstPtr = dstPtrInfo._hostPointer;
-            srcPtr = srcPtrInfo._hostPointer;
-            
-            //throw Kalmar::runtime_exception("HCC should not use hsa_memory_async_copy for host-to-host copy");
+            /* H2H case
+             * We expect ROCR runtime to continue use the CPU for host to host
+             * copies, and thus must pass host pointers here.
+             */
+            dstPtr = this->dst;
+            srcPtr = const_cast<void*>(this->src);
             break;
         case Kalmar::hcMemcpyHostToDevice: 
             srcAgent=hostAgent; dstAgent=copyAgent;
+
+            /* H2D case
+             * Destination is simply this->dst.
+             * Source has to be calculated by adding the offset to the pinned
+             * host pointer.
+             */
+            dstPtr = this->dst;
+            srcPtr = reinterpret_cast<unsigned char*>(srcPtrInfo._devicePointer) +
+                     (reinterpret_cast<unsigned char*>(const_cast<void*>(this->src)) -
+                      reinterpret_cast<unsigned char*>(srcPtrInfo._hostPointer));
             break;
         case Kalmar::hcMemcpyDeviceToHost: 
             srcAgent=copyAgent; dstAgent=hostAgent;
+
+            /* D2H case
+             * Source is simply this->src.
+             * Desination has to be calculated by adding the offset to the
+             * pinned host pointer.
+             */
+            dstPtr = reinterpret_cast<unsigned char*>(dstPtrInfo._devicePointer) +
+                     (reinterpret_cast<unsigned char*>(this->dst) -
+                      reinterpret_cast<unsigned char*>(dstPtrInfo._hostPointer));
+            srcPtr = const_cast<void*>(this->src);
             break;
         case Kalmar::hcMemcpyDeviceToDevice: 
+            this->isPeerToPeer = (dstPtrInfo._acc != srcPtrInfo._acc);
             srcAgent=copyAgent; dstAgent=copyAgent;
+
+            /* D2D case
+             * Simply pass this->src and this->dst to ROCR runtime.
+             */
+            dstPtr = this->dst;
+            srcPtr = const_cast<void*>(this->src);
             break;
         default:
             throw Kalmar::runtime_exception("bad copyKind in hcc_memory_async_copy", copyKind);
@@ -4269,7 +4728,7 @@ hsa_status_t HSACopy::hcc_memory_async_copy(Kalmar::hcCommandKind copyKind, cons
 
     // Next kernel needs to acquire the result of the copy.
     // This holds true for any copy direction, since host memory can also be cached on this GPU. 
-    DBOUT( DB_CMD, "  H2D copy setNextKernelNeedsSysAcquire(true)\n");
+    DBOUT( DB_CMD2, "  H2D copy setNextKernelNeedsSysAcquire(true)\n");
     // HSA memory copy requires a system-scope acquire before the next kernel command - set flag here so we remember:
     hsaQueue()->setNextKernelNeedsSysAcquire(true);
 
@@ -4324,7 +4783,7 @@ HSACopy::enqueueAsyncCopyCommand(const Kalmar::HSADevice *copyDevice, const hc::
         setCommandKind (resolveMemcpyDirection(srcPtrInfo._isInDeviceMem, dstPtrInfo._isInDeviceMem));
 
         auto releaseScope = (hsaQueue()->nextSyncNeedsSysRelease()) ? hc::system_scope : hc::no_scope;
-        depAsyncOp = hsaQueue()->detectStreamDeps(this->getCommandKind(), this);
+        depAsyncOp = std::static_pointer_cast<HSAOp> (hsaQueue()->detectStreamDeps(this->getCommandKind(), this));
 
         // We need to ensure the copy waits for preceding commands the HCC queue to complete, if those commands exist.
         // The copy has to be set so that it depends on the completion_signal of the youngest command in the queue.
@@ -4339,16 +4798,16 @@ HSACopy::enqueueAsyncCopyCommand(const Kalmar::HSADevice *copyDevice, const hc::
             // For both of these cases, we create an additional barrier packet in the source, and attach the desired fence.
             // Then we make the copy depend on the signal written by this command.
             if ((depSignal.handle == 0x0) || (releaseScope != hc::no_scope)) {
-                DBOUT( DB_CMD, "  asyncCopy adding marker for needed dependency or release\n");
+                DBOUT( DB_CMD2, "  asyncCopy adding marker for needed dependency or release\n");
 
                 // Set depAsyncOp for use by the async copy below:
-                depAsyncOp = hsaQueue()->EnqueueMarkerWithDependency(0, nullptr, releaseScope);
+                depAsyncOp = std::static_pointer_cast<HSAOp> (hsaQueue()->EnqueueMarkerWithDependency(0, nullptr, releaseScope));
                 depSignal = * (static_cast <hsa_signal_t*> (depAsyncOp->getNativeHandle()));
             };
 
             depSignalCnt = 1;
 
-            DBOUT( DB_CMD, "  asyncCopy sent with dependency on op#" << depAsyncOp->getSeqNum() << " depSignal="<< std::hex  << depSignal.handle << std::dec <<"\n");
+            DBOUT( DB_CMD2, "  asyncCopy sent with dependency on op#" << depAsyncOp->getSeqNum() << " depSignal="<< std::hex  << depSignal.handle << std::dec <<"\n");
         }
 
 
@@ -4359,6 +4818,8 @@ HSACopy::enqueueAsyncCopyCommand(const Kalmar::HSADevice *copyDevice, const hc::
                       << "  copyAgent=" << copyDevice
                       << "\n");
         }
+
+        isAsync = true;
 
         hcc_memory_async_copy(getCommandKind(), copyDevice, dstPtrInfo, srcPtrInfo, sizeBytes, depSignalCnt, depSignalCnt ? &depSignal:NULL, signal);
     }
@@ -4392,7 +4853,22 @@ HSACopy::dispose() {
     // HSA signal may not necessarily be allocated by HSACopy instance
     // only release the signal if it was really allocated (signalIndex >= 0)
     if (signalIndex >= 0) {
+        if (HCC_PROFILE & HCC_PROFILE_TRACE) {
+            uint64_t start = getBeginTimestamp();
+            uint64_t end   = getEndTimestamp();
+
+            double bw = (double)(sizeBytes)/(end-start) * (1000.0/1024.0) * (1000.0/1024.0);
+
+            LOG_PROFILE(this, start, end, "copy", getCopyCommandString(),  "\t" << sizeBytes << " bytes;\t" << sizeBytes/1024.0/1024 << " MB;\t" << bw << " GB/s;");
+        }
         Kalmar::ctx.releaseSignal(signal, signalIndex);
+    } else {
+        if (HCC_PROFILE & HCC_PROFILE_TRACE) {
+            uint64_t start = apiStartTick;
+            uint64_t end   = Kalmar::ctx.getSystemTicks();
+            double bw = (double)(sizeBytes)/(end-start) * (1000.0/1024.0) * (1000.0/1024.0);
+            LOG_PROFILE(this, start, end, "copyslo", getCopyCommandString(),  "\t" << sizeBytes << " bytes;\t" << sizeBytes/1024.0/1024 << " MB;\t" << bw << " GB/s;");
+        }
     }
 
     if (future != nullptr) {
@@ -4404,16 +4880,16 @@ HSACopy::dispose() {
 inline uint64_t
 HSACopy::getBeginTimestamp() override {
     Kalmar::HSADevice* device = static_cast<Kalmar::HSADevice*>(hsaQueue()->getDev());
-    hsa_amd_profiling_dispatch_time_t time;
-    hsa_amd_profiling_get_dispatch_time(device->getAgent(), signal, &time);
+    hsa_amd_profiling_async_copy_time_t time;
+    hsa_amd_profiling_get_async_copy_time(signal, &time);
     return time.start;
 }
 
 inline uint64_t
 HSACopy::getEndTimestamp() override {
     Kalmar::HSADevice* device = static_cast<Kalmar::HSADevice*>(hsaQueue()->getDev());
-    hsa_amd_profiling_dispatch_time_t time;
-    hsa_amd_profiling_get_dispatch_time(device->getAgent(), signal, &time);
+    hsa_amd_profiling_async_copy_time_t time;
+    hsa_amd_profiling_get_async_copy_time(signal, &time);
     return time.end;
 }
 
@@ -4437,15 +4913,13 @@ HSACopy::syncCopyExt(hc::hcCommandKind copyDir, const hc::AmPointerInfo &srcPtrI
     }
 
 
-
-
     DBOUT(DB_COPY, "hcCommandKind: " << getHcCommandKindString(copyDir) << "\n");
 
     bool useFastCopy = true;
     switch (copyDir) {
         case Kalmar::hcMemcpyHostToDevice:
             if (!srcInTracker || forceUnpinnedCopy) {
-                DBOUT(DB_COPY,"HSACopy::syncCopy(), invoke UnpinnedCopyEngine::CopyHostToDevice()\n");
+                DBOUT(DB_COPY,"HSACopy::syncCopyExt(), invoke UnpinnedCopyEngine::CopyHostToDevice()\n");
 
                 copyDevice->copy_engine[0]->CopyHostToDevice(copyDevice->copy_mode, dst, src, sizeBytes, depSignalCnt ? &depSignal : NULL);
                 useFastCopy = false;
@@ -4455,7 +4929,7 @@ HSACopy::syncCopyExt(hc::hcCommandKind copyDir, const hc::AmPointerInfo &srcPtrI
 
         case Kalmar::hcMemcpyDeviceToHost:
             if (!dstInTracker || forceUnpinnedCopy) {
-                DBOUT(DB_COPY,"HSACopy::syncCopy(), invoke UnpinnedCopyEngine::CopyDeviceToHost()\n");
+                DBOUT(DB_COPY,"HSACopy::syncCopyExt(), invoke UnpinnedCopyEngine::CopyDeviceToHost()\n");
                 UnpinnedCopyEngine::CopyMode d2hCopyMode = copyDevice->copy_mode;
                 if (d2hCopyMode == UnpinnedCopyEngine::UseMemcpy) {
                     // override since D2H does not support Memcpy
@@ -4467,7 +4941,7 @@ HSACopy::syncCopyExt(hc::hcCommandKind copyDir, const hc::AmPointerInfo &srcPtrI
             break;
 
         case Kalmar::hcMemcpyHostToHost:
-            DBOUT(DB_COPY,"HSACopy::syncCopy(), invoke memcpy\n");
+            DBOUT(DB_COPY,"HSACopy::syncCopyExt(), invoke memcpy\n");
             // Since this is sync copy, we assume here that the GPU has already drained younger commands.
 
             // This works for both mapped and unmapped memory:
@@ -4477,9 +4951,12 @@ HSACopy::syncCopyExt(hc::hcCommandKind copyDir, const hc::AmPointerInfo &srcPtrI
 
         case Kalmar::hcMemcpyDeviceToDevice:
             if (forceUnpinnedCopy) {
+                // TODO - is this a same-device copy or a P2P?
                 hsa_agent_t dstAgent = * (static_cast<hsa_agent_t*> (dstPtrInfo._acc.get_hsa_agent()));
                 hsa_agent_t srcAgent = * (static_cast<hsa_agent_t*> (srcPtrInfo._acc.get_hsa_agent()));
-                DBOUT(DB_COPY, "HSACopy:: P2P copy by engine forcing use of staging buffers.  copyEngine=" << copyDevice << "\n");
+                DBOUT(DB_COPY, "HSACopy::syncCopyExt() P2P copy by engine forcing use of staging buffers.  copyEngine=" << copyDevice << "\n");
+
+                isPeerToPeer = true;
 
                 // TODO, which staging buffer should we use for this to be optimal?
                 copyDevice->copy_engine[1]->CopyPeerToPeer(dst, dstAgent, src, srcAgent, sizeBytes, depSignalCnt ? &depSignal : NULL);
@@ -4497,7 +4974,7 @@ HSACopy::syncCopyExt(hc::hcCommandKind copyDir, const hc::AmPointerInfo &srcPtrI
     if (useFastCopy) {
         // Didn't already handle copy with one of special (slow) cases above, use the standard runtime copy path.
 
-        DBOUT(DB_COPY, "HSACopy::syncCopy(), useFastCopy=1, fetch and init a HSA signal\n");
+        DBOUT(DB_COPY, "HSACopy::syncCopyExt(), useFastCopy=1, fetch and init a HSA signal\n");
 
         // Get a signal and initialize it:
         std::pair<hsa_signal_t, int> ret = Kalmar::ctx.getSignal();
@@ -4506,7 +4983,7 @@ HSACopy::syncCopyExt(hc::hcCommandKind copyDir, const hc::AmPointerInfo &srcPtrI
 
         hsa_signal_store_relaxed(signal, 1);
 
-        DBOUT(DB_CMD, "HSACopy::syncCopy(), invoke hsa_amd_memory_async_copy()\n");
+        DBOUT(DB_CMD, "HSACopy::syncCopyExt(), invoke hsa_amd_memory_async_copy()\n");
 
         if (copyDevice == nullptr) {
             throw Kalmar::runtime_exception("Null copyDevice reached call to hcc_memory_async_copy", -1);
@@ -4516,16 +4993,14 @@ HSACopy::syncCopyExt(hc::hcCommandKind copyDir, const hc::AmPointerInfo &srcPtrI
         hsa_status_t hsa_status = hcc_memory_async_copy(copyDir, copyDevice, dstPtrInfo, srcPtrInfo, sizeBytes, depSignalCnt, depSignalCnt ? &depSignal:NULL, signal);
 
         if (hsa_status == HSA_STATUS_SUCCESS) {
-            DBOUT(DB_COPY, "HSACopy::syncCopy(), wait for completion...");
+            DBOUT(DB_COPY, "HSACopy::syncCopyExt(), wait for completion...");
             hsa_signal_wait_relaxed(signal, HSA_SIGNAL_CONDITION_LT, 1, UINT64_MAX, waitMode);
 
             DBOUT(DB_COPY,"done!\n");
         } else {
-            DBOUT(DB_COPY, "HSACopy::syncCopy(), hsa_amd_memory_async_copy() returns: 0x" << std::hex << hsa_status << std::dec <<"\n");
+            DBOUT(DB_COPY, "HSACopy::syncCopyExt(), hsa_amd_memory_async_copy() returns: 0x" << std::hex << hsa_status << std::dec <<"\n");
             throw Kalmar::runtime_exception("hsa_amd_memory_async_copy error", hsa_status);
         }
-        Kalmar::ctx.releaseSignal(signal, signalIndex);
-        signalIndex = -1;
     }
 
     if (HCC_CHECK_COPY) {
@@ -4559,8 +5034,8 @@ HSACopy::syncCopy() {
     bool dstInDeviceMem = false;
 
     hc::accelerator acc;
-    hc::AmPointerInfo srcPtrInfo(NULL, NULL, 0, acc, 0, 0);
-    hc::AmPointerInfo dstPtrInfo(NULL, NULL, 0, acc, 0, 0);
+    hc::AmPointerInfo srcPtrInfo(NULL, NULL, NULL, 0, acc, 0, 0);
+    hc::AmPointerInfo dstPtrInfo(NULL, NULL, NULL, 0, acc, 0, 0);
 
     if (hc::am_memtracker_getinfo(&srcPtrInfo, src) == AM_SUCCESS) {
         srcInTracker = true;

@@ -7,6 +7,7 @@
 #ifndef USE_LIBCXX
 #include <cxxabi.h>
 #endif
+#include <cstring>
 #include <string>
 #include <sstream>
 #include <iostream>
@@ -26,13 +27,15 @@
 #define DB_INIT      11  /* 0x0800  HCC initialization and shutdown. */
 #define DB_MISC      12  /* 0x1000  misc debug, not yet classified. */
 #define DB_AQL2      13  /* 0x2000  Show raw bytes of AQL packet */
+#define DB_CODE      14  /* 0x4000  Show CreateKernel and code creation debug */
+#define DB_CMD2      15  /* 0x8000  More detailed command info, including barrier commands created by hcc rt. */
 // If adding new define here update the table below:
 
 extern unsigned HCC_DB;
 
 
 // Keep close to debug defs above since these have to be kept in-sync
-static std::vector<std::string> g_DbStr = {"api", "cmd", "wait", "aql", "queue", "sig", "lock", "kernarg", "copy", "copy2", "resource", "init", "misc", "aql2"};
+static std::vector<std::string> g_DbStr = {"api", "cmd", "wait", "aql", "queue", "sig", "lock", "kernarg", "copy", "copy2", "resource", "init", "misc", "aql2", "code", "cmd2"};
 
 
 // Macro for prettier debug messages, use like:
@@ -41,12 +44,14 @@ static std::vector<std::string> g_DbStr = {"api", "cmd", "wait", "aql", "queue",
 
 #define DBFLAG(db_flag) (HCC_DB & (1<<(db_flag)))
 
+#define DBSTREAM std::cerr
+
 // Use str::stream so output is atomic wrt other threads:
 #define DBOUT(db_flag, msg) \
 if (COMPILE_HCC_DB && (HCC_DB & (1<<(db_flag)))) { \
     std::stringstream sstream;\
     sstream << "   hcc-" << g_DbStr[db_flag] << " tid:" << hcc_tlsShortTid._shortTid << " " << msg ; \
-    std::cerr << sstream.str();\
+    DBSTREAM << sstream.str();\
 };
 
 // Like DBOUT, but add newline:
@@ -54,9 +59,11 @@ if (COMPILE_HCC_DB && (HCC_DB & (1<<(db_flag)))) { \
 if (COMPILE_HCC_DB && (HCC_DB & (1<<(db_flag)))) { \
     std::stringstream sstream;\
     sstream << "   hcc-" << g_DbStr[db_flag] << " tid:" << hcc_tlsShortTid._shortTid << " " << msg << "\n"; \
-    std::cerr << sstream.str();\
+    DBSTREAM << sstream.str();\
 };
 
+// get a the current filename without the path
+#define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/')+1 : __FILE__)
 
 // Class with a constructor that gets called when new thread is created:
 struct ShortTid {
