@@ -95,6 +95,7 @@ node( 'rocmtest' )
       {
         sh "cd ${build_dir_release_abs}; make package"
         archiveArtifacts artifacts: "${build_dir_release_rel}/*.deb", fingerprint: true
+        archiveArtifacts artifacts: "docker/dockerfile-hcc-lc-*", fingerprint: true
         // archiveArtifacts artifacts: "${build_dir_release_rel}/*.rpm", fingerprint: true
       }
     }
@@ -169,14 +170,15 @@ node( 'rocmtest' )
   stage('hip integration')
   {
     // If this a clang_tot_upgrade build, kick off downstream hip build so that the two projects are in sync
-    if( env.BRANCH_NAME.toLowerCase( ).startsWith( 'clang_tot_upgrade' ) )
-    {
-      build( job: 'ROCm-Developer-Tools/HIP/master', wait: false )
-    }
-    // If this is a PR build, test compiler against downstream hip project
-    else if( env.BRANCH_NAME.toLowerCase( ).startsWith( 'pr-' ) )
-    {
-      build( job: 'ROCm-Developer-Tools/HIP/master', parameters: [booleanParam( name: 'hcc_integration_test', value: true )] )
-    }
+    // if( env.BRANCH_NAME.toLowerCase( ).startsWith( 'clang_tot_upgrade' ) )
+    // {
+    //   build( job: 'kknox/HIP/ci-fix', wait: false )
+    // }
+    // // If this is a PR build, test compiler against downstream hip project
+    // else if( env.BRANCH_NAME.toLowerCase( ).startsWith( 'pr-' ) )
+    // {
+    //   build( job: 'kknox/HIP/ci-fix', parameters: [booleanParam( name: 'hcc_integration_test', value: true )] )
+    // }
+    build( job: 'kknox/HIP/ci-fix', parameters: [booleanParam( name: 'hcc_integration_test', value: true )] )
   }
 }
