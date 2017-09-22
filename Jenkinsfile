@@ -8,8 +8,33 @@ properties([buildDiscarder(logRotator(
     daysToKeepStr: '',
     numToKeepStr: '10')),
     disableConcurrentBuilds(),
+    parameters([booleanParam( name: 'run_hip_integration_testing', defaultValue: false, description: 'Build hip with this compiler and run hip unit tests' ),
+                string( name: 'hip_integration_branch', defaultValue: 'ROCm-Developer-Tools/HIP/master', description: 'Path to hip branch to build & test' )]),
     [$class: 'CopyArtifactPermissionProperty', projectNames: '*']
   ])
+
+////////////////////////////////////////////////////////////////////////
+// -- AUXILLARY HELPER FUNCTIONS
+
+////////////////////////////////////////////////////////////////////////
+// Return user description if a build was manually kicked off (like build now button clicked),
+// or null if some other trigger caused the build
+@NonCPS
+String get_build_cause( )
+{
+    def build_cause = currentBuild.rawBuild.getCause( hudson.model.Cause$UserIdCause )
+    if( build_cause == null )
+      return build_cause
+
+    return build_cause.getShortDescription( )
+}
+
+// Not used right now, seems to always return 0
+@NonCPS
+def get_num_change_sets( )
+{
+  return currentBuild.changeSets.size( );
+}
 
 node( 'rocmtest' )
 {
@@ -170,15 +195,14 @@ node( 'rocmtest' )
   stage('hip integration')
   {
     // If this a clang_tot_upgrade build, kick off downstream hip build so that the two projects are in sync
-    // if( env.BRANCH_NAME.toLowerCase( ).startsWith( 'clang_tot_upgrade' ) )
-    // {
-    //   build( job: 'kknox/HIP/ci-fix', wait: false )
-    // }
-    // // If this is a PR build, test compiler against downstream hip project
-    // else if( env.BRANCH_NAME.toLowerCase( ).startsWith( 'pr-' ) )
-    // {
-    //   build( job: 'kknox/HIP/ci-fix', parameters: [booleanParam( name: 'hcc_integration_test', value: true )] )
-    // }
-    build( job: 'kknox/HIP/ci-fix', parameters: [booleanParam( name: 'hcc_integration_test', value: true )] )
+    if( env.BRANCH_NAME.toLowerCase( ).startsWith( 'clang_tot_upgrade' ) )
+    {
+      build( job: 'ROCm-Developer-Tools/HIP/master', wait: false )
+    }
+    // If hip integration testing is requested by the user, launch a hip build job to use this transient compiler
+    else if( params.run_hip_integration_testing )
+    {
+      build( job: params.hip_integration_branch, parameters: [booleanParam( name: 'hcc_integration_test', value: true )] )
+    }
   }
 }
