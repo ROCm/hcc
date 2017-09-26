@@ -5,6 +5,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hc_rt_debug.h"
+#include "mcwamp_impl.hpp"
+
 #include <iostream>
 #include <string>
 #include <cassert>
@@ -13,9 +16,6 @@
 
 #include <amp.h>
 #include <mutex>
-
-#include "mcwamp_impl.hpp"
-#include "hc_rt_debug.h"
 
 #include <dlfcn.h>
 
@@ -29,8 +29,8 @@ const wchar_t accelerator::default_accelerator[] = L"default";
 // weak symbols of kernel codes
 
 // Kernel bundle
-extern "C" char * kernel_bundle_source[] asm ("_binary_kernel_bundle_start") __attribute__((weak));
-extern "C" char * kernel_bundle_end[] asm ("_binary_kernel_bundle_end") __attribute__((weak));
+extern "C" char * kernel_bundle_source[] asm ("_binary_kernel_bundle_start") __attribute__((visibility("hidden")));
+extern "C" char * kernel_bundle_end[] asm ("_binary_kernel_bundle_end") __attribute__((visibility("hidden")));
 
 // interface of HCC runtime implementation
 struct RuntimeImpl {
@@ -394,14 +394,14 @@ public:
 
       // get context
       KalmarContext* context = static_cast<KalmarContext*>(runtime->m_GetContextImpl());
-    
+
       const std::vector<KalmarDevice*> devices = context->getDevices();
 
       for (auto dev = devices.begin(); dev != devices.end(); dev++) {
 
         // get default queue on the default device
         std::shared_ptr<KalmarQueue> queue = (*dev)->get_default_queue();
-  
+
         // build kernels on the default queue on the default device
         CLAMP::BuildProgram(queue.get());
       }
@@ -424,7 +424,7 @@ static inline std::uint32_t f32_as_u32(float f) { union { float f; std::uint32_t
 static inline float u32_as_f32(std::uint32_t u) { union { float f; std::uint32_t u; } v; v.u = u; return v.f; }
 static inline int clamp_int(int i, int l, int h) { return std::min(std::max(i, l), h); }
 
-// half à float, the f16 is in the low 16 bits of the input argument ¿a¿
+// half ï¿½ float, the f16 is in the low 16 bits of the input argument ï¿½aï¿½
 static inline float __convert_half_to_float(std::uint32_t a) noexcept {
   std::uint32_t u = ((a << 13) + 0x70000000U) & 0x8fffe000U;
   std::uint32_t v = f32_as_u32(u32_as_f32(u) * 0x1.0p+112f) + 0x38000000U;
@@ -432,7 +432,7 @@ static inline float __convert_half_to_float(std::uint32_t a) noexcept {
   return u32_as_f32(u) * 0x1.0p-112f;
 }
 
-// float à half with nearest even rounding
+// float ï¿½ half with nearest even rounding
 // The lower 16 bits of the result is the bit pattern for the f16
 static inline std::uint32_t __convert_float_to_half(float a) noexcept {
   std::uint32_t u = f32_as_u32(a);
