@@ -68,7 +68,7 @@ node( 'rocmtest' )
             -DCPACK_SET_DESTDIR=OFF \
             -DCMAKE_BUILD_TYPE=${build_config} \
             -DHSA_AMDGPU_GPU_TARGET="gfx900;gfx803" \
-            -DNUM_TEST_THREADS="4" \
+            -DNUM_TEST_THREADS="2" \
             ../..
           make -j\$(nproc)
           make test
