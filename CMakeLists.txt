@@ -349,7 +349,7 @@ install(PROGRAMS $<TARGET_FILE:LLVMAMDGPUDesc>
         COMPONENT compiler
 )
 
-# force library install path to lid
+# force library install path to lib
 set(CMAKE_INSTALL_LIBDIR "lib" CACHE INTERNAL "Installation directory for libraries" FORCE)
 
 install(FILES ${CLANG_BIN_DIR}/lib/clang/6.0.0/lib/linux/libclang_rt.builtins-x86_64.a
