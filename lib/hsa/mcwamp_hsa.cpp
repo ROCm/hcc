@@ -783,6 +783,7 @@ public:
     }
 
 
+	void overrideAcquireFenceIfNeeded();
     hsa_status_t setLaunchConfiguration(int dims, size_t *globalDims, size_t *localDims,
                                      int dynamicGroupSize);
 
@@ -1752,12 +1753,12 @@ public:
     //
     // depOps specifies the other ops that this marker will depend on.  These 
     // can be in any queue on any GPU .
-    // 
-    // releaseScope specifies the scope of the release fence that will be
+    //
+    // fenceScope specifies the scope of the acquire and release fence that will be
     // applied after the marker executes.  See hc::memory_scope
-    std::shared_ptr<KalmarAsyncOp> EnqueueMarkerWithDependency(int count, 
-            std::shared_ptr <KalmarAsyncOp> *depOps, 
-            hc::memory_scope releaseScope) override {
+    std::shared_ptr<KalmarAsyncOp> EnqueueMarkerWithDependency(int count,
+            std::shared_ptr <KalmarAsyncOp> *depOps,
+            hc::memory_scope fenceScope) override {
 
         hsa_status_t status = HSA_STATUS_SUCCESS;
 
@@ -1802,7 +1803,7 @@ public:
             }
 
             // enqueue the barrier
-            status = barrier.get()->enqueueAsync(releaseScope);
+            status = barrier.get()->enqueueAsync(fenceScope);
             STATUS_CHECK(status, __LINE__);
 
 
@@ -3791,6 +3792,10 @@ HSAQueue::dispatch_hsa_kernel(const hsa_kernel_dispatch_packet_t *aql,
     Kalmar::HSADevice* device = static_cast<Kalmar::HSADevice*>(this->getDev());
     //HSADispatch *dispatch = new HSADispatch(device, nullptr, aql);
     std::shared_ptr<HSADispatch> sp_dispatch = std::make_shared<HSADispatch>(device, this/*queue*/, nullptr, aql);
+    if (HCC_OPT_FLUSH) {
+		sp_dispatch->overrideAcquireFenceIfNeeded();
+    }
+
     pushAsyncOp(sp_dispatch);
     HSADispatch *dispatch = sp_dispatch.get();
     dispatch->setKernelName(kernelName);
@@ -4205,6 +4210,15 @@ HSADispatch::getEndTimestamp() override {
     return time.end;
 }
 
+void HSADispatch::overrideAcquireFenceIfNeeded()
+{
+    if (hsaQueue()->nextKernelNeedsSysAcquire())  {
+       DBOUT( DB_CMD2, "  kernel AQL packet adding system-scope acquire\n");
+       // Pick up system acquire if needed.
+       aql.header |= ((HSA_FENCE_SCOPE_SYSTEM) << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) ;
+       hsaQueue()->setNextKernelNeedsSysAcquire(false);
+    } 
+}
 
 inline hsa_status_t
 HSADispatch::setLaunchConfiguration(int dims, size_t *globalDims, size_t *localDims,
@@ -4279,16 +4293,10 @@ HSADispatch::setLaunchConfiguration(int dims, size_t *globalDims, size_t *localD
 
     aql.header = 0;
     if (HCC_OPT_FLUSH) {
-        if (hsaQueue()->nextKernelNeedsSysAcquire())  {
-            DBOUT( DB_CMD2, "  kernel AQL packet adding system-scope acquire\n");
-            // Pick up system acquire if needed.
-            aql.header |= ((HSA_FENCE_SCOPE_SYSTEM) << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) ;
-            hsaQueue()->setNextKernelNeedsSysAcquire(false);
-        } else {
-            aql.header |= ((HSA_FENCE_SCOPE_AGENT) << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE);
-        }
-        aql.header |= ((HSA_FENCE_SCOPE_AGENT) << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
-    } else { 
+        aql.header = ((HSA_FENCE_SCOPE_AGENT) << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
+                     ((HSA_FENCE_SCOPE_AGENT) << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
+		overrideAcquireFenceIfNeeded();
+    } else {
         aql.header = ((HSA_FENCE_SCOPE_SYSTEM) << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
                      ((HSA_FENCE_SCOPE_SYSTEM) << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
     }
@@ -4332,14 +4340,18 @@ HSABarrier::waitComplete() {
 
 // TODO - remove hsaQueue parm.
 inline hsa_status_t
-HSABarrier::enqueueAsync(hc::memory_scope releaseScope) {
+HSABarrier::enqueueAsync(hc::memory_scope fenceScope) {
 
     // extract hsa_queue_t from HSAQueue
     //
-   
-    if (releaseScope == hc::system_scope) { 
+    if (fenceScope == hc::system_scope) {
         hsaQueue()->setNextSyncNeedsSysRelease(false);
     };
+
+    if (fenceScope > _acquire_scope) {
+		DBOUT( DB_CMD2, "  marker overriding acquireScope(old:" << _acquire_scope << ") to match fenceScope = " << fenceScope);
+		_acquire_scope = fenceScope;
+    }
 
     // set acquire scope:
     unsigned fenceBits = 0;
@@ -4358,7 +4370,7 @@ HSABarrier::enqueueAsync(hc::memory_scope releaseScope) {
             STATUS_CHECK(HSA_STATUS_ERROR_INVALID_ARGUMENT, __LINE__);
     }
 
-    switch (releaseScope) {
+    switch (fenceScope) {
         case hc::no_scope:
             fenceBits |= ((HSA_FENCE_SCOPE_NONE) << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
             break;
@@ -4782,7 +4794,7 @@ HSACopy::enqueueAsyncCopyCommand(const Kalmar::HSADevice *copyDevice, const hc::
         hsa_signal_t depSignal;
         setCommandKind (resolveMemcpyDirection(srcPtrInfo._isInDeviceMem, dstPtrInfo._isInDeviceMem));
 
-        auto releaseScope = (hsaQueue()->nextSyncNeedsSysRelease()) ? hc::system_scope : hc::no_scope;
+        auto fenceScope = (hsaQueue()->nextSyncNeedsSysRelease()) ? hc::system_scope : hc::no_scope;
         depAsyncOp = std::static_pointer_cast<HSAOp> (hsaQueue()->detectStreamDeps(this->getCommandKind(), this));
 
         // We need to ensure the copy waits for preceding commands the HCC queue to complete, if those commands exist.
@@ -4797,11 +4809,11 @@ HSACopy::enqueueAsyncCopyCommand(const Kalmar::HSADevice *copyDevice, const hc::
             //      in streams that we depend on.
             // For both of these cases, we create an additional barrier packet in the source, and attach the desired fence.
             // Then we make the copy depend on the signal written by this command.
-            if ((depSignal.handle == 0x0) || (releaseScope != hc::no_scope)) {
+            if ((depSignal.handle == 0x0) || (fenceScope != hc::no_scope)) {
                 DBOUT( DB_CMD2, "  asyncCopy adding marker for needed dependency or release\n");
 
                 // Set depAsyncOp for use by the async copy below:
-                depAsyncOp = std::static_pointer_cast<HSAOp> (hsaQueue()->EnqueueMarkerWithDependency(0, nullptr, releaseScope));
+                depAsyncOp = std::static_pointer_cast<HSAOp> (hsaQueue()->EnqueueMarkerWithDependency(0, nullptr, fenceScope));
                 depSignal = * (static_cast <hsa_signal_t*> (depAsyncOp->getNativeHandle()));
             };
 

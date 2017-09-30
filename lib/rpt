@@ -65,7 +65,7 @@ parser.add_argument('--roi_stop',
 
 
 parser.add_argument('--topn', 
-        type=int, nargs=1,   # TODO - fix this so it is int
+        type=int, 
         default=20,
         help="print top N entries in summary.  Default=10.  -1=all")
 
