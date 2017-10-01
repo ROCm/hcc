@@ -247,15 +247,15 @@ public:
      * is marked ready.   Thus, markers provide a mechanism to enforce order between
      * commands in an execute_any_order accelerator_view.
      *
-     * release_scope controls the scope of the release fence applied after the marker executes.  Options are:
-     *   - no_scope : No release fence operation is performed.
-     *   - accelerator_scope: Memory is released to the accelerator scope where the marker executes.
-     *   - system_scope: Memory is released to system scope (all accelerators including CPUs)
+     * fence_scope controls the scope of the acquire and release fences applied after the marker executes.  Options are:
+     *   - no_scope : No fence operation is performed.
+     *   - accelerator_scope: Memory is acquired from and released to the accelerator scope where the marker executes.
+     *   - system_scope: Memory is acquired from and released to system scope (all accelerators including CPUs)
      *
      * @return A future which can be waited on, and will block until the
      *         current batch of commands has completed.
      */
-    completion_future create_marker(memory_scope release_scope=system_scope) const;
+    completion_future create_marker(memory_scope fence_scope=system_scope) const;
 
     /**
      * This command inserts a marker event into the accelerator_view's command
@@ -270,10 +270,10 @@ public:
      * is marked ready.   Thus, markers provide a mechanism to enforce order between
      * commands in an execute_any_order accelerator_view.
      *
-     * release_scope controls the scope of the release fence applied after the marker executes.  Options are:
-     *   - no_scope : No release fence operation is performed.
-     *   - accelerator_scope: Memory is released to the accelerator scope where the marker executes.
-     *   - system_scope: Memory is released to system scope (all accelerators including CPUs)
+     * fence_scope controls the scope of the acquire and release fences applied after the marker executes.  Options are:
+     *   - no_scope : No fence operation is performed.
+     *   - accelerator_scope: Memory is acquired from and released to the accelerator scope where the marker executes.
+     *   - system_scope: Memory is acquired from and released to system scope (all accelerators including CPUs)
      *
      * dependent_futures may be recorded in another queue or another accelerator.  If in another accelerator,
      * the runtime performs cross-accelerator sychronization.  
@@ -282,7 +282,7 @@ public:
      *         current batch of commands, plus the dependent event have
      *         been completed.
      */
-    completion_future create_blocking_marker(completion_future& dependent_future, memory_scope release_scope=system_scope) const;
+    completion_future create_blocking_marker(completion_future& dependent_future, memory_scope fence_scope=system_scope) const;
 
     /**
      * This command inserts a marker event into the accelerator_view's command
@@ -297,16 +297,16 @@ public:
      * is marked ready.   Thus, markers provide a mechanism to enforce order between
      * commands in an execute_any_order accelerator_view.
      *
-     * release_scope controls the scope of the release fence applied after the marker executes.  Options are:
-     *   - no_scope : No release fence operation is performed.
-     *   - accelerator_scope: Memory is released to the accelerator scope where the marker executes.
-     *   - system_scope: Memory is released to system scope (all accelerators including CPUs)
+     * fence_scope controls the scope of the acquire and release fences applied after the marker executes.  Options are:
+     *   - no_scope : No fence operation is performed.
+     *   - accelerator_scope: Memory is acquired from and released to the accelerator scope where the marker executes.
+     *   - system_scope: Memory is acquired from and released to system scope (all accelerators including CPUs)
      *
      * @return A future which can be waited on, and will block until the
      *         current batch of commands, plus the dependent event have
      *         been completed.
      */
-    completion_future create_blocking_marker(std::initializer_list<completion_future> dependent_future_list, memory_scope release_scope=system_scope) const;
+    completion_future create_blocking_marker(std::initializer_list<completion_future> dependent_future_list, memory_scope fence_scope=system_scope) const;
 
 
     /**
