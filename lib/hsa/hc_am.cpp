@@ -1,5 +1,9 @@
+
+#include "hc.hpp"
 #include "hc_am.hpp"
 
+#include <cstddef>
+#include <mutex>
 #include <cstdint>
 #include <iomanip>
 #include <hsa/hsa.h>
@@ -43,7 +47,7 @@ AmPointerInfo & AmPointerInfo::operator= (const AmPointerInfo &other)
 struct AmMemoryRange {
     const void * _basePointer;
     const void * _endPointer;
-    AmMemoryRange(const void *basePointer, size_t sizeBytes) :
+    AmMemoryRange(const void *basePointer, std::size_t sizeBytes) :
         _basePointer(basePointer), _endPointer((const unsigned char*)basePointer + sizeBytes - 1) {};
 };
 
@@ -137,7 +141,7 @@ public:
     void readerUnlock() { _mutex.unlock(); };
 
 
-    size_t reset (const hc::accelerator &acc);
+    std::size_t reset (const hc::accelerator &acc);
     void update_peers (const hc::accelerator &acc, int peerCnt, hsa_agent_t *peerAgents) ;
 
 private:
@@ -183,12 +187,12 @@ AmPointerTracker::MapTrackerType::iterator  AmPointerTracker::find (const void *
 //---
 // Remove all tracked locations, and free the associated memory (if the range was originally allocated by AM).
 // Returns count of ranges removed.
-size_t AmPointerTracker::reset (const hc::accelerator &acc) 
+std::size_t AmPointerTracker::reset (const hc::accelerator &acc) 
 {
     std::lock_guard<std::mutex> l (_mutex);
     mprintf ("reset: \n");
 
-    size_t count = 0;
+    std::size_t count = 0;
     // relies on C++11 (erase returns iterator)
     for (auto iter = _tracker.begin() ; iter != _tracker.end(); ) {
         if (iter->second._acc == acc) {
@@ -239,7 +243,7 @@ AmPointerTracker g_amPointerTracker;  // Track all am pointer allocations.
 namespace hc {
 
 // Allocate accelerator memory, return NULL if memory could not be allocated:
-auto_voidp am_aligned_alloc(size_t sizeBytes, hc::accelerator &acc, unsigned flags, size_t alignment)
+auto_voidp am_aligned_alloc(std::size_t sizeBytes, hc::accelerator &acc, unsigned flags, std::size_t alignment)
 {
     void *ptr = NULL;
 
@@ -295,7 +299,7 @@ auto_voidp am_aligned_alloc(size_t sizeBytes, hc::accelerator &acc, unsigned fla
     return ptr;
 };
 
-auto_voidp am_alloc(size_t sizeBytes, hc::accelerator &acc, unsigned flags)
+auto_voidp am_alloc(std::size_t sizeBytes, hc::accelerator &acc, unsigned flags)
 {
     return am_aligned_alloc(sizeBytes, acc, flags, 0);
 };
@@ -318,7 +322,7 @@ am_status_t am_free(void* ptr)
 }
 
 
-am_status_t am_copy(void*  dst, const void*  src, size_t sizeBytes)
+am_status_t am_copy(void*  dst, const void*  src, std::size_t sizeBytes)
 {
     am_status_t am_status = AM_ERROR_MISC;
     hsa_status_t err = hsa_memory_copy(dst, src, sizeBytes);
@@ -458,12 +462,12 @@ void am_memtracker_print(void *targetAddress)
 
 
 //---
-void am_memtracker_sizeinfo(const hc::accelerator &acc, size_t *deviceMemSize, size_t *hostMemSize, size_t *userMemSize)
+void am_memtracker_sizeinfo(const hc::accelerator &acc, std::size_t *deviceMemSize, std::size_t *hostMemSize, std::size_t *userMemSize)
 {
     *deviceMemSize = *hostMemSize = *userMemSize = 0;
     for (auto iter = g_amPointerTracker.readerLockBegin() ; iter != g_amPointerTracker.end(); iter++) {
         if (iter->second._acc == acc) {
-            size_t sizeBytes = iter->second._sizeBytes;
+            std::size_t sizeBytes = iter->second._sizeBytes;
             if (iter->second._isAmManaged) {
                 if (iter->second._isInDeviceMem) {
                     *deviceMemSize += sizeBytes;
@@ -481,7 +485,7 @@ void am_memtracker_sizeinfo(const hc::accelerator &acc, size_t *deviceMemSize, s
 
 
 //---
-size_t am_memtracker_reset(const hc::accelerator &acc)
+std::size_t am_memtracker_reset(const hc::accelerator &acc)
 {
     return g_amPointerTracker.reset(acc);
 }
@@ -491,7 +495,7 @@ void am_memtracker_update_peers (const hc::accelerator &acc, int peerCnt, hsa_ag
     return g_amPointerTracker.update_peers(acc, peerCnt, peerAgents);
 }
 
-am_status_t am_map_to_peers(void* ptr, size_t num_peer, const hc::accelerator* peers) 
+am_status_t am_map_to_peers(void* ptr, std::size_t num_peer, const hc::accelerator* peers) 
 {
     // check input
     if(nullptr == ptr || 0 == num_peer || nullptr == peers)
@@ -525,7 +529,7 @@ am_status_t am_map_to_peers(void* ptr, size_t num_peer, const hc::accelerator* p
             return AM_ERROR_MISC;
     }
 
-    const size_t max_agent = hc::accelerator::get_all().size();
+    const std::size_t max_agent = hc::accelerator::get_all().size();
     hsa_agent_t agents[max_agent];
   
     int peer_count = 0;
@@ -579,7 +583,7 @@ am_status_t am_map_to_peers(void* ptr, size_t num_peer, const hc::accelerator* p
     return AM_SUCCESS;
 }
 
-am_status_t am_memory_host_lock(hc::accelerator &ac, void *hostPtr, size_t size, hc::accelerator *visible_ac, size_t num_visible_ac)
+am_status_t am_memory_host_lock(hc::accelerator &ac, void *hostPtr, std::size_t size, hc::accelerator *visible_ac, std::size_t num_visible_ac)
 {
     am_status_t am_status = AM_ERROR_MISC;
     void *devPtr;
@@ -614,5 +618,13 @@ am_status_t am_memory_host_unlock(hc::accelerator &ac, void *hostPtr)
     }
     return am_status;
 }
+
+  namespace internal {
+    auto_voidp am_alloc_host_coherent(size_t size) {
+      hc::accelerator acc = hc::accelerator();
+      void* buffer = hc::am_alloc(size, acc, amHostCoherent);
+      return buffer;
+    }
+  } // end namespace internal
 
 } // end namespace hc.
