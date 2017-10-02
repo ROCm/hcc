@@ -38,10 +38,10 @@
 #include "kalmar_runtime.h"
 #include "kalmar_aligned_alloc.h"
 
-#include <hc_am.hpp>
-
+#include "hc_am_internal.hpp"
 #include "unpinned_copy_engine.h"
 #include "hc_rt_debug.h"
+#include "hc_printf.hpp"
 
 #include <time.h>
 #include <iomanip>
@@ -269,6 +269,22 @@ static unsigned extractBits(unsigned v, unsigned pos, unsigned w)
 {
     return (v >> pos) & ((1 << w) - 1);
 };
+
+
+
+
+namespace hc {
+
+// printf buffer size (in number of packets, see hc_printf.hpp)
+constexpr unsigned int default_printf_buffer_size = 1024;
+
+// address of the global printf buffer in host coherent system memory
+PrintfPacket* printf_buffer = nullptr;
+
+// store the address of agent accessible hc::printf_buffer;
+PrintfPacket** gpu_printf_buffer_ptr = nullptr;
+
+} // namespace hc
 
 
 namespace Kalmar {
@@ -1333,6 +1349,11 @@ public:
         }
         // clear async operations table
         asyncOps.clear();
+
+        // flush the printf buffer
+        if (hc::printf_buffer != nullptr) {
+            processPrintfBuffer(hc::printf_buffer);
+        }
    }
 
     void LaunchKernel(void *ker, size_t nr_dim, size_t *global, size_t *local) override {
@@ -2953,6 +2974,12 @@ private:
                                            NULL, &hsaExecutable);
             STATUS_CHECK(status, __LINE__);
 
+            // Define the global symbol hc::printf_buffer with the actual address
+            status = hsa_executable_agent_global_variable_define(hsaExecutable, agent
+                                                            , "_ZN2hc13printf_bufferE"
+                                                            , hc::gpu_printf_buffer_ptr);
+            STATUS_CHECK(status, __LINE__);
+
 #if KALMAR_DEBUG
             dumpHSAAgentInfo(agent, "Loading code object ");
 #endif
@@ -3147,6 +3174,14 @@ public:
 
         signalPoolMutex.unlock();
 #endif
+
+        // initialize the printf buffer
+        if (hc::printf_buffer == nullptr) {
+          hc::printf_buffer = hc::createPrintfBuffer(hc::default_printf_buffer_size);
+          hc::gpu_printf_buffer_ptr = hc::internal::am_alloc_host_coherent(sizeof(void*));
+          *hc::gpu_printf_buffer_ptr = hc::printf_buffer;
+        }
+
         init_success = true;
     }
 
@@ -3276,6 +3311,17 @@ public:
 
         if (!init_success)
           return;
+
+        // deallocate the printf buffer
+        if (hc::printf_buffer != nullptr) {
+           // do a final flush
+           hc::processPrintfBuffer(hc::printf_buffer);
+
+           hc::deletePrintfBuffer(hc::printf_buffer);
+           hc::printf_buffer = nullptr;
+           hc::am_free(hc::gpu_printf_buffer_ptr);
+           hc::gpu_printf_buffer_ptr = nullptr;
+        }
 
         // destroy all KalmarDevices associated with this context
         for (auto dev : Devices)
