@@ -9,8 +9,7 @@
 #include <iostream>
 #include <algorithm>
 
-#include "hc_am.hpp"
-#include "hc.hpp"
+#include "hc_am_internal.hpp"
 #include "hsa_atomic.h"
 
 #define HC_PRINTF_DEBUG  (0)
@@ -71,16 +70,20 @@ public:
   PrintfPacketData data;
 };
 
+// Global printf buffer
+// The actual variable is currently defined in mcwamp_hsa.cpp
+extern PrintfPacket* printf_buffer;
+
 enum PrintfError {
    PRINTF_SUCCESS = 0
   ,PRINTF_BUFFER_OVERFLOW = 1
   ,PRINTF_STRING_BUFFER_OVERFLOW = 2
 };
 
-static inline PrintfPacket* createPrintfBuffer(hc::accelerator& a, const unsigned int numElements) {
+static inline PrintfPacket* createPrintfBuffer(const unsigned int numElements) {
   PrintfPacket* printfBuffer = NULL;
   if (numElements > PRINTF_MIN_SIZE) {
-    printfBuffer = hc::am_alloc(sizeof(PrintfPacket) * numElements, a, amHostCoherent);
+    printfBuffer = hc::internal::am_alloc_host_coherent(sizeof(PrintfPacket) * numElements);
 
     // Initialize the Header elements of the Printf Buffer
     printfBuffer[PRINTF_BUFFER_SIZE].type = PRINTF_BUFFER_SIZE;
@@ -89,7 +92,7 @@ static inline PrintfPacket* createPrintfBuffer(hc::accelerator& a, const unsigne
     // Header includes a helper string buffer which holds all char* args
     // PrintfPacket is 12 bytes, equivalent string buffer size used
     printfBuffer[PRINTF_STRING_BUFFER].type = PRINTF_STRING_BUFFER;
-    printfBuffer[PRINTF_STRING_BUFFER].data.ptr = hc::am_alloc(sizeof(char) * numElements * 12, a, amHostCoherent);
+    printfBuffer[PRINTF_STRING_BUFFER].data.ptr = hc::internal::am_alloc_host_coherent(sizeof(char) * numElements * 12);
     printfBuffer[PRINTF_STRING_BUFFER_SIZE].type = PRINTF_STRING_BUFFER_SIZE;
     printfBuffer[PRINTF_STRING_BUFFER_SIZE].data.ui = numElements * 12;
 
@@ -218,6 +221,12 @@ static inline PrintfError printf(PrintfPacket* queue, All... all) [[hc,cpu]] {
   return error;
 }
 
+template <typename... All>
+static inline PrintfError printf(const char* format_string, All... all) [[hc,cpu]] {
+  return printf(hc::printf_buffer, format_string, all...);
+}
+
+
 // regex for finding format string specifiers
 static std::regex specifierPattern("(%){1}[-+#0]*[0-9]*((.)[0-9]+){0,1}([diuoxXfFeEgGaAcsp]){1}");
 static std::regex signedIntegerPattern("(%){1}[-+#0]*[0-9]*((.)[0-9]+){0,1}([cdi]){1}");
@@ -286,6 +295,7 @@ static inline void processPrintfPackets(PrintfPacket* packets, const unsigned in
     formatString = std::regex_replace(formatString,doubleAmpersandPattern,"%");
     std::printf("%s",formatString.c_str());
   }
+  std::flush(std::cout);
 }
 
 static inline void processPrintfBuffer(PrintfPacket* gpuBuffer) {
