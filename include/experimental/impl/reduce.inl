@@ -25,7 +25,7 @@ if ((_IDX < _W) && ((_IDX + _W) < _LENGTH)) {\
 int reduce_lexi(std::vector<int>& v) {
 
     const int N = static_cast<int>(v.size());
-    auto binary_op = [](const int& a, const int& b) { return a == 1 ? b : a; };
+    auto binary_op = [](const int& a, const int& b) [[hc]] [[cpu]] { return a == 1 ? b : a; };
     // call to std::accumulate when small data size
     if (N <= details::PARALLELIZE_THRESHOLD) {
         return reduce_impl(std::begin(v), std::end(v), 1, binary_op, std::input_iterator_tag{});
@@ -46,7 +46,7 @@ int reduce_lexi(std::vector<int>& v) {
     result.discard_data();
     kernel_launch(length,
                   [ first_, N, length, result, binary_op ]
-                  ( hc::tiled_index<1> t_idx ) [[hc]]
+                  ( hc::tiled_index<1> t_idx ) [[hc]] [[cpu]]
                   {
                   using T = int;
                   int gx = t_idx.global[0];

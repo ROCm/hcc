@@ -25,9 +25,14 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
     wget \
     python \
     rpm \
+    pkg-config \
     g++-multilib \
+    gcc-multilib \
+    findutils \
     libncurses5-dev \
     libelf-dev \
+    libelf1 \
+    libpci3 \
     libc++abi-dev \
     libc++-dev \
     hsa-rocr-dev && \

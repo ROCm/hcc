@@ -52,6 +52,9 @@ DECLARE_VECTOR_TYPE_CLASS(unsigned long, ulong);
 DECLARE_VECTOR_TYPE_CLASS(long, long);
 DECLARE_VECTOR_TYPE_CLASS(unsigned long long, ulonglong);
 DECLARE_VECTOR_TYPE_CLASS(long long, longlong);
+#if !__HCC_AMP__
+DECLARE_VECTOR_TYPE_CLASS(hc::half, half);
+#endif
 DECLARE_VECTOR_TYPE_CLASS(float, float);
 DECLARE_VECTOR_TYPE_CLASS(double, double);
 DECLARE_VECTOR_TYPE_CLASS(norm, norm);
@@ -127,6 +130,15 @@ typedef longlong4 longlong_4;
 typedef longlong8 longlong_8;
 typedef longlong16 longlong_16;
 
+#if !__HCC_AMP__
+typedef half1 half_1;
+typedef half2 half_2;
+typedef half3 half_3;
+typedef half4 half_4;
+typedef half8 half_8;
+typedef half16 half_16;
+#endif
+
 typedef float1 float_1;
 typedef float2 float_2;
 typedef float3 float_3;
@@ -173,7 +185,11 @@ struct short_vector_traits {
   static_assert((std::is_integral<SCALAR_TYPE>::value
                 || std::is_floating_point<SCALAR_TYPE>::value
                 || std::is_same<SCALAR_TYPE, norm>::value
-                || std::is_same<SCALAR_TYPE, unorm>::value)
+                || std::is_same<SCALAR_TYPE, unorm>::value
+#if !__HCC_AMP__
+                || std::is_same<SCALAR_TYPE,hc::half>::value
+#endif
+                )
                 , "short_vector of this data type is not supported");
   typedef SCALAR_TYPE value_type;
   static int const size = 1;
@@ -428,7 +444,11 @@ template <typename SCALAR_TYPE, unsigned int VECTOR_LENGTH>
 class __vector : public __vector_data_container<SCALAR_TYPE, VECTOR_LENGTH>   {
 
   static_assert((std::is_integral<SCALAR_TYPE>::value
-                || std::is_floating_point<SCALAR_TYPE>::value)
+                || std::is_floating_point<SCALAR_TYPE>::value
+#if !__HCC_AMP__
+                || std::is_same<SCALAR_TYPE,hc::half>::value
+#endif
+                )
                 , "short_vector of this data type is not supported");
 
   static_assert((VECTOR_LENGTH==1 || VECTOR_LENGTH==2 || VECTOR_LENGTH==3 
@@ -888,9 +908,23 @@ __vector<SCALAR_TYPE,VECTOR_LENGTH> operator/(const __vector<SCALAR_TYPE,VECTOR_
   return r;
 }
 
+// scalar * vector
+template <typename SCALAR_TYPE1, typename SCALAR_TYPE2, unsigned int VECTOR_LENGTH>
+typename std::enable_if<std::is_scalar<SCALAR_TYPE1>::value, __vector<SCALAR_TYPE2,VECTOR_LENGTH> >::type
+operator*(const SCALAR_TYPE1& lhs,
+          const __vector<SCALAR_TYPE2,VECTOR_LENGTH>& rhs) __CPU_GPU__ {
+  __vector<SCALAR_TYPE2,VECTOR_LENGTH> r(rhs.get_vector() * static_cast<SCALAR_TYPE2>(lhs));
+  return r;
+}
 
-
-
+// vector * scalar
+template <typename SCALAR_TYPE1, typename SCALAR_TYPE2, unsigned int VECTOR_LENGTH>
+typename std::enable_if<std::is_scalar<SCALAR_TYPE2>::value, __vector<SCALAR_TYPE1,VECTOR_LENGTH> >::type
+operator*(const __vector<SCALAR_TYPE1,VECTOR_LENGTH>& lhs,
+          const SCALAR_TYPE2& rhs) __CPU_GPU__ {
+  __vector<SCALAR_TYPE1,VECTOR_LENGTH> r(lhs.get_vector() * static_cast<SCALAR_TYPE1>(rhs));
+  return r;
+}
 
 // Specialization for norm, unorm
 template <bool normIsSigned, unsigned int VECTOR_LENGTH>
@@ -916,17 +950,17 @@ private:
   typedef float v8_type_internal  __attribute__((ext_vector_type(8)));
   typedef float v16_type_internal  __attribute__((ext_vector_type(16)));
 
-  v1_type_internal clamp(v1_type_internal v) __CPU__GPU__ {
+  v1_type_internal clamp(v1_type_internal v) __CPU_GPU__ {
     return { value_type(v.s0) };
   }
 
-  v2_type_internal clamp(v2_type_internal v) __CPU__GPU__ {
+  v2_type_internal clamp(v2_type_internal v) __CPU_GPU__ {
     return { value_type(v.s0)
             ,value_type(v.s1)
             };
   }
 
-  v4_type_internal clamp(v4_type_internal v) __CPU__GPU__ {
+  v4_type_internal clamp(v4_type_internal v) __CPU_GPU__ {
     return { value_type(v.s0)
             ,value_type(v.s1)
             ,value_type(v.s2)
@@ -934,7 +968,7 @@ private:
             };
   }
 
-  v8_type_internal clamp(v8_type_internal v) __CPU__GPU__ {
+  v8_type_internal clamp(v8_type_internal v) __CPU_GPU__ {
     return { value_type(v.s0)
             ,value_type(v.s1)
             ,value_type(v.s2)
@@ -946,7 +980,7 @@ private:
             };
   }
 
-  v16_type_internal clamp(v16_type_internal v) __CPU__GPU__ {
+  v16_type_internal clamp(v16_type_internal v) __CPU_GPU__ {
     return { value_type(v.s0)
             ,value_type(v.s1)
             ,value_type(v.s2)

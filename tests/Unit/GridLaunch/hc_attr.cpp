@@ -14,25 +14,20 @@
 #define TILE_SIZE 16
 
 // C++11 style attribute
-[[hc]] int foo(grid_launch_parm lp) {
+[[hc]] int foo(grid_launch_parm& lp) {
   int idx = hc_get_workitem_id(0) + hc_get_group_id(0)*lp.group_dim.x;
   return idx;
 }
 
 // C-style attribute
-__attribute__((hc)) int foo2(grid_launch_parm lp) {
+__attribute__((hc)) int foo2(grid_launch_parm& lp) {
   int idx = hc_get_workitem_id(0) + hc_get_group_id(0)*lp.group_dim.x;
   return idx + 2;
 }
 
-// No attribute
-int foo3(grid_launch_parm lp, int idx) {
-  return idx + 3;
-}
-
 __attribute__((hc_grid_launch)) void kernel(grid_launch_parm lp, int* x) {
   int idx = foo(lp);
-  x[idx] = idx + foo2(lp) + foo3(lp, idx);
+  x[idx] = idx + foo2(lp);
 }
 
 
@@ -63,7 +58,7 @@ int main() {
   bool ret = true;
 
   for(int i = 0; i < sz; ++i) {
-    ret &= (data1[i] == i + i + 2 + i + 3);
+    ret &= (data1[i] == i + i + 2);
   }
 
   hc::am_free(data1_d);

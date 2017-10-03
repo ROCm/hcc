@@ -13,7 +13,7 @@
 template<typename T, size_t SIZE>
 bool test(void) {
 
-  auto op = [](const T& a, const T& b) { return a - b; };
+  auto op = [](const T& a, const T& b) [[hc,cpu]] { return a - b; };
 
   using std::experimental::parallel::par;
 

@@ -8,7 +8,7 @@
 #include <hsa/hsa.h>
 
 // loop to deliberately slow down kernel execution
-#define LOOP_COUNT (1024)
+#define LOOP_COUNT (10240)
 
 #define TEST_DEBUG (0)
 

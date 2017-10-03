@@ -3,7 +3,6 @@ option(HCC_RUNTIME_DEBUG "Enable debug build for HCC Runtime" OFF)
 
 if (HCC_RUNTIME_DEBUG)
   add_compile_options(-g -O0)
-  add_definitions(-DKALMAR_DEBUG=1)
 endif (HCC_RUNTIME_DEBUG)
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
@@ -22,11 +21,19 @@ add_mcwamp_library(mcwamp_atomic mcwamp_atomic.cpp)
 # Library interface to use runtime
 add_library(hccrt INTERFACE)
 target_compile_options(hccrt INTERFACE -hc)
-target_link_libraries(hccrt INTERFACE "-hc -Wl,-rpath $<TARGET_FILE_DIR:$<TARGET_NAME:mcwamp>>" "-Wl,--whole-archive" mcwamp "-Wl,--no-whole-archive")
+target_link_libraries(hccrt INTERFACE "-hc -L $<TARGET_FILE_DIR:$<TARGET_NAME:mcwamp>> -Wl,-rpath $<TARGET_FILE_DIR:$<TARGET_NAME:mcwamp>>" "-Wl,--whole-archive" mcwamp "-Wl,--no-whole-archive")
 target_link_libraries(hccrt INTERFACE dl m)
+
 if (USE_LIBCXX)
-  target_link_libraries(hccrt INTERFACE c++ c++abi)
+  target_link_libraries(hccrt INTERFACE -stdlib=libc++)
+  if (NOT HCC_TOOLCHAIN_RHEL)
+    target_link_libraries(hccrt INTERFACE c++abi)
+  endif()
 endif (USE_LIBCXX)
+
+# Library interface for building shared libraries
+add_library(hccshared INTERFACE)
+target_link_libraries(hccshared INTERFACE -fPIC)
 
 ####################
 # C++AMP tools
@@ -37,7 +44,7 @@ install(PROGRAMS ${PROJECT_BINARY_DIR}/compiler/bin/clamp-device
     ${PROJECT_BINARY_DIR}/compiler/bin/clamp-link
     ${PROJECT_BINARY_DIR}/compiler/bin/hc-kernel-assemble
     ${PROJECT_BINARY_DIR}/compiler/bin/hc-host-assemble
-    DESTINATION compiler/bin)
+    DESTINATION bin)
 
 ####################
 # C++AMP tools (HSA-specific)
@@ -69,7 +76,7 @@ add_subdirectory(cpu)
 ####################
 # install targets
 ####################
-install(TARGETS mcwamp mcwamp_atomic hccrt
+install(TARGETS mcwamp mcwamp_atomic hccrt hccshared
     EXPORT hcc-targets
     RUNTIME DESTINATION bin
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}

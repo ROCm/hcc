@@ -1,29 +1,40 @@
 // RUN: %cxxamp %s -o %t.out && %t.out
 #include <amp.h>
-#include <stdlib.h>
-#include <iostream>
 #include <amp_math.h>
+
+#include <iostream>
+#include <random>
+#include <cmath>
+#include <cassert>
 
 using namespace concurrency;
 
-int main(void) {
-  const int vecSize = 1000;
+#define ERROR_THRESHOLD (1e-1)
+
+template<typename _Tp>
+bool test() {
+  const int vecSize = 1024;
 
   // Alloc & init input data
   extent<1> e(vecSize);
-  array<float, 1> a(vecSize);
-  array<float, 1> b(vecSize);
-  array<float, 1> c(vecSize);
-  array<float, 1> d(vecSize);
+  array<_Tp, 1> a(vecSize);
 
-  array_view<float> ga(a);
-  array_view<float> gb(b);
-  array_view<float> gc(c);
-  array_view<float> gd(d);
+  array<_Tp, 1> b(vecSize);
+  array<_Tp, 1> c(vecSize);
+  array<_Tp, 1> d(vecSize);
+
+  // setup RNG
+  std::random_device rd;
+  std::default_random_engine gen(rd());
+  std::uniform_real_distribution<_Tp> dis(1, 4);
+  array_view<_Tp> ga(a);
+  array_view<_Tp> gb(b);
+  array_view<_Tp> gc(c);
+  array_view<_Tp> gd(d);
 
   for (index<1> i(0); i[0] < vecSize; i++) {
-    ga[i] = rand() / 1000.0f;
-    gb[i] = rand() / 1000.0f;
+    ga[i] = dis(gen);
+    gb[i] = dis(gen);
   }
 
   parallel_for_each(
@@ -36,9 +47,22 @@ int main(void) {
     gd[i] = fast_math::pow(ga[i], gb[i]);
   }
 
-  float sum = 0;
+  _Tp sum = 0;
   for(unsigned i = 0; i < vecSize; i++) {
-    sum += fast_math::fabs(fast_math::fabs(gc[i]) - fast_math::fabs(gd[i]));
+    if (std::isnan(gc[i])) {
+      printf("gc[%d] is NaN!\n", i);
+      assert(false);
+    }
+    _Tp diff = fast_math::fabs(gc[i] - gd[i]);
+    sum += diff;
   }
-  return (sum > 0.1f);
+  return (sum < ERROR_THRESHOLD);
+}
+
+int main(void) {
+  bool ret = true;
+
+  ret &= test<float>();
+
+  return !(ret == true);
 }

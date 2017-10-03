@@ -6,7 +6,6 @@
 #include <iostream>
 
 #define __KERNEL__ __attribute__((amp))
-#define __GROUP__ __attribute__((address_space(3)))
 
 template<size_t GRID_SIZE, size_t TILE_SIZE>
 bool test() {
@@ -26,10 +25,10 @@ bool test() {
     index<1> local = tidx.local;
 
     // fetch the address of a variable in group segment
-    __GROUP__ unsigned char* ptr = (__GROUP__ unsigned char*)&lds1[local[0]];
+    unsigned char* ptr = (unsigned char*)&lds1[local[0]];
 
     // fetch the address of the beginning of dynamic group segment
-    __GROUP__ unsigned char* dynamic_lds = (__GROUP__ unsigned char*)get_dynamic_group_segment_base_pointer();
+    unsigned char* dynamic_lds = (unsigned char*)get_dynamic_group_segment_base_pointer();
 
     // calculate the offset and set to the result global array_view
     av(global) = (dynamic_lds - ptr);

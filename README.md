@@ -1,17 +1,17 @@
 HCC : An open source C++ compiler for heterogeneous devices
 ===========================================================
-This repository hosts HCC compiler implementation project. The goal is to 
-implement a compiler that takes a program conforming parallel programming 
-standards such as C++ AMP, HC, C++ 17 ParallelSTL, or OpenMP and transforms it 
-into AMD GCN ISA.
+This repository hosts the HCC compiler implementation project. The goal is to 
+implement a compiler that takes a program that conforms to a parallel programming 
+standard such as C++ AMP, HC, C++ 17 ParallelSTL, or OpenMP, and transforms it 
+into the AMD GCN ISA.
 
 The project is based on LLVM+CLANG. For more information, please visit the 
 [hcc wiki][1]:
 
 [https://github.com/RadeonOpenCompute/hcc/wiki][1]
 
-Git submodules
-==============
+Download HCC
+============
 The project now employs git submodules to manage external components it depends 
 upon. It it advised to add `--recursive` when you clone the project so all 
 submodules are fetched automatically.
@@ -24,41 +24,45 @@ git clone --recursive -b clang_tot_upgrade https://github.com/RadeonOpenCompute/
 
 For more information about git submodules, please refer to [git documentation][2].
 
-Device libraries
-================
-HCC device library is a part of [ROCm-Device-Libs][3]. When compiling device 
-code with hcc, the rocm-device-libs package needs to be installed.
-
-You can install its binary package via:
-
-```
-    sudo apt-get install rocm-device-libs libc6-dev-i386
-```
-
-In case rocm-device-libs package is not present, or you want to build it
-from source, please refer to 
-[ROCm-Device-Libs build procedure][4] for more details.
-
-Once it's built, run `make install` and config ToT HCC like:
-
+Build HCC from source
+=====================
+To configure and build HCC from source, use the following steps:
 ```bash
-cmake \
-    -DCMAKE_BUILD_TYPE=Release \
-    -DHSA_AMDGPU_GPU_TARGET=<AMD GPU ISA version string> \
-    -DROCM_DEVICE_LIB_DIR=<location of the ROCm-Device-Libs bitcode> \
-    <ToT HCC checkout directory>
+mkdir -p build; cd build
+cmake -DCMAKE_BUILD_TYPE=Release ..
+make
 ```
 
-An example would be:
+To install it, use the following steps:
 ```bash
-# Use gfx803 AMD GPU ISA
-# ROCm-Device-Libs is built at ~/ocml/build , bitcodes are at
-# ~/ocml/build/dist/lib
-cmake \
-    -DCMAKE_BUILD_TYPE=Release \
-    -DHSA_AMDGPU_GPU_TARGET=gfx803 \
-    -DROCM_DEVICE_LIB_DIR=~/ocml/build/dist/lib \
-    ..
+sudo make install
+```
+
+Use HCC
+=======
+For C++AMP source codes:
+```bash
+hcc `clamp-config --cxxflags --ldflags` foo.cpp
+```
+
+For HC source codes:
+```bash
+hcc `hcc-config --cxxflags --ldflags` foo.cpp
+```
+
+In case you build HCC from source and want to use the compiled binaries
+directly in the build directory:
+
+For C++AMP source codes:
+```bash
+# notice the --build flag
+bin/hcc `bin/clamp-config --build --cxxflags --ldflags` foo.cpp
+```
+
+For HC source codes:
+```bash
+# notice the --build flag
+bin/hcc `bin/hcc-config --build --cxxflags --ldflags` foo.cpp
 ```
 
 Multiple ISA
@@ -110,49 +114,6 @@ cmake \
     ../hcc
 ```
 
-Building clang_tot_upgrade branch on Ubuntu 16.04.1
-----------------------------------------------------
-The following issue is common when building HCC tot branch.
-
-```bash
-In file included from /home/aditya/rocm/hcc.lc.tot/lib/mcwamp.cpp:8:
-In file included from /usr/include/c++/v1/iostream:38:
-In file included from /usr/include/c++/v1/ios:216:
-In file included from /usr/include/c++/v1/__locale:15:
-/usr/include/c++/v1/string:1938:44: error: 'basic_string<_CharT, _Traits, _Allocator>' is
-      missing exception specification
-      'noexcept(is_nothrow_copy_constructible<allocator_type>::value)'
-basic_string<_CharT, _Traits, _Allocator>::basic_string(const allocator_type& __a)
-                                           ^
-/usr/include/c++/v1/string:1326:40: note: previous declaration is here
-    _LIBCPP_INLINE_VISIBILITY explicit basic_string(const allocator_type& __a)
-                                       ^
-1 error generated.
-lib/CMakeFiles/mcwamp.dir/build.make:62: recipe for target 'lib/CMakeFiles/mcwamp.dir/mcwamp.cpp.o' failed
-make[2]: *** [lib/CMakeFiles/mcwamp.dir/mcwamp.cpp.o] Error 1
-CMakeFiles/Makefile2:229: recipe for target 'lib/CMakeFiles/mcwamp.dir/all' failed
-make[1]: *** [lib/CMakeFiles/mcwamp.dir/all] Error 2
-Makefile:149: recipe for target 'all' failed
-make: *** [all] Error 2
-```
-
-This is because of the libc++ package (version 3.7.x) that ships with Ubuntu 
-16.04.1 being broken. This can be solved by installing the [libc++1][5] and 
-[libc++-dev][6] packages from upstream Debian.
-
-The latest working version, at the time of this writing, is 3.9.0-3. For example,
-the following instruction sequence performs the update:
-
-```bash
-wget http://ftp.us.debian.org/debian/pool/main/libc/libc++/libc++-dev_3.9.0-3_amd64.deb
-wget http://ftp.us.debian.org/debian/pool/main/libc/libc++/libc++1_3.9.0-3_amd64.deb
-
-dpkg -i libc++1_3.9.0-3_amd64.deb
-dpkg -i libc++-dev_3.9.0-3_amd64.deb
-```
-
-This replaces the previous version of libc++.
-
 CodeXL Activity Logger
 ======================
 To enable the [CodeXL Activity Logger][7], use the `USE_CODEXL_ACTIVITY_LOGGER` 
@@ -180,9 +141,5 @@ refer to its [documentation][8].
 [//]: # (References)
 [1]: https://github.com/RadeonOpenCompute/hcc/wiki
 [2]: https://git-scm.com/book/en/v2/Git-Tools-Submodules
-[3]: https://github.com/RadeonOpenCompute/ROCm-Device-Libs
-[4]: https://github.com/RadeonOpenCompute/ROCm-Device-Libs#building
-[5]: https://packages.debian.org/sid/libc++1
-[6]: https://packages.debian.org/sid/libc++-dev
 [7]: https://github.com/RadeonOpenCompute/ROCm-Profiler/tree/master/CXLActivityLogger
 [8]: https://github.com/RadeonOpenCompute/ROCm-Profiler/blob/master/CXLActivityLogger/doc/AMDTActivityLogger.pdf

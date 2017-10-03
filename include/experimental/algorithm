@@ -319,7 +319,7 @@ fill(ExecutionPolicy&& exec,
      ForwardIterator first, ForwardIterator last,
      const T& value) {
   // fill kernel
-  auto k = [=](typename std::iterator_traits<ForwardIterator>::value_type& v) {
+  auto k = [=](typename std::iterator_traits<ForwardIterator>::value_type& v) [[hc,cpu]] {
     v = value;
   };
 
@@ -340,7 +340,7 @@ fill_n(ExecutionPolicy&& exec,
        const T& value) {
   if (count >= Size()) {
     // fill_n kernel
-    auto k = [=](typename std::iterator_traits<OutputIterator>::value_type& v) {
+    auto k = [=](typename std::iterator_traits<OutputIterator>::value_type& v) [[hc,cpu]] {
       v = value;
     };
 
@@ -363,7 +363,7 @@ copy(ExecutionPolicy&& exec,
      InputIterator first, InputIterator last,
      OutputIterator d_first) {
   // copy kernel
-  auto k = [](typename std::iterator_traits<InputIterator>::value_type& v) {
+  auto k = [](typename std::iterator_traits<InputIterator>::value_type& v) [[hc,cpu]] {
     return v;
   };
 
@@ -405,7 +405,7 @@ replace(ExecutionPolicy&& exec,
         ForwardIterator first, ForwardIterator last,
         const T& old_value, const T& new_value) {
   // replace kernel
-  auto k = [=](typename std::iterator_traits<ForwardIterator>::value_type& v) {
+  auto k = [=](typename std::iterator_traits<ForwardIterator>::value_type& v) [[hc,cpu]] {
     if (v == old_value)
       v = new_value;
   };
@@ -428,7 +428,7 @@ replace_copy(ExecutionPolicy&& exec,
              OutputIterator d_first,
              const T& old_value, const T& new_value) {
   // replace_copy kernel
-  auto k = [=](typename std::iterator_traits<InputIterator>::value_type& v) {
+  auto k = [=](typename std::iterator_traits<InputIterator>::value_type& v) [[hc,cpu]] {
     return (v == old_value) ? new_value : v;
   };
 
@@ -450,7 +450,7 @@ adjacent_difference(ExecutionPolicy&& exec,
                     OutputIterator d_first) {
   typedef typename std::iterator_traits<InputIterator>::value_type Type;
   // adjacent_difference kernel
-  auto k = [](const Type& a, const Type& b) {
+  auto k = [](const Type& a, const Type& b) [[hc,cpu]] {
     return a - b;
   };
 

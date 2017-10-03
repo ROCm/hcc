@@ -46,7 +46,9 @@ bool test() {
   });
 
   // create a barrier packet
-  hc::accelerator_view av = hc::accelerator().get_default_view();
+  hc::accelerator_view av  = hc::accelerator().get_default_view();
+  hc::accelerator_view av2 = hc::accelerator().create_view();
+  hc::accelerator_view av3 = hc::accelerator().create_view();
   hc::completion_future fut2 = av.create_blocking_marker(fut);
 
   void* nativeHandle = fut.get_native_handle();
@@ -93,11 +95,83 @@ bool test() {
     error += table_c[i] - (table_a[i] + table_b[i]);
   }
   if (error == 0) {
-    std::cout << "Verify success!\n";
+    std::cout << "Verify first part success!\n";
   } else {
-    std::cout << "Verify failed!\n";
+    std::cout << "Verify first part failed!\n";
   }
   ret &= (error == 0);
+
+
+  // Try another case with events that are not dispatched.
+  // These will have null asyncOps so tests corner case in HCC:
+  {
+      hc::completion_future nullcf[7];
+      hc::completion_future cfA;
+      
+      cfA = av.create_blocking_marker(nullcf[0]);
+      cfA.wait();
+
+      cfA= av.create_blocking_marker({nullcf[0], nullcf[1], nullcf[2]});
+      cfA.wait();
+
+      // Test case with > 6 completion futures:
+      cfA = av.create_blocking_marker({nullcf[0], nullcf[1], nullcf[2], nullcf[3], nullcf[4], nullcf[5], nullcf[6]});
+      cfA.wait();
+
+
+      std::cout << "null signals verify OK\n";
+
+
+      hc::completion_future cf_pfe, cf_pfe2;
+     
+      cf_pfe  = hc::parallel_for_each(av,
+        e,
+        [=](hc::index<1> idx) __HC__ {
+          for (int i = 0; i < LOOP_COUNT; ++i)
+            table_c(idx) = table_a(idx) + table_b(idx);
+      });
+
+      cfA = av2.create_blocking_marker({nullcf[0], cf_pfe});
+      cfA.wait();
+
+      hsa_signal_value_t signal_value_pfe = hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(cf_pfe.get_native_handle()));
+      hsa_signal_value_t signal_value_cbm = hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(cfA.get_native_handle()));
+
+      std::cout << "create_blocking_marker on single PFE verify OK\n";
+      
+
+      // Both signals should have completed.
+      assert(signal_value_pfe == 0);
+      assert(signal_value_cbm == 0);
+
+
+
+      // Try a 3-way:
+      // Two kernels sent to different PFE, then wait on all three
+      cf_pfe  = hc::parallel_for_each(av,
+        e,
+        [=](hc::index<1> idx) __HC__ {
+          for (int i = 0; i < LOOP_COUNT; ++i)
+            table_c(idx) = table_a(idx) + table_b(idx);
+      });
+      cf_pfe2  = hc::parallel_for_each(av2,
+        e,
+        [=](hc::index<1> idx) __HC__ {
+          for (int i = 0; i < LOOP_COUNT; ++i)
+            table_c(idx) = table_a(idx) + table_b(idx);
+      });
+
+
+      cfA = av2.create_blocking_marker({nullcf[0], cf_pfe, nullcf[1], cf_pfe2});
+      cfA.wait();
+
+      assert (hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(cf_pfe.get_native_handle())) == 0);
+      assert (hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(cf_pfe2.get_native_handle())) == 0);
+      assert (hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(cfA.get_native_handle())) == 0);
+      std::cout << "create_blocking_marker on dual PFE verify OK\n";
+  }
+
+
 
   return ret;
 }

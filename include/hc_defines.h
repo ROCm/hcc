@@ -30,24 +30,24 @@ namespace hc {
 //
 // work-item related builtin functions
 //
-extern "C" __attribute__((const,hc)) int64_t hc_get_grid_size(unsigned int n);
-extern "C" __attribute__((const,hc)) int64_t hc_get_workitem_absolute_id(unsigned int n);
-extern "C" __attribute__((const,hc)) int64_t hc_get_group_size(unsigned int n);
-extern "C" __attribute__((const,hc)) int64_t hc_get_workitem_id(unsigned int n);
-extern "C" __attribute__((const,hc)) int64_t hc_get_num_groups(unsigned int n);
-extern "C" __attribute__((const,hc)) int64_t hc_get_group_id(unsigned int n);
+extern "C" __attribute__((const,hc)) uint32_t hc_get_grid_size(unsigned int n);
+extern "C" __attribute__((const,hc)) uint32_t hc_get_workitem_absolute_id(unsigned int n);
+extern "C" __attribute__((const,hc)) uint32_t hc_get_group_size(unsigned int n);
+extern "C" __attribute__((const,hc)) uint32_t hc_get_workitem_id(unsigned int n);
+extern "C" __attribute__((const,hc)) uint32_t hc_get_num_groups(unsigned int n);
+extern "C" __attribute__((const,hc)) uint32_t hc_get_group_id(unsigned int n);
 
-extern "C" __attribute__((const,amp)) int64_t amp_get_global_size(unsigned int n);
-extern "C" __attribute__((const,amp)) int64_t amp_get_global_id(unsigned int n); 
-extern "C" __attribute__((const,amp)) int64_t amp_get_local_size(unsigned int n);
-extern "C" __attribute__((const,amp)) int64_t amp_get_local_id(unsigned int n);
-extern "C" __attribute__((const,amp)) int64_t amp_get_num_groups(unsigned int n);
-extern "C" __attribute__((const,amp)) int64_t amp_get_group_id(unsigned int n);
+extern "C" __attribute__((const,amp)) uint32_t amp_get_global_size(unsigned int n);
+extern "C" __attribute__((const,amp)) uint32_t amp_get_global_id(unsigned int n);
+extern "C" __attribute__((const,amp)) uint32_t amp_get_local_size(unsigned int n);
+extern "C" __attribute__((const,amp)) uint32_t amp_get_local_id(unsigned int n);
+extern "C" __attribute__((const,amp)) uint32_t amp_get_num_groups(unsigned int n);
+extern "C" __attribute__((const,amp)) uint32_t amp_get_group_id(unsigned int n);
 
 #if __KALMAR_ACCELERATOR__ == 2
 #define tile_static thread_local
 #else
-#define tile_static static __attribute__((section("clamp_opencl_local")))
+#define tile_static __attribute__((tile_static))
 #endif
 
 extern "C" __attribute__((noduplicate,hc)) void hc_barrier(unsigned int n);

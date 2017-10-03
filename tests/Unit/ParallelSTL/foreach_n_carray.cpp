@@ -15,7 +15,7 @@
 template<typename T, size_t SIZE, int FIRST_OFFSET, int LAST_OFFSET>
 bool test_negative(void) {
 
-  auto f = [](T& v) { v = 1; };
+  auto f = [](T& v) [[hc,cpu]] { v = 1; };
   using std::experimental::parallel::par;
 
   bool ret = true;
@@ -35,7 +35,7 @@ template<typename T, size_t SIZE, size_t FIRST_OFFSET, size_t TEST_LENGTH>
 bool test(void) {
 
   // test kernel
-  auto f = [&](T& v)
+  auto f = [&](T& v) [[hc,cpu]]
   {
     v *= 8;
     v += 3;

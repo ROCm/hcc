@@ -6,8 +6,8 @@ inline void Memcpy(hc::accelerator_view &av, const void *Src, void *Dst, size_t 
     av.copy(Src, Dst, Size);
 }
 
-inline void MemcpyAsync(hc::accelerator_view &av, const void *Src, void *Dst, size_t Size){
-    av.copy_async(Src, Dst, Size);
+inline hc::completion_future MemcpyAsync(hc::accelerator_view &av, const void *Src, void *Dst, size_t Size){
+    return av.copy_async(Src, Dst, Size);
 }
 
 inline void* HostAlloc(hc::accelerator &Acc, size_t Size){
@@ -37,12 +37,12 @@ void Test1(hc::accelerator_view &Av){
     Memcpy(Av, A, Ad, size);
 }
 
-void Test4(hc::accelerator_view &Av){
-    MemcpyAsync(Av, Ah, Ad, size);
+hc::completion_future Test4(hc::accelerator_view &Av){
+    return MemcpyAsync(Av, Ah, Ad, size);
 }
 
-void Test5(hc::accelerator_view &Av){
-    MemcpyAsync(Av, Bd, Bh, size);
+hc::completion_future Test5(hc::accelerator_view &Av){
+    return MemcpyAsync(Av, Bd, Bh, size);
 }
 
 
@@ -65,4 +65,19 @@ void Init(hc::accelerator &Ac){
         Ah[i] = A[i];
         Bh[i] = B[i];
     }
+}
+
+
+void Destroy(){
+    free(A);
+    free(B);
+    free(C);
+
+    hc::am_free(Ad);
+    hc::am_free(Bd);
+    hc::am_free(Cd);
+
+    hc::am_free(Ah);
+    hc::am_free(Bh);
+    hc::am_free(Ch);
 }

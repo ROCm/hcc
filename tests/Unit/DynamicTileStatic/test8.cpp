@@ -388,14 +388,18 @@ int main() {
   ret &= test1D<1024, 16>();
   ret &= test1D<4096, 256>();
 
+#if 0
   ret &= test2D<1, 1, 1, 1>();
   ret &= test2D<8, 8, 2, 2>();
   ret &= test2D<1024, 16, 32, 4>();
   ret &= test2D<4096, 256, 16, 16>();
+#endif
 
+#if 0
   ret &= test3D<1, 1, 1, 1, 1, 1>();
   ret &= test3D<8, 8, 8, 2, 2, 2>();
   ret &= test3D<1024, 32, 16, 32, 4, 2>();
+#endif
 
   return !(ret == true);
 }

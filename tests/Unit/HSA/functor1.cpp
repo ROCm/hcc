@@ -20,7 +20,7 @@ class prog {
   int (&input)[SIZE];
 
 public:
-  prog(int (&t)[SIZE]) : input(t) {}
+  prog(int (&t)[SIZE]) restrict(amp,cpu) : input(t) {}
 
   void operator() (index<1>& idx) restrict(amp) {
     input[idx[0]] = idx[0];

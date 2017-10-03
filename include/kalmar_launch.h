@@ -36,7 +36,6 @@ static inline std::shared_ptr<KalmarQueue> get_availabe_que(const Kernel& f)
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-variable"
-static std::set<std::string> __mcw_cxxamp_kernels;
 template<typename Kernel, int dim_ext>
 inline std::shared_ptr<KalmarAsyncOp>
 mcw_cxxamp_launch_kernel_async(const std::shared_ptr<KalmarQueue>& pQueue, size_t *ext,

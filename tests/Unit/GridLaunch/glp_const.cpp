@@ -45,6 +45,8 @@ int main() {
   bool ret = true;
 
   for(int i = 0; i < sz; ++i) {
+    if (data1[i] != i)
+      std::cout << "Mismatch at #" << i << ": " << data1[i] << "\n";
     ret &= (data1[i] == i);
   }
 

@@ -13,7 +13,7 @@
 
 const int SIZE = GRID_SIZE*TILE_SIZE;
 
-// CHECK-LABEL: define amdgpu_kernel void @_ZN12_GLOBAL__N_138_Z7kernel116grid_launch_parmPi_functor19__cxxamp_trampolineEiiiiiiPi
+// CHECK-LABEL: define weak_odr amdgpu_kernel void @_ZN12_GLOBAL__N_138_Z7kernel116grid_launch_parmPi_functor19__cxxamp_trampolineEiiiiiiPi
 // CHECK-SAME:({{[^)]*}}){{[^#]*}}#[[ATTR0:[0-9]+]]
 // CHECK: attributes #[[ATTR0]] = {{{.*}}"amdgpu-flat-work-group-size"="1,10" "amdgpu-max-work-group-dim"="10,1,1" "amdgpu-waves-per-eu"="5,6"
 
