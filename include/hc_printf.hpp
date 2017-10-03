@@ -131,13 +131,13 @@ static inline void copy_n(char* dest, const char* src, unsigned int len) [[hc,cp
 // return the memory size (including '/0') if it's a C-string
 template <typename T>
 std::size_t mem_size_if_string(typename std::enable_if< std::is_same<T,const char*>::value 
-                                        || std::is_same<T,char*>::value, T>::type  s) [[hc,cpu]] {
+                                                        || std::is_same<T,char*>::value, T>::type  s) [[hc,cpu]] {
   return string_length(s) + 1;
 }
 
 template <typename T>
 std::size_t mem_size_if_string(typename std::enable_if< !std::is_same<T,const char*>::value 
-                                        && !std::is_same<T,char*>::value, T>::type  s) [[hc,cpu]] {
+                                                         && !std::is_same<T,char*>::value, T>::type  s) [[hc,cpu]] {
   return 0;
 }
 
