@@ -165,6 +165,7 @@ void ldflags(void) {
         if (p == std::string("ON"))
         std::cout << " -lmcwamp_atomic";
 
+    std::cout << " -lhc_am";
     std::cout << " -Wl,--whole-archive -lmcwamp -Wl,--no-whole-archive";
 
 #ifdef CODEXL_ACTIVITY_LOGGER_ENABLED
