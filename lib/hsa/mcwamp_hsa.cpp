@@ -1349,11 +1349,6 @@ public:
         }
         // clear async operations table
         asyncOps.clear();
-
-        // flush the printf buffer
-        if (hc::printf_buffer != nullptr) {
-            processPrintfBuffer(hc::printf_buffer);
-        }
    }
 
     void LaunchKernel(void *ker, size_t nr_dim, size_t *global, size_t *local) override {
@@ -3315,7 +3310,7 @@ public:
         // deallocate the printf buffer
         if (hc::printf_buffer != nullptr) {
            // do a final flush
-           hc::processPrintfBuffer(hc::printf_buffer);
+           flushPrintfBuffer();
 
            hc::deletePrintfBuffer(hc::printf_buffer);
            hc::printf_buffer = nullptr;
@@ -3366,6 +3361,10 @@ public:
         uint64_t timestamp_frequency_hz = 0L;
         hsa_system_get_info(HSA_SYSTEM_INFO_TIMESTAMP_FREQUENCY, &timestamp_frequency_hz);
         return timestamp_frequency_hz;
+    }
+
+    void flushPrintfBuffer() override {
+      hc::processPrintfBuffer(hc::printf_buffer);
     }
 };
 

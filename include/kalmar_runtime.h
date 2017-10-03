@@ -553,6 +553,9 @@ public:
 
     /// get tick frequency
     virtual uint64_t getSystemTickFrequency() { return 0L; };
+
+    // flush the device printf buffer
+    virtual void flushPrintfBuffer() {};
 };
 
 KalmarContext *getContext();
