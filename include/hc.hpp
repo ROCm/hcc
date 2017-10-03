@@ -1236,6 +1236,8 @@ public:
             //TODO-ASYNC - need to reclaim older AsyncOps here.
             __amp_future.wait();
         }
+
+        Kalmar::getContext()->flushPrintfBuffer();
     }
 
     template <class _Rep, class _Period>
