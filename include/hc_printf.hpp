@@ -1,5 +1,6 @@
 #pragma once
 
+#include <type_traits>
 #include <cstdlib>
 #include <cstdio>
 #include <cassert>
@@ -78,6 +79,7 @@ enum PrintfError {
    PRINTF_SUCCESS = 0
   ,PRINTF_BUFFER_OVERFLOW = 1
   ,PRINTF_STRING_BUFFER_OVERFLOW = 2
+  ,PRINTF_UNKNOWN_ERROR = 3
 };
 
 static inline PrintfPacket* createPrintfBuffer(const unsigned int numElements) {
@@ -126,25 +128,40 @@ static inline void copy_n(char* dest, const char* src, unsigned int len) [[hc,cp
   }
 }
 
+// return the memory size (including '/0') if it's a C-string
+template <typename T>
+std::size_t mem_size_if_string(typename std::enable_if< std::is_same<T,const char*>::value 
+                                        || std::is_same<T,char*>::value, T>::type  s) [[hc,cpu]] {
+  return string_length(s) + 1;
+}
+
+template <typename T>
+std::size_t mem_size_if_string(typename std::enable_if< !std::is_same<T,const char*>::value 
+                                        && !std::is_same<T,char*>::value, T>::type  s) [[hc,cpu]] {
+  return 0;
+}
+
 // get the argument count
 static inline void countArg(unsigned int& count_arg, unsigned int& count_char) [[hc,cpu]] {}
 template <typename T>
 static inline void countArg(unsigned int& count_arg, unsigned int& count_char, const T t) [[hc,cpu]] {
   ++count_arg;
-  if (std::is_same<T, char*>::value || std::is_same<T, const char*>::value){
-    count_char += string_length((const char*)t) + 1;
-  }
+  count_char += mem_size_if_string<T>(t);
 }
 template <typename T, typename... Rest>
 static inline void countArg(unsigned int& count_arg, unsigned int& count_char, const T t, const Rest&... rest) [[hc,cpu]] {
   ++count_arg;
-  if (std::is_same<T, char*>::value || std::is_same<T, const char*>::value){
-    count_char += string_length((const char*)t) + 1;
-  }
+  count_char += mem_size_if_string<T>(t);
   countArg(count_arg, count_char, rest...);
 }
 
-static inline PrintfError process_str_batch(PrintfPacket* queue, int poffset, unsigned int& soffset, const char* string) [[hc,cpu]] {
+template<typename T>
+PrintfError process_str_batch(PrintfPacket* queue, int poffset, unsigned int& soffset
+, typename std::enable_if< std::is_same<T,const char*>::value || std::is_same<T,char*>::value, T>::type string) [[hc,cpu]] {
+
+  if (queue[poffset].type != PRINTF_CHAR_PTR && queue[poffset].type != PRINTF_CONST_CHAR_PTR)
+    return PRINTF_UNKNOWN_ERROR;
+
   unsigned int str_len = string_length(string);
   unsigned int sb_offset = soffset;
   char* string_buffer = (char*) queue[PRINTF_STRING_BUFFER].data.ptr;
@@ -157,23 +174,32 @@ static inline PrintfError process_str_batch(PrintfPacket* queue, int poffset, un
   return PRINTF_SUCCESS;
 }
 
+template<typename T>
+PrintfError process_str_batch(PrintfPacket* queue, int poffset, unsigned int& soffset
+, typename std::enable_if< !std::is_same<T,const char*>::value && !std::is_same<T,char*>::value, T>::type data) [[hc,cpu]] {
+
+  if (queue[poffset].type == PRINTF_CHAR_PTR || queue[poffset].type == PRINTF_CONST_CHAR_PTR)
+    return PRINTF_UNKNOWN_ERROR;
+  else
+    return PRINTF_SUCCESS;
+}
+
 template <typename T>
 static inline PrintfError set_batch(PrintfPacket* queue, int poffset, unsigned int& soffset, const T t) [[hc,cpu]] {
   PrintfError err = PRINTF_SUCCESS;
   queue[poffset].set(t);
-  if (queue[poffset].type == PRINTF_CHAR_PTR || queue[poffset].type == PRINTF_CONST_CHAR_PTR){
-    err = process_str_batch(queue, poffset, soffset, (char*)t);
-  }
+  err = process_str_batch<T>(queue, poffset, soffset, t);
   return err;
 }
+
 template <typename T, typename... Rest>
 static inline PrintfError set_batch(PrintfPacket* queue, int poffset, unsigned int& soffset, const T t, Rest... rest) [[hc,cpu]] {
   PrintfError err = PRINTF_SUCCESS;
   queue[poffset].set(t);
-  if (queue[poffset].type == PRINTF_CHAR_PTR || queue[poffset].type == PRINTF_CONST_CHAR_PTR){
-    if ((err = process_str_batch(queue, poffset, soffset, (char*)t)) != PRINTF_SUCCESS)
-      return err;
-  }
+
+  if ((err = process_str_batch<T>(queue, poffset, soffset, t)) != PRINTF_SUCCESS)
+    return err;
+
   return set_batch(queue, poffset + 1, soffset, rest...);
 }
 
