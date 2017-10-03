@@ -276,7 +276,7 @@ static unsigned extractBits(unsigned v, unsigned pos, unsigned w)
 namespace hc {
 
 // printf buffer size (in number of packets, see hc_printf.hpp)
-constexpr unsigned int default_printf_buffer_size = 1024;
+constexpr unsigned int default_printf_buffer_size = 2048;
 
 // address of the global printf buffer in host coherent system memory
 PrintfPacket* printf_buffer = nullptr;
