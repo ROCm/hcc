@@ -126,27 +126,6 @@ if [ $KMDUMPLLVM == "1" ]; then
   cp $1 ./dump.input.bc
 fi
 
-# Invoke HCC-specific opt passes
-if [ "$HCC_TILECHECK" == "ON" ]; then
-  $OPT -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-       -load $LIB/LLVMTileUniform@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-       -erase-nonkernels -tile-uniform -dce -globaldce < $1 -o $2.promote.bc
-else
-  $OPT -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-       -erase-nonkernels -dce -globaldce < $1 -o $2.promote.bc
-fi
-
-# error handling for HCC-specific opt passes
-RETVAL=$?
-if [ $RETVAL != 0 ]; then
-  echo "Generating AMD GCN kernel failed in HCC-specific opt passes for target: $AMDGPU_TARGET"
-  exit $RETVAL
-fi
-
-if [ $KMDUMPLLVM == "1" ]; then
-  cp $2.promote.bc ${KMDUMPDIR}/dump.promote.bc
-fi
-
 HCC_EXTRA_ARCH_FILE=""
 
 # select appropriate ROCm-Device-Libs per AMDGPU_TARGET
@@ -177,7 +156,7 @@ HCC_BC_LIBS="$ROCM_LIB/hc.amdgcn.bc $ROCM_LIB/opencl.amdgcn.bc $ROCM_LIB/ocml.am
 # include libraries specified through the HCC_EXTRA_LIBRARIES environment variable
 HCC_BC_LIBS="$HCC_BC_LIBS  $HCC_EXTRA_LIBRARIES $HCC_EXTRA_ARCH_FILE"
 
-$LINK -suppress-warnings -o $2.linked.bc $2.promote.bc $HCC_BC_LIBS
+$LINK -suppress-warnings -o $2.linked.bc $1 $HCC_BC_LIBS
 
 # error handling for llvm-link
 RETVAL=$?
@@ -190,11 +169,29 @@ if [ $KMDUMPLLVM == "1" ]; then
   cp $2.linked.bc ${KMDUMPDIR}/dump.linked.bc
 fi
 
+# Invoke HCC-specific opt passes
+if [ "$HCC_TILECHECK" == "ON" ]; then
+    $OPT -load $LIB/LLVMSelectAcceleratorCode@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+        -select-accelerator-code -dce -globaldce -always-inline -tile_uniform < $2.linked.bc -o $2.selected.bc
+else
+    $OPT -load $LIB/LLVMSelectAcceleratorCode@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+        -select-accelerator-code -dce -globaldce -always-inline < $2.linked.bc -o $2.selected.bc
+fi
+
+# error handling for HCC-specific opt passes
+RETVAL=$?
+if [ $RETVAL != 0 ]; then
+  echo "Generating AMD GCN kernel failed in HCC-specific opt passes for target: $AMDGPU_TARGET"
+  exit $RETVAL
+fi
+
+if [ $KMDUMPLLVM == "1" ]; then
+  cp $2.selected.bc ${KMDUMPDIR}/dump.selected.bc
+fi
+
 # Optimization notes:
 #  -disable-simplify-libcalls:  prevents transforming loops into library calls such as memset, memcopy on GPU
-# Teach LLVM inliner we do want all functions used by a kernel be inlined
-# by assigning a big iniling threshold value
-$OPT -inline -inline-threshold=1048576 -mtriple amdgcn--amdhsa-amdgiz -mcpu=$AMDGPU_TARGET -infer-address-spaces -amdgpu-internalize-symbols -disable-simplify-libcalls $KMOPTOPT -verify $2.linked.bc -o $2.opt.bc
+$OPT -mtriple amdgcn--amdhsa-amdgiz -mcpu=$AMDGPU_TARGET -infer-address-spaces -amdgpu-internalize-symbols -disable-simplify-libcalls $KMOPTOPT -verify $2.selected.bc -o $2.opt.bc
 
 # error handling for opt
 RETVAL=$?
