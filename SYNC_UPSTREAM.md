@@ -80,7 +80,6 @@ This directory would be referred as *HCC directory* hereafter.
 ### Add all remotes and forks for submodules
 
 - change to HCC directory
-- `git remote add hcc_fork git@github.com:your_name/hcc.git`
 - `cd lld`
 - `git remote add lld_fork git@github.com:your_name/lld.git`
 - `cd ../compiler`
@@ -154,7 +153,7 @@ This directory would be referred as *HCC directory* hereafter.
 
 - change to HCC directory
 - `cd ..; mkdir -p build; cd build`
-- `cmake -DCMAKE_BUILD_TYPE=Release ../hcc`
+- `cmake -DCMAKE_BUILD_TYPE=Release ../hcc_fork`
 - `make -j$(nproc)`
 
 Fix any compilation failures if there is any. Repeat this step until HCC
