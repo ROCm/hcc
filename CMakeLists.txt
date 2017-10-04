@@ -349,6 +349,9 @@ install(PROGRAMS $<TARGET_FILE:LLVMAMDGPUDesc>
         COMPONENT compiler
 )
 
+# force library install path to lib
+set(CMAKE_INSTALL_LIBDIR "lib" CACHE INTERNAL "Installation directory for libraries" FORCE)
+
 install(FILES ${CLANG_BIN_DIR}/lib/clang/6.0.0/lib/linux/libclang_rt.builtins-x86_64.a
         DESTINATION  ${CMAKE_INSTALL_LIBDIR}
         COMPONENT compiler)
@@ -543,7 +546,7 @@ set(CPACK_RPM_PRE_UNINSTALL_SCRIPT_FILE "${PROJECT_BINARY_DIR}/packaging/debian/
 # disable automatic shared libraries dependency detection
 set(CPACK_RPM_PACKAGE_AUTOREQ 0)
 
-set(HCC_GENERAL_RPM_DEP "findutils, elfutils-libelf, pciutils-libs, file, pth, libunwind, libunwind-devel, gcc-c++, libcxx, libcxxabi")
+set(HCC_GENERAL_RPM_DEP "findutils, elfutils-libelf, pciutils-libs, file, pth, libunwind, libunwind-devel, libcxx, libcxxabi")
 set(CPACK_RPM_PACKAGE_REQUIRES "${HCC_GENERAL_RPM_DEP} ${HCC_ROCR_DEP}" )
 
 set(CPACK_COMPONENTS_ALL compiler)
