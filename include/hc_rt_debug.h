@@ -7,10 +7,11 @@
 #ifndef USE_LIBCXX
 #include <cxxabi.h>
 #endif
-#include <cstring>
-#include <string>
-#include <sstream>
 #include <iostream>
+#include <cstring>
+#include <sstream>
+#include <string>
+#include <vector>
 
 
 #define DB_API        0  /* 0x0001  HCC runtime API calls */
