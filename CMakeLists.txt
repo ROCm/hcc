@@ -316,6 +316,7 @@ if(EXISTS ${PROJECT_SOURCE_DIR}/clang-tools-extra/CMakeLists.txt)
   set(LLVM_EXTERNAL_CLANG_TOOLS_EXTRA_SOURCE_DIR "${PROJECT_SOURCE_DIR}/clang-tools-extra")
 endif()
 
+include_directories("${CMAKE_CURRENT_BINARY_DIR}/hcc_config")
 add_subdirectory(${CLANG_SRC_DIR})
 
 install(PROGRAMS $<TARGET_FILE:llvm-as>
