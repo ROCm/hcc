@@ -1,4 +1,4 @@
-// RUN: %hc %s -lhc_am -o %t.out && %t.out | %FileCheck %s
+// RUN: %hc %s -DCHECK_PRINTF_ERROR -lhc_am -o %t.out && %t.out | %FileCheck %s
 
 #include <cassert>
 #include <hc.hpp>
