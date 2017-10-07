@@ -462,9 +462,14 @@ public:
     HSAOp(Kalmar::KalmarQueue *queue, hc::hcCommandKind commandKind) ;
 
     const HSAOpCoord opCoord() const { return _opCoord; };
+    int asyncOpsIndex() const { return _asyncOpsIndex; };
+
+    void asyncOpsIndex(int asyncOpsIndex) { _asyncOpsIndex = asyncOpsIndex; };
+    
 protected:
     uint64_t   apiStartTick;
     HSAOpCoord _opCoord;
+    int        _asyncOpsIndex; 
 };
 
 
@@ -1165,6 +1170,7 @@ public:
 
             wait();
         }
+        op->asyncOpsIndex(asyncOps.size());
         asyncOps.push_back(op);
 
         youngestCommandKind = op->getCommandKind();
@@ -1891,51 +1897,44 @@ public:
 
 
     // remove finished async operation from waiting list
-    void removeAsyncOp(KalmarAsyncOp* asyncOp) {
-        int targetIndex = -1;
-        for (int i = 0; i < asyncOps.size(); ++i) {
+    void removeAsyncOp(HSAOp* asyncOp) {
+        int targetIndex = asyncOp->asyncOpsIndex();
+        //asyncOps[targetIndex] = nullptr;
+
+        // All older ops are known to be done and we can reclaim their resources here:
+        // Both execute_in_order and execute_any_order flags always remove ops in-order at the end of the pipe.
+        // Note if not found above targetIndex=-1 and we skip the loop:
+        int nullifiedCount = 0;
+        for (int i = targetIndex; i>=0; i--) {
             Kalmar::KalmarAsyncOp *op = asyncOps[i].get();
-            if (op == asyncOp) {
-                targetIndex = i;
-                //std::cerr << "remove targeted asyncOp[" << i << "] #" << op->getSeqNum() <<  " use_count=" << asyncOps[i].use_count() << " (1 indicates last)\n";
+            // opportunistically update status for any ops we encounter along the way:
+            if (op) {
+#ifdef KALMAR_DEBUG
+                hsa_signal_t signal =  *(static_cast<hsa_signal_t*> (op->getNativeHandle()));
+
+                // v<0 : no signal, v==0 signal and done, v>0 : signal and not done:
+                hsa_signal_value_t v = -1;
+                if (signal.handle)
+                    v = hsa_signal_load_acquire(signal);
+                assert (v <=0);
+#endif
+
+                nullifiedCount++;
+
                 asyncOps[i] = nullptr;
+            } else {
+                // The queue is retired in-order, and ops only inserted at "top", and ops can only be removed at two defined points:
+                //   - Draining the entire queue in HSAQueue::wait() - this calls asyncOps.clear()
+                //   - Events in the middle of the queue can be removed, but will call this function which removes all older ops.
+                //   So once we remove the asyncOps, there is no way for an older async op to be come non-null and we can stop search here:
+                //
+
+                break; // stop searching if we find null, there cannot be any more valid pointers below.
             }
         }
-
-         // All older ops are known to be done and we can reclaim their resources here:
-         // Both execute_in_order and execute_any_order flags always remove ops in-order at the end of the pipe.
-         // Note if not found above targetIndex=-1 and we skip the loop:
-         bool foundNull = false;
-         for (int i = targetIndex-1; i>=0; i--) {
-             Kalmar::KalmarAsyncOp *op = asyncOps[i].get();
-             // opportunistically update status for any ops we encounter along the way:
-             if (op) {
-                 hsa_signal_t signal =  *(static_cast<hsa_signal_t*> (op->getNativeHandle()));
-
-                 // v<0 : no signal, v==0 signal and done, v>0 : signal and not done:
-                 hsa_signal_value_t v = -1;
-                 if (signal.handle)
-                    v = hsa_signal_load_acquire(signal);
-                 assert (v <=0);
-
-                 if (foundNull) {
-                     // printAsyncOps()
-                    DBOUTL(DB_RESOURCE, "in removeAsyncOp, found unexpected nonnull asyncop after another null at position:" << i);
-                    //assert(!foundNull);
-
-                 }
-                 //std::cerr << "remove opportunistic asyncOp[" << i << "] #" << op->getSeqNum() <<  " use_count=" << asyncOps[i].use_count() << "\n";
-                 asyncOps[i] = nullptr;
-             } else {
-                 foundNull = true;
-                 // The queue is retired in-order, and ops only inserted at "top", and ops can only be removed at two defined points:
-                 //   - Draining the entire queue in HSAQueue::wait() - this calls asyncOps.clear()
-                 //   - Events in the middle of the queue can be removed, but will call this function which removes all older ops.
-                 //   So once we remove the asyncOps, there is no way for an older async op to be come non-null and we can stop search here:
-                 //
-                 break; // stop searching if we find null, there cannot be any more valid pointers below.
-             }
-         }
+        if (nullifiedCount > 1000) {
+            DBOUTL(DB_RESOURCE, "removeAsyncOps nullified " << nullifiedCount << " ops.");
+        }
 
 
         // GC for finished kernels
@@ -2733,9 +2732,6 @@ public:
             kernargPool.push_back(kernargMemory+i);
             kernargPoolFlag.push_back(false);
         };
-
-
-
     }
 
     std::pair<void*, int> getKernargBuffer(int size) {
@@ -4620,7 +4616,8 @@ HSAOpCoord::HSAOpCoord(Kalmar::HSAQueue *queue) :
 
 HSAOp::HSAOp(Kalmar::KalmarQueue *queue, hc::hcCommandKind commandKind) :
     KalmarAsyncOp(queue, commandKind),
-    _opCoord(static_cast<Kalmar::HSAQueue*> (queue))
+    _opCoord(static_cast<Kalmar::HSAQueue*> (queue)),
+    _asyncOpsIndex(-1)
 {
     apiStartTick = Kalmar::ctx.getSystemTicks();
 };
