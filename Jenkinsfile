@@ -92,9 +92,10 @@ node( 'rocmtest' )
             -DCMAKE_INSTALL_PREFIX=${hcc_install_prefix} \
             -DCPACK_SET_DESTDIR=OFF \
             -DCMAKE_BUILD_TYPE=${build_config} \
-            -DHSA_AMDGPU_GPU_TARGET="gfx900;gfx803" \
+            -DHSA_AMDGPU_GPU_TARGET="gfx803;gfx900" \
             ../..
           make -j\$(nproc)
+          make test
         """
 
       // Cap the maximum amount of testing, in case of hangs
