@@ -2278,8 +2278,10 @@ public:
 
         hsa_status_t status = HSA_STATUS_SUCCESS;
 
-        for (int i = 0; i < kernargPool.size(); ++i) {
-            hsa_amd_memory_pool_free(kernargPool[i]);
+        // kernargPool is allocated in batch, KERNARG_POOL_SIZE for each
+        // allocation. it is therefore be released also in batch.
+        for (int i = 0; i < kernargPool.size() / KERNARG_POOL_SIZE; ++i) {
+            hsa_amd_memory_pool_free(kernargPool[i * KERNARG_POOL_SIZE]);
             STATUS_CHECK(status, __LINE__);
         }
 
