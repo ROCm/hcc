@@ -1903,42 +1903,41 @@ public:
         int targetIndex = asyncOp->asyncOpsIndex();
 
 
-		int nullifiedCount = 0;
-		// Make sure the opindex is still valid.
-		// If the queue is destroyed first it may not exist in asyncops anymore so no need to destroy.
-	    if (targetIndex < asyncOps.size() && 
- 	        asyncOp == asyncOps[targetIndex].get()) {
+        int nullifiedCount = 0;
+        // Make sure the opindex is still valid.
+        // If the queue is destroyed first it may not exist in asyncops anymore so no need to destroy.
+        if (targetIndex < asyncOps.size() && 
+            asyncOp == asyncOps[targetIndex].get()) {
 
-			// All older ops are known to be done and we can reclaim their resources here:
-			// Both execute_in_order and execute_any_order flags always remove ops in-order at the end of the pipe.
-			// Note if not found above targetIndex=-1 and we skip the loop:
-			for (int i = targetIndex; i>=0; i--) {
-				Kalmar::KalmarAsyncOp *op = asyncOps[i].get();
-				if (op) {
-					nullifiedCount++;
-					asyncOps[i] = nullptr;
+            // All older ops are known to be done and we can reclaim their resources here:
+            // Both execute_in_order and execute_any_order flags always remove ops in-order at the end of the pipe.
+            // Note if not found above targetIndex=-1 and we skip the loop:
+            for (int i = targetIndex; i>=0; i--) {
+                Kalmar::KalmarAsyncOp *op = asyncOps[i].get();
+                if (op) {
+                    nullifiedCount++;
+                    asyncOps[i] = nullptr;
 
-	#if CHECK_OLDER_COMPLETE
-				// opportunistically update status for any ops we encounter along the way:
-					hsa_signal_t signal =  *(static_cast<hsa_signal_t*> (op->getNativeHandle()));
+        #if CHECK_OLDER_COMPLETE
+                    // opportunistically update status for any ops we encounter along the way:
+                    hsa_signal_t signal =  *(static_cast<hsa_signal_t*> (op->getNativeHandle()));
 
-					// v<0 : no signal, v==0 signal and done, v>0 : signal and not done:
-					hsa_signal_value_t v = -1;
-					if (signal.handle)
-						v = hsa_signal_load_acquire(signal);
-					assert (v <=0);
-	#endif
+                    // v<0 : no signal, v==0 signal and done, v>0 : signal and not done:
+                    hsa_signal_value_t v = -1;
+                    if (signal.handle)
+                        v = hsa_signal_load_acquire(signal);
+                    assert (v <=0);
+        #endif
 
-				} else {
-					// The queue is retired in-order, and ops only inserted at "top", and ops can only be removed at two defined points:
-					//   - Draining the entire queue in HSAQueue::wait() - this calls asyncOps.clear()
-					//   - Events in the middle of the queue can be removed, but will call this function which removes all older ops.
-					//   So once we remove the asyncOps, there is no way for an older async op to be come non-null and we can stop search here:
-					//
+                } else {
+                    // The queue is retired in-order, and ops only inserted at "top", and ops can only be removed at two defined points:
+                    //   - Draining the entire queue in HSAQueue::wait() - this calls asyncOps.clear()
+                    //   - Events in the middle of the queue can be removed, but will call this function which removes all older ops.
+                    //   So once we remove the asyncOps, there is no way for an older async op to be come non-null and we can stop search here:
 
-					break; // stop searching if we find null, there cannot be any more valid pointers below.
-				}
-			}
+                    break; // stop searching if we find null, there cannot be any more valid pointers below.
+                }
+            }
         }
         if (nullifiedCount > 1000) {
             DBOUTL(DB_RESOURCE, "removeAsyncOps nullified " << nullifiedCount << " ops.");
