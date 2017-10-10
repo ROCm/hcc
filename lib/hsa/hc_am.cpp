@@ -576,7 +576,7 @@ am_status_t am_map_to_peers(void* ptr, std::size_t num_peer, const hc::accelerat
     // allow access to the agents
     if(peer_count)
     {
-        hsa_status_t status = hsa_amd_agents_allow_access(peer_count, agents.data(), NULL, ptr);
+        hsa_status_t status = hsa_amd_agents_allow_access(peer_count, agents, NULL, ptr);
         return status == HSA_STATUS_SUCCESS ? AM_SUCCESS : AM_ERROR_MISC;
     }
    
