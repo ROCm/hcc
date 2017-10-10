@@ -11,10 +11,27 @@ Some other useful features:
 - Shows queue, start, and stop timestamps for each command
 - Shows barrier commands and the time they spent waiting to resolve (if requested)
 
-### Enable and configure
-
-HCC_PROFILE=1 shows a summary of kernel and data commands when hcc exits. (under development)
 HCC_PROFILE=2 enables a profile message after each command (kernel or data movement) completes. 
+HCC_PROFILE=1 is a future capability that will shows a summary of kernel and data commands when hcc exits. (under development)
+
+## One-liners
+```
+# Trace collection:
+$ HCC_PROFILE=2  RunMyApp &> prof.out
+
+# Post-processing examples:
+# Show summary
+$ rpt prof.out
+
+# Show summary for a specified ROI for lines 100-200 of the file
+$ rpt prof.out -r @100 --R @200
+
+# Generate text trace to stdout
+$ rpt  prof.out -t
+
+# Generate gui trace for reading with chrome://tracing
+$ rpt prof.out -g prof.json
+```
 
 ## HCC text profile format
 
@@ -38,7 +55,7 @@ PROFILE:  TYPE;    KERNEL_NAME     ;  DURATION;        ENQUEUE; START         ; 
 - ENQUEUE: When the command is enqueued to the GPU from the host, measured in ns and using host-side timers.  This timestamp is collected inside host API that enqueues the command.
 - START: When the command starts executing, measured in ns.  For "fast" command executed by the GPU copy engines, this is measured using GPU-side timers.
 - STOP: When the command stops executing, measured in ns.  For "fast" command executed by the GPU copy engines, this is measured using GPU-side timers.
-- ID: command id in device.queue.cmd format.  The cmdsequm is a unique mononotically increasing number per-queue, so the triple of device.queue.cmdseqnum uniquely identifies the command during the process execution.
+- ID: command id in device.queue.cmd format.  The cmd number is a mononotically increasing per-queue, so the triple of device.queue.cmd uniquely identifies the command during the process execution.
 
 ### Memory Copy Commands
 This example shows memory copy commands with full verbose output:
@@ -114,23 +131,26 @@ ROCm Profiling Tool ("rpt") is a command-line tool that post-processes the outpu
 rpt organizes profile records into the parent resources where they execute.  Resources can currently be GPUs (numbered 0..N-1) or the DATA bus.
 GPU resources execute kernel and barrier commands.  DATA resources execute copy commands.
 
-Gaps indicate periods of times when the resource is not utilized.  
-rpt computes gap time by examining the delta between the stop and start time of consecutive records on the resource.
-Commands may be overlapped or completely hidden if a command starts eariler - in this case the command run time will show 0.
+Gaps indicate periods of times when the resource is not utilized.  rpt computes gap time by examining the delta between the stop and start time of consecutive records on the resource.
+Commands may be overlapped or completely hidden if a command starts eariler - in this case the duration will be 0.
 
 The summary view uses a histogram to aggregate gaps into buckets and will show the range covered by the bucket.  For example, the "gap >=10000us" buckets sumarizes all gaps which are equal or more than 10000us.  Gaps are inclusive of the lower bound and exclusive of the upper bound.  The --gaps option can be used to customize the histogram boundaries and this can be useful to isolate causes of gaps in some cases.
 
 Large gaps can indicate the ROI is not set correctly - see the next section for suggestions on how to set the ROI.  Inside a valid ROI:
 
-    - Gaps of <10us typically indicate GPU hardware overhead - this is maximum rate that the GPU can execute back-to-back commands in the same queue.
-    If this is significant overhead, it may be beneficial to combine kernels, or use multiple queues if the work is independent.
+- Gaps of <10us typically indicate GPU hardware overhead - this is maximum rate that the GPU can execute back-to-back commands in the same queue.
+If this is significant overhead, it may be beneficial to combine kernels, or use multiple queues if the work is independent.
 
-    - Larger gaps can indicate excessive host serialization or cases where the GPU was not fed commands frequently enough, perhaps due to some expensive CPU activity.  To analyze the cause of these gaps, you can use a profiler such as operf or can use the --text_trace or --gui_trace options combined with progtram instrumentation (stderr output) to identify what is occurring in the gap regions. 
+- Larger gaps can indicate excessive host serialization or cases where the GPU was not fed commands frequently enough, perhaps due to some expensive CPU activity.  To analyze the cause of these gaps, you can use a profiler such as operf or can use the --text_trace or --gui_trace options combined with progtram instrumentation (stderr output) to identify what is occurring in the gap regions. 
 
 
 #### Specifying ROI
 A common problem when performing profiling analysis is to determine which region to focus the analysis on, and in particular to exclude initialization, warmup, and tear-down activity from the results.  RPT provides options to specify the start and stop of the "Region of Interest" (ROI) using line numbers from the input file, timestamps, or regular expressions.  The latter is particularly useful - modify the program to emit a marker message and then search for the specified marker.
 
+ROI_POINTs can be specified with line numbers, start times, or search strings.
+- @LINENUM : specify a line number from the input file.  Example: @1342.\n"\
+- ^TIME    : specify start time from the beginning of the file.  Example: ^55.12345\n"\
+- MATCH_NUM%SEARCH_RE : Specify string in python regular expression format, rpt will use the profile record after the found text. MATCH_NUM specifies the nth match in the file of the string.  This allows applications to embed markers using simple stderr print statements and instruct rpt to include records only between the markers. Examples: %MyStartMarker, 2%MyStartMarker (finds 2nd instance of MyMarker), %"^iteration *10"
 
 #### Text trace
 The `-t` option generates a text trace, with one row per profile record.  Gaps between the records are also computed and displayed.
@@ -152,24 +172,36 @@ GPU0       980.791477:      +7.70 gap                ==
 GPU0       980.799181:      +0.00 barrier #0.3.305   195143: depcnt=0,acq=none,rel=sys
 DATA       980.536173:    +272.19 gap                ==========
 DATA       980.808366:      +2.37 copy    #0.3.306   195144: DeviceToHost_async_fast_4_bytes
-
 ```
+- Resource : The resource this command executed on.  May be GPU# for a specific GPU or DATA to indicate data transfer command
+- Time(us) : Time which the command contributed to the 'critical' path
+- Start(ms) : Start time of the command, displayed in ms.  Command start from time 0
+- Type  : Type of the command (kernel,barrier, copy)
+- Dev.Queue.Cmd : The cmd sequm is a unique mononotically increasing number per-queue, so the triple of device.queue.cmdseqnum uniquely identifies the command during the process execution.
+- LineNum : Line number from the input HCC_PROF_FILE
+- Name  : Name of the record.  For kernels, this is kernel name.  For copy commands, the name contains the size and direction.  For barrier commands this is contains dependency counts, acquire and release fences.
 
-Text output from the application(is shown interleaved with the profile records, preceded by leading ">".  
+Text output from the application(is shown interleaved with the profile records, preceded by leading ">".
 The --hide_app_text option can be used to supress this if desired.
 
-The gaps are shown with a series of '==" indicating their length - longer bars indicating a longer gap..  The --gaps parmater (or defaults if not specified) also controls the split points for the bar display.  The intent is to provide a visually distinct way to
-visualize the length of the gaps.
+The gaps are shown with a series of '==" indicating their length - longer bars indicating a longer gap..  The --gaps parmater (or defaults if not specified) also controls the split points for the bar display.
+The intent is to provide a visually distinct way to visualize the length of the gaps.
 
 The combined view interleaves the records for all resources, sorted by their start order.
-However, the time delta and gap computation are computed on a per-resource basis.  
+However, the time delta and gap computation are computed on a per-resource basis.
 For example, in the case above the large "DATA" gaps show the time since the last DATA command.
 
+Copy commands show:
+- Copy kind: HostToDevice, HostToHost, DeviceToHost, DeviceToDevice, or PeerToPeer.  DeviceToDevice indicates the copy occurs on a single device while PeerToPeer indicates a copy between devices.
+- Sync or Async.  Synchronous copies indicate the host waits for the completion for the copy. Asynchronous copies are launched by the host without waiting for the copy to complete.
+- Fast or Slow.  Fast copies use the GPUs optimized copy routines from the hsa_amd_memory_copy routine.  Slow copies typically involve unpinned host memory and can't take the fast path.
+- Size of the copy in bytes.
+
 Barrier commands show:
-    - depcnt=N : Number of other barriers this one depends on.
-    - acq      : The "acquire" fence executed before the barrier.  May be "none", acc(meaning "accelerator" or "agent"), or "sys" ("system")
-    - rel      : The "release" fence executed before the barrier.  May be "none", acc(meaning "accelerator" or "agent"), or "sys" ("system")
-    - Dependent list (Under development) : List of dependents
+- depcnt=N : Number of other barriers this one depends on.
+- acq      : The "acquire" fence executed before the barrier.  May be "none", acc(meaning "accelerator" or "agent"), or "sys" ("system")
+- rel      : The "release" fence executed before the barrier.  May be "none", acc(meaning "accelerator" or "agent"), or "sys" ("system")
+- Dependent list (Under development) : List of dependents
 
 More information is available in the HSA Platofrm System Architecture Specification section 2.9 ("Architected Queueing Language").
 
@@ -177,7 +209,7 @@ The ROI controls apply to the text trace as well, and are useful to limit the ge
 
 #### GUI trace
 
-The -g or --gui_trace option generates a JSON-format file that can be input into chrome://tracing.
+The `-g` or `--gui_trace` option generates a JSON-format file that can be input into chrome://tracing.
 Chrome tracing was originally designed for viewing browser performance information but is also a fully capable timeline viewing tool which is readily available on many platforms.
 To access the gui, start the Chrome brower and open the site "chrome://tracing".  In the browser:
     - Select "Load" from the upper left hand corner and navigate to the saved JSON file.
@@ -190,43 +222,28 @@ In the timeline view, each row shows a GPU queue or data resource.  Rectangles i
 
 The ROI controls apply to the giu trace as well.
 
-####  Example
 ```
+# Use rpt to create a json gui trace file
 $ rpt prof.out -g prof.json
 ```
 Start the Chrome brower and open the site "chrome://tracing".  In the browswer, select "Load" from the upper left hand corner and navigate to the saved JSON file.
 
 
-#### One-liners
-```
-# Trace collection:
-$ HCC_PROFILE=2  RunMyApp &> prof.out
-
-# Post-processing examples:
-# Show summary
-$ rpt prof.out
-
-# Show summary for a specified ROI for lines 100-200 of the file
-$ rpt prof.out -r @100 --R @200
-
-# Generate text trace to stdout
-$ rpt  prof.out -t
-
-# Generate gui trace for reading with chrome://tracing
-$ rpt prof.out -g prof.json
-```
 
 
 ### Example profiling analysis
 
-# In this case we examine the performance for a 
-A common problem when performing profiling analysis is to determine which region to focus the analysis on, and in particular to exclude initialization, warmup, and tear-down activity from the results.
+```
+# Collect the profiling information for the application
+$ HCC_PROFILE=2 myapp &> myapp.prof
+```
 
+In this example, we had previously modified the program to print the message "iteration start" before every 10 iterations in the critical loop.
+We use the markers to filter the information parsed by roi, so we are examining exactly one iteration (specifically the profile records printed between the 3rd and 4th ocurrences of the phrase "iteration start" at the beginning of a line).  By default, rpt emits a summary table showing the top users of each resource:
 
-#### Specifying ROI
-For this case, we add print statement to the original application to delinate every 10 iterations in the critical loop, and then use "grep -n" to extract those line numbers from the program output file (with HCC_PROFILE=2 enabled).  Finally, we pass the desired line numbers to rpt:
+```
+$ rpt -r 3%"^iteration start" -R 4%"^iteration start"
 
-$ rpt prof.out --roi_start @195169 --roi_stop @288991
 ROI_START: GPU0         0.000000:      +0.00  kernel   195169: miog_alphaab                   #0.1.199064
 ROI_STOP : GPU0      6819.188139:      +0.00  kernel   288991: miog_betac_alphaab             #0.1.282703
 ROI_TIME=   6.819 secs
@@ -251,7 +268,7 @@ Resource=GPU0 Showing 20/84 records   78.43% busy
          1.37%    93703.6       40   2342.6   1347.6   5417.6  MIOpenCvBwdWrW
          1.29%    87982.8       26   3384.0   1035.7   7178.7  gap<10000us
          1.20%    82023.0      280    292.9     53.2   1909.4  BatchNormBwdSpatialDX
-         1.05%    71775.9     2340     30.7      3.9    131.7  Eigen::internal::InnerReductionLauncher<Eigen::TensorEvaluator<Eigen::TensorReductionOp<Eigen::internal::SumReducer<float>, Eigen::DimensionList<long, 1ul> const, Eigen::TensorCwiseUnaryOp<Eigen::internal::bind2nd_op<Eigen::internal::scalar_product_op<float, float> >, Eigen::TensorCwiseUnaryOp<Eigen::internal::scalar_square_op<float const>, Eigen::TensorMap<Eigen::Tensor<float const, 1, 1, long>, 16, Eigen::MakePointer> const> const> const, Eigen::MakePointer> const, Eigen::GpuDevice>, Eigen::internal::SumReducer<float>, float, true, void>::run
+         1.05%    71775.9     2340     30.7      3.9    131.7  TensorOp
 
 Resource=DATA Showing 8/8 records    0.00% busy
       Total(%)    Time(ms)    Calls  Avg(us)  Min(us)  Max(us)  Name
@@ -263,41 +280,42 @@ Resource=DATA Showing 8/8 records    0.00% busy
          0.00%       41.4        9      4.6      2.7      6.3  gap<10us
          0.00%       28.6       10      2.9      2.7      3.1  HostToDevice_async_fast_4_bytes
          0.00%       27.7       10      2.8      2.7      3.1  HostToDevice_async_fast_128_bytes
+```
  
 
-
 #### Observations and further analysis
-- The data bus is used very infrequently, the average is 0.00% active. 
+- This GPU is used only ~78% of the time.  The remaining 22% of time is displayed in the "gap" categories ; about half this comes from the second row showing 10 gaps averaging 77ms.
+These are relatively large gaps and likely indicate the CPU is not feeding the GPU quickly enough.   One approach would be to use the `-t` option and examine the kernels and other profile activity around the gap.
+Another approach is to use oprofile (see the next section).
 
-- The miog_betac_alphaab and MIOpenConv1x kernels take 18.11% and 8.92% of the overall GPU execution time respectively.  Optimizing thise or choosing alternate algorithms could improve performance significantly.
+- The miog_betac_alphaab and MIOpenConv1x kernels take 17.69% and 9.17% of the overall GPU execution time respectively.  Optimizing thise or choosing alternate algorithms could improve performance significantly.
 
-- This GPU is used only 77.46% of the time.  
-    - 12.46% of time is from large gaps of 15ms to 182ms (the second line in the profile summary). That is a large spread between min and max so to narrow things down we redefine the gap range in rpt:
-   $ rpt prof.out --roi_start @195169 --roi_stop @288991  --gaps 10 20 50 100 1000 10000 20000 100000
+- The DATA resource is used very infrequently, nearly 0% active with only 8 records and plenty of gaps.
 
-#### oprofile
-##### Introduction
-http://oprofile.sourceforge.net/docs/
-https://www.ibm.com/support/knowledgecenter/linuxonibm/liacf/oprofile_pdf.pdf
 
-##### Installation
+## oprofile
+### Introduction
+- http://oprofile.sourceforge.net/docs/
+- https://www.ibm.com/support/knowledgecenter/linuxonibm/liacf/oprofile_pdf.pdf
+
+### Installation
 $ apt-get install oprofile
 
-##### Data Collection
+### Data Collection
 
 Start the program of interest.
 ```
-$ RunMyApp
+$ ./myapp
 ```
 
 In another terminal, determine the process id (perhaps with `pgrep`) and pass to 
 ```
-$ operf --pid `pgrep RunMyApp`
+$ operf --pid `pgrep myapp`
 ```
 
 By default, operf will backup any previously recorded perf data and create a new file.
 
-##### Data Reporting
+### Data Reporting
 
 ```
 # Show callgraph
@@ -306,7 +324,3 @@ $ opreport -cl
 # Show hotspots in code:
 $ opreport -dg
 ```
-
-
-
-

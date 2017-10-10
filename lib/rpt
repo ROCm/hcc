@@ -22,7 +22,7 @@ parser.add_argument("-g", '--gui_trace',
         help="Generate a JSON file suitable for viewing with chrome trace viewer in chrome://tracing")
 
 ROI_HELP = "ROI_POINTs can be specified with line numbers, start times, or search strings." +\
-            " Supported options include @LINENUM, ^START_TIME, MATCH_NUM%%SEARCH_RE.  Examples: @1234, ^45679.0123, 2%%MyMarker (finds 2nd instead of MyMarker)";
+            " Supported options include @LINENUM, ^START_TIME, MATCH_NUM%%SEARCH_RE.  Examples: @1234, ^45679.0123, 2%%MyMarker (finds 2nd instance of MyMarker)";
 
 
 
@@ -264,7 +264,7 @@ class ProfileLogRecord:
             print "  Time(us) : Time which the command contributed to the 'critical' path "
             print "  Start(ms) : Start time of the command, displayed in ms.  Command start from time 0"
             print "  Type  : Type of the command (kernel,barrier, copy)"
-            print "  Dev.Queue.Cmd : Unique identifier for the command.  Device, Queue, Cmd are all monotically increasing numbers.  Cmd=0 indicates cmd number is not known."
+            print "  Dev.Queue.Cmd : The cmd sequm is a unique mononotically increasing number per-queue, so the triple of device.queue.cmdseqnum uniquely identifies the command during the process execution."
             print "  LineNum : Line number from the input HCC_PROF_FILE"
             print "  Name  : Name of the record.  For kernels, this is kernel name.  For copy commands, the name contains the size and direction.  For barrier commands this is contains dependency counts, acquire and release fences."
 
@@ -706,3 +706,5 @@ if  __name__ == "__main__":
 
 # Data to and from
 # align headers
+# Compute total APIs and total time for each resource
+# Show Min/Max/Avg bandwidth?
