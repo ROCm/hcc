@@ -1,0 +1,780 @@
+#!/usr/bin/env groovy
+
+// Generated from snippet generator 'properties; set job properties'
+// Keep only the most recent XX builds
+properties([buildDiscarder(logRotator(
+    artifactDaysToKeepStr: '',
+    artifactNumToKeepStr: '',
+    daysToKeepStr: '',
+    numToKeepStr: '10')),
+    disableConcurrentBuilds(),
+    parameters([booleanParam( name: 'run_hip_integration_testing', defaultValue: false, description: 'Build hip with this compiler and run hip unit tests' ),
+                string( name: 'hip_integration_branch', defaultValue: 'ROCm-Developer-Tools/HIP/master', description: 'Path to hip branch to build & test' )]),
+    [$class: 'CopyArtifactPermissionProperty', projectNames: '*']
+  ])
+
+////////////////////////////////////////////////////////////////////////
+// -- AUXILLARY HELPER FUNCTIONS
+
+////////////////////////////////////////////////////////////////////////
+// Return user description if a build was manually kicked off (like build now button clicked),
+// or null if some other trigger caused the build
+@NonCPS
+String get_build_cause( )
+{
+    def build_cause = currentBuild.rawBuild.getCause( hudson.model.Cause$UserIdCause )
+    if( build_cause == null )
+      return build_cause
+
+    return build_cause.getShortDescription( )
+}
+
+// Not used right now, seems to always return 0
+@NonCPS
+def get_num_change_sets( )
+{
+  return currentBuild.changeSets.size( );
+}
+
+node( 'rocmtest' )
+{
+  // Convenience variables for common paths used in building
+  def workspace_dir_abs = pwd()
+  def build_dir_debug_rel = "build/debug"
+  def build_dir_release_rel = "build/release"
+  def build_dir_cmake_tests_rel = "build/cmake-tests"
+  def build_dir_debug_abs = "${workspace_dir_abs}/${build_dir_debug_rel}"
+  def build_dir_release_abs = "${workspace_dir_abs}/${build_dir_release_rel}"
+  def build_dir_cmake_tests_abs = "${workspace_dir_abs}/${build_dir_cmake_tests_rel}"
+
+  // The client workspace is shared with the docker container
+  stage('HCC Checkout')
+  {
+    checkout([
+      $class: 'GitSCM',
+      branches: scm.branches,
+      doGenerateSubmoduleConfigurations: scm.doGenerateSubmoduleConfigurations,
+      extensions: scm.extensions + [[$class: 'CleanCheckout'], [$class: 'SubmoduleOption', disableSubmodules: false, parentCredentials: false, recursiveSubmodules: true, reference: '', timeout: 60, trackingSubmodules: false]],
+      userRemoteConfigs: scm.userRemoteConfigs
+    ])
+  }
+
+  def hcc_build_image = null
+  stage('ubuntu-16.04 image')
+  {
+    def build_org = "hcc-lc"
+    def build_type_name = "build-ubuntu-16.04"
+    def dockerfile_name = "dockerfile-${build_type_name}"
+    def build_image_name = "${build_type_name}"
+    dir('docker')
+    {
+      hcc_build_image = docker.build( "${build_org}/${build_image_name}:latest", "-f ${dockerfile_name} --build-arg build_type=Release --build-arg rocm_install_path=/opt/rocm ." )
+    }
+  }
+
+// JENKINS-33510: the jenkinsfile dir() command is not workin well with docker.inside()
+  hcc_build_image.inside( '--device=/dev/kfd' )
+  {
+    stage('hcc-lc release')
+    {
+      // Build release hcc
+      def build_config = "Release"
+      def hcc_install_prefix = "/opt/rocm"
+
+      // cmake -B${build_dir_release_abs} specifies to cmake where to generate build files
+      // This is necessary because cmake seemingly randomly generates build makefile into the docker
+      // workspace instead of the current set directory.  Not sure why, but it seems like a bug
+      sh  """
+          rm -rf ${build_dir_release_rel}
+          mkdir -p ${build_dir_release_rel}
+          cd ${build_dir_release_rel}
+          cmake -B${build_dir_release_abs} \
+            -DCMAKE_INSTALL_PREFIX=${hcc_install_prefix} \
+            -DCPACK_SET_DESTDIR=OFF \
+            -DCMAKE_BUILD_TYPE=${build_config} \
+            -DHSA_AMDGPU_GPU_TARGET="gfx900;gfx803" \
+            ../..
+          make -j\$(nproc)
+        """
+
+      // Cap the maximum amount of testing, in case of hangs
+      timeout(time: 1, unit: 'HOURS')
+      {
+        stage("unit testing")
+        {
+          // install from debian packages because pre/post scripts set up softlinks install targets don't
+          sh  """#!/usr/bin/env bash
+              cd ${build_dir_release_abs}
+              make install
+              mkdir -p ${build_dir_cmake_tests_abs}
+              cd ${build_dir_cmake_tests_abs}
+              CXX=${hcc_install_prefix}/bin/hcc cmake ${workspace_dir_abs}/cmake-tests
+              make
+              ./cmake-test
+              """
+          // junit "${build_dir_release_abs}/*.xml"
+        }
+      }
+
+      stage("packaging")
+      {
+        sh "cd ${build_dir_release_abs}; make package"
+        archiveArtifacts artifacts: "${build_dir_release_rel}/*.deb", fingerprint: true
+        archiveArtifacts artifacts: "docker/dockerfile-hcc-lc-*", fingerprint: true
+        // archiveArtifacts artifacts: "${build_dir_release_rel}/*.rpm", fingerprint: true
+      }
+    }
+  }
+
+  // Everything above builds hcc in a clean container to create a debain package
+  // Create a clean docker image that installs the debian package
+  def hcc_install_image = null
+  stage('artifactory')
+  {
+    def artifactory_org = "${env.JOB_NAME}".toLowerCase()
+    def image_name = "hcc-lc-ubuntu-16.04"
+
+    dir("${build_dir_release_abs}/docker")
+    {
+      //  We copy the docker files into the bin directory where the .deb lives so that it's a clean
+      //  build everytime
+      sh "cp -r ${workspace_dir_abs}/docker/* .; cp ${build_dir_release_abs}/*.deb ."
+
+      // The --build-arg REPO_RADEON= is a temporary fix to get around a DNS issue with our build machines
+      hcc_install_image = docker.build( "${artifactory_org}/${image_name}:${env.BUILD_NUMBER}", "-f dockerfile-${image_name} ." )
+    }
+
+    // The connection to artifactory can fail sometimes, but this should not be treated as a build fail
+    try
+    {
+      // Don't push pull requests to artifactory, these tend to accumulate over time with little use
+      if( env.BRANCH_NAME.toLowerCase( ).startsWith( 'pr-' ) )
+      {
+        println 'Pull Request (PR-xxx) detected; NOT pushing to artifactory'
+      }
+      else
+      {
+        docker.withRegistry('http://compute-artifactory:5001', 'artifactory-cred' )
+        {
+          hcc_install_image.push( "${env.BUILD_NUMBER}" )
+          hcc_install_image.push( 'latest' )
+        }
+      }
+    }
+    catch( err )
+    {
+      currentBuild.result = 'SUCCESS'
+    }
+
+    // Lots of images with tags are created above; no apparent way to delete images:tags with docker global variable
+    // run bash script to clean images:tags after successful pushing
+    sh "docker images | grep \"${artifactory_org}/${image_name}\" | awk '{print \$1 \":\" \$2}' | xargs docker rmi"
+  }
+
+  ////////////////////////////////////////////////////////////////////////
+  // hcc integration testing
+  // This stage sets up integration testing of HiP with this particular build
+  // Integration testing is built upon docker uses clean build & test environments every time
+
+  // NOTES: There are at least two methods to do integration testing, both have pros and cons
+  // 1.  Inside the HCC container, clone, build & test HiP
+  //     a.  This is simplest method to get integration testing running
+  //     b.  This solution doesn't scale well.  When HCC wants to start building other projects in addition to HiP
+  //        such as libraries, this solution implies those projects CI code will be duplicated in HCC jenkinsfile
+  //     c.  This solution breaks transitivity A->B->C chain.  The build instructions for B & C are duplicated in A,
+  //        so a change in B will not automatically rebuild C
+  // 2.  When this build archives artifacts, kick off a downstream HiP build using Jenkins API
+  //    a.  This is slightly more complicated because you have to transfer build artifacts, possibly
+  //      different between machines (mechanics handled by jenkins build step)
+  //    b.  The build file in HiP needs extra logic to handle hcc integration testing logic
+  //    c.  Assuming transitive dependencies are set up between projects A->B->C, submitting a change to A will rebuild
+  //        B, which then rebuilds C.  Submitting a change to B rebuilds C.  However, each project requires special
+  //        integration testing paths/logic
+
+  // I've implemented solution #2 above
+  stage('hip integration')
+  {
+    // If this a clang_tot_upgrade build, kick off downstream hip build so that the two projects are in sync
+    if( env.BRANCH_NAME.toLowerCase( ).startsWith( 'clang_tot_upgrade' ) )
+    {
+      build( job: 'ROCm-Developer-Tools/HIP/master', wait: false )
+    }
+    // If hip integration testing is requested by the user, launch a hip build job to use this transient compiler
+    else if( params.run_hip_integration_testing )
+    {
+      build( job: params.hip_integration_branch, parameters: [booleanParam( name: 'hcc_integration_test', value: true )] )
+    }
+  }
+}
+
+
+
+
+
+int main(pipeline_name) {
+  switch (pipeline_name) {
+    case "lightning-merge-llvm-to-amd-master":
+      lightning_merge_llvm_to_amd_master()
+      break
+    case "lightning-merge-llvm-to-amd-common":
+      lightning_merge_llvm_to_amd_common()
+      break
+    case "lightning-merge-driver-to-amd-master":
+      lightning_merge_driver_to_amd_master()
+      break
+    case "lightning-merge-opencl-to-github":
+      lightning_merge_opencl_to_github()
+      break
+    case "lightning-merge-opencl-to-amd-npi":
+      lightning_merge_opencl_to_amd_npi()
+      break
+    case "lightning-weekly-build-opencl-github":
+      lightning_weekly_build_opencl_github()
+      break
+    case "lightning-psdb-opencl-opensrc":
+    case "lightning-psdb-opencl-amd-npi":
+      lightning_psdb_opencl()
+      break
+    default:
+      error "Unrecognized job name: '${env.JOB_NAME}'"
+      break
+  }
+  return 0
+}
+
+//===----------------------------------------------------------------------===//
+// Helpers.                                                                   //
+//===----------------------------------------------------------------------===//
+
+def artifactory_download(name) {
+  def artifactory_archive = Common.downloadArtifactoryModule(
+      ".", "rocm-generic-local", env.JOB_NAME,
+      "${name}-${env.BUILD_NUMBER}", "tar.bz2")
+  sh "tar -xjf ${artifactory_archive}"
+}
+
+def artifactory_upload(dir, name, need_archive, need_repo) {
+  def repo = ""
+  if (need_repo) {
+    repo = ".repo"
+  }
+
+  sh "tar -cjf ${name}.tar.bz2 ${dir} ${repo}"
+  Common.uploadArtifactoryModule(
+      "${name}.tar.bz2", "rocm-generic-local", env.JOB_NAME,
+      "${name}-${env.BUILD_NUMBER}", "tar.bz2", "")
+
+  if (need_archive) {
+    archive "${name}.tar.bz2"
+  }
+}
+
+def rocm_deps_download() {
+  def artifactory_archive = Common.downloadArtifactoryModule(
+      ".", "rocm-generic-local", env.JOB_NAME,
+      "rocm-deps-${env.BUILD_NUMBER}", "tar.bz2")
+  sh "tar -xjf ${artifactory_archive}"
+}
+
+def rocm_deps_upload() {
+  def binaries = "deb/linux/ deb/rocr/ deb/roct/"
+  def scripts = "prototype/compute_utils.sh prototype/lightning-setup-remote-node.sh"
+  def name = "rocm-deps"
+
+  sh "mkdir -p ${name}"
+  dir ("${name}") {
+    sh "wget http://compute-artifactory.amd.com/artifactory/rocm-generic-local/amd/lightning-support-files/lightning-rocm-deps.tar.bz2"
+    sh "tar -xjf lightning-rocm-deps.tar.bz2 ${binaries}"
+
+    sh "git clone ssh://gerritgit/compute/ec/prototype"
+    dir ("prototype") {
+      sh "git checkout amd-master"
+    }
+
+    sh "tar -cjf ${name}.tar.bz2 ${binaries} ${scripts}"
+    Common.uploadArtifactoryModule(
+        "${name}.tar.bz2", "rocm-generic-local", env.JOB_NAME,
+        "${name}-${env.BUILD_NUMBER}", "tar.bz2", "")
+  }
+}
+
+def rocm_deps_install() {
+  sh "sudo dpkg --force-all -i deb/rocr/* deb/roct/*"
+}
+
+def git_config() {
+  def git_email = "jenkins-compute@amd.com"
+  def git_name = "Jenkins Compute"
+
+  sh "git config user.email ${git_email}"
+  sh "git config user.name ${git_name}"
+}
+
+def git_merge(workspace, branch, remote_url, remote_branch) {
+  dir (workspace) {
+    def commit_message = "Merge branch ${remote_branch} into ${branch}"
+
+    git_config()
+    sh "git checkout ${branch}"
+    sh "git fetch ${remote_url} ${remote_branch}"
+    sh "git merge -m \"${commit_message}\" --no-edit FETCH_HEAD"
+  }
+}
+
+def git_merge_llvm(workspace, branch, remote_url, remote_branch) {
+  dir (workspace) {
+    git_merge("llvm", "${branch}", "${remote_url}/llvm", "${remote_branch}")
+    git_merge("llvm/tools/clang", "${branch}", "${remote_url}/clang", "${remote_branch}")
+    git_merge("llvm/tools/lld", "${branch}", "${remote_url}/lld", "${remote_branch}")
+  }
+}
+
+def git_push(workspace, url, branch) {
+  dir (workspace) {
+    sh "git push ${url} HEAD:${branch}"
+  }
+}
+
+def git_push_llvm(workspace, url, branch) {
+  dir (workspace) {
+    git_push("llvm", "${url}/llvm", "${branch}")
+    git_push("llvm/tools/clang", "${url}/clang", "${branch}")
+    git_push("llvm/tools/lld", "${url}/lld", "${branch}")
+  }
+}
+
+def repo_download() {
+  if (Common.isParamSet("GERRIT_PROJECT")) {
+    switch ("${GERRIT_PROJECT}") {
+      case "compute/ec/opencl":
+      case "lightning/ec/device-libs":
+      case "lightning/er/clang":
+      case "lightning/er/lld":
+      case "lightning/er/llvm":
+        sh "repo download ${GERRIT_PROJECT} ${GERRIT_CHANGE_NUMBER}/${GERRIT_PATCHSET_NUMBER}"
+    }
+  }
+}
+
+def repo_sync() {
+  sh "repo init -u ${MANIFEST_REPO} -b ${MANIFEST_BRANCH} -m ${MANIFEST_NAME}"
+  sh "repo sync"
+}
+
+def autoclean_node(name, commands) {
+  node (name) {
+    def workspace = pwd()
+    try {
+      deleteDir()
+      commands()
+    } finally {
+      dir (workspace) {
+        deleteDir()
+      }
+    }
+  }
+}
+
+def test_node(name, commands) {
+  autoclean_node (name) {
+    if (env.LIGHTNING_DOCKER_NAME != null) {
+      def host_name = "jenkins-${env.NODE_NAME}"
+      def test_node = "${env.LIGHTNING_DOCKER_NAME}"
+
+      rocm_deps_download()
+      dir ("prototype") {
+        sh "bash lightning-setup-remote-node.sh ${host_name} ${test_node} ../deb/linux/*"
+      }
+
+      autoclean_node (test_node) {
+        rocm_deps_download()
+        rocm_deps_install()
+        commands();
+      }
+    } else {
+      rocm_deps_download()
+      rocm_deps_install()
+      commands();
+    }
+  }
+}
+
+def build(project) {
+  artifactory_download("${project}")
+
+  sh "mkdir -p ${project}/build"
+  dir ("${project}/build") {
+    def defs_build_type = "-DCMAKE_BUILD_TYPE=Release"
+    def defs_clang = "-DCLANG_ENABLE_STATIC_ANALYZER=ON"
+    def defs_targets = "-DLLVM_TARGETS_TO_BUILD=\"AMDGPU;X86\""
+    def defs_tests = "-DLLVM_BUILD_TOOLS=ON -DLLVM_INCLUDE_TESTS=ON"
+
+    sh "cmake ${defs_build_type} ${defs_clang} ${defs_targets} ${defs_tests} .."
+    sh "make -j 4"
+  }
+
+  artifactory_upload("${project}/build", "${project}-build", true, false)
+
+  dir ("${project}/build") {
+    sh "make -j 4 check"
+  }
+}
+
+def get_opencl_conformance_tests() {
+  sh "wget ${OPENCL_CONFORMANCE_TESTS_URL}"
+  sh "unzip *.zip"
+  sh "tar -xzf *lnx64a.tar.gz"
+}
+
+def run_opencl_conformance_tests() {
+  artifactory_download("opencl-build")
+
+  def workspace = pwd()
+  def llvm_binaries = "${workspace}/opencl/build/compiler/llvm/bin"
+  def opencl_libraries = "${workspace}/opencl/build/lib"
+
+  get_opencl_conformance_tests()
+  try {
+    dir ("conformance/2.0") {
+      def test_list = "opencl_conformance_tests_lightning.csv"
+
+      sh "sed -i 's/\\(Compiler (execute_after_included_header_link)\\)/#\\1/g' ${test_list}"
+      sh "sed -i 's/\\(Compiler (get_program_build_info)\\)/#\\1/g' ${test_list}"
+      sh "sed -i 's/\\(Compiler (options_build_optimizations)\\)/#\\1/g' ${test_list}"
+      sh "sed -i 's/^\\(Buffers\\)/#\\1/g' ${test_list}"
+      sh "sed -i 's/^\\(Events\\)/#\\1/g' ${test_list}"
+      sh "sed -i 's/^\\(Mem\\)/#\\1/g' ${test_list}"
+
+      withEnv (["CL_TEST_SINGLE_THREADED=1",
+                "HSA_ENABLE_SDMA=0",
+                "LD_LIBRARY_PATH=${opencl_libraries}",
+                "LLVM_BIN=${llvm_binaries}"]) {
+        sh "./run_conformance.py ${test_list}"
+        sh "grep '>> TEST on [_A-Z]\\+ PASSED' *.log"
+      }
+    }
+  } finally {
+    archive "conformance/2.0/*.log"
+  }
+}
+
+def send_email(status) {
+  emailext (
+    to: 'mark.searles@amd.com,konstantin.zhuravlyov@amd.com',
+    subject: "${status}: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'",
+    body: "${status}: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'; see console output at ${env.BUILD_URL}"
+  )
+}
+
+//===----------------------------------------------------------------------===//
+// Pipelines.                                                                 //
+//===----------------------------------------------------------------------===//
+
+def lightning_merge_llvm_to_amd_master() {
+  try {
+    stage "Fetch LLVM"
+    autoclean_node ("build-slave || lightning-bootstrap") {
+      repo_sync()
+      git_merge_llvm(pwd(), "amd-master", "http://llvm.org/git", "master")
+      artifactory_upload("llvm", "llvm", false, true)
+    }
+
+    stage "Build LLVM"
+    autoclean_node ("build-slave || lightning-builder") {
+      build("llvm")
+    }
+
+    stage "Push LLVM"
+    autoclean_node ("lightning-bootstrap") {
+      artifactory_download("llvm")
+      git_push_llvm(pwd(), "jenkinscompute@git.amd.com:lightning/er", "amd-master")
+    }
+  } catch(e) {
+    send_email("FAILED")
+    throw e
+  }
+}
+
+def lightning_merge_llvm_to_amd_common() {
+  try {
+    stage "Fetch OpenCL"
+    autoclean_node ("lightning-bootstrap") {
+      repo_sync()
+
+      if ("${LLVM_REVIEW_REQUEST}" != "") {
+        sh "repo download lightning/er/llvm ${LLVM_REVIEW_REQUEST}"
+      } else {
+        git_merge("opencl/compiler/llvm", "amd-common", "jenkinscompute@git.amd.com:lightning/er/llvm", "amd-master")
+      }
+
+      if ("${CLANG_REVIEW_REQUEST}" != "") {
+        sh "repo download lightning/er/clang ${CLANG_REVIEW_REQUEST}"
+      } else {
+        git_merge("opencl/compiler/llvm/tools/clang", "amd-common", "jenkinscompute@git.amd.com:lightning/er/clang", "amd-master")
+      }
+
+      if ("${LLD_REVIEW_REQUEST}" != "") {
+        sh "repo download lightning/er/lld ${LLD_REVIEW_REQUEST}"
+      } else {
+        git_merge("opencl/compiler/llvm/tools/lld", "amd-common", "jenkinscompute@git.amd.com:lightning/er/lld", "amd-master")
+      }
+
+      artifactory_upload("opencl", "opencl", false, true)
+    }
+
+    stage "Build OpenCL"
+    parallel "rocm-deps-upload": {
+      autoclean_node ("build-slave || lightning-bootstrap") {
+        rocm_deps_upload()
+      }
+    }, "build-opencl": {
+      autoclean_node ("lightning-builder") {
+        build("opencl")
+      }
+    }
+
+    stage "Run tests"
+    test_node ("lightning-tester-gfx803 || lightning-tester-gfx900") {
+      run_opencl_conformance_tests()
+    }
+
+    stage "Push LLVM"
+    autoclean_node ("lightning-bootstrap") {
+      artifactory_download("opencl")
+      git_push_llvm("opencl/compiler", "jenkinscompute@git.amd.com:lightning/er", "amd-common")
+    }
+  } catch(e) {
+    send_email("FAILED")
+    throw e
+  }
+}
+
+def lightning_merge_driver_to_amd_master() {
+  try {
+    stage "Fetch OpenCL"
+    autoclean_node ("lightning-bootstrap") {
+      repo_sync()
+      git_merge("opencl/compiler/driver", "amd-master", "jenkinscompute@git.amd.com:lightning/ec/opencl-driver", "master")
+      artifactory_upload("opencl", "opencl", false, true)
+    }
+
+    stage "Build OpenCL"
+    parallel "rocm-deps-upload": {
+      autoclean_node ("build-slave || lightning-bootstrap") {
+        rocm_deps_upload()
+      }
+    }, "build-opencl": {
+      autoclean_node ("lightning-builder") {
+        build("opencl")
+      }
+    }
+
+    stage "Run tests"
+    test_node ("lightning-tester-gfx803 || lightning-tester-gfx900") {
+      run_opencl_conformance_tests()
+    }
+
+    stage "Push OpenCL Driver"
+    autoclean_node ("lightning-bootstrap") {
+      artifactory_download("opencl")
+      git_push("opencl/compiler/driver", "jenkinscompute@git.amd.com:lightning/ec/opencl-driver", "amd-master")
+    }
+  } catch(e) {
+    send_email("FAILED")
+    throw e
+  }
+}
+
+def lightning_merge_opencl_to_github() {
+  try {
+    autoclean_node ("lightning-bootstrap") {
+      stage "Fetch OpenCL"
+      repo_sync()
+
+      stage "Merge OpenCL"
+      git_merge("opencl", "master", "jenkinscompute@git.amd.com:compute/ec/opencl", "master")
+      git_merge("opencl/library/amdgcn", "master", "jenkinscompute@git.amd.com:lightning/ec/device-libs", "master")
+      git_merge_llvm("opencl/compiler", "amd-common", "jenkinscompute@git.amd.com:lightning/er", "amd-common")
+
+      stage "Push OpenCL"
+      withCredentials ([[$class: 'StringBinding',
+                         credentialsId: '8f63dd5f-4767-42db-9089-34f78aee9c80',
+                         variable: 'githubToken']]) {
+        git_push("opencl", 'https://$githubToken@github.com/RadeonOpenCompute/ROCm-OpenCL-Runtime', "master")
+        git_push("opencl/library/amdgcn", 'https://$githubToken@github.com/RadeonOpenCompute/ROCm-Device-Libs', "master")
+        git_push_llvm("opencl/compiler", 'https://$githubToken@github.com/RadeonOpenCompute', "amd-common")
+      }
+    }
+  } catch(e) {
+    send_email("FAILED")
+    throw e
+  }
+}
+
+def lightning_merge_opencl_to_amd_npi() {
+  try {
+    stage "Fetch OpenCL"
+    autoclean_node ("lightning-bootstrap") {
+      repo_sync()
+
+      if ("${OPENCL_REVIEW_REQUEST}" != "") {
+        sh "repo download compute/ec/opencl ${OPENCL_REVIEW_REQUEST}"
+      } else {
+        git_merge("opencl", "amd-npi", "jenkinscompute@git.amd.com:compute/ec/opencl", "master")
+      }
+
+      if ("${DEVICE_LIBS_REVIEW_REQUEST}" != "") {
+        sh "repo download lightning/ec/device-libs ${DEVICE_LIBS_REVIEW_REQUEST}"
+      } else {
+        git_merge("opencl/library/amdgcn", "amd-npi", "jenkinscompute@git.amd.com:lightning/ec/device-libs", "master")
+      }
+
+      if ("${LLVM_REVIEW_REQUEST}" != "") {
+        sh "repo download lightning/er/llvm ${LLVM_REVIEW_REQUEST}"
+      } else {
+        git_merge("opencl/compiler/llvm", "amd-npi", "jenkinscompute@git.amd.com:lightning/er/llvm", "amd-common")
+      }
+
+      if ("${CLANG_REVIEW_REQUEST}" != "") {
+        sh "repo download lightning/er/clang ${CLANG_REVIEW_REQUEST}"
+      } else {
+        git_merge("opencl/compiler/llvm/tools/clang", "amd-npi", "jenkinscompute@git.amd.com:lightning/er/clang", "amd-common")
+      }
+
+      if ("${LLD_REVIEW_REQUEST}" != "") {
+        sh "repo download lightning/er/lld ${LLD_REVIEW_REQUEST}"
+      } else {
+        git_merge("opencl/compiler/llvm/tools/lld", "amd-npi", "jenkinscompute@git.amd.com:lightning/er/lld", "amd-common")
+      }
+
+      artifactory_upload("opencl", "opencl", false, true)
+    }
+
+    stage "Build OpenCL"
+    parallel "rocm-deps-upload": {
+      autoclean_node ("build-slave || lightning-bootstrap") {
+        rocm_deps_upload()
+      }
+    }, "build-opencl": {
+      autoclean_node ("lightning-builder") {
+        build("opencl")
+      }
+    }
+
+    stage "Run tests"
+    test_node ("lightning-tester-gfx803 || lightning-tester-gfx900") {
+      run_opencl_conformance_tests()
+    }
+
+    stage "Push OpenCL"
+    autoclean_node ("lightning-bootstrap") {
+      artifactory_download("opencl")
+
+      git_push("opencl", "jenkinscompute@git.amd.com:compute/ec/opencl", "amd-npi")
+      git_push("opencl/library/amdgcn", "jenkinscompute@git.amd.com:lightning/ec/device-libs", "amd-npi")
+      git_push_llvm("opencl/compiler", "jenkinscompute@git.amd.com:lightning/er", "amd-npi")
+    }
+  } catch(e) {
+    send_email("FAILED")
+    throw e
+  }
+}
+
+def lightning_weekly_build_opencl_github() {
+  try {
+    stage "Fetch OpenCL"
+    autoclean_node ("lightning-bootstrap") {
+      repo_sync()
+      artifactory_upload("opencl", "opencl", false, true)
+    }
+
+    stage "Build OpenCL"
+    parallel "rocm-deps-upload": {
+      autoclean_node ("build-slave || lightning-bootstrap") {
+        rocm_deps_upload()
+      }
+    }, "build-opencl": {
+      autoclean_node ("lightning-builder") {
+        build("opencl")
+      }
+    }
+
+    stage "Run tests"
+    test_node ("lightning-tester-gfx803 || lightning-tester-gfx900") {
+      run_opencl_conformance_tests()
+    }
+  } catch(e) {
+    send_email("FAILED")
+    throw e
+  }
+}
+
+def lightning_psdb_opencl() {
+  try {
+    stage "Fetch OpenCL"
+    autoclean_node ("lightning-bootstrap") {
+      repo_sync()
+      repo_download()
+      artifactory_upload("opencl", "opencl", false, true)
+    }
+
+    stage "Build OpenCL"
+    parallel "rocm-deps-upload": {
+      autoclean_node ("build-slave || lightning-bootstrap") {
+        rocm_deps_upload()
+      }
+    }, "build-opencl": {
+      autoclean_node ("lightning-builder") {
+        build("opencl")
+      }
+    }
+
+    stage "Run tests"
+    test_node ("lightning-tester-gfx803 || lightning-tester-gfx900") {
+      run_opencl_conformance_tests()
+    }
+  } catch(e) {
+    send_email("FAILED")
+    throw e
+  }
+}
+
+
+// SALINAS
+def hcc_merge_llvm_to_amd_common() {
+  try {
+  
+  stage "Clone HCC with repo"
+  stage "Clone HCC repo manifest"
+  stage "Initialize git submodules"
+  stage "Add all remotes and forks for submodules"
+  stage "Checkout latest master ROCm-Device-Libs"
+  stage "Merge amd-common LLD commits"
+  stage "Merge amd-common LLVM commits"
+  stage "Merge amd-common COMPILER-RT commits from llvm-mirror"
+  stage "Merge amd-common CLANG-TOOLS-EXTRA commits from llvm-mirror"
+  stage "Merge amd-common Clang commits"
+  stage "Build merged HCC"
+  stage "Full sanity tests on merged HCC"
+  stage "Quick sanity tests on merged HCC"
+  stage "Push and Create Pull Request for HCC Clang submodule"
+  stage "Push and Create Pull Request for amd-hcc LLD submodule"
+  stage "Push and Create Pull Request for amd-hcc LLVM submodule"
+  stage "Push and Create Pull Request for amd-hcc COMPILER-RT submodule"
+  stage "Push and Create Pull Request for amd-hcc CLANG-TOOLS-EXTRA submodule"
+  stage "Update HCC git submodules configuration"
+  stage "Update HCC repo manifest"
+  
+    
+  } catch(e) {
+  //  send_email("FAILED")
+    throw e
+  }
+  
+}
+
+
+return this
+
+
+
