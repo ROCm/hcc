@@ -140,10 +140,10 @@ char * HCC_PROFILE_FILE=nullptr;
                          << std::setw(40) << tag\
                          << ";\t" << std::fixed << std::setw(6) << std::setprecision(1) << (end-start)/1000.0 << " us;";\
     if (HCC_PROFILE_VERBOSE & (HCC_PROFILE_VERBOSE_TIMESTAMP)) {\
-            sstream << "\t" << op->apiStartTick << ";\t" << start << ";\t" << end << ";";\
+            sstream << "\t" << start << ";\t" << end << ";";\
     }\
     if (HCC_PROFILE_VERBOSE & (HCC_PROFILE_VERBOSE_OPSEQNUM)) {\
-            sstream << "\t" << *op <<";";\
+            sstream << "\t#" << op->hsaQueue()->getHSADev()->get_seqnum() << "." <<  op->hsaQueue()->getSeqNum() << "." << op->getSeqNum() <<";";\
     }\
    sstream <<  msg << "\n";\
    Kalmar::ctx.getHccProfileStream() << sstream.str();\
