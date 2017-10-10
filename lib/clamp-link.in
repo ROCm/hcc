@@ -476,11 +476,11 @@ if [ -e $TEMP_DIR/kernel.bc ]; then
 fi
 
 if [ ${#LINK_KERNEL_ARGS[@]} != 0 ]; then
-  rm "${LINK_KERNEL_ARGS[@]}" # individual kernels
+  rm -f "${LINK_KERNEL_ARGS[@]}" # individual kernels
 fi
 
 if [ -n "$LINK_HOST_ARGS" ]; then
-  rm "${LINK_HOST_ARGS[@]}" # individual host codes
+  rm -f "${LINK_HOST_ARGS[@]}" # individual host codes
 fi
 
 if [ -e $CXXAMP_SERIALIZE_SYMBOL_FILE ]; then
