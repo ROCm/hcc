@@ -8,11 +8,35 @@ properties([buildDiscarder(logRotator(
     daysToKeepStr: '',
     numToKeepStr: '10')),
     disableConcurrentBuilds(),
+    parameters([booleanParam( name: 'run_hip_integration_testing', defaultValue: false, description: 'Build hip with this compiler and run hip unit tests' ),
+                string( name: 'hip_integration_branch', defaultValue: 'ROCm-Developer-Tools/HIP/master', description: 'Path to hip branch to build & test' )]),
     [$class: 'CopyArtifactPermissionProperty', projectNames: '*']
   ])
 
-// NOTE: Remove fiji qualifier when HSA_AMDGPU_GPU_TARGET is fixed
-node ('rocmtest && fiji')
+////////////////////////////////////////////////////////////////////////
+// -- AUXILLARY HELPER FUNCTIONS
+
+////////////////////////////////////////////////////////////////////////
+// Return user description if a build was manually kicked off (like build now button clicked),
+// or null if some other trigger caused the build
+@NonCPS
+String get_build_cause( )
+{
+    def build_cause = currentBuild.rawBuild.getCause( hudson.model.Cause$UserIdCause )
+    if( build_cause == null )
+      return build_cause
+
+    return build_cause.getShortDescription( )
+}
+
+// Not used right now, seems to always return 0
+@NonCPS
+def get_num_change_sets( )
+{
+  return currentBuild.changeSets.size( );
+}
+
+node( 'rocmtest' )
 {
   // Convenience variables for common paths used in building
   def workspace_dir_abs = pwd()
@@ -44,7 +68,6 @@ node ('rocmtest && fiji')
     def build_image_name = "${build_type_name}"
     dir('docker')
     {
-      // The --build-arg REPO_RADEON= is a temporary fix to get around a DNS issue with our build machines
       hcc_build_image = docker.build( "${build_org}/${build_image_name}:latest", "-f ${dockerfile_name} --build-arg build_type=Release --build-arg rocm_install_path=/opt/rocm ." )
     }
   }
@@ -97,6 +120,7 @@ node ('rocmtest && fiji')
       {
         sh "cd ${build_dir_release_abs}; make package"
         archiveArtifacts artifacts: "${build_dir_release_rel}/*.deb", fingerprint: true
+        archiveArtifacts artifacts: "docker/dockerfile-hcc-lc-*", fingerprint: true
         // archiveArtifacts artifacts: "${build_dir_release_rel}/*.rpm", fingerprint: true
       }
     }
@@ -147,4 +171,38 @@ node ('rocmtest && fiji')
     sh "docker images | grep \"${artifactory_org}/${image_name}\" | awk '{print \$1 \":\" \$2}' | xargs docker rmi"
   }
 
+  ////////////////////////////////////////////////////////////////////////
+  // hcc integration testing
+  // This stage sets up integration testing of HiP with this particular build
+  // Integration testing is built upon docker uses clean build & test environments every time
+
+  // NOTES: There are at least two methods to do integration testing, both have pros and cons
+  // 1.  Inside the HCC container, clone, build & test HiP
+  //     a.  This is simplest method to get integration testing running
+  //     b.  This solution doesn't scale well.  When HCC wants to start building other projects in addition to HiP
+  //        such as libraries, this solution implies those projects CI code will be duplicated in HCC jenkinsfile
+  //     c.  This solution breaks transitivity A->B->C chain.  The build instructions for B & C are duplicated in A,
+  //        so a change in B will not automatically rebuild C
+  // 2.  When this build archives artifacts, kick off a downstream HiP build using Jenkins API
+  //    a.  This is slightly more complicated because you have to transfer build artifacts, possibly
+  //      different between machines (mechanics handled by jenkins build step)
+  //    b.  The build file in HiP needs extra logic to handle hcc integration testing logic
+  //    c.  Assuming transitive dependencies are set up between projects A->B->C, submitting a change to A will rebuild
+  //        B, which then rebuilds C.  Submitting a change to B rebuilds C.  However, each project requires special
+  //        integration testing paths/logic
+
+  // I've implemented solution #2 above
+  stage('hip integration')
+  {
+    // If this a clang_tot_upgrade build, kick off downstream hip build so that the two projects are in sync
+    if( env.BRANCH_NAME.toLowerCase( ).startsWith( 'clang_tot_upgrade' ) )
+    {
+      build( job: 'ROCm-Developer-Tools/HIP/master', wait: false )
+    }
+    // If hip integration testing is requested by the user, launch a hip build job to use this transient compiler
+    else if( params.run_hip_integration_testing )
+    {
+      build( job: params.hip_integration_branch, parameters: [booleanParam( name: 'hcc_integration_test', value: true )] )
+    }
+  }
 }

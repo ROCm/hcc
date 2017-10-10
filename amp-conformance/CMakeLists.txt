@@ -8,7 +8,7 @@ amp_test_lib/src/context.cpp amp_test_lib/src/device.cpp amp_test_lib/src/loggin
 amp_test_lib/src/main.cpp amp_test_lib/src/runall.cpp amp_test_lib/src/string_utils.cpp
 )
 
-target_link_libraries(amptest c++)
+target_link_libraries(amptest PRIVATE c++)
 
 set(AMP_CONFORMANCE_NUM_THREADS 1 CACHE INT "The number of threads to use when running amp conformance")
 

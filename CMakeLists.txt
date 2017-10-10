@@ -29,7 +29,8 @@ endif( )
 # Accepted values for DISTRO_ID: trusty (Ubuntu 14.04), xenial (Ubuntu 16.06), fd23 (Fedora 23)
 string(TOLOWER "${DISTRO_ID}" DISTRO_ID )
 if( DISTRO_ID MATCHES "ubuntu" OR DISTRO_ID MATCHES "fedora"
-   OR DISTRO_ID MATCHES "centos" OR DISTRO_ID MATCHES "redhatenterpriseserver")
+   OR DISTRO_ID MATCHES "centos" OR DISTRO_ID MATCHES "redhatenterpriseserver"
+   OR DISTRO_ID MATCHES "opensuse")
   message( STATUS "Detected distribution: ${DISTRO_ID}:${DISTRO_RELEASE}" )
 else()
   message( "This cmakefile does not natively support ${DISTRO_ID}:${DISTRO_RELEASE}.  Continuing with Ubuntu logic" )
@@ -340,13 +341,16 @@ install(PROGRAMS $<TARGET_FILE:LLVMAMDGPUDesc>
                  $<TARGET_FILE:LLVMSupport>
                  $<TARGET_FILE:LLVMCpuRename>
                  $<TARGET_FILE:LLVMDirectFuncCall>
-                 $<TARGET_FILE:LLVMEraseNonkernel>
+                 $<TARGET_FILE:LLVMSelectAcceleratorCode>
                  $<TARGET_FILE:LLVMHello>
                  $<TARGET_FILE:LLVMTileUniform>
                  $<TARGET_FILE:LLVMWrapperGen>
         DESTINATION lib
         COMPONENT compiler
 )
+
+# force library install path to lib
+set(CMAKE_INSTALL_LIBDIR "lib" CACHE INTERNAL "Installation directory for libraries" FORCE)
 
 install(FILES ${CLANG_BIN_DIR}/lib/clang/6.0.0/lib/linux/libclang_rt.builtins-x86_64.a
         DESTINATION  ${CMAKE_INSTALL_LIBDIR}
@@ -542,7 +546,7 @@ set(CPACK_RPM_PRE_UNINSTALL_SCRIPT_FILE "${PROJECT_BINARY_DIR}/packaging/debian/
 # disable automatic shared libraries dependency detection
 set(CPACK_RPM_PACKAGE_AUTOREQ 0)
 
-set(HCC_GENERAL_RPM_DEP "findutils, elfutils-libelf, pciutils-libs, file, pth, libunwind")
+set(HCC_GENERAL_RPM_DEP "findutils, elfutils-libelf, pciutils-libs, file, pth, libunwind, libunwind-devel, libcxx, libcxxabi")
 set(CPACK_RPM_PACKAGE_REQUIRES "${HCC_GENERAL_RPM_DEP} ${HCC_ROCR_DEP}" )
 
 set(CPACK_COMPONENTS_ALL compiler)

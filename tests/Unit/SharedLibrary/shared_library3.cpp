@@ -1,6 +1,6 @@
 
-// RUN: %hc -fPIC -Wl,-Bsymbolic -shared -DSHARED_LIBRARY_1 %s -o %T/libtest3_foo.so
-// RUN: %hc -fPIC -Wl,-Bsymbolic -shared -DSHARED_LIBRARY_2 %s -o %T/libtest3_bar.so
+// RUN: %hc -fPIC -shared -DSHARED_LIBRARY_1 %s -o %T/libtest3_foo.so
+// RUN: %hc -fPIC -shared -DSHARED_LIBRARY_2 %s -o %T/libtest3_bar.so
 // RUN: %clang -std=c++11 %s -L%T -ltest3_foo -ltest3_bar -o %t.out && LD_LIBRARY_PATH=%T %t.out
 
 // kernels built as multiple shared libraries

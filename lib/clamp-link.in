@@ -404,20 +404,28 @@ if [ ${#LINK_KERNEL_ARGS[@]} != 0 ]; then
   CLANG_OFFLOAD_BUNDLER_INPUTS_ARGS="-inputs=$TEMP_DIR/__empty.o"
   CLANG_OFFLOAD_BUNDLER_TARGETS_ARGS="-targets=host-x86_64-unknown-linux"
 
+  declare -a pids
   # for each GPU target, lower to GCN ISA in HSACO format
   for AMDGPU_TARGET in ${AMDGPU_TARGET_ARRAY[@]}; do
-    $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel-$AMDGPU_TARGET.hsaco --amdgpu-target=$AMDGPU_TARGET
+    { $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel-$AMDGPU_TARGET.hsaco --amdgpu-target=$AMDGPU_TARGET; } &
 
     # error handling
-    ret=$?
-    if [ $ret != 0 ]; then
-      exit $ret
-    fi
+    pids+=("${pids[@]}" "$!")
 
     # augment arguments to clang-offload-bundler
     CLANG_OFFLOAD_BUNDLER_INPUTS_ARGS+=",$TEMP_DIR/kernel-$AMDGPU_TARGET.hsaco"
     CLANG_OFFLOAD_BUNDLER_TARGETS_ARGS+=",hcc-amdgcn--amdhsa-$AMDGPU_TARGET"
   done
+
+  # collect all the error codes from forked processes
+  # error handling
+  for pid in ${pids[*]}; do
+    wait $pid || ret=$((ret+$?))
+  done
+  if [ $ret != 0 ]; then
+    exit $ret
+  fi
+
 
   # invoke clang-offload-bundler
   $CLANG_OFFLOAD_BUNDLER -type=o $CLANG_OFFLOAD_BUNDLER_INPUTS_ARGS $CLANG_OFFLOAD_BUNDLER_TARGETS_ARGS -outputs=$TEMP_DIR/kernel.bundle
@@ -468,11 +476,11 @@ if [ -e $TEMP_DIR/kernel.bc ]; then
 fi
 
 if [ ${#LINK_KERNEL_ARGS[@]} != 0 ]; then
-  rm "${LINK_KERNEL_ARGS[@]}" # individual kernels
+  rm -f "${LINK_KERNEL_ARGS[@]}" # individual kernels
 fi
 
 if [ -n "$LINK_HOST_ARGS" ]; then
-  rm "${LINK_HOST_ARGS[@]}" # individual host codes
+  rm -f "${LINK_HOST_ARGS[@]}" # individual host codes
 fi
 
 if [ -e $CXXAMP_SERIALIZE_SYMBOL_FILE ]; then
