@@ -247,11 +247,26 @@ static inline PrintfError printf(PrintfPacket* queue, All... all) [[hc,cpu]] {
   return error;
 }
 
+
+// The presence of hc::printf may impact performance even when it's not being called.
+// Currently hcc's printf on accelerator is an opt-in feature.  This means that users 
+// have to define HCC_ENABLE_ACCELERATOR_PRINTF to enable it.   
+#ifdef HCC_ENABLE_ACCELERATOR_PRINTF
+
 template <typename... All>
 static inline PrintfError printf(const char* format_string, All... all) [[hc,cpu]] {
   return printf(hc::printf_buffer, format_string, all...);
 }
 
+#else
+
+// this is just a stubs for printf that doesn't do anything
+template <typename... All>
+static inline PrintfError printf(const char* format_string, All... all) [[hc,cpu]] {
+  return PRINTF_SUCCESS;
+}
+
+#endif
 
 // regex for finding format string specifiers
 static std::regex specifierPattern("(%){1}[-+#0]*[0-9]*((.)[0-9]+){0,1}([diuoxXfFeEgGaAcsp]){1}");

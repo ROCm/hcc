@@ -1,4 +1,4 @@
-// RUN: %hc %s -DHCC_ENABLE_ACCELERATOR_PRINTF -lhc_am -o %t.out && %t.out | %FileCheck %s
+// RUN: %hc %s -lhc_am -o %t.out && %t.out | %FileCheck %s
 
 #include <hc.hpp>
 #include <hc_printf.hpp>
@@ -10,4 +10,4 @@ int main() {
   return 0;
 }
 
-// CHECK: Accelerator: Hello World!
+// CHECK-NOT: Accelerator: Hello World!
