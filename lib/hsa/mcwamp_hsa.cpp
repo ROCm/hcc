@@ -271,6 +271,143 @@ static unsigned extractBits(unsigned v, unsigned pos, unsigned w)
 };
 
 
+namespace
+{
+    template<typename P>
+    inline
+    ELFIO::section* find_section_if(ELFIO::elfio& reader, P p)
+    {
+        using namespace std;
+
+        const auto it = find_if(
+            reader.sections.begin(), reader.sections.end(), move(p));
+
+        return it != reader.sections.end() ? *it : nullptr;
+    }
+
+    inline
+    std::vector<std::string> copy_names_of_undefined_symbols(
+        const ELFIO::symbol_section_accessor& section)
+    {
+        using namespace ELFIO;
+        using namespace std;
+
+        vector<string> r;
+
+        for (auto i = 0u; i != section.get_symbols_num(); ++i) {
+            // TODO: this is boyscout code, caching the temporaries
+            //       may be of worth.
+            string name;
+            Elf64_Addr value = 0;
+            Elf_Xword size = 0;
+            Elf_Half sect_idx = 0;
+            uint8_t bind = 0;
+            uint8_t type = 0;
+            uint8_t other = 0;
+
+            section.get_symbol(
+                i, name, value, size, bind, type, sect_idx, other);
+
+            if (sect_idx == SHN_UNDEF && !name.empty()) {
+                r.push_back(std::move(name));
+            }
+        }
+
+        return r;
+    }
+
+    inline
+    std::pair<ELFIO::Elf64_Addr, ELFIO::Elf_Xword> find_symbol_address(
+        const ELFIO::symbol_section_accessor& section,
+        const std::string& symbol_name)
+    {
+        using namespace ELFIO;
+        using namespace std;
+
+        static constexpr pair<Elf64_Addr, Elf_Xword> r{0, 0};
+
+        for (auto i = 0u; i != section.get_symbols_num(); ++i) {
+            // TODO: this is boyscout code, caching the temporaries
+            //       may be of worth.
+            string name;
+            Elf64_Addr value = 0;
+            Elf_Xword size = 0;
+            Elf_Half sect_idx = 0;
+            uint8_t bind = 0;
+            uint8_t type = 0;
+            uint8_t other = 0;
+
+            section.get_symbol(
+                i, name, value, size, bind, type, sect_idx, other);
+
+            if (name == symbol_name) return make_pair(value, size);
+        }
+
+        return r;
+    }
+
+    inline
+    void associate_code_object_symbols_with_host_allocation(
+        const ELFIO::elfio& reader,
+        const ELFIO::elfio& self_reader,
+        ELFIO::section* code_object_dynsym,
+        ELFIO::section* process_symtab,
+        hsa_agent_t agent,
+        hsa_executable_t executable)
+    {
+        using namespace ELFIO;
+        using namespace std;
+
+        if (!code_object_dynsym || !process_symtab) return;
+
+        const auto undefined_symbols = copy_names_of_undefined_symbols(
+            symbol_section_accessor{reader, code_object_dynsym});
+
+        for (auto&& x : undefined_symbols) {
+            const auto tmp = find_symbol_address(
+                symbol_section_accessor{self_reader, process_symtab}, x);
+
+            assert(tmp.first);
+
+            void* p = nullptr;
+            hsa_amd_memory_lock(
+                reinterpret_cast<void*>(tmp.first), tmp.second, &agent, 1, &p);
+
+            hsa_executable_agent_global_variable_define(
+                executable, agent, x.c_str(), p);
+
+            static vector<
+                unique_ptr<void, decltype(hsa_amd_memory_unlock)*>> globals;
+            static mutex mtx;
+
+            lock_guard<std::mutex> lck{mtx};
+            globals.emplace_back(p, hsa_amd_memory_unlock);
+        }
+    }
+
+    inline
+    hsa_code_object_reader_t load_code_object_and_freeze_executable(
+        void* elf,
+        std::size_t byte_cnt,
+        hsa_agent_t agent,
+        hsa_executable_t executable)
+    {   // TODO: the following sequence is inefficient, should be refactored
+        //       into a single load of the file and subsequent ELFIO
+        //       processing.
+        using namespace std;
+
+        hsa_code_object_reader_t r = {};
+        hsa_code_object_reader_create_from_memory(elf, byte_cnt, &r);
+
+        hsa_executable_load_agent_code_object(
+            executable, agent, r, nullptr, nullptr);
+
+        hsa_executable_freeze(executable, nullptr);
+
+        return r;
+    }
+}
+
 namespace Kalmar {
 
 enum class HCCRuntimeStatus{
@@ -334,16 +471,16 @@ class HSADevice;
 /// modeling of HSA executable
 class HSAExecutable {
 private:
-    hsa_code_object_t hsaCodeObject;
+    hsa_code_object_reader_t hsaCodeObjectReader;
     hsa_executable_t hsaExecutable;
     friend class HSAKernel;
     friend class Kalmar::HSADevice;
 
 public:
     HSAExecutable(hsa_executable_t _hsaExecutable,
-                  hsa_code_object_t _hsaCodeObject) :
+                  hsa_code_object_reader_t _hsaCodeObjectReader) :
         hsaExecutable(_hsaExecutable),
-        hsaCodeObject(_hsaCodeObject) {}
+        hsaCodeObjectReader(_hsaCodeObjectReader) {}
 
     ~HSAExecutable() {
       hsa_status_t status;
@@ -353,7 +490,7 @@ public:
       status = hsa_executable_destroy(hsaExecutable);
       STATUS_CHECK(status, __LINE__);
 
-      status = hsa_code_object_destroy(hsaCodeObject);
+      status = hsa_code_object_reader_destroy(hsaCodeObjectReader);
       STATUS_CHECK(status, __LINE__);
     }
 
@@ -467,11 +604,11 @@ public:
     int asyncOpsIndex() const { return _asyncOpsIndex; };
 
     void asyncOpsIndex(int asyncOpsIndex) { _asyncOpsIndex = asyncOpsIndex; };
-    
+
 protected:
     uint64_t   apiStartTick;
     HSAOpCoord _opCoord;
-    int        _asyncOpsIndex; 
+    int        _asyncOpsIndex;
 };
 
 
@@ -532,16 +669,16 @@ public:
 
         std::string s;
         switch (getCommandKind()) {
-            case hcMemcpyHostToHost: 
+            case hcMemcpyHostToHost:
                 s += "HostToHost";
                 break;
-            case hcMemcpyHostToDevice: 
+            case hcMemcpyHostToDevice:
                 s += "HostToDevice";
                 break;
-            case hcMemcpyDeviceToHost: 
+            case hcMemcpyDeviceToHost:
                 s += "DeviceToHost";
                 break;
-            case hcMemcpyDeviceToDevice: 
+            case hcMemcpyDeviceToDevice:
                 if (isPeerToPeer) {
                     s += "PeerToPeer";
                 } else {
@@ -564,7 +701,7 @@ public:
     // HSA signals would be waited in HSA_WAIT_STATE_ACTIVE by default for HSACopy instances
     HSACopy(Kalmar::KalmarQueue *queue, const void* src_, void* dst_, size_t sizeBytes_);
 
-    
+
 
 
     ~HSACopy() {
@@ -602,7 +739,7 @@ public:
 
 
 private:
-  hsa_status_t hcc_memory_async_copy(Kalmar::hcCommandKind copyKind, const Kalmar::HSADevice *copyDevice, 
+  hsa_status_t hcc_memory_async_copy(Kalmar::hcCommandKind copyKind, const Kalmar::HSADevice *copyDevice,
                                       const hc::AmPointerInfo &dstPtrInfo, const hc::AmPointerInfo &srcPtrInfo,
                                       size_t sizeBytes, int depSignalCnt, const hsa_signal_t *depSignals,
                                       hsa_signal_t completion_signal);
@@ -666,14 +803,14 @@ public:
 
 
     // constructor with 1 prior dependency
-    HSABarrier(Kalmar::KalmarQueue *queue, std::shared_ptr <Kalmar::KalmarAsyncOp> dependent_op) : 
-        HSAOp(queue, Kalmar::hcCommandMarker), 
-        isDispatched(false), 
+    HSABarrier(Kalmar::KalmarQueue *queue, std::shared_ptr <Kalmar::KalmarAsyncOp> dependent_op) :
+        HSAOp(queue, Kalmar::hcCommandMarker),
+        isDispatched(false),
         future(nullptr),
         _acquire_scope(hc::no_scope),
         _barrierNextSyncNeedsSysRelease(false),
         _barrierNextKernelNeedsSysAcquire(false),
-        waitMode(HSA_WAIT_STATE_BLOCKED) 
+        waitMode(HSA_WAIT_STATE_BLOCKED)
     {
 
         if (dependent_op != nullptr) {
@@ -689,20 +826,20 @@ public:
     }
 
     // constructor with at most 5 prior dependencies
-    HSABarrier(Kalmar::KalmarQueue *queue, int count, std::shared_ptr <Kalmar::KalmarAsyncOp> *dependent_op_array) : 
+    HSABarrier(Kalmar::KalmarQueue *queue, int count, std::shared_ptr <Kalmar::KalmarAsyncOp> *dependent_op_array) :
         HSAOp(queue, Kalmar::hcCommandMarker),
-        isDispatched(false), 
+        isDispatched(false),
         future(nullptr),
         _acquire_scope(hc::no_scope),
         _barrierNextSyncNeedsSysRelease(false),
         _barrierNextKernelNeedsSysAcquire(false),
         waitMode(HSA_WAIT_STATE_BLOCKED),
-        depCount(0) 
+        depCount(0)
     {
         if ((count >= 0) && (count <= 5)) {
             for (int i = 0; i < count; ++i) {
                 if (dependent_op_array[i]) {
-                    // squish null ops 
+                    // squish null ops
                     assert (dependent_op_array[i]->getCommandKind() == hcCommandMarker);
                     depAsyncOps[depCount] = std::static_pointer_cast<HSABarrier> (dependent_op_array[i]);
                     depCount++;
@@ -751,7 +888,7 @@ private:
     Kalmar::HSADevice* device;
     hsa_agent_t agent;
 
-    const char *kernel_name; 
+    const char *kernel_name;
     const HSAKernel* kernel;
 
     std::vector<uint8_t> arg_vec;
@@ -1304,7 +1441,7 @@ public:
             auto marker = EnqueueMarker(hc::system_scope);
 
             DBOUT(DB_CMD2, " Sys-release needed, enqueued marker into " << *this << " to release written data " << marker<<"\n");
-            
+
         }
 
         DBOUT(DB_WAIT, *this << " wait, contents:\n");
@@ -1816,7 +1953,7 @@ public:
                     auto depHSAQueue = static_cast<Kalmar::HSAQueue *> (depOp->getQueue());
                     // Same accelerator:
                     // Inherit system-acquire and system-release bits op we are dependent on.
-                    //   - barriers 
+                    //   - barriers
                     //
                     // _nextSyncNeedsSysRelease is set when a queue executes a kernel.
                     // It indicates the queue needs to execute a release-to-system
@@ -1906,7 +2043,7 @@ public:
         int nullifiedCount = 0;
         // Make sure the opindex is still valid.
         // If the queue is destroyed first it may not exist in asyncops anymore so no need to destroy.
-        if (targetIndex < asyncOps.size() && 
+        if (targetIndex < asyncOps.size() &&
             asyncOp == asyncOps[targetIndex].get()) {
 
             // All older ops are known to be done and we can reclaim their resources here:
@@ -2935,38 +3072,61 @@ public:
 private:
 
     void BuildOfflineFinalizedProgramImpl(void* kernelBuffer, int kernelSize) {
+        using namespace ELFIO;
+        using namespace std;
+
         hsa_status_t status;
 
-        std::string index = kernel_checksum((size_t)kernelSize, kernelBuffer);
+        string index = kernel_checksum((size_t)kernelSize, kernelBuffer);
 
         // load HSA program if we haven't done so
         if (executables.find(index) == executables.end()) {
-            // Deserialize code object.
-            hsa_code_object_t code_object = {0};
-            status = hsa_code_object_deserialize(kernelBuffer, kernelSize, NULL, &code_object);
-            STATUS_CHECK(status, __LINE__);
-            assert(0 != code_object.handle);
-
             // Create the executable.
             hsa_executable_t hsaExecutable;
-            status = hsa_executable_create(HSA_PROFILE_FULL, HSA_EXECUTABLE_STATE_UNFROZEN,
-                                           NULL, &hsaExecutable);
+            status = hsa_executable_create_alt(
+                HSA_PROFILE_FULL,
+                HSA_DEFAULT_FLOAT_ROUNDING_MODE_DEFAULT,
+                nullptr,
+                &hsaExecutable);
             STATUS_CHECK(status, __LINE__);
 
-#if KALMAR_DEBUG
-            dumpHSAAgentInfo(agent, "Loading code object ");
-#endif
+            elfio reader;
+            istringstream tmp{string{
+                static_cast<char*>(kernelBuffer),
+                static_cast<char*>(kernelBuffer) + kernelSize}};
+            reader.load(tmp);
 
-            // Load the code object.
-            status = hsa_executable_load_code_object(hsaExecutable, agent, code_object, NULL);
-            STATUS_CHECK(status, __LINE__);
+            elfio self_reader;
+            self_reader.load("/proc/self/exe");
 
-            // Freeze the executable.
-            status = hsa_executable_freeze(hsaExecutable, NULL);
-            STATUS_CHECK(status, __LINE__);
+            const auto symtab =
+                find_section_if(self_reader, [](const ELFIO::section* x) {
+                    return x->get_type() == SHT_SYMTAB;
+            });
+
+            const auto code_object_dynsym =
+                find_section_if(reader, [](const ELFIO::section* x) {
+                    return x->get_type() == SHT_DYNSYM;
+            });
+
+            associate_code_object_symbols_with_host_allocation(
+                reader,
+                self_reader,
+                code_object_dynsym,
+                symtab,
+                agent,
+                hsaExecutable);
+
+            auto code_object_reader = load_code_object_and_freeze_executable(
+                kernelBuffer, kernelSize, agent, hsaExecutable);
+
+            #if KALMAR_DEBUG
+                dumpHSAAgentInfo(agent, "Loading code object ");
+            #endif
 
             // save everything as an HSAExecutable instance
-            executables[index] = new HSAExecutable(hsaExecutable, code_object);
+            executables[index] = new HSAExecutable(
+                hsaExecutable, code_object_reader);
         }
     }
 
@@ -3607,8 +3767,8 @@ inline std::ostream& operator<<(std::ostream& os, const HSAOp & op)
 }
 
 
-HSAQueue::HSAQueue(KalmarDevice* pDev, hsa_agent_t agent, execute_order order) : 
-    KalmarQueue(pDev, queuing_mode_automatic, order), 
+HSAQueue::HSAQueue(KalmarDevice* pDev, hsa_agent_t agent, execute_order order) :
+    KalmarQueue(pDev, queuing_mode_automatic, order),
     rocrQueue(nullptr),
     asyncOps(), drainingQueue_(false),
     valid(true), _nextSyncNeedsSysRelease(false), _nextKernelNeedsSysAcquire(false), bufferKernelMap(), kernelBufferMap()
@@ -4100,7 +4260,7 @@ HSADispatch::dispatchKernel(hsa_queue_t* lockedHsaQueue, const void *hostKernarg
     DBOUTL(DB_AQL, " dispatch_aql " << *this << "(hwq=" << lockedHsaQueue << ") kernargs=" << hostKernargSize << " " << *q_aql );
     DBOUTL(DB_AQL2, rawAql(*q_aql));
 
-    if (DBFLAG(DB_KERNARG)) { 
+    if (DBFLAG(DB_KERNARG)) {
         printKernarg(q_aql->kernarg_address, hostKernargSize);
     }
 
@@ -4285,7 +4445,7 @@ void HSADispatch::overrideAcquireFenceIfNeeded()
        // Pick up system acquire if needed.
        aql.header |= ((HSA_FENCE_SCOPE_SYSTEM) << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) ;
        hsaQueue()->setNextKernelNeedsSysAcquire(false);
-    } 
+    }
 }
 
 inline hsa_status_t
@@ -4812,7 +4972,7 @@ hsa_status_t HSACopy::hcc_memory_async_copy(Kalmar::hcCommandKind copyKind, cons
     }
 
     // Next kernel needs to acquire the result of the copy.
-    // This holds true for any copy direction, since host memory can also be cached on this GPU. 
+    // This holds true for any copy direction, since host memory can also be cached on this GPU.
     DBOUT( DB_CMD2, "  H2D copy setNextKernelNeedsSysAcquire(true)\n");
     // HSA memory copy requires a system-scope acquire before the next kernel command - set flag here so we remember:
     hsaQueue()->setNextKernelNeedsSysAcquire(true);
