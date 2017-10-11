@@ -341,16 +341,21 @@ static inline void processPrintfPackets(PrintfPacket* packets, const unsigned in
 
 static inline void processPrintfBuffer(PrintfPacket* gpuBuffer) {
 
-  if (gpuBuffer == NULL) return;
-  unsigned int bufferSize = gpuBuffer[PRINTF_BUFFER_SIZE].data.ui;
+  if (gpuBuffer == nullptr) return;
+
   unsigned int cursor = gpuBuffer[PRINTF_OFFSETS].data.uia[0];
-  unsigned int numPackets = ((bufferSize<cursor)?bufferSize:cursor) - PRINTF_HEADER_SIZE;
-  if (numPackets > 0) {
+
+  // check whether the printf buffer is non-empty
+  if (cursor !=  PRINTF_HEADER_SIZE) {
+    unsigned int bufferSize = gpuBuffer[PRINTF_BUFFER_SIZE].data.ui;
+    unsigned int numPackets = ((bufferSize<cursor)?bufferSize:cursor) - PRINTF_HEADER_SIZE;
+
     processPrintfPackets(gpuBuffer+PRINTF_HEADER_SIZE, numPackets);
+
+    // reset the printf buffer and string buffer
+    gpuBuffer[PRINTF_OFFSETS].data.uia[0] = PRINTF_HEADER_SIZE;
+    gpuBuffer[PRINTF_OFFSETS].data.uia[1] = 0;
   }
-  // reset the printf buffer and string buffer
-  gpuBuffer[PRINTF_OFFSETS].data.uia[0] = PRINTF_HEADER_SIZE;
-  gpuBuffer[PRINTF_OFFSETS].data.uia[1] = 0;
 }
 
 
