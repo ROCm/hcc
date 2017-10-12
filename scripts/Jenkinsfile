@@ -1,6 +1,24 @@
-node ('rocmtest') {
+#!/usr/bin/env groovy
 
-	stage ('Clone HCC with repo') { 
+// Generated from snippet generator 'properties; set job properties'
+// Keep only the most recent XX builds
+properties([buildDiscarder(logRotator(
+    artifactDaysToKeepStr: '',
+    artifactNumToKeepStr: '',
+    daysToKeepStr: '',
+    numToKeepStr: '10')),
+    disableConcurrentBuilds(),
+    parameters([booleanParam( name: 'run_hip_integration_testing', defaultValue: false, description: 'Build hip with this compiler and run hip unit tests' ),
+                string( name: 'hip_integration_branch', defaultValue: 'ROCm-Developer-Tools/HIP/master', description: 'Path to hip branch to build & test' )]),
+    [$class: 'CopyArtifactPermissionProperty', projectNames: '*']
+  ])
+
+
+node ('rocmtest') 
+{
+
+	stage ('Clone HCC with repo') 
+	{ 
 	    sh "repo init -u https://github.com/RadeonOpenCompute/HCC-Native-GCN-ISA.git"
 	    sh "repo sync"
 	}
