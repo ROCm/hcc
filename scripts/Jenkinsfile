@@ -216,7 +216,7 @@ def run_opencl_conformance_tests() {
 
 def send_email(status) {
   emailext (
-    to: 'mark.searles@amd.com,konstantin.zhuravlyov@amd.com',
+    to: 'david.salinas@amd.com',
     subject: "${status}: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'",
     body: "${status}: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'; see console output at ${env.BUILD_URL}"
   )
@@ -230,51 +230,51 @@ def send_email(status) {
 node ("rocmtest") {
 
     stage "Fetch OpenCL"
-    autoclean_node ("lightning-bootstrap") {
-      repo_sync()
+   // autoclean_node ("lightning-bootstrap") {
+    //  repo_sync()
 
-      if ("${LLVM_REVIEW_REQUEST}" != "") {
-        sh "repo download lightning/er/llvm ${LLVM_REVIEW_REQUEST}"
-      } else {
-        git_merge("opencl/compiler/llvm", "amd-common", "jenkinscompute@git.amd.com:lightning/er/llvm", "amd-master")
-      }
+   //   if ("${LLVM_REVIEW_REQUEST}" != "") {
+   //     sh "repo download lightning/er/llvm ${LLVM_REVIEW_REQUEST}"
+   //   } else {
+   //     git_merge("opencl/compiler/llvm", "amd-common", "jenkinscompute@git.amd.com:lightning/er/llvm", "amd-master")
+   //   }
 
-      if ("${CLANG_REVIEW_REQUEST}" != "") {
-        sh "repo download lightning/er/clang ${CLANG_REVIEW_REQUEST}"
-      } else {
-        git_merge("opencl/compiler/llvm/tools/clang", "amd-common", "jenkinscompute@git.amd.com:lightning/er/clang", "amd-master")
-      }
+   //   if ("${CLANG_REVIEW_REQUEST}" != "") {
+   //     sh "repo download lightning/er/clang ${CLANG_REVIEW_REQUEST}"
+   //   } else {
+   //     git_merge("opencl/compiler/llvm/tools/clang", "amd-common", "jenkinscompute@git.amd.com:lightning/er/clang", "amd-master")
+   //   }
 
-      if ("${LLD_REVIEW_REQUEST}" != "") {
-        sh "repo download lightning/er/lld ${LLD_REVIEW_REQUEST}"
-      } else {
-        git_merge("opencl/compiler/llvm/tools/lld", "amd-common", "jenkinscompute@git.amd.com:lightning/er/lld", "amd-master")
-      }
+   //   if ("${LLD_REVIEW_REQUEST}" != "") {
+   //     sh "repo download lightning/er/lld ${LLD_REVIEW_REQUEST}"
+   //   } else {
+   //     git_merge("opencl/compiler/llvm/tools/lld", "amd-common", "jenkinscompute@git.amd.com:lightning/er/lld", "amd-master")
+   //   }
 
-      artifactory_upload("opencl", "opencl", false, true)
-    }
+   //   artifactory_upload("opencl", "opencl", false, true)
+   // }
 
     stage "Build OpenCL"
-    parallel "rocm-deps-upload": {
-      autoclean_node ("build-slave || lightning-bootstrap") {
-        rocm_deps_upload()
-      }
-    }, "build-opencl": {
-      autoclean_node ("lightning-builder") {
-        build("opencl")
-      }
-    }
+  //  parallel "rocm-deps-upload": {
+  //    autoclean_node ("build-slave || lightning-bootstrap") {
+  //      rocm_deps_upload()
+  //    }
+  //  }, "build-opencl": {
+  //    autoclean_node ("lightning-builder") {
+  //      build("opencl")
+  //    }
+  //  }
 
     stage "Run tests"
-    test_node ("lightning-tester-gfx803 || lightning-tester-gfx900") {
-      run_opencl_conformance_tests()
-    }
+ //   test_node ("lightning-tester-gfx803 || lightning-tester-gfx900") {
+ //     run_opencl_conformance_tests()
+ //   }
 
     stage "Push LLVM"
-    autoclean_node ("lightning-bootstrap") {
-      artifactory_download("opencl")
-      git_push_llvm("opencl/compiler", "jenkinscompute@git.amd.com:lightning/er", "amd-common")
-    }
+  //  autoclean_node ("lightning-bootstrap") {
+  //    artifactory_download("opencl")
+  //    git_push_llvm("opencl/compiler", "jenkinscompute@git.amd.com:lightning/er", "amd-common")
+  //  }
 }
 
 
