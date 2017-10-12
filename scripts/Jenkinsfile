@@ -1,8 +1,9 @@
 node ('rocmtest') {
 
-//===----------------------------------------------------------------------===//
-// Helpers.                                                                   //
-//===----------------------------------------------------------------------===//
+stage ('Clone HCC with repo') { 
+
+}
+
 
 def artifactory_download(name) {
   def artifactory_archive = Common.downloadArtifactoryModule(
@@ -224,7 +225,7 @@ def send_email(status) {
   )
 }
 
-    stage "Fetch OpenCL"
+  //   stage "Fetch OpenCL"
    // autoclean_node ("lightning-bootstrap") {
     //  repo_sync()
 
@@ -249,7 +250,7 @@ def send_email(status) {
    //   artifactory_upload("opencl", "opencl", false, true)
    // }
 
-    stage "Build OpenCL"
+ //   stage "Build OpenCL"
   //  parallel "rocm-deps-upload": {
   //    autoclean_node ("build-slave || lightning-bootstrap") {
   //      rocm_deps_upload()
@@ -260,12 +261,12 @@ def send_email(status) {
   //    }
   //  }
 
-    stage "Run tests"
+  //  stage "Run tests"
  //   test_node ("lightning-tester-gfx803 || lightning-tester-gfx900") {
  //     run_opencl_conformance_tests()
  //   }
 
-    stage "Push LLVM"
+  //  stage "Push LLVM"
   //  autoclean_node ("lightning-bootstrap") {
   //    artifactory_download("opencl")
   //    git_push_llvm("opencl/compiler", "jenkinscompute@git.amd.com:lightning/er", "amd-common")
