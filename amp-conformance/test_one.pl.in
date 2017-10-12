@@ -50,14 +50,12 @@ my $AMPTESTLIB="@AMPTESTLIB@";
 my $AMPTESTINC="@AMPTESTINC@";
 my $RUNTESTSDIR="@RUNTESTSDIR@";
 
+$ENV{'HCC_BUILD'}="1";
 my $CLANG_AMP="$CLANG_AMP_BUILD_DIR/compiler/bin/clang++";
-my $CLAMP_CONFIG=`find $CLANG_AMP_BUILD_DIR/bin -name clamp-config -print`;
-$CLAMP_CONFIG =~ s/^\s+//;
-$CLAMP_CONFIG =~ s/\s+$//;
-my $CLAMP_CXXFLAGS=`$CLAMP_CONFIG --build --cxxflags`;
+my $CLAMP_CXXFLAGS=" -std=c++amp";
 $CLAMP_CXXFLAGS =~ s/^\s+//;
 $CLAMP_CXXFLAGS =~ s/\s+$//;
-my $CLAMP_LDFLAGS=`$CLAMP_CONFIG --build --ldflags`;
+my $CLAMP_LDFLAGS=" -std=c++amp";
 $CLAMP_LDFLAGS =~ s/^\s+//;
 $CLAMP_LDFLAGS =~ s/\s+$//;
 my $SHARED_CXXFLAGS="$CLAMP_CXXFLAGS -I$AMPTESTINC -I/usr/include -I$CLANG_AMP_BUILD_DIR/compiler/lib/clang/5.0.0/include/";
