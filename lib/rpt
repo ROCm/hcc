@@ -406,7 +406,7 @@ class ProfileSummaryRecord:
     @staticmethod
     def printHeader():
         print "%14s %11s %8s %8s %8s %8s  %-30s" % \
-                ("Total(%)", "Time(ms)", "Calls", "Avg(us)", "Min(us)", "Max(us)", "Name")
+                ("Total(%)", "Time(us)", "Calls", "Avg(us)", "Min(us)", "Max(us)", "Name")
 
 
     def printMe(self, totalTimeNs):
