@@ -93,6 +93,7 @@ node( 'rocmtest' )
             -DCPACK_SET_DESTDIR=OFF \
             -DCMAKE_BUILD_TYPE=${build_config} \
             -DHSA_AMDGPU_GPU_TARGET="gfx900;gfx803" \
+            -DNUM_TEST_THREADS="2" \
             ../..
           make -j\$(nproc)
         """
@@ -105,6 +106,7 @@ node( 'rocmtest' )
           // install from debian packages because pre/post scripts set up softlinks install targets don't
           sh  """#!/usr/bin/env bash
               cd ${build_dir_release_abs}
+              make test
               make install
               mkdir -p ${build_dir_cmake_tests_abs}
               cd ${build_dir_cmake_tests_abs}
