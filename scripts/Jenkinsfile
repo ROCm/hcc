@@ -1,8 +1,8 @@
 node ('rocmtest') {
 
-stage ('Clone HCC with repo') { 
-    sh "repo init -u https://github.com/RadeonOpenCompute/HCC-Native-GCN-ISA.git"
-    sh "repo sync"
+	stage ('Clone HCC with repo') { 
+	    sh "repo init -u https://github.com/RadeonOpenCompute/HCC-Native-GCN-ISA.git"
+	    sh "repo sync"
+	}
+
 }
-
-
