@@ -28,10 +28,13 @@ node ('rocmtest')
     }
   }
  
+// JENKINS-33510: the jenkinsfile dir() command is not workin well with docker.inside()
+  hcc_build_image.inside( '--device=/dev/kfd' )
+  {
 	stage ('Clone HCC with repo') 
 	{ 
 	    sh "repo init -u https://github.com/RadeonOpenCompute/HCC-Native-GCN-ISA.git"
 	    sh "repo sync"
 	}
-
+  }
 }
