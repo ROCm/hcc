@@ -39,6 +39,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
     libunwind-dev \
     hsa-rocr-dev && \
     apt-get clean && \
+    repo \
     rm -rf /var/lib/apt/lists/*
 
 RUN chmod 777 $(find /opt/rocm -type d)
