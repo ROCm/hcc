@@ -1,21 +1,20 @@
 #!/usr/bin/env groovy
 
-// Generated from snippet generator 'properties; set job properties'
-// Keep only the most recent XX builds
-properties([buildDiscarder(logRotator(
-    artifactDaysToKeepStr: '',
-    artifactNumToKeepStr: '',
-    daysToKeepStr: '',
-    numToKeepStr: '10')),
-    disableConcurrentBuilds(),
-    parameters([booleanParam( name: 'run_hip_integration_testing', defaultValue: false, description: 'Build hip with this compiler and run hip unit tests' ),
-                string( name: 'hip_integration_branch', defaultValue: 'ROCm-Developer-Tools/HIP/master', description: 'Path to hip branch to build & test' )]),
-    [$class: 'CopyArtifactPermissionProperty', projectNames: '*']
-  ])
-
-
 node ('rocmtest') 
 {
+
+
+ stage('HCC Checkout')
+  {
+    checkout([
+      $class: 'GitSCM',
+      branches: scm.branches,
+      doGenerateSubmoduleConfigurations: scm.doGenerateSubmoduleConfigurations,
+      extensions: scm.extensions + [[$class: 'CleanCheckout'], [$class: 'SubmoduleOption', disableSubmodules: false, parentCredentials: false, recursiveSubmodules: true, reference: '', timeout: 60, trackingSubmodules: false]],
+      userRemoteConfigs: scm.userRemoteConfigs
+    ])
+  }
+  
   def hcc_build_image = null
   stage('ubuntu-16.04 image')
   {
