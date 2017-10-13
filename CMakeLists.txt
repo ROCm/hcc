@@ -321,6 +321,7 @@ add_subdirectory(${CLANG_SRC_DIR})
 install(PROGRAMS $<TARGET_FILE:llvm-as>
                  $<TARGET_FILE:llvm-dis>
                  $<TARGET_FILE:llvm-link>
+                 $<TARGET_FILE:llvm-lto>
                  $<TARGET_FILE:llvm-objdump>
                  $<TARGET_FILE:llvm-mc>
                  $<TARGET_FILE:opt>
