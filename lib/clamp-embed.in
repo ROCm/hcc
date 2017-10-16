@@ -24,5 +24,5 @@ if [[ "$FILE" != "$FILENAME" ]]; then
   $LLC -O=2 "$1.S" -relocation-model=pic -filetype=obj -o "$2"
   rm "$1.S"
 else
-  objcopy -B i386:x86-64 -I binary -O elf64-x86-64 --rename-section .data=.kernel "$1" "$2"
+  objcopy -B aarch64 -I binary -O elf64-littleaarch64 --rename-section .data=.kernel "$1" "$2"
 fi

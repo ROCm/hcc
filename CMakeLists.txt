@@ -153,7 +153,7 @@ if (NOT CODEXL_ACTIVITY_LOGGER_HEADER)
   MESSAGE("CodeXL header not found. use -DCODEXL_ACTIVITY_LOGGER_HEADER_DIR=<path_to_CXLActivityLogger.h>.")
 endif (NOT CODEXL_ACTIVITY_LOGGER_HEADER)
 
-find_path(CODEXL_ACTIVITY_LOGGER_LIBRARY NAMES libCXLActivityLogger.so PATHS ${CODEXL_ACTIVITY_LOGGER_LIBRARY_DIR} ${ROCM_ROOT}/profiler/CXLActivityLogger/bin/x86_64 NO_DEFAULT_PATH)
+find_path(CODEXL_ACTIVITY_LOGGER_LIBRARY NAMES libCXLActivityLogger.so PATHS ${CODEXL_ACTIVITY_LOGGER_LIBRARY_DIR} ${ROCM_ROOT}/profiler/CXLActivityLogger/bin/aarch64 NO_DEFAULT_PATH)
 find_path(CODEXL_ACTIVITY_LOGGER_LIBRARY NAMES libCXLActivityLogger.so)
 
 if (NOT CODEXL_ACTIVITY_LOGGER_LIBRARY)
@@ -309,7 +309,7 @@ endif ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
 set(LLVM_EXTERNAL_CLANG_SOURCE_DIR "${PROJECT_SOURCE_DIR}/clang")
 set(LLVM_EXTERNAL_COMPILER_RT_SOURCE_DIR "${PROJECT_SOURCE_DIR}/compiler-rt")
 set(LLVM_EXTERNAL_LLD_SOURCE_DIR "${PROJECT_SOURCE_DIR}/lld")
-set(LLVM_TARGETS_TO_BUILD "AMDGPU" "X86" CACHE STRING "" FORCE)
+set(LLVM_TARGETS_TO_BUILD "AMDGPU" "AArch64" CACHE STRING "" FORCE)
 set(LLVM_INSTALL_TOOLCHAIN_ONLY ON CACHE BOOL "" FORCE)
 
 if(EXISTS ${PROJECT_SOURCE_DIR}/clang-tools-extra/CMakeLists.txt)
@@ -330,7 +330,7 @@ install(PROGRAMS $<TARGET_FILE:llvm-as>
 
 add_custom_target(clang_links DEPENDS clang)
 add_custom_command(TARGET clang_links POST_BUILD
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ${CLANG_BIN_DIR}/lib/clang/6.0.0/lib/linux/libclang_rt.builtins-x86_64.a ${PROJECT_BINARY_DIR}/lib/libclang_rt.builtins-x86_64.a
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ${CLANG_BIN_DIR}/lib/clang/6.0.0/lib/linux/libclang_rt.builtins-aarch64.a ${PROJECT_BINARY_DIR}/lib/libclang_rt.builtins-aarch64.a
 )
 
 # install certain LLVM libraries needed by HIP
@@ -352,7 +352,7 @@ install(PROGRAMS $<TARGET_FILE:LLVMAMDGPUDesc>
 # force library install path to lib
 set(CMAKE_INSTALL_LIBDIR "lib" CACHE INTERNAL "Installation directory for libraries" FORCE)
 
-install(FILES ${CLANG_BIN_DIR}/lib/clang/6.0.0/lib/linux/libclang_rt.builtins-x86_64.a
+install(FILES ${CLANG_BIN_DIR}/lib/clang/6.0.0/lib/linux/libclang_rt.builtins-aarch64.a
         DESTINATION  ${CMAKE_INSTALL_LIBDIR}
         COMPONENT compiler)
 
