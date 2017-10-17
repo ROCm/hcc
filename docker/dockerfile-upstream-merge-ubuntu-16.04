@@ -3,7 +3,7 @@ MAINTAINER Kent Knox <kent.knox@amd>
 
 # Parameters related to building hcc-lc
 ARG rocm_install_path=/opt/rocm
-ARG rocm_build_path=~/
+ARG rocm_build_path=/usr/local
 ARG build_type=Release
 
 # Download and install an up to date version of cmake, because compiling
