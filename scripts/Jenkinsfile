@@ -25,9 +25,7 @@ node ('rocmtest')
     def build_image_name = "${build_type_name}"
     dir('docker')
     {
-        sh "docker build -t ${paths.project_name}/${build_image_name}:latest -f docker/${docker_args.build_docker_file} ${docker_args.docker_build_args} --build-arg user_uid=${user_uid} --build-arg base_image=${docker_args.from_image} ."
-    
-      hcc_build_image = docker.build( "${build_org}/${build_image_name}:latest", "-f ${dockerfile_name} --build-arg build_type=Release -build-arg user_uid=${user_uid} --build-arg rocm_install_path=/opt/rocm ." )
+       hcc_build_image = docker.build( "${build_org}/${build_image_name}:latest", "-f ${dockerfile_name} --build-arg build_type=Release -build-arg user_uid=${user_uid} --build-arg rocm_install_path=/opt/rocm ." )
     }
   }
  
