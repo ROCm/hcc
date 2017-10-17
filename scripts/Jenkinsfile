@@ -37,5 +37,12 @@ node ('rocmtest')
 	    sh "repo init -u https://github.com/RadeonOpenCompute/HCC-Native-GCN-ISA.git"
 	    sh "repo sync"
 	}
+	
+	stage('Initialize GIT submodules') { 
+	   sh "git clone https://github.com/${user_uid}/hcc.git hcc_fork"
+	   sh "cd hcc_fork"
+	   sh "git checkout clang_tot_upgrade"
+	   sh "git submodule update --init"
+	}
   }
 }
