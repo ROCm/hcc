@@ -3,7 +3,7 @@ MAINTAINER Kent Knox <kent.knox@amd>
 
 # Parameters related to building hcc-lc
 ARG rocm_install_path=/opt/rocm
-ARG rocm_build_path=/usr/local/src/hcc-lc
+ARG rocm_build_path=~/
 ARG build_type=Release
 
 # Download and install an up to date version of cmake, because compiling
@@ -44,5 +44,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
 
 RUN chmod 777 $(find /opt/rocm -type d)
 
-RUN repo init -u https://github.com/RadeonOpenCompute/HCC-Native-GCN-ISA.git && \
+RUN mkdir -p ${rocm_build_path} && \
+    cd ${rocm_build_path} && \
+    repo init -u https://github.com/RadeonOpenCompute/HCC-Native-GCN-ISA.git && \
     repo sync 
