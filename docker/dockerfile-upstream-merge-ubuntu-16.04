@@ -12,6 +12,7 @@ ARG cmake_prefix=/opt/cmake
 ARG cmake_ver_major=3.7
 ARG cmake_ver_minor=3.7.2
 ARG REPO_RADEON=repo.radeon.com
+ARG repository_name=david.salinas
 
 # Install Packages
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends curl repo && \
@@ -45,5 +46,5 @@ RUN chmod 777 $(find /opt/rocm -type d)
 
 RUN mkdir -p ${rocm_build_path} && \
     cd ${rocm_build_path} && \
-    repo init --depth=1 -u https://github.com/RadeonOpenCompute/HCC-Native-GCN-ISA.git -b clang_tot_upgrade && \
+    repo init --depth=1 -u https://github.com/${repository_name}/HCC-Native-GCN-ISA.git -b clang_tot_upgrade && \
     repo sync 
