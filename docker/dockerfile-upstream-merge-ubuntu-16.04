@@ -46,5 +46,5 @@ RUN chmod 777 $(find /opt/rocm -type d)
 
 RUN mkdir -p ${rocm_build_path} && \
     cd ${rocm_build_path} && \
-    repo init --depth=1 -u https://github.com/david-salinas/HCC-Native-GCN-ISA.git -b clang_tot_upgrade && \
+    repo init -u https://github.com/RadeonOpenCompute/HCC-Native-GCN-ISA.git && \
     repo sync 
