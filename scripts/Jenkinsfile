@@ -19,7 +19,7 @@ node ('rocmtest')
   stage('ubuntu-16.04 image')
   {
     def build_org = "david-salinas"
-    def build_type_name = "build-ubuntu-16.04"
+    def build_type_name = "upstream-merge-ubuntu-16.04"
     def dockerfile_name = "dockerfile-${build_type_name}"
     def build_image_name = "${build_type_name}"
     dir('docker')
@@ -33,8 +33,8 @@ node ('rocmtest')
   {
 	stage ('Clone HCC with repo') 
 	{ 
-	    sh "repo init -u https://github.com/david-salinas/HCC-Native-GCN-ISA.git"
-	    sh "repo sync"
+	  //  sh "repo init -u https://github.com/david-salinas/HCC-Native-GCN-ISA.git"
+	   // sh "repo sync"
 	}
   }
 }
