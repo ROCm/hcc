@@ -3170,12 +3170,7 @@ public:
         signalPoolMutex.unlock();
 #endif
 
-        // initialize the printf buffer
-        if (hc::printf_buffer == nullptr) {
-          hc::printf_buffer = hc::createPrintfBuffer(hc::default_printf_buffer_size);
-          hc::gpu_printf_buffer_ptr = hc::internal::am_alloc_host_coherent(sizeof(void*));
-          *hc::gpu_printf_buffer_ptr = hc::printf_buffer;
-        }
+        initPrintfBuffer();
 
         init_success = true;
     }
@@ -3361,6 +3356,26 @@ public:
         uint64_t timestamp_frequency_hz = 0L;
         hsa_system_get_info(HSA_SYSTEM_INFO_TIMESTAMP_FREQUENCY, &timestamp_frequency_hz);
         return timestamp_frequency_hz;
+    }
+
+    void initPrintfBuffer() override {
+        if (hc::printf_buffer != nullptr) {
+          // Check whether the printf buffer is still valid
+          // because it may have been annihilated by HIP's hipDeviceReset().
+          // Re-allocate the printf buffer if that happens.
+          hc::AmPointerInfo info;
+          am_status_t status = am_memtracker_getinfo(&info, hc::printf_buffer);
+          if (status != AM_SUCCESS) {
+            hc::printf_buffer = nullptr;
+            hc::gpu_printf_buffer_ptr = nullptr;
+          }
+        }
+
+        if (hc::printf_buffer == nullptr) {
+          hc::printf_buffer = hc::createPrintfBuffer(hc::default_printf_buffer_size);
+          hc::gpu_printf_buffer_ptr = hc::internal::am_alloc_host_coherent(sizeof(void*));
+          *hc::gpu_printf_buffer_ptr = hc::printf_buffer;
+        }
     }
 
     void flushPrintfBuffer() override {

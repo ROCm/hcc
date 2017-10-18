@@ -554,6 +554,9 @@ public:
     /// get tick frequency
     virtual uint64_t getSystemTickFrequency() { return 0L; };
 
+    // initialize the printf buffer
+    virtual void initPrintfBuffer() {};
+
     // flush the device printf buffer
     virtual void flushPrintfBuffer() {};
 };

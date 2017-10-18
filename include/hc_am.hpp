@@ -33,6 +33,18 @@ public:
     unsigned    _appAllocationFlags; ///< App-specific allocation flags.  (Used by HIP to store allocation flags)
     void *      _appPtr;             ///< App-specific pointer to additional information.
 
+    // creates a dummy copy of AmPointerInfo
+    AmPointerInfo() :
+        _hostPointer(nullptr),
+        _devicePointer(nullptr),
+        _unalignedDevicePointer(nullptr),
+        _sizeBytes(0),
+        _isInDeviceMem(false),
+        _isAmManaged(false),
+        _allocSeqNum(0),
+        _appId(-1),
+        _appAllocationFlags(0),
+        _appPtr(nullptr)  {};
 
     AmPointerInfo(void *hostPointer, void *devicePointer, void* unalignedDevicePointer, std::size_t sizeBytes, hc::accelerator &acc,  bool isInDeviceMem=false, bool isAmManaged=false) :
         _hostPointer(hostPointer),
