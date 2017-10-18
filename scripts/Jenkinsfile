@@ -85,7 +85,7 @@ node ('rocmtest')
 		stage ('Add all remotes and forks for submodules') {
 			// sh "git remote add hcc_fork https://github.com/david-salinas/hcc.git"
 			git_remote_add("hcc_fork", "https://github.com/david-salinas/hcc.git");
-			sh "cd ../lld"
+			sh "cd lld"
 			git_remote_add("lld_fork", "https://github.com/david-salinas/lld.git");
 			sh "cd ../compiler"
 			git_remote_add("llvm_fork", "https://github.com/david-salinas/llvm.git");
