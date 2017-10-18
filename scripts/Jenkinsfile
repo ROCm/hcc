@@ -1,6 +1,4 @@
 #!/usr/bin/env groovy
-
-
 //===----------------------------------------------------------------------===//
 // Helpers.                                                                   //
 //===----------------------------------------------------------------------===//
@@ -226,8 +224,6 @@ def send_email(status) {
 }
 
 
-
-
 node ('rocmtest') 
 {
  stage('HCC Checkout')
@@ -273,5 +269,6 @@ node ('rocmtest')
 	
 	stage ('Add all remotes and forks for submodules') {
 		sh "git remote add hcc_fork https://github.com/aaronenyeshi/hcc.git"
+	}
   }
 }
