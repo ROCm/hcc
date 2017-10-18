@@ -39,7 +39,7 @@ node ('rocmtest')
 	}
 	
 	stage('Initialize GIT submodules') { 
-	   sh "git clone https://github.com/${user_uid}/hcc.git hcc_fork"
+	   sh "git clone https://github.com/david-salinas/hcc.git hcc_fork"
 	   sh "cd hcc_fork"
 	   sh "git checkout clang_tot_upgrade"
 	   sh "git submodule update --init"
