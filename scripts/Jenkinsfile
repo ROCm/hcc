@@ -63,7 +63,7 @@ node ('rocmtest')
 		stage ('Clone HCC with repo') 
 		{ 
 			if (fileExists("hcc_fork")) {
-			// do nothing
+		    	sh "echo hcc_fork"
 			} else { }
 			    sh "repo init -u https://github.com/RadeonOpenCompute/HCC-Native-GCN-ISA.git"
 			    sh "repo sync"
@@ -72,11 +72,12 @@ node ('rocmtest')
 		
 		stage('Initialize GIT submodules') { 
 		  if (fileExists("hcc_fork")) {
-		  // do nothing
+		    sh "cd hcc_fork"
 		  }else {
 		   sh "git clone https://github.com/david-salinas/hcc.git hcc_fork"
-		  }
 		   sh "cd hcc_fork"
+		  }
+		   
 		   sh "git checkout clang_tot_upgrade"
 		   sh "git submodule update --init"
 		}
