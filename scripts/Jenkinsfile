@@ -48,8 +48,8 @@ node ('rocmtest')
   try { 
 		stage ('Clone HCC with repo') 
 		{ 
-		    sh "repo init -u https://github.com/RadeonOpenCompute/HCC-Native-GCN-ISA.git"
-		    sh "repo sync"
+	//	    sh "repo init -u https://github.com/RadeonOpenCompute/HCC-Native-GCN-ISA.git"
+	//	    sh "repo sync"
 		}
 		
 		stage('Initialize GIT submodules') { 
@@ -61,7 +61,7 @@ node ('rocmtest')
 		
 		stage ('Add all remotes and forks for submodules') {
 			// sh "git remote add hcc_fork https://github.com/david-salinas/hcc.git"
-			git_remote_add(hcc_fork, "https://github.com/david-salinas/hcc.git");
+			git_remote_add("hcc_fork", "https://github.com/david-salinas/hcc.git");
 		}
 	} catch(e) {
 	   send_email("FAILED")
