@@ -18,7 +18,11 @@ def autoclean_node(name, commands) {
 }
 
  def git_remote_add(remote_name, remote_url) {
+ if (fileExists(remote_name) {
+     sh "echo already exists"
+     } else { 
     sh "git remote add ${remote_name} ${remote_url}"
+    }
  }
  
  def send_email(status) {
