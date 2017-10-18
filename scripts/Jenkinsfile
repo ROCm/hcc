@@ -63,7 +63,7 @@ node ('rocmtest')
 // JENKINS-33510: the jenkinsfile dir() command is not workin well with docker.inside()
   hcc_build_image.inside( '--device=/dev/kfd' )
   {
-  try { 
+ // try { 
 		stage ('Clone HCC with repo') 
 		{ 
 			if (fileExists("hcc_fork")) {
@@ -123,9 +123,9 @@ node ('rocmtest')
 			sh "git merge origin/amd-common --no-edit"
 		}
 		
-	} catch(e) {
-	   send_email("FAILED")
-	  throw e
-	}
+//	} catch(e) {
+//	   send_email("FAILED")
+//	  throw e
+//	}
   }
 }
