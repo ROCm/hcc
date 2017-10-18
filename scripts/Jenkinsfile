@@ -64,7 +64,7 @@ node ('rocmtest')
 		{ 
 			if (fileExists("hcc_fork")) {
 		    	sh "echo hcc_fork"
-			} else { }
+			} else { 
 			    sh "repo init -u https://github.com/RadeonOpenCompute/HCC-Native-GCN-ISA.git"
 			    sh "repo sync"
 			}
