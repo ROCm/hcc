@@ -3,6 +3,20 @@
 // Helpers.                                                                   //
 //===----------------------------------------------------------------------===//
 
+def autoclean_node(name, commands) {
+  node (name) {
+    def workspace = pwd()
+    try {
+      deleteDir()
+      commands()
+    } finally {
+      dir (workspace) {
+        deleteDir()
+      }
+    }
+  }
+}
+
  def git_remote_add(remote_name, remote_url) {
     sh "git remote add ${remote_name} ${remote_url}"
  }
@@ -48,8 +62,8 @@ node ('rocmtest')
   try { 
 		stage ('Clone HCC with repo') 
 		{ 
-	//	    sh "repo init -u https://github.com/RadeonOpenCompute/HCC-Native-GCN-ISA.git"
-	//	    sh "repo sync"
+		    sh "repo init -u https://github.com/RadeonOpenCompute/HCC-Native-GCN-ISA.git"
+		    sh "repo sync"
 		}
 		
 		stage('Initialize GIT submodules') { 
@@ -62,7 +76,39 @@ node ('rocmtest')
 		stage ('Add all remotes and forks for submodules') {
 			// sh "git remote add hcc_fork https://github.com/david-salinas/hcc.git"
 			git_remote_add("hcc_fork", "https://github.com/david-salinas/hcc.git");
+			sh "cd ../lld"
+			git_remote_add("lld_fork", "https://github.com/david-salinas/lld.git");
+			sh "cd ../compiler"
+			git_remote_add("llvm_fork", "https://github.com/david-salinas/llvm.git");
+			sh "cd ../compiler_rt"
+			git_remote_add("compiler-rt_fork", "https://github.com/david-salinas/compiler-rt.git");
+			git_remote_add("compiler-rt", "https://github.com/llvm-mirror/compiler-rt.git");
+			sh "cd ../clang-tools-extra"
+			git_remote_add("clang-tools-extra_fork", "https://github.com/david-salinas/clang-tools-extra.git");
+			git_remote_add("clang-tools-extra", "https://github.com/llvm-mirror/clang-tools-extra.git");
+			sh "cd ../clang"
+			git_remote_add("clang_fork", "https://github.com/david-salinas/hcc_clang_upgrade.git");
+			git_remote_add("clang", "https://github.com/RadeonOpenCompute/clang.git");
+			sh "cd ../"
 		}
+		
+		stage ('Checkout latest master ROCM-Device-Libs') {
+			// cd hcc_fork
+			sh "cd rocdl"
+			sh "git fetch --all"
+			sh "git checkout origin/master"
+			sh "cd ../"
+		}
+		
+		
+		stage ('Merge amd-common LLD commits') {
+			// cd hcc_fork
+			sh "cd lld"
+			sh "git fetch --all"
+			sh "git checkout -b merge_YYYYMMDD origin/amd-hcc"
+			sh "git merge origin/amd-common --no-edit"
+		}
+		
 	} catch(e) {
 	   send_email("FAILED")
 	  throw e
