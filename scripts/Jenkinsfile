@@ -20,6 +20,15 @@ def autoclean_node(name, commands) {
   }
 }
 
+def git_config() {
+  def git_email = "dsalinas@amd.com" // "jenkins-compute@amd.com"
+  def git_name = "David Salinas" // Jenkins Compute"
+
+  sh (script:"git config user.email ${git_email}")
+  sh (script:"git config user.name ${git_name}")
+}
+
+
 //def git_remote_exists(workspace, remote_name) {
 
 //	dir(workspace) {
