@@ -77,20 +77,17 @@ node ('rocmtest')
 		stage ('Clone HCC with repo') 
 		{ 
 		    deleteDir()
-			sh "repo init -u https://github.com/RadeonOpenCompute/HCC-Native-GCN-ISA.git"
-			sh "repo sync"
+			sh (script: "repo init -u https://github.com/RadeonOpenCompute/HCC-Native-GCN-ISA.git")
+			sh (script: "repo sync")
 		}
 		
 		stage('Initialize GIT submodules') { 
-		  if (!fileExists("hcc_fork")) {
-		  	sh "git clone https://github.com/david-salinas/hcc.git hcc_fork"
-		  }
-		  
-		  sh(script: "cd hcc_fork; git checkout clang_tot_upgrade; git submodule update --init")
+			sh (script:"git clone https://github.com/david-salinas/hcc.git hcc_fork")  
+			sh(script: "cd hcc_fork; git checkout clang_tot_upgrade; git submodule update --init")
 		}
 		
 		stage ('Add all remotes and forks for submodules') {
-			sh "cd hcc_fork"
+			
 			// sh "git remote add hcc_fork https://github.com/david-salinas/hcc.git"
 			git_remote_add("hcc_fork","hcc_fork", "https://github.com/david-salinas/hcc.git");
 			//sh "cd lld"
