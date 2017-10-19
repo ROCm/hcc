@@ -78,10 +78,10 @@ node ('rocmtest')
   		
 		stage ('Clone HCC with repo') 
 		{ 
-			if (!fileExists("hcc_fork")) {
+			//if (!fileExists("hcc_fork")) {
 				sh "repo init -u https://github.com/RadeonOpenCompute/HCC-Native-GCN-ISA.git"
 			    sh "repo sync"
-			}
+			//}
 		}
 		
 		stage('Initialize GIT submodules') { 
