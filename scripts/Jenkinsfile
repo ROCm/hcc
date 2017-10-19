@@ -74,14 +74,11 @@ node ('rocmtest')
   hcc_build_image.inside( '--device=/dev/kfd' )
   {
   try { 
-  		deleteDir()
-  		
 		stage ('Clone HCC with repo') 
 		{ 
-			//if (!fileExists("hcc_fork")) {
-				sh "repo init -u https://github.com/RadeonOpenCompute/HCC-Native-GCN-ISA.git"
-			    sh "repo sync"
-			//}
+		    deleteDir()
+			sh "repo init -u https://github.com/RadeonOpenCompute/HCC-Native-GCN-ISA.git"
+			sh "repo sync"
 		}
 		
 		stage('Initialize GIT submodules') { 
