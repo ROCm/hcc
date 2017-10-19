@@ -17,9 +17,17 @@ def autoclean_node(name, commands) {
   }
 }
 
+//def git_remote_exists(workspace, remote_name) {
+
+//	dir(workspace) {
+//		sh "git remote -v | grep ${remote_name}"
+//		def retstat = sh(script: 'git remote -v | grep ${remote_name}', returnStatus: true)
+//	}
+//}
+
  def git_remote_add(workspace, remote_name, remote_url) {
    dir(workspace) {
-	    if (fileExists(remote_name)) {
+	    if (sh(script: 'git remote -v | grep ${remote_name}', returnStatus: true))) {
 	     sh "echo already exists"
 	    } else { 
 	      sh "git remote add ${remote_name} ${remote_url}"
