@@ -45,20 +45,15 @@ def autoclean_node(name, commands) {
 
 node ('rocmtest') 
 {
- //stage('HCC Checkout')
-//  {
-  
- // 			deleteDir()
-//			sh (script: "repo init -u https://github.com/RadeonOpenCompute/HCC-Native-GCN-ISA.git")
-//			sh (script: "repo sync")
-  //  checkout([
-  //    $class: 'GitSCM',
-   //   branches: scm.branches,
-  //    doGenerateSubmoduleConfigurations: scm.doGenerateSubmoduleConfigurations,
-  //    extensions: scm.extensions + [[$class: 'CleanCheckout'], [$class: 'SubmoduleOption', disableSubmodules: false, parentCredentials: false, recursiveSubmodules: true, reference: '', timeout: 60, trackingSubmodules: false]],
-   //   userRemoteConfigs: scm.userRemoteConfigs
-   // ])
- // }
+ stage('HCC Checkout')
+  {
+      $class: 'GitSCM',
+      branches: scm.branches,
+      doGenerateSubmoduleConfigurations: scm.doGenerateSubmoduleConfigurations,
+      extensions: scm.extensions + [[$class: 'CleanCheckout'], [$class: 'SubmoduleOption', disableSubmodules: false, parentCredentials: false, recursiveSubmodules: true, reference: '', timeout: 60, trackingSubmodules: false]],
+      userRemoteConfigs: scm.userRemoteConfigs
+    ])
+  }
   
   def hcc_build_image = null
   stage('ubuntu-16.04 image')
