@@ -47,13 +47,17 @@ node ('rocmtest')
 {
  stage('HCC Checkout')
   {
-    checkout([
-      $class: 'GitSCM',
-      branches: scm.branches,
-      doGenerateSubmoduleConfigurations: scm.doGenerateSubmoduleConfigurations,
-      extensions: scm.extensions + [[$class: 'CleanCheckout'], [$class: 'SubmoduleOption', disableSubmodules: false, parentCredentials: false, recursiveSubmodules: true, reference: '', timeout: 60, trackingSubmodules: false]],
-      userRemoteConfigs: scm.userRemoteConfigs
-    ])
+  
+  deleteDir()
+			sh (script: "repo init -u https://github.com/RadeonOpenCompute/HCC-Native-GCN-ISA.git")
+			sh (script: "repo sync")
+  //  checkout([
+  //    $class: 'GitSCM',
+   //   branches: scm.branches,
+  //    doGenerateSubmoduleConfigurations: scm.doGenerateSubmoduleConfigurations,
+  //    extensions: scm.extensions + [[$class: 'CleanCheckout'], [$class: 'SubmoduleOption', disableSubmodules: false, parentCredentials: false, recursiveSubmodules: true, reference: '', timeout: 60, trackingSubmodules: false]],
+   //   userRemoteConfigs: scm.userRemoteConfigs
+   // ])
   }
   
   def hcc_build_image = null
@@ -74,11 +78,15 @@ node ('rocmtest')
   hcc_build_image.inside( '--device=/dev/kfd' )
   {
   try { 
-		stage ('Clone HCC with repo') 
-		{ 
-		    deleteDir()
-			sh (script: "repo init -u https://github.com/RadeonOpenCompute/HCC-Native-GCN-ISA.git")
-			sh (script: "repo sync")
+	//	stage ('Clone HCC with repo') 
+	//	{ 
+	//	    deleteDir()
+	//		sh (script: "repo init -u https://github.com/RadeonOpenCompute/HCC-Native-GCN-ISA.git")
+	//		sh (script: "repo sync")
+	//	}
+		
+		stage('Clone HCC repo manifest') { 
+			sh (script:"git clone https://github.com/RadeonOpenCompute/HCC-Native-GCN-ISA.git manifest")
 		}
 		
 		stage('Initialize GIT submodules') { 
