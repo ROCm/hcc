@@ -104,7 +104,7 @@ node ('rocmtest')
 		stage ('Merge amd-common LLD commits') {
 			String date = new Date().format​('YYYYMMDD')
 			String merge_name = "merge_" + date
-			sh (script: "cd hcc_fork/lld; git fetch --all ; git checkout -b ${merge_name} origin/amd-hcc; git merge origin/amd-common --no-edit"
+			sh (script: "cd hcc_fork/lld; git fetch --all ; git checkout -b ${merge_name} origin/amd-hcc; git merge origin/amd-common --no-edit")
 		}
 		
 	} catch(e) {
