@@ -76,24 +76,21 @@ node ('rocmtest')
   try { 
 		stage ('Clone HCC with repo') 
 		{ 
-			if (fileExists("hcc_fork")) {
-		    	sh "echo hcc_fork"
-			} else { 
-			    sh "repo init -u https://github.com/RadeonOpenCompute/HCC-Native-GCN-ISA.git"
+			if (!fileExists("hcc_fork")) {
+				sh "repo init -u https://github.com/RadeonOpenCompute/HCC-Native-GCN-ISA.git"
 			    sh "repo sync"
 			}
 		}
 		
 		stage('Initialize GIT submodules') { 
-		  if (fileExists("hcc_fork")) {
-		    sh "cd hcc_fork"
-		  }else {
-		   sh "git clone https://github.com/david-salinas/hcc.git hcc_fork"
-		   sh "cd hcc_fork"
+		  if (!fileExists("hcc_fork")) {
+		  	sh "git clone https://github.com/david-salinas/hcc.git hcc_fork"
 		  }
-		   
-		   sh "git checkout clang_tot_upgrade"
-		   sh "git submodule update --init"
+		  
+		   sh(script: """#!/usr/bin/bash
+		                 cd hcc_fork
+		                 git checkout clang_tot_upgrade
+		                 git submodule update --init""")
 		}
 		
 		stage ('Add all remotes and forks for submodules') {
