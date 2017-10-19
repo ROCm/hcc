@@ -52,6 +52,9 @@ install(PROGRAMS ${PROJECT_BINARY_DIR}/compiler/bin/clamp-device
 install(PROGRAMS ${PROJECT_BINARY_DIR}/bin/extractkernel
     DESTINATION bin)
 
+install(PROGRAMS ${PROJECT_SOURCE_DIR}/lib/rpt
+    DESTINATION bin)
+
 ####################
 # CodeXL Activity Logger
 ####################
