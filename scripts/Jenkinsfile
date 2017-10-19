@@ -27,7 +27,7 @@ def autoclean_node(name, commands) {
 
  def git_remote_add(workspace, remote_name, remote_url) {
    dir(workspace) {
-	    if (sh(script: 'git remote -v | grep ${remote_name}', returnStatus: true))) {
+	    if (sh(script: 'git remote -v | grep ${remote_name}', returnStatus: true)) {
 	     sh "echo already exists"
 	    } else { 
 	      sh "git remote add ${remote_name} ${remote_url}"
