@@ -87,10 +87,9 @@ node ('rocmtest')
 		  	sh "git clone https://github.com/david-salinas/hcc.git hcc_fork"
 		  }
 		  
-		   sh(script: """#!/usr/bin/bash
-		                 cd hcc_fork
-		                 git checkout clang_tot_upgrade
-		                 git submodule update --init""")
+		   sh(script: "cd hcc_fork;
+		                 git checkout clang_tot_upgrade;
+		                 git submodule update --init")
 		}
 		
 		stage ('Add all remotes and forks for submodules') {
