@@ -22,7 +22,7 @@ def autoclean_node(name, commands) {
 	    if (fileExists(remote_name)) {
 	     sh "echo already exists"
 	    } else { 
-	      sh returnStatus, "git remote add ${remote_name} ${remote_url}"
+	      sh "git remote add ${remote_name} ${remote_url}"
 	    }
   	}
  }
