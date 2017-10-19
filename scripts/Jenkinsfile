@@ -109,7 +109,7 @@ node ('rocmtest')
 		
 		
 		stage ('Merge amd-common LLD commits') {
-			def dateFormat = new SimpleDateFormat("YYYYMMDD")
+			def dateFormat = new SimpleDateFormat("yyyyMMdd")
 			def date = new Date()
 			String merge_name = "merge_" + dateFormat.format(date)
 			sh (script: "cd hcc_fork/lld; git fetch --all ; git checkout -b ${merge_name} origin/amd-hcc; git merge origin/amd-common --no-edit")
