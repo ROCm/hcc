@@ -87,8 +87,8 @@ node ('rocmtest')
 		  	sh "git clone https://github.com/david-salinas/hcc.git hcc_fork"
 		  }
 		  
-		   sh(script: "cd hcc_fork;
-		                 git checkout clang_tot_upgrade;
+		   sh(script: "cd hcc_fork
+		                 git checkout clang_tot_upgrade
 		                 git submodule update --init")
 		}
 		
