@@ -47,6 +47,7 @@ node ('rocmtest')
 {
  stage('HCC Checkout')
   {
+    checkout([
       $class: 'GitSCM',
       branches: scm.branches,
       doGenerateSubmoduleConfigurations: scm.doGenerateSubmoduleConfigurations,
