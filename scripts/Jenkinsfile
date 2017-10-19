@@ -121,8 +121,8 @@ node ('rocmtest')
 			def dateFormat = new SimpleDateFormat("yyyyMMddHHmm")
 			def date = new Date()
 			String merge_name = "auto_merge_" + dateFormat.format(date)
-			git_config()
-			sh (script: "cd hcc_fork/lld; git fetch --all ; git checkout -b ${merge_name} origin/amd-hcc; git merge origin/amd-common --no-edit")
+			//git_config()
+			sh (script: "cd hcc_fork/lld; git config user.email dsalinas@amd.com; git config user.name David Salinas; git fetch --all ; git checkout -b ${merge_name} origin/amd-hcc; git merge origin/amd-common --no-edit")
 		}
 		
 	} catch(e) {
