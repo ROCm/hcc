@@ -100,7 +100,7 @@ node ('rocmtest')
 			}
 		}
 		
-//		stage ('Add all remotes and forks for submodules') {
+		stage ('Add all remotes and forks for submodules') {
 //			git_remote_add("hcc_fork","hcc_fork", "https://github.com/david-salinas/hcc.git");
 //			git_remote_add("hcc_fork/lld","lld_fork", "https://github.com/david-salinas/lld.git");
 //			git_remote_add("hcc_fork/compiler","llvm_fork", "https://github.com/david-salinas/llvm.git");
@@ -108,9 +108,9 @@ node ('rocmtest')
 //			git_remote_add("hcc_fork/compiler-rt","compiler-rt", "https://github.com/llvm-mirror/compiler-rt.git");
 //			git_remote_add("hcc_fork/clang-tools-extra","clang-tools-extra_fork", "https://github.com/david-salinas/clang-tools-extra.git");
 //			git_remote_add("hcc_fork/clang-tools-extra","clang-tools-extra", "https://github.com/llvm-mirror/clang-tools-extra.git");
-//			git_remote_add("hcc_fork/clang","clang_fork", "https://github.com/david-salinas/hcc_clang_upgrade.git");
-//			git_remote_add("hcc_fork/clang","clang", "https://github.com/RadeonOpenCompute/clang.git");			
-//		}
+			git_remote_add("hcc_fork/clang","clang_fork", "https://github.com/david-salinas/hcc_clang_upgrade.git");
+			git_remote_add("hcc_fork/clang","clang", "https://github.com/RadeonOpenCompute/clang.git");			
+		}
 		
 		stage ('Checkout latest master ROCM-Device-Libs') {
 			sh (script: "cd hcc_fork/rocdl; git fetch --all; git checkout origin/master")
