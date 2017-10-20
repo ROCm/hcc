@@ -13,6 +13,15 @@
 #include "hc_am_internal.hpp"
 #include "hsa_atomic.h"
 
+// The printf on the accelerator is only enabled when
+// The HCC_ENABLE_ACCELERATOR_PRINTF is defined 
+//
+//#define HCC_ENABLE_ACCELERATOR_PRINTF (1)
+
+// Indicate whether hc::printf is supported
+#define HC_FEATURE_PRINTF (1)
+
+// Enable extra debug messages
 #define HC_PRINTF_DEBUG  (0)
 
 namespace hc {
