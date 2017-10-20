@@ -148,7 +148,7 @@ node ('rocmtest')
 			def dateFormat = new SimpleDateFormat("yyyyMMddHHmm")
 			def date = new Date()
 			String merge_name = "auto_merge_" + dateFormat.format(date)
-			sh (script: "cd hcc_fork/clang; git config user.email dsalinas@amd.com; git config user.name David Salinas; git fetch --all ; git checkout -b ${merge_name} origin/amd-hcc; git merge --no-ff clang/amd-common --no-edit")
+			sh (script: "cd hcc_fork/clang; git fetch --all ; git checkout -b ${merge_name} origin/amd-hcc; git merge --no-ff clang/amd-common --no-edit")
 		}
 		
 		stage ('Build merged HCC') {
