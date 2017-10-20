@@ -108,20 +108,18 @@ node ('rocmtest')
 //			git_remote_add("hcc_fork/compiler-rt","compiler-rt", "https://github.com/llvm-mirror/compiler-rt.git");
 //			git_remote_add("hcc_fork/clang-tools-extra","clang-tools-extra_fork", "https://github.com/david-salinas/clang-tools-extra.git");
 //			git_remote_add("hcc_fork/clang-tools-extra","clang-tools-extra", "https://github.com/llvm-mirror/clang-tools-extra.git");
-			git_remote_add("hcc_fork/clang","clang_fork", "https://github.com/david-salinas/hcc_clang_upgrade.git");
-			git_remote_add("hcc_fork/clang","clang", "https://github.com/RadeonOpenCompute/clang.git");			
+//			git_remote_add("hcc_fork/clang","clang_fork", "https://github.com/david-salinas/hcc_clang_upgrade.git");
+//			git_remote_add("hcc_fork/clang","clang", "https://github.com/RadeonOpenCompute/clang.git");			
 		}
 		
 		stage ('Checkout latest master ROCM-Device-Libs') {
 			sh (script: "cd hcc_fork/rocdl; git fetch --all; git checkout origin/master")
 		}
-		
-		
+				
 		stage ('Merge amd-common LLD commits') {
 			def dateFormat = new SimpleDateFormat("yyyyMMddHHmm")
 			def date = new Date()
 			String merge_name = "auto_merge_" + dateFormat.format(date)
-			//git_config()
 			sh (script: "cd hcc_fork/lld; git config user.email dsalinas@amd.com; git config user.name David Salinas; git fetch --all ; git checkout -b ${merge_name} origin/amd-hcc; git merge origin/amd-common --no-edit")
 		}
 		
@@ -129,7 +127,6 @@ node ('rocmtest')
 			def dateFormat = new SimpleDateFormat("yyyyMMddHHmm")
 			def date = new Date()
 			String merge_name = "auto_merge_" + dateFormat.format(date)
-			//git_config()
 			sh (script: "cd hcc_fork/compiler; git config user.email dsalinas@amd.com; git config user.name David Salinas; git fetch --all ; git checkout -b ${merge_name} origin/amd-hcc; git merge origin/amd-common --no-edit")
 		}
 		
@@ -137,7 +134,6 @@ node ('rocmtest')
 			def dateFormat = new SimpleDateFormat("yyyyMMddHHmm")
 			def date = new Date()
 			String merge_name = "auto_merge_" + dateFormat.format(date)
-			//git_config()
 			sh (script: "cd hcc_fork/compiler-rt; git config user.email dsalinas@amd.com; git config user.name David Salinas; git fetch --all ; git checkout -b ${merge_name} origin/amd-hcc; git merge --no-ff compiler-rt/master --no-edit")
 		}
 		
@@ -145,7 +141,6 @@ node ('rocmtest')
 			def dateFormat = new SimpleDateFormat("yyyyMMddHHmm")
 			def date = new Date()
 			String merge_name = "auto_merge_" + dateFormat.format(date)
-			//git_config()
 			sh (script: "cd hcc_fork/clang-tools-extra; git config user.email dsalinas@amd.com; git config user.name David Salinas; git fetch --all ; git checkout -b ${merge_name} origin/amd-hcc; git merge clang-tools-extra/master --no-edit")
 		}
 		
@@ -153,7 +148,6 @@ node ('rocmtest')
 			def dateFormat = new SimpleDateFormat("yyyyMMddHHmm")
 			def date = new Date()
 			String merge_name = "auto_merge_" + dateFormat.format(date)
-			//git_config()
 			sh (script: "cd hcc_fork/clang; git config user.email dsalinas@amd.com; git config user.name David Salinas; git fetch --all ; git checkout -b ${merge_name} origin/amd-hcc; git merge --no-ff clang/amd-common --no-edit")
 		}
 		
