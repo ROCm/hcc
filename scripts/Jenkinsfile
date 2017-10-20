@@ -146,7 +146,7 @@ node ('rocmtest')
 			def date = new Date()
 			String merge_name = "auto_merge_" + dateFormat.format(date)
 			//git_config()
-			sh (script: "cd hcc_fork/compiler-rt; git config user.email dsalinas@amd.com; git config user.name David Salinas; git fetch --all ; git checkout -b ${merge_name} origin/amd-hcc; git merge clang-tools-extra/master --no-edit")
+			sh (script: "cd hcc_fork/clang-tools-extra; git config user.email dsalinas@amd.com; git config user.name David Salinas; git fetch --all ; git checkout -b ${merge_name} origin/amd-hcc; git merge clang-tools-extra/master --no-edit")
 		}
 		
 		stage ('Merge amd-common Clang commits') {
@@ -154,7 +154,7 @@ node ('rocmtest')
 			def date = new Date()
 			String merge_name = "auto_merge_" + dateFormat.format(date)
 			//git_config()
-			sh (script: "cd hcc_fork/compiler-rt; git config user.email dsalinas@amd.com; git config user.name David Salinas; git fetch --all ; git checkout -b ${merge_name} origin/amd-hcc; git merge --no-ff clang/amd-common --no-edit")
+			sh (script: "cd hcc_fork/clang; git config user.email dsalinas@amd.com; git config user.name David Salinas; git fetch --all ; git checkout -b ${merge_name} origin/amd-hcc; git merge --no-ff clang/amd-common --no-edit")
 		}
 		
 		stage ('Build merged HCC') {
