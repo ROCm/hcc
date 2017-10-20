@@ -125,6 +125,42 @@ node ('rocmtest')
 			sh (script: "cd hcc_fork/lld; git config user.email dsalinas@amd.com; git config user.name David Salinas; git fetch --all ; git checkout -b ${merge_name} origin/amd-hcc; git merge origin/amd-common --no-edit")
 		}
 		
+		stage ('Merge amd-common LLVM commits') {
+			def dateFormat = new SimpleDateFormat("yyyyMMddHHmm")
+			def date = new Date()
+			String merge_name = "auto_merge_" + dateFormat.format(date)
+			//git_config()
+			sh (script: "cd hcc_fork/compiler; git config user.email dsalinas@amd.com; git config user.name David Salinas; git fetch --all ; git checkout -b ${merge_name} origin/amd-hcc; git merge origin/amd-common --no-edit")
+		}
+		
+		stage ('Merge amd-common COMPILER-RT commits') {
+			def dateFormat = new SimpleDateFormat("yyyyMMddHHmm")
+			def date = new Date()
+			String merge_name = "auto_merge_" + dateFormat.format(date)
+			//git_config()
+			sh (script: "cd hcc_fork/compiler-rt; git config user.email dsalinas@amd.com; git config user.name David Salinas; git fetch --all ; git checkout -b ${merge_name} origin/amd-hcc; git merge --no-ff compiler-rt/master --no-edit")
+		}
+		
+		stage ('Merge amd-common CLANG-TOOLS-EXTRA commits') {
+			def dateFormat = new SimpleDateFormat("yyyyMMddHHmm")
+			def date = new Date()
+			String merge_name = "auto_merge_" + dateFormat.format(date)
+			//git_config()
+			sh (script: "cd hcc_fork/compiler-rt; git config user.email dsalinas@amd.com; git config user.name David Salinas; git fetch --all ; git checkout -b ${merge_name} origin/amd-hcc; git merge clang-tools-extra/master --no-edit")
+		}
+		
+		stage ('Merge amd-common Clang commits') {
+			def dateFormat = new SimpleDateFormat("yyyyMMddHHmm")
+			def date = new Date()
+			String merge_name = "auto_merge_" + dateFormat.format(date)
+			//git_config()
+			sh (script: "cd hcc_fork/compiler-rt; git config user.email dsalinas@amd.com; git config user.name David Salinas; git fetch --all ; git checkout -b ${merge_name} origin/amd-hcc; git merge --no-ff clang/amd-common --no-edit")
+		}
+		
+		stage ('Build merged HCC') {
+			sh (script: "mkdir -p build; cd build; cmake -DCMAKE_BUILD_TYPE=Release ../hcc; make -j10")
+		}
+		
 	} catch(e) {
 	   send_email("FAILED")
 	  throw e
