@@ -204,7 +204,10 @@ public:
      *                     hcWaitModeActive would be used to reduce latency with
      *                     the expense of using one CPU core for active waiting.
      */
-    void wait(hcWaitMode waitMode = hcWaitModeBlocked) { pQueue->wait(waitMode); }
+    void wait(hcWaitMode waitMode = hcWaitModeBlocked) { 
+      pQueue->wait(waitMode); 
+      Kalmar::getContext()->flushPrintfBuffer();
+    }
 
     /**
      * Sends the queued up commands in the accelerator_view to the device for
