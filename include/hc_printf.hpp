@@ -118,7 +118,7 @@ static inline PrintfPacket* createPrintfBuffer(const unsigned int numElements) {
   return printfBuffer;
 }
 
-void deletePrintfBuffer(PrintfPacket*& buffer) {
+static inline void deletePrintfBuffer(PrintfPacket*& buffer) {
   if (buffer){
     if (buffer[PRINTF_STRING_BUFFER].data.ptr)
       hc::am_free(buffer[PRINTF_STRING_BUFFER].data.ptr);
