@@ -32,6 +32,7 @@ union PrintfPacketData {
   float           f;
   void*           ptr;
   const void*     cptr;
+  double          d;
   
   // Header offset members (union uses same memory)
   // uia[0] - PrintfPacket buffer offset
@@ -60,6 +61,7 @@ enum PrintfPacketDataType {
   ,PRINTF_UNSIGNED_INT
   ,PRINTF_SIGNED_INT
   ,PRINTF_FLOAT
+  ,PRINTF_DOUBLE
   ,PRINTF_VOID_PTR
   ,PRINTF_CONST_VOID_PTR
   ,PRINTF_CHAR_PTR
@@ -72,6 +74,7 @@ public:
   void set(unsigned int d) [[hc,cpu]] { type = PRINTF_UNSIGNED_INT;   data.ui = d; }
   void set(int d)          [[hc,cpu]] { type = PRINTF_SIGNED_INT;     data.i = d; }
   void set(float d)        [[hc,cpu]] { type = PRINTF_FLOAT;          data.f = d; }
+  void set(double d)       [[hc,cpu]] { type = PRINTF_DOUBLE;         data.d = d; }
   void set(void* d)        [[hc,cpu]] { type = PRINTF_VOID_PTR;       data.ptr = d; }
   void set(const void* d)  [[hc,cpu]] { type = PRINTF_CONST_VOID_PTR; data.cptr = d; }
   void set(char* d)        [[hc,cpu]] { type = PRINTF_CHAR_PTR;       data.ptr = d; }
@@ -331,7 +334,10 @@ static inline void processPrintfPackets(PrintfPacket* packets, const unsigned in
       } else if (std::regex_search(specifier, specifierTypeMatch, signedIntegerPattern)) {
         std::printf(specifier.c_str(), packets[i].data.i);
       } else if (std::regex_search(specifier, specifierTypeMatch, floatPattern)) {
-        std::printf(specifier.c_str(), packets[i].data.f);
+        if (packets[i].type == PRINTF_FLOAT)
+          std::printf(specifier.c_str(), packets[i].data.f);
+        else
+          std::printf(specifier.c_str(), packets[i].data.d);
       } else if (std::regex_search(specifier, specifierTypeMatch, pointerPattern)) {
         std::printf(specifier.c_str(), packets[i].data.cptr);
       }
