@@ -59,6 +59,7 @@ def String timestamp = new SimpleDateFormat("yyyyMMddHHmm").format(new Date())
     subject: "${status}: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'",
     body: "${status}: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'; see console output at ${env.BUILD_URL}"
   )
+  dump()
 }
 
 node ('rocmtest') 
@@ -173,7 +174,6 @@ node ('rocmtest')
 		}
 		
 	} catch(e) {
-		dump()
 	   send_email("FAILED")
 	  throw e
 	}
