@@ -135,12 +135,12 @@ node ('rocmtest')
 				
 		stage ('Merge amd-common LLD commits') {
 		
-		merge("lld", "origin/amd-hcc", "origin/amd-common");
+		//merge("lld", "origin/amd-hcc", "origin/amd-common");
 		
-		//	def dateFormat = new SimpleDateFormat("yyyyMMddHHmm")
-		//	def date = new Date()
-		//	String merge_name = "auto_merge_" + dateFormat.format(date)
-		//	sh (script: "cd hcc_fork/lld; git config user.email dsalinas@amd.com; git config user.name David Salinas; git fetch --all ; git checkout -b ${merge_name} origin/amd-hcc; git merge origin/amd-common --no-edit")
+			def dateFormat = new SimpleDateFormat("yyyyMMddHHmm")
+			def date = new Date()
+			String merge_name = "auto_merge_" + dateFormat.format(date)
+			sh (script: "cd hcc_fork/lld; git config user.email dsalinas@amd.com; git config user.name David Salinas; git fetch --all ; git checkout -b ${merge_name} origin/amd-hcc; git merge origin/amd-common --no-edit")
 		}
 		
 		stage ('Merge amd-common LLVM commits') {
