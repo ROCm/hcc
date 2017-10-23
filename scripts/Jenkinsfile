@@ -35,7 +35,7 @@ def git_config() {
   sh (script:"git config user.name ${git_name}")
 }
 
-def String timestamp = new new SimpleDateFormat("yyyyMMddHHmm").format(new Date())
+def String timestamp = new SimpleDateFormat("yyyyMMddHHmm").format(new Date())
 
 //def get_dateString() {
 //	def dateFormat = new SimpleDateFormat("yyyyMMddHHmm")
