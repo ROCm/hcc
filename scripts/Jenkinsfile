@@ -6,6 +6,13 @@ import java.text.SimpleDateFormat
 // Helpers.                                                                   //
 //===----------------------------------------------------------------------===//
 
+def dump(timestamp) { 
+
+   sh (script: "tar -cvf hcc.tar 2> tar.out") 
+
+}
+
+
 def autoclean_node(name, commands) {
   node (name) {
     def workspace = pwd()
@@ -28,14 +35,19 @@ def git_config() {
   sh (script:"git config user.name ${git_name}")
 }
 
+def String timestamp = new new SimpleDateFormat("yyyyMMddHHmm").format(new Date())
 
-//def git_remote_exists(workspace, remote_name) {
-
-//	dir(workspace) {
-//		sh "git remote -v | grep ${remote_name}"
-//		def retstat = sh(script: 'git remote -v | grep ${remote_name}', returnStatus: true)
-//	}
+//def get_dateString() {
+//	def dateFormat = new SimpleDateFormat("yyyyMMddHHmm")
+//	def date = new Date()
 //}
+
+def merge(subcomponent_name,checkout_origin_branch,merge_source) { 
+//	def dateFormat = new SimpleDateFormat("yyyyMMddHHmm")
+//	def date = new Date()
+	String merge_name = "auto_merge_" + timestamp   // dateFormat.format(date)
+	sh (script: "cd hcc_fork/${subcomponent_name}; git config user.email dsalinas@amd.com; git config user.name David Salinas; git fetch --all ; git checkout -b ${merge_name} origin/${ checkout_origin_branch}; git merge ${merge_source} --no-edit")
+}				
 
  def git_remote_add(workspace, remote_name, remote_url) {
 	sh (script:"cd ${ workspace}; git remote add ${remote_name} ${remote_url}")
@@ -122,10 +134,13 @@ node ('rocmtest')
 		}
 				
 		stage ('Merge amd-common LLD commits') {
-			def dateFormat = new SimpleDateFormat("yyyyMMddHHmm")
-			def date = new Date()
-			String merge_name = "auto_merge_" + dateFormat.format(date)
-			sh (script: "cd hcc_fork/lld; git config user.email dsalinas@amd.com; git config user.name David Salinas; git fetch --all ; git checkout -b ${merge_name} origin/amd-hcc; git merge origin/amd-common --no-edit")
+		
+		merge("lld", "origin/amd-hcc", "origin/amd-common");
+		
+		//	def dateFormat = new SimpleDateFormat("yyyyMMddHHmm")
+		//	def date = new Date()
+		//	String merge_name = "auto_merge_" + dateFormat.format(date)
+		//	sh (script: "cd hcc_fork/lld; git config user.email dsalinas@amd.com; git config user.name David Salinas; git fetch --all ; git checkout -b ${merge_name} origin/amd-hcc; git merge origin/amd-common --no-edit")
 		}
 		
 		stage ('Merge amd-common LLVM commits') {
@@ -161,6 +176,7 @@ node ('rocmtest')
 		}
 		
 	} catch(e) {
+		dump()
 	   send_email("FAILED")
 	  throw e
 	}
