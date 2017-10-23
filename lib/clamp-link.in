@@ -398,10 +398,10 @@ if [ ${#LINK_KERNEL_ARGS[@]} != 0 ]; then
   #$LINK "${LINK_KERNEL_ARGS[@]}" | $OPT -always-inline - -o $TEMP_DIR/kernel.bc
   echo "Kernels: ${LINK_KERNEL_ARGS[@]}"
   for KERNEL in ${LINK_KERNEL_ARGS[@]} ; do
-    $OPT -thinlto-bc -disable-opt $KERNEL -o $KERNEL
+    $OPT -thinlto-bc -disable-opt -module-summary $KERNEL -o $KERNEL
   done
-  $LTO -thinlto-action=thinlink "${LINK_KERNEL_ARGS[@]}" -o $TEMP_DIR/kernel.thinlto.index
-  $LTO -thinlto-action=import "${LINK_KERNEL_ARGS[@]}" -thinlto-index=$TEMP_DIR/kernel.thinlto.index
+  $LTO -thinlto -thinlto-action=thinlink "${LINK_KERNEL_ARGS[@]}" -o $TEMP_DIR/kernel.thinlto.index
+  $LTO -thinlto -thinlto-action=import "${LINK_KERNEL_ARGS[@]}" -thinlto-index=$TEMP_DIR/kernel.thinlto.index -import-instr-limit=1048576
 
   # lower to GCN ISA
   if [ $VERBOSE == 1 ]; then
