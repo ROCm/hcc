@@ -415,43 +415,49 @@ if [ ${#LINK_KERNEL_ARGS[@]} != 0 ]; then
   # invoke clang-offload-bundler to create kernel bundle
   CLANG_OFFLOAD_BUNDLER_INPUTS_ARGS="-inputs=$TEMP_DIR/__empty.o"
   CLANG_OFFLOAD_BUNDLER_TARGETS_ARGS="-targets=host-x86_64-unknown-linux"
-  echo "Clamp-device inputs and outputs:"
   declare -a pids
   declare -a ISABIN_FILES
   MAX_LIMIT=8
+
   # for each GPU target, lower to GCN ISA in HSACO format
-  for AMDGPU_TARGET in ${AMDGPU_TARGET_ARRAY[@]}
+  for KERNEL in ${LINK_KERNEL_ARGS[@]}
   do
-    for KERNEL in ${LINK_KERNEL_ARGS[@]}
+    echo "$KERNEL"
+    # Only allow at most $MAX_LIMIT sub-processes
+    if [ $(jobs 2>&1 | grep -c Running) -ge "$MAX_LIMIT" ] ; then
+      for pid in ${pids[*]}; do
+        wait $pid || ret=$((ret+$?))
+      done
+      pids=("")
+    fi
+
+    i=0
+    for AMDGPU_TARGET in ${AMDGPU_TARGET_ARRAY[@]}
     do
-      #{ $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel-$AMDGPU_TARGET.hsaco --amdgpu-target=$AMDGPU_TARGET; } &
-      echo "$KERNEL"
-      # Only allow at most $MAX_LIMIT sub-processes
-      if [ $(jobs 2>&1 | grep -c Running) -ge "$MAX_LIMIT" ] ; then
-        for pid in ${pids[*]}; do
-          wait $pid || ret=$((ret+$?))
-        done
-        pids=("")
-      fi
       { $CLAMP_DEVICE $KERNEL.thinlto.imported.bc $KERNEL-$AMDGPU_TARGET.isabin --amdgpu-target=$AMDGPU_TARGET; } &
       # error handling
       pids=("${pids[@]}" "$!")
-      ISABIN_FILES=("${ISABIN_FILES[@]}" "$KERNEL-$AMDGPU_TARGET.isabin")
+
+      ISABIN_FILES[$i]="${ISABIN_FILES[$i]} $KERNEL-$AMDGPU_TARGET.isabin"
       echo "$KERNEL-$AMDGPU_TARGET.isabin"
+      i+=1
     done
+  done
 
-    # collect all the error codes from forked processes
-    # error handling
-    for pid in ${pids[*]}; do
-      wait $pid || ret=$((ret+$?))
-    done
-    pids=("")
-    if [ $ret != 0 ]; then
-      exit $ret
-    fi
+  # collect all the error codes from forked processes
+  # error handling
+  for pid in ${pids[*]}; do
+    wait $pid || ret=$((ret+$?))
+  done
+  pids=("")
+  if [ $ret != 0 ]; then
+    exit $ret
+  fi
 
+  i=0
+  for AMDGPU_TARGET in ${AMDGPU_TARGET_ARRAY[@]} ; do
     # Combine all .isabin files into HSACO format
-    $LLD -shared "${ISABIN_FILES[@]}" -o $KERNEL-$AMDGPU_TARGET.hsaco
+    $LLD -shared ${ISABIN_FILES[$i]} -o $KERNEL-$AMDGPU_TARGET.hsaco
     ret=$?
     if [ $ret != 0 ]; then
       echo "Generating AMD GCN kernel failed in ld.lld for target: $AMDGPU_TARGET"
@@ -461,12 +467,13 @@ if [ ${#LINK_KERNEL_ARGS[@]} != 0 ]; then
       cp $KERNEL-$AMDGPU_TARGET.hsaco ${KMDUMPDIR}/dump-$AMDGPU_TARGET.hsaco
     fi
 
-    ISABIN_FILES=("")
+    #ISABIN_FILES=("")
     echo "$KERNEL-$AMDGPU_TARGET.hsaco"
 
     # augment arguments to clang-offload-bundler
     CLANG_OFFLOAD_BUNDLER_INPUTS_ARGS+=",$KERNEL-$AMDGPU_TARGET.hsaco"
     CLANG_OFFLOAD_BUNDLER_TARGETS_ARGS+=",hcc-amdgcn--amdhsa-$AMDGPU_TARGET"
+    i+=1
   done
 
   echo "Finished clamp-device"
