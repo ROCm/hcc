@@ -37,7 +37,10 @@ def git_config() {
 
 def String timestamp = new SimpleDateFormat("yyyyMMddHHmm").format(new Date())
 
-
+//def get_dateString() {
+//	def dateFormat = new SimpleDateFormat("yyyyMMddHHmm")
+//	def date = new Date()
+//}
 
 //def merge(subcomponent_name,checkout_origin_branch,merge_source) { 
 //	def dateFormat = new SimpleDateFormat("yyyyMMddHHmm")
