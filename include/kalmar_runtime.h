@@ -559,6 +559,9 @@ public:
 
     // flush the device printf buffer
     virtual void flushPrintfBuffer() {};
+
+    // get the locked printf buffer VA
+    virtual void* getPrintfBufferPointerVA() { return nullptr; };
 };
 
 KalmarContext *getContext();

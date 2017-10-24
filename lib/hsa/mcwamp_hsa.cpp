@@ -3389,6 +3389,10 @@ public:
     void flushPrintfBuffer() override {
       hc::processPrintfBuffer(hc::printf_buffer);
     }
+
+    void* getPrintfBufferPointerVA() override {
+      return hc::printf_buffer_locked_va;
+    }
 };
 
 static HSAContext ctx;
