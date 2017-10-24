@@ -36,7 +36,7 @@ parser.add_argument('-R', '--roi_stop',
 
 parser.add_argument('--info', 
         action="store_true",
-        help="Print detailed explanation of how to interpet rpt data.")
+        help="Print detailed explanation of how to interpet rpt data.  Must specify an input file.")
 
 parser.add_argument('--hide_app_text', 
         action='store_true',
@@ -173,26 +173,20 @@ class ProfileLogRecord:
             self.name = fields[1]
             self.time = (float)(fields[2].split(" ")[0])
 
-            try:
-                self.enqTime   =  (int)(fields[3])
-                self.startTime =  (int)(fields[4])
-                self.stopTime  =  (int)(fields[5])
-                fi = 6
-                if (self.enqTime > self.startTime):
-                    raise ValueError
-            except:
-                # older traces did not have enq time, so set to start time here.
-                self.startTime =  (int)(fields[3])
-                self.stopTime  =  (int)(fields[4])
-                self.enqTime   = self.startTime-10
-                fi = 5
-
+            self.enqTime   =  (int)(fields[3])
+            self.startTime =  (int)(fields[4])
+            self.stopTime  =  (int)(fields[5])
+            fi = 6
+            if (self.enqTime > self.startTime):
+                raise ValueError
 
             try:
                 (self.device, self.queue, self.cmdNum) = [int(f) for f in fields[fi].lstrip("#").split(".")]
             except:
                 print "warning: unknown opid tag=", fields[fi]
                 self.device = 0
+                self.queue = 0
+                self.cmdnum = 0
 
 
             if self.type == 'barrier':
@@ -200,8 +194,8 @@ class ProfileLogRecord:
                     (self.depcnt, self.acqFence, self.releaseFence) = self.name.split(",")
                     #print "found depcnt=", self.depcnt
                     if (self.depcnt > 0):
-                        # hack to prevent barriers from appears to start before their dependents which hides the dependenets on the critical path.
-                        # Really should do bette critical path analsysis here to add the elem
+                        # hack to prevent barriers from appears to start before their dependents which hides the dependents on the critical path.
+                        # Really should do better critical path analsysis here to add the elem
                         self.startTime = self.stopTime
                 except:
                     # legacy trace formats.
@@ -215,7 +209,7 @@ class ProfileLogRecord:
                     self.name = self.name + "_" + str(self.sizeBytes) + "_bytes"
                     #self.bandwidthGBps = (float)(sizeBytes*1000.0/1024.0*1000.0/1024.0) / (self.stopTime - self.startTime)
                 except:
-                    print "can't find copy size in", fields[copyField]
+                    print "warning: can't find copy size in", fields[copyField]
 
             # these structures filled in after sorting the records:
             self.criticalTime = None
@@ -223,7 +217,7 @@ class ProfileLogRecord:
 
             self.valid = True
         except:
-            print "warning: could not parse profile line", line,
+            print "warning: ignored unparsable profile line:", line,
 
             self.valid = False
 
@@ -261,16 +255,16 @@ class ProfileLogRecord:
             print "Display each of the profiling events on a single line.  Fields:"
 
             print "  Resource : The resource this command executed on.  May be GPU# for a specific GPU or DATA to indicate data transfer command"
-            print "  Time(us) : Time which the command contributed to the 'critical' path "
             print "  Start(ms) : Start time of the command, displayed in ms.  Command start from time 0"
-            print "  Type  : Type of the command (kernel,barrier, copy)"
-            print "  Dev.Queue.Cmd : The cmd sequm is a unique mononotically increasing number per-queue, so the triple of device.queue.cmdseqnum uniquely identifies the command during the process execution."
+            print "  +Time(us) : Time which the command contributed to the 'critical' path "
+            print "  Type  : Type of the command (kernel, barrier, copy)"
+            print "  Dev.Q.Cmd : The command sequm is a unique mononotically increasing number per-queue, so the triple of device.queue.cmdseqnum uniquely identifies the command during the process execution."
             print "  LineNum : Line number from the input HCC_PROF_FILE"
-            print "  Name  : Name of the record.  For kernels, this is kernel name.  For copy commands, the name contains the size and direction.  For barrier commands this is contains dependency counts, acquire and release fences."
+            print "  Name  : Name of the record.  For kernels, the kernel name.  For copy commands, the name contains the direction and size.  For barrier commands the name contains dependency counts and acquire and release fences."
 
 
         print "%4s %16s %8s %7s %10s %10s %-30s"  % \
-                ("Resource", "Start(ms)", "+Time(us)", "Type", "#Dev.Queue.Cmd", "LineNum", "Name")
+                ("Resource", "Start(ms)", "+Time(us)", "Type", "#Dev.Q.Cmd", "LineNum", "Name")
 
     def printOneLine(self, startTime, lineNum):
         if lineNum == self.lineNum:
