@@ -99,28 +99,25 @@ node ('rocmtest')
   hcc_build_image.inside( '--device=/dev/kfd' )
   {
   try { 
-//		stage ('Clone HCC with repo') 
-//		{ 
-//		    deleteDir()
-//			sh (script: "repo init -u https://github.com/RadeonOpenCompute/HCC-Native-GCN-ISA.git")
-//			sh (script: "repo sync")
-//			if (!fileExists("manifest")) {
-//			  sh (script:"git clone https://github.com/RadeonOpenCompute/HCC-Native-GCN-ISA.git manifest")
-//			}
-//		}
+		stage ('Clone HCC with repo') 
+		{ 
+		    deleteDir()
+			sh (script: "repo init -u https://github.com/RadeonOpenCompute/HCC-Native-GCN-ISA.git")
+			sh (script: "repo sync")
+			if (!fileExists("manifest")) {
+			  sh (script:"git clone https://github.com/RadeonOpenCompute/HCC-Native-GCN-ISA.git manifest")
+			}
+		}
 		
-//		stage('Clone HCC repo manifest') { 
-//		    deleteDir()
-//			if (!fileExists("manifest")) {
-//			  sh (script:"git clone https://github.com/RadeonOpenCompute/HCC-Native-GCN-ISA.git manifest")
-//			}
-//		}
+		stage('Clone HCC repo manifest') { 
+			  sh (script:"git clone https://github.com/RadeonOpenCompute/HCC-Native-GCN-ISA.git manifest")
+		}
 		
 		stage('Initialize GIT submodules') { 
-			if (!fileExists("hcc_fork")) {
+		//	if (!fileExists("hcc_fork")) {
 				sh (script:"git clone https://github.com/${ build_org}/hcc.git hcc_fork")  
 				sh (script: "cd hcc_fork; git checkout clang_tot_upgrade; git submodule update --init")
-			}
+			//}
 		}
 		
 		stage ('Add all remotes and forks for submodules') {
