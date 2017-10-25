@@ -199,7 +199,7 @@ node( 'rocmtest' )
     // If this a clang_tot_upgrade build, kick off downstream hip build so that the two projects are in sync
     if( env.BRANCH_NAME.toLowerCase( ).startsWith( 'clang_tot_upgrade' ) )
     {
-      build( job: 'ROCm-Developer-Tools/HIP/master', wait: false )
+      build( job: 'ROCm-Developer-Tools/HIP/master', wait: true )
     }
     // If hip integration testing is requested by the user, launch a hip build job to use this transient compiler
     else if( params.run_hip_integration_testing )
