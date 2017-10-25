@@ -184,9 +184,9 @@ node ('rocmtest')
 		
 		
 		stage ('Quick sanity tests on merged HCC') {
-			sh (script: "bash bin/hcc `bin/clamp-config --build --cxxflags --ldflags` -lm ~/hcc/tests/Unit/AmpMath/amp_math_cos.cpp; ./a.out ; echo $?")
-			sh (script: "bash bin/hcc `bin/hcc-config --build --cxxflags --ldflags` -lhc_am ~/hcc/tests/Unit/GridLaunch/glp_const.cpp; ./a.out ; echo $?")
-			sh (script: "bash bin/hcc `bin/hcc-config --build --cxxflags --ldflags` ~/hcc/tests/Unit/HC/hc_atomic_add_global.cpp ; ./a.out ; echo $?")
+			sh (script: "bash bin/hcc `bin/clamp-config --build --cxxflags --ldflags` -lm ~/hcc/tests/Unit/AmpMath/amp_math_cos.cpp; ./a.out ")
+			sh (script: "bash bin/hcc `bin/hcc-config --build --cxxflags --ldflags` -lhc_am ~/hcc/tests/Unit/GridLaunch/glp_const.cpp; ./a.out ")
+			sh (script: "bash bin/hcc `bin/hcc-config --build --cxxflags --ldflags` ~/hcc/tests/Unit/HC/hc_atomic_add_global.cpp ; ./a.out ")
 		}
 		
 		
