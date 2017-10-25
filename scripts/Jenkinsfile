@@ -85,6 +85,10 @@ node ('rocmtest')
     def build_type_name = "upstream-merge-ubuntu-16.04"
     def dockerfile_name = "dockerfile-${build_type_name}"
     def build_image_name = "${build_type_name}"
+    def dateFormat = new SimpleDateFormat("yyyyMMddHHmm")
+	def date = new Date()
+	String merge_name = "auto_merge_" + dateFormat.format(date)
+    String user_email = "dsalinas@amd.com"
     dir('docker')
     {
        hcc_build_image = docker.build( "${build_org}/${build_image_name}:latest", "-f ${dockerfile_name} --build-arg build_type=Release --build-arg user_uid=${user_uid} --build-arg rocm_install_path=/opt/rocm ." )
@@ -114,20 +118,20 @@ node ('rocmtest')
 		
 		stage('Initialize GIT submodules') { 
 			if (!fileExists("hcc_fork")) {
-				sh (script:"git clone https://github.com/david-salinas/hcc.git hcc_fork")  
+				sh (script:"git clone https://github.com/${ build_org}/hcc.git hcc_fork")  
 				sh (script: "cd hcc_fork; git checkout clang_tot_upgrade; git submodule update --init")
 			}
 		}
 		
 		stage ('Add all remotes and forks for submodules') {
-			git_remote_add("hcc_fork","hcc_fork", "https://github.com/david-salinas/hcc.git");
-			git_remote_add("hcc_fork/lld","lld_fork", "https://github.com/david-salinas/lld.git");
-			git_remote_add("hcc_fork/compiler","llvm_fork", "https://github.com/david-salinas/llvm.git");
-			git_remote_add("hcc_fork/compiler-rt","compiler-rt_fork", "https://github.com/david-salinas/compiler-rt.git");
+			git_remote_add("hcc_fork","hcc_fork", "https://github.com/${ build_org}/hcc.git");
+			git_remote_add("hcc_fork/lld","lld_fork", "https://github.com/${ build_org}/lld.git");
+			git_remote_add("hcc_fork/compiler","llvm_fork", "https://github.com/${ build_org}/llvm.git");
+			git_remote_add("hcc_fork/compiler-rt","compiler-rt_fork", "https://github.com/${ build_org}/compiler-rt.git");
 			git_remote_add("hcc_fork/compiler-rt","compiler-rt", "https://github.com/llvm-mirror/compiler-rt.git");
-			git_remote_add("hcc_fork/clang-tools-extra","clang-tools-extra_fork", "https://github.com/david-salinas/clang-tools-extra.git");
+			git_remote_add("hcc_fork/clang-tools-extra","clang-tools-extra_fork", "https://github.com/${ build_org}/clang-tools-extra.git");
 			git_remote_add("hcc_fork/clang-tools-extra","clang-tools-extra", "https://github.com/llvm-mirror/clang-tools-extra.git");
-			git_remote_add("hcc_fork/clang","clang_fork", "https://github.com/david-salinas/hcc-clang-upgrade.git");
+			git_remote_add("hcc_fork/clang","clang_fork", "https://github.com/${ build_org}/hcc-clang-upgrade.git");
 			git_remote_add("hcc_fork/clang","clang", "https://github.com/RadeonOpenCompute/clang");			
 		}
 		
@@ -136,42 +140,76 @@ node ('rocmtest')
 		}
 				
 		stage ('Merge amd-common LLD commits') {
-			def dateFormat = new SimpleDateFormat("yyyyMMddHHmm")
-			def date = new Date()
-			String merge_name = "auto_merge_" + dateFormat.format(date)
-			sh (script: "cd hcc_fork/lld; git config user.email dsalinas@amd.com; git config user.name David Salinas; git fetch --all ; git checkout -b ${merge_name} origin/amd-hcc; git merge origin/amd-common --no-edit")
+			//def dateFormat = new SimpleDateFormat("yyyyMMddHHmm")
+			//def date = new Date()
+			//String merge_name = "auto_merge_" + dateFormat.format(date)
+			sh (script: "cd hcc_fork/lld; git config user.email ${ user_email}; git config user.name David Salinas; git fetch --all ; git checkout -b ${merge_name} origin/amd-hcc; git merge origin/amd-common --no-edit")
 		}
 		
 		stage ('Merge amd-common LLVM commits') {
-			def dateFormat = new SimpleDateFormat("yyyyMMddHHmm")
-			def date = new Date()
-			String merge_name = "auto_merge_" + dateFormat.format(date)
-			sh (script: "cd hcc_fork/compiler; git config user.email dsalinas@amd.com; git config user.name David Salinas; git fetch --all ; git checkout -b ${merge_name} origin/amd-hcc; git merge origin/amd-common --no-edit")
+			//def dateFormat = new SimpleDateFormat("yyyyMMddHHmm")
+			//def date = new Date()
+			//String merge_name = "auto_merge_" + dateFormat.format(date)
+			sh (script: "cd hcc_fork/compiler; git config user.email ${ user_email}m; git config user.name David Salinas; git fetch --all ; git checkout -b ${merge_name} origin/amd-hcc; git merge origin/amd-common --no-edit")
 		}
 		
 		stage ('Merge amd-common COMPILER-RT commits') {
-			def dateFormat = new SimpleDateFormat("yyyyMMddHHmm")
-			def date = new Date()
-			String merge_name = "auto_merge_" + dateFormat.format(date)
-			sh (script: "cd hcc_fork/compiler-rt; git config user.email dsalinas@amd.com; git config user.name David Salinas; git fetch --all ; git checkout -b ${merge_name} origin/amd-hcc; git merge --no-ff compiler-rt/master --no-edit")
+		//	def dateFormat = new SimpleDateFormat("yyyyMMddHHmm")
+		//	def date = new Date()
+		//	String merge_name = "auto_merge_" + dateFormat.format(date)
+			sh (script: "cd hcc_fork/compiler-rt; git config user.email ${ user_email}; git config user.name David Salinas; git fetch --all ; git checkout -b ${merge_name} origin/amd-hcc; git merge --no-ff compiler-rt/master --no-edit")
 		}
 		
 		stage ('Merge amd-common CLANG-TOOLS-EXTRA commits') {
-			def dateFormat = new SimpleDateFormat("yyyyMMddHHmm")
-			def date = new Date()
-			String merge_name = "auto_merge_" + dateFormat.format(date)
-			sh (script: "cd hcc_fork/clang-tools-extra; git config user.email dsalinas@amd.com; git config user.name David Salinas; git fetch --all ; git checkout -b ${merge_name} origin/amd-hcc; git merge clang-tools-extra/master --no-edit")
+		//	def dateFormat = new SimpleDateFormat("yyyyMMddHHmm")
+		//	def date = new Date()
+		//	String merge_name = "auto_merge_" + dateFormat.format(date)
+			sh (script: "cd hcc_fork/clang-tools-extra; git config user.email ${ user_email}m; git config user.name David Salinas; git fetch --all ; git checkout -b ${merge_name} origin/amd-hcc; git merge clang-tools-extra/master --no-edit")
 		}
 		
 		stage ('Merge amd-common Clang commits') {
-			def dateFormat = new SimpleDateFormat("yyyyMMddHHmm")
-			def date = new Date()
-			String merge_name = "auto_merge_" + dateFormat.format(date)
-			sh (script: "cd hcc_fork/clang; git config user.email dsalinas@amd.com; git config user.name David Salinas; git fetch --all ; git checkout -b ${merge_name} origin/clang_tot_upgrade; git merge --no-ff clang/amd-common --no-edit")
+		//	def dateFormat = new SimpleDateFormat("yyyyMMddHHmm")
+		//	def date = new Date()
+		//	String merge_name = "auto_merge_" + dateFormat.format(date)
+			sh (script: "cd hcc_fork/clang; git config user.email ${ user_email}; git config user.name David Salinas; git fetch --all ; git checkout -b ${merge_name} origin/clang_tot_upgrade; git merge --no-ff clang/amd-common --no-edit")
 		}
 		
 		stage ('Build merged HCC') {
 			sh (script: "mkdir -p build; cd build; cmake -DCMAKE_BUILD_TYPE=Release ../hcc; make -j10")
+		}
+		
+		stage ('Full sanity tests on merged HCC') {
+			sh (script: "cd build; make test")
+		}
+		
+		
+		stage ('Quick sanity tests on merged HCC') {
+			sh (script: "bash bin/hcc `bin/clamp-config --build --cxxflags --ldflags` -lm ~/hcc/tests/Unit/AmpMath/amp_math_cos.cpp; ./a.out ; echo $?")
+			sh (script: "bash bin/hcc `bin/hcc-config --build --cxxflags --ldflags` -lhc_am ~/hcc/tests/Unit/GridLaunch/glp_const.cpp; ./a.out ; echo $?")
+			sh (script: "bash bin/hcc `bin/hcc-config --build --cxxflags --ldflags` ~/hcc/tests/Unit/HC/hc_atomic_add_global.cpp ; ./a.out ; echo $?")
+		}
+		
+		
+		stage('Push and Create Pull Request for clang') {
+			sh (script: "cd hcc_fork/clang; git push clang_fork ${merge_name}:${merge_name}")
+			sh (script: "cd hcc/clang; git request-pull https://github.com/david-salinas/hcc-clang-upgrade clang_tot_upgrade")
+		}
+		
+		stage('Push and Create Pull Request for lld') {
+		
+		}
+		
+		stage('Push and Create Pull Request for llvm') {
+		
+		}
+		
+		
+		stage('Push and Create Pull Request for compiler-rt') {
+		
+		}
+		
+		stage('Push and Create Pull Request for clang-tools-extra') {
+		
 		}
 		
 	} catch(e) {
