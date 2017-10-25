@@ -35,8 +35,10 @@ AmPointerInfo & AmPointerInfo::operator= (const AmPointerInfo &other)
     _acc = other._acc;
     _isInDeviceMem = other._isInDeviceMem;
     _isAmManaged = other._isAmManaged;
+    _allocSeqNum = other._allocSeqNum;
     _appId = other._appId;
     _appAllocationFlags = other._appAllocationFlags;
+    _appPtr = other._appPtr;
 
     return *this;
 }
