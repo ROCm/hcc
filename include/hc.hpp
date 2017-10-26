@@ -204,7 +204,10 @@ public:
      *                     hcWaitModeActive would be used to reduce latency with
      *                     the expense of using one CPU core for active waiting.
      */
-    void wait(hcWaitMode waitMode = hcWaitModeBlocked) { pQueue->wait(waitMode); }
+    void wait(hcWaitMode waitMode = hcWaitModeBlocked) { 
+      pQueue->wait(waitMode); 
+      Kalmar::getContext()->flushPrintfBuffer();
+    }
 
     /**
      * Sends the queued up commands in the accelerator_view to the device for
@@ -1236,6 +1239,8 @@ public:
             //TODO-ASYNC - need to reclaim older AsyncOps here.
             __amp_future.wait();
         }
+
+        Kalmar::getContext()->flushPrintfBuffer();
     }
 
     template <class _Rep, class _Period>

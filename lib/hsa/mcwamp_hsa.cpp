@@ -38,10 +38,10 @@
 #include "kalmar_runtime.h"
 #include "kalmar_aligned_alloc.h"
 
-#include <hc_am.hpp>
-
+#include "hc_am_internal.hpp"
 #include "unpinned_copy_engine.h"
 #include "hc_rt_debug.h"
+#include "hc_printf.hpp"
 
 #include <time.h>
 #include <iomanip>
@@ -407,6 +407,22 @@ namespace
         return r;
     }
 }
+
+
+
+namespace hc {
+
+// printf buffer size (in number of packets, see hc_printf.hpp)
+constexpr unsigned int default_printf_buffer_size = 2048;
+
+// address of the global printf buffer in host coherent system memory
+PrintfPacket* printf_buffer = nullptr;
+
+// store the address of agent accessible hc::printf_buffer;
+PrintfPacket** printf_buffer_locked_va = nullptr;
+
+} // namespace hc
+
 
 namespace Kalmar {
 
@@ -3090,6 +3106,12 @@ private:
                 &hsaExecutable);
             STATUS_CHECK(status, __LINE__);
 
+            // Define the global symbol hc::printf_buffer with the actual address
+            status = hsa_executable_agent_global_variable_define(hsaExecutable, agent
+                                                            , "_ZN2hc13printf_bufferE"
+                                                            , hc::printf_buffer_locked_va);
+            STATUS_CHECK(status, __LINE__);
+
             elfio reader;
             istringstream tmp{string{
                 static_cast<char*>(kernelBuffer),
@@ -3192,6 +3214,8 @@ private:
     */
     hsa_agent_t host;
 
+    // GPU devices
+    std::vector<hsa_agent_t> agents;
 
     std::ofstream hccProfileFile; // if using a file open it here
     std::ostream *hccProfileStream = nullptr; // point at file or default stream
@@ -3275,7 +3299,6 @@ public:
         STATUS_CHECK(status, __LINE__);
 
         // Iterate over the agents to find out gpu device
-        std::vector<hsa_agent_t> agents;
         status = hsa_iterate_agents(&HSAContext::find_gpu, &agents);
         STATUS_CHECK(status, __LINE__);
 
@@ -3307,6 +3330,9 @@ public:
 
         signalPoolMutex.unlock();
 #endif
+
+        initPrintfBuffer();
+
         init_success = true;
     }
 
@@ -3437,6 +3463,17 @@ public:
         if (!init_success)
           return;
 
+        // deallocate the printf buffer
+        if (hc::printf_buffer != nullptr) {
+           // do a final flush
+           flushPrintfBuffer();
+
+           hc::deletePrintfBuffer(hc::printf_buffer);
+           status = hsa_amd_memory_unlock(&hc::printf_buffer);
+           STATUS_CHECK(status, __LINE__);
+           hc::printf_buffer_locked_va = nullptr;
+        }
+
         // destroy all KalmarDevices associated with this context
         for (auto dev : Devices)
             delete dev;
@@ -3480,6 +3517,41 @@ public:
         uint64_t timestamp_frequency_hz = 0L;
         hsa_system_get_info(HSA_SYSTEM_INFO_TIMESTAMP_FREQUENCY, &timestamp_frequency_hz);
         return timestamp_frequency_hz;
+    }
+
+    void initPrintfBuffer() override {
+
+        if (hc::printf_buffer != nullptr) {
+          // Check whether the printf buffer is still valid
+          // because it may have been annihilated by HIP's hipDeviceReset().
+          // Re-allocate the printf buffer if that happens.
+          hc::AmPointerInfo info;
+          am_status_t status = am_memtracker_getinfo(&info, hc::printf_buffer);
+          if (status != AM_SUCCESS) {
+            hc::printf_buffer = nullptr;
+          }
+        }
+
+        if (hc::printf_buffer == nullptr) {
+          hc::printf_buffer = hc::createPrintfBuffer(hc::default_printf_buffer_size);
+        }
+
+        // pinned hc::printf_buffer so that the GPUs could access it
+        if (hc::printf_buffer_locked_va == nullptr) {
+          hsa_status_t status = HSA_STATUS_SUCCESS;
+          hsa_agent_t* hsa_agents = agents.data();
+          status = hsa_amd_memory_lock(&hc::printf_buffer, sizeof(hc::printf_buffer),
+                                       hsa_agents, agents.size(), (void**)&hc::printf_buffer_locked_va);
+          STATUS_CHECK(status, __LINE__);
+        }
+    }
+
+    void flushPrintfBuffer() override {
+      hc::processPrintfBuffer(hc::printf_buffer);
+    }
+
+    void* getPrintfBufferPointerVA() override {
+      return hc::printf_buffer_locked_va;
     }
 };
 
