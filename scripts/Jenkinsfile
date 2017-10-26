@@ -63,7 +63,7 @@ def String timestamp = new SimpleDateFormat("yyyyMMddHHmm").format(new Date())
   dump()
 }
 
-node ('rocmtest') 
+node ('fujin') 
 {
  stage('HCC Checkout')
   {
@@ -87,8 +87,7 @@ node ('rocmtest')
     def build_image_name = "${build_type_name}"
     def dateFormat = new SimpleDateFormat("yyyyMMddHHmm")
 	def date = new Date()
-	String merge_name = "auto_merge_" + dateFormat.format(date)
-    String user_email = "dsalinas@amd.com"
+	
     dir('docker')
     {
        hcc_build_image = docker.build( "david-salinas/${build_image_name}:latest", "-f ${dockerfile_name} --build-arg build_type=Release --build-arg user_uid=${user_uid} --build-arg rocm_install_path=/opt/rocm ." )
@@ -99,6 +98,9 @@ node ('rocmtest')
   hcc_build_image.inside( '--device=/dev/kfd' )
   {
    String build_org = "david-salinas"
+   String merge_name = "auto_merge_" + dateFormat.format(date)
+   String user_email = "dsalinas@amd.com"
+   
   try { 
 //		stage ('Clone HCC with repo') 
 //		{ 
