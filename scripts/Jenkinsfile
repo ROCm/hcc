@@ -63,7 +63,7 @@ def String timestamp = new SimpleDateFormat("yyyyMMddHHmm").format(new Date())
   dump()
 }
 
-node ('rocmtest')  
+('node ('upstream-merger')   
 {
  stage('HCC Checkout')
   {
