@@ -117,20 +117,20 @@ node ('rocmtest')
 		// deleteDir()
 		//	if (!fileExists("hcc_fork")) {
 				//sh (script:"git clone https://github.com/david-salinas/hcc.git hcc_fork")  
-				sh (script:'git clone https://github.com/${ build_org}/hcc.git hcc_fork')
+				sh (script:'git clone https://github.com/david-salinas/hcc.git hcc_fork')
 				sh (script: 'cd hcc_fork; git checkout clang_tot_upgrade; git submodule update --init')
 			//}
 		}
 		
 		stage ('Add all remotes and forks for submodules') {
 			git_remote_add("hcc_fork","hcc_fork", "https://github.com/david-salinas/hcc.git");
-			git_remote_add("hcc_fork/lld","lld_fork", "https://github.com/${ build_org}/lld.git");
-			git_remote_add("hcc_fork/compiler","llvm_fork", "https://github.com/${ build_org}/llvm.git");
-			git_remote_add("hcc_fork/compiler-rt","compiler-rt_fork", "https://github.com/${ build_org}/compiler-rt.git");
+			git_remote_add("hcc_fork/lld","lld_fork", "https://github.com/david-salinas/lld.git");
+			git_remote_add("hcc_fork/compiler","llvm_fork", "https://github.com/david-salinas/llvm.git");
+			git_remote_add("hcc_fork/compiler-rt","compiler-rt_fork", "https://github.com/david-salinas/compiler-rt.git");
 			git_remote_add("hcc_fork/compiler-rt","compiler-rt", "https://github.com/llvm-mirror/compiler-rt.git");
-			git_remote_add("hcc_fork/clang-tools-extra","clang-tools-extra_fork", "https://github.com/${ build_org}/clang-tools-extra.git");
+			git_remote_add("hcc_fork/clang-tools-extra","clang-tools-extra_fork", "https://github.com/david-salinas/clang-tools-extra.git");
 			git_remote_add("hcc_fork/clang-tools-extra","clang-tools-extra", "https://github.com/llvm-mirror/clang-tools-extra.git");
-			git_remote_add("hcc_fork/clang","clang_fork", "https://github.com/${ build_org}/hcc-clang-upgrade.git");
+			git_remote_add("hcc_fork/clang","clang_fork", "https://github.com/david-salinas/hcc-clang-upgrade.git");
 			git_remote_add("hcc_fork/clang","clang", "https://github.com/RadeonOpenCompute/clang");			
 		}
 		
