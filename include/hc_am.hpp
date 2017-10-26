@@ -167,7 +167,7 @@ am_status_t am_memtracker_add(void* ptr, hc::AmPointerInfo &info);
  *
  * @see am_memtracker_getinfo, am_memtracker_add
  */
-am_status_t am_memtracker_update(const void* ptr, int appId, unsigned allocationFlags);
+am_status_t am_memtracker_update(const void* ptr, int appId, unsigned allocationFlags, void *appPtr=nullptr);
 
 
 /** 
