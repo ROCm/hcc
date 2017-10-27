@@ -67,7 +67,7 @@ node ('upstream-merger')
 {
  stage('HCC Checkout')
   {
-    deleteDir()
+    //deleteDir()
     checkout([
       $class: 'GitSCM',
       branches: scm.branches,
