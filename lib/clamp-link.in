@@ -401,7 +401,7 @@ if [ ${#LINK_KERNEL_ARGS[@]} != 0 ]; then
     $OPT -thinlto-bc -disable-opt -module-summary $KERNEL -o $KERNEL
   done
   $LTO -thinlto -thinlto-action=thinlink "${LINK_KERNEL_ARGS[@]}" -o $TEMP_DIR/kernel.thinlto.index
-  $LTO -thinlto -thinlto-action=import "${LINK_KERNEL_ARGS[@]}" -thinlto-index=$TEMP_DIR/kernel.thinlto.index -import-instr-limit=1048576 -force-weak-import
+  $LTO -thinlto -thinlto-action=import "${LINK_KERNEL_ARGS[@]}" -thinlto-index=$TEMP_DIR/kernel.thinlto.index -import-instr-limit=1048576 -force-import-weak
 
   # lower to GCN ISA
   if [ $VERBOSE == 1 ]; then
