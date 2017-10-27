@@ -75,28 +75,28 @@ node ('upstream-merger')
  //     extensions: scm.extensions + [[$class: 'CleanCheckout'], [$class: 'SubmoduleOption', disableSubmodules: false, parentCredentials: false, recursiveSubmodules: true, reference: '', timeout: 60, trackingSubmodules: false]],
  //     userRemoteConfigs: scm.userRemoteConfigs
  //  ])
- }
+   }
   
- // def hcc_build_image = null
- // stage('ubuntu-16.04 image')
- // {
- //   def user_uid = sh( script: 'id -u', returnStdout: true ).trim()
+  def hcc_build_image = null
+  stage('ubuntu-16.04 image')
+  {
+    def user_uid = sh( script: 'id -u', returnStdout: true ).trim()
    
- //   def build_type_name = "upstream-merge-ubuntu-16.04"
- //   def dockerfile_name = "dockerfile-${build_type_name}"
- //   def build_image_name = "${build_type_name}"
- //   def dateFormat = new SimpleDateFormat("yyyyMMddHHmm")
-//	def date = new Date()
+    def build_type_name = "upstream-merge-ubuntu-16.04"
+    def dockerfile_name = "dockerfile-${build_type_name}"
+    def build_image_name = "${build_type_name}"
+    def dateFormat = new SimpleDateFormat("yyyyMMddHHmm")
+	def date = new Date()
 	
- //   dir('docker')
- //   {
- //      hcc_build_image = docker.build( "sudo david-salinas/${build_image_name}:latest", "-f ${dockerfile_name} --build-arg build_type=Release --build-arg user_uid=${user_uid} --build-arg rocm_install_path=/opt/rocm ." )
-  //  }
- // }
+   dir('docker')
+    {
+       hcc_build_image = docker.build( "sudo david-salinas/${build_image_name}:latest", "-f ${dockerfile_name} --build-arg build_type=Release --build-arg user_uid=${user_uid} --build-arg rocm_install_path=/opt/rocm ." )
+    }
+  }
  
 // JENKINS-33510: the jenkinsfile dir() command is not workin well with docker.inside()
- // hcc_build_image.inside( '--device=/dev/kfd' )
- // {
+  hcc_build_image.inside( '--device=/dev/kfd' )
+  {
 
    
   try { 
@@ -216,5 +216,5 @@ node ('upstream-merger')
 	  throw e
 	}
 	
-//  } // end of docker container
+  } // end of docker container
 }  // end of node
