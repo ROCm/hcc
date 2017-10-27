@@ -65,19 +65,19 @@ def String timestamp = new SimpleDateFormat("yyyyMMddHHmm").format(new Date())
 
 node ('upstream-merger')   
 {
- stage('HCC Checkout')
-  {
+ //stage('HCC Checkout')
+ // {
     //deleteDir()
-    checkout([
-      $class: 'GitSCM',
-      branches: 'clang_tot_upgrade',
-      doGenerateSubmoduleConfigurations: scm.doGenerateSubmoduleConfigurations,
-      extensions: scm.extensions + [[$class: 'CleanCheckout'], [$class: 'SubmoduleOption', disableSubmodules: false, parentCredentials: false, recursiveSubmodules: true, reference: '', timeout: 60, trackingSubmodules: false]],
-      userRemoteConfigs: scm.userRemoteConfigs
-    ])
-  }
+ //   checkout([
+ //     $class: 'GitSCM',
+ //     branches: 'clang_tot_upgrade',
+ //     doGenerateSubmoduleConfigurations: scm.doGenerateSubmoduleConfigurations,
+ //     extensions: scm.extensions + [[$class: 'CleanCheckout'], [$class: 'SubmoduleOption', disableSubmodules: false, parentCredentials: false, recursiveSubmodules: true, reference: '', timeout: 60, trackingSubmodules: false]],
+ //     userRemoteConfigs: scm.userRemoteConfigs
+ //  ])
+ //}
   
-  def hcc_build_image = null
+ // def hcc_build_image = null
  // stage('ubuntu-16.04 image')
  // {
  //   def user_uid = sh( script: 'id -u', returnStdout: true ).trim()
