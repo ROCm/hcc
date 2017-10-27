@@ -112,9 +112,9 @@ node ('upstream-merger')
 			}
 		}
 		
-		stage('Clone HCC repo manifest') { 
-			  sh (script:"git clone https://github.com/RadeonOpenCompute/HCC-Native-GCN-ISA.git manifest")
-		}
+	//	stage('Clone HCC repo manifest') { 
+	//		  sh (script:"git clone https://github.com/RadeonOpenCompute/HCC-Native-GCN-ISA.git manifest")
+	//	}
 		
 		stage('Initialize GIT submodules') { 
 		// deleteDir()
