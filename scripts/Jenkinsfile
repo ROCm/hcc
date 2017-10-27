@@ -13,21 +13,6 @@ def dump(timestamp) {
 
 }
 
-
-def autoclean_node(name, commands) {
-  node (name) {
-    def workspace = pwd()
-    try {
-      deleteDir()
-      commands()
-    } finally {
-      dir (workspace) {
-        deleteDir()
-      }
-    }
-  }
-}
-
 def git_config() {
   def git_email = "dsalinas@amd.com" // "jenkins-compute@amd.com"
   def git_name = "David Salinas" // Jenkins Compute"
