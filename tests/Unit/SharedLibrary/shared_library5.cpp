@@ -1,5 +1,5 @@
 
-// RUN: %hc --amdgpu-target=gfx701 --amdgpu-target=gfx801 --amdgpu-target=gfx802 --amdgpu-target=gfx803 -fPIC -shared -DSHARED_LIBRARY %s -o %T/libtest5.so
+// RUN: %hc --amdgpu-target=gfx701 --amdgpu-target=gfx801 --amdgpu-target=gfx802 --amdgpu-target=gfx803 --amdgpu-target=gfx900 -fPIC -shared -DSHARED_LIBRARY %s -o %T/libtest5.so
 // RUN: %clang %s -L%T -ltest5 -o %t.out && LD_LIBRARY_PATH=%T %t.out
 
 // kernels built as one single shared libary
