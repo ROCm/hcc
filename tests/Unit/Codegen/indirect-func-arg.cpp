@@ -9,7 +9,7 @@
 
 #define GRID_SIZE (1024)
 
-// CHECK-LABEL: define weak_odr amdgpu_kernel void @"_ZZ4mainEN3$_019__cxxamp_trampolineEPjiiPi"(i32*, i32, i32, i32*)
+// CHECK-LABEL: define weak_odr amdgpu_kernel void @"_ZZ4mainEN3$_019__cxxamp_trampolineEPjiii"(i32*, i32, i32, i32)
 struct A {
   int x[8];
   A()[[hc]] {
@@ -36,18 +36,17 @@ int main() {
   using namespace hc;
   array<unsigned int, 1> table(GRID_SIZE);
   extent<1> ex(GRID_SIZE);
-  int i;
-  auto k = [&](index<1>& idx) [[hc]]{
+  int i = 0;
+  auto k = [&table, i](index<1>& idx) [[hc]]{
     A a;
     table(idx) = f(a, i);
   };
-  i = 0;
-  parallel_for_each(ex, k ).wait();
+  parallel_for_each(ex, k).wait();
 
   // verify result
   bool ret = true;
   std::vector<unsigned int> result = table;
-  for (int i = 0; i < GRID_SIZE; ++i) {
+  for (i = 0; i < GRID_SIZE; ++i) {
     ret &= (result[i] == 1);
   }
 
