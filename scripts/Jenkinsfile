@@ -46,8 +46,12 @@ def String timestamp = new SimpleDateFormat("yyyyMMddHHmm").format(new Date())
  }
  
  def git_merge(workspace, merge_name, checkout_branch, merge_branch) {
- try {
-    sh (script: "cd ${workspace}; git config user.email dsalinas@amd.com; git config user.name David Salinas; git fetch --all ; git checkout -b ${merge_name} ${ checkout_branch}}; git merge ${ merge_branch} --no-edit")
+ 	try {
+	 	dir(workspace) {
+	    	sh "git fetch --all"
+	    	sh "git checkout -b ${merge_name} ${checkout_branch}"
+	    	sh "git merge ${ merge_branch} --no-edit"
+		}    	
     } catch (e) {
     	sh (script: "echo \"GIT MERGE failed\"")
     	throw e
@@ -74,6 +78,7 @@ node ('upstream-merger')
 		stage ('Clone HCC with repo') 
 		{ 
 		  //  deleteDir()
+		  	git_config()
 			sh (script: "repo init -u https://github.com/RadeonOpenCompute/HCC-Native-GCN-ISA.git")
 			sh (script: "repo sync")
 			if (!fileExists("manifest")) {
@@ -104,27 +109,18 @@ node ('upstream-merger')
 			sh (script: "cd hcc_fork/rocdl; git fetch --all; git checkout origin/master")
 		}
 				
-		stage ('Merge amd-common LLD commits') {
-				git_merge("hcc_fork/lld", merge_name, "origin/amd-hcc", "origin/amd-common")
-
-//sh (script: "cd hcc_fork/lld; git config user.email dsalinas@amd.com; git config user.name David Salinas; git fetch --all ; git checkout -b ${merge_name} origin/amd-hcc; git merge origin/amd-common --no-edit")
-		}
-		
-		stage ('Merge amd-common LLVM commits') {
-			sh (script: "cd hcc_fork/compiler; git config user.email dsalinas@amd.com; git config user.name David Salinas; git fetch --all ; git checkout -b ${merge_name} origin/amd-hcc; git merge origin/amd-common --no-edit")
-		}
-		
-		stage ('Merge amd-common COMPILER-RT commits') {
-			sh (script: "cd hcc_fork/compiler-rt; git config user.email dsalinas@amd.com; git config user.name David Salinas; git fetch --all ; git checkout -b ${merge_name} origin/amd-hcc; git merge --no-ff compiler-rt/master --no-edit")
-		}
-		
-		stage ('Merge amd-common CLANG-TOOLS-EXTRA commits') {
-			sh (script: "cd hcc_fork/clang-tools-extra; git config user.email dsalinas@amd.com; git config user.name David Salinas; git fetch --all ; git checkout -b ${merge_name} origin/amd-hcc; git merge clang-tools-extra/master --no-edit")
-		}
-		
-		stage ('Merge amd-common Clang commits') {
-			sh (script: "cd hcc_fork/clang; git config user.email dsalinas@amd.com; git config user.name David Salinas; git fetch --all ; git checkout -b ${merge_name} origin/clang_tot_upgrade; git merge --no-ff clang/amd-common --no-edit")
-		}
+		stage ('Merge amd-common  commits') {
+			dir("hcc_fork") {
+				git_merge("lld", merge_name, "origin/amd-hcc", "origin/amd-common")
+				git_merge("compiler",merge_name,"origin/amd-hcc", "origin/amd-common")
+				git_merge("compiler-rt", merge_name, "origin/amd-hcc", "--no-ff compiler-rt/master")
+				git_merge("clang-tools-extra", merge_name, "origin/amd-hcc", "clang-tools-extra/master")
+				git_merge("clang", merge_name, "origin/clang_tot_upgrade", "--no-ff clang/amd-common")
+			}
+		}		
+		//	sh (script: "cd hcc_fork/compiler-rt; git config user.email dsalinas@amd.com; git config user.name David Salinas; git fetch --all ; git checkout -b ${merge_name} origin/amd-hcc; git merge --no-ff compiler-rt/master --no-edit")
+		//	sh (script: "cd hcc_fork/clang-tools-extra; git config user.email dsalinas@amd.com; git config user.name David Salinas; git fetch --all ; git checkout -b ${merge_name} origin/amd-hcc; git merge clang-tools-extra/master --no-edit")
+		//	sh (script: "cd hcc_fork/clang; git config user.email dsalinas@amd.com; git config user.name David Salinas; git fetch --all ; git checkout -b ${merge_name} origin/clang_tot_upgrade; git merge --no-ff clang/amd-common --no-edit")
 		
 		stage ('Build merged HCC') {
 			sh (script: "mkdir -p build; cd build; cmake -DCMAKE_BUILD_TYPE=Release ../hcc; make -j10")
