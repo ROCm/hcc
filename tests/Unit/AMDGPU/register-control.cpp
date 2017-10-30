@@ -1,6 +1,5 @@
 // RUN: %hc %s -o %t.out -Xlinker -dump-llvm -Xlinker -dump-dir=%T --amdgpu-target=gfx803
 // RUN: %llvm-dis %T/dump-gfx803.opt.bc -f -o - | %FileCheck %s
-// RUN: %t.out
 
 #include <hc.hpp>
 #include <vector>
