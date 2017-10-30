@@ -36,7 +36,9 @@ def String timestamp = new SimpleDateFormat("yyyyMMddHHmm").format(new Date())
 //}				
 
  def git_remote_add(workspace, remote_name, remote_url) {
-	sh (script:"cd ${ workspace}; git remote add ${remote_name} ${remote_url}")
+    dir (workspace) {
+	  sh (script:"git remote add ${remote_name} ${remote_url}")
+	}
  }
  
  def send_email(status) {
@@ -45,52 +47,20 @@ def String timestamp = new SimpleDateFormat("yyyyMMddHHmm").format(new Date())
     subject: "${status}: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'",
     body: "${status}: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'; see console output at ${env.BUILD_URL}"
   )
- // dump()
 }
 
 node ('upstream-merger')   
 {
-// stage('HCC Checkout')
- // {
-    deleteDir()
- //   checkout([
- //     $class: 'GitSCM',
- //     branches: 'clang_tot_upgrade',
- //     doGenerateSubmoduleConfigurations: scm.doGenerateSubmoduleConfigurations,
- //     extensions: scm.extensions + [[$class: 'CleanCheckout'], [$class: 'SubmoduleOption', disableSubmodules: false, parentCredentials: false, recursiveSubmodules: true, reference: '', timeout: 60, trackingSubmodules: false]],
- //     userRemoteConfigs: scm.userRemoteConfigs
- //  ])
- //  }
-  
-//  def hcc_build_image = null
-//  stage('ubuntu-16.04 image')
-//  {
-//    def user_uid = sh( script: 'id -u', returnStdout: true ).trim()
-   
-//    def build_type_name = "upstream-merge-ubuntu-16.04"
-//    def dockerfile_name = "dockerfile-${build_type_name}"
-//    def build_image_name = "${build_type_name}"
-//    def dateFormat = new SimpleDateFormat("yyyyMMddHHmm")
-//	def date = new Date()
-	
- //  dir('docker')
-//    {
-//       hcc_build_image = docker.build( "david-salinas/${build_image_name}:latest", "-f ${dockerfile_name} --build-arg build_type=Release --build-arg user_uid=${user_uid} --build-arg rocm_install_path=/opt/rocm ." )
-//    }
-//  }
- 
-// JENKINS-33510: the jenkinsfile dir() command is not workin well with docker.inside()
-//  hcc_build_image.inside( '--device=/dev/kfd' )
-//  { 
   try { 
-     def dateFormat = new SimpleDateFormat("yyyyMMddHHmm")
-	 def date = new Date()
-     String build_org = "david-salinas"
-     String merge_name = "auto_merge_" + dateFormat.format(date)
-     String user_email = "dsalinas@amd.com"
+	     def dateFormat = new SimpleDateFormat("yyyyMMddHHmm")
+		 def date = new Date()
+	     String build_org = "david-salinas"
+	     String merge_name = "auto_merge_" + dateFormat.format(date)
+	     String user_email = "dsalinas@amd.com"
+     
 		stage ('Clone HCC with repo') 
 		{ 
-		    deleteDir()
+		  //  deleteDir()
 			sh (script: "repo init -u https://github.com/RadeonOpenCompute/HCC-Native-GCN-ISA.git")
 			sh (script: "repo sync")
 			if (!fileExists("manifest")) {
@@ -101,7 +71,7 @@ node ('upstream-merger')
 		stage('Initialize GIT submodules') { 
 			if (!fileExists("hcc_fork")) {
 				sh (script:"git clone https://github.com/david-salinas/hcc.git hcc_fork")
-				sh (script: 'cd hcc_fork; git checkout clang_tot_upgrade; git submodule update --init')
+				sh (script:"cd hcc_fork; git checkout clang_tot_upgrade; git submodule update --init")
 			}
 		}
 		
@@ -148,14 +118,12 @@ node ('upstream-merger')
 		stage ('Full sanity tests on merged HCC') {
 			sh (script: "cd build; make test")
 		}
-		
-		
+				
 		stage ('Quick sanity tests on merged HCC') {
 			sh (script: "bash bin/hcc `bin/clamp-config --build --cxxflags --ldflags` -lm ~/hcc/tests/Unit/AmpMath/amp_math_cos.cpp; ./a.out ")
 			sh (script: "bash bin/hcc `bin/hcc-config --build --cxxflags --ldflags` -lhc_am ~/hcc/tests/Unit/GridLaunch/glp_const.cpp; ./a.out ")
 			sh (script: "bash bin/hcc `bin/hcc-config --build --cxxflags --ldflags` ~/hcc/tests/Unit/HC/hc_atomic_add_global.cpp ; ./a.out ")
 		}
-		
 		
 		stage('Push and Create Pull Request for clang') {
 			sh (script: "cd hcc_fork/clang; git push clang_fork ${merge_name}:${merge_name}")
@@ -163,26 +131,27 @@ node ('upstream-merger')
 		}
 		
 		stage('Push and Create Pull Request for lld') {
-		
+			sh (script: "cd hcc_fork/lld; git push lld_fork ${merge_name}:${merge_name}")
+			sh (script: "cd hcc/lld; git request-pull https://github.com/david-salinas/lld amd-hcc")
 		}
 		
 		stage('Push and Create Pull Request for llvm') {
-		
+		    sh (script: "cd hcc_fork/compiler; git push llvm_fork ${merge_name}:${merge_name}")
+			sh (script: "cd hcc/compler; git request-pull https://github.com/david-salinas/llvm amd-hcc")
 		}
-		
-		
+				
 		stage('Push and Create Pull Request for compiler-rt') {
-		
+		    sh (script: "cd hcc_fork/compiler-rt; git push compiler-rt_fork ${merge_name}:${merge_name}")
+			sh (script: "cd hcc/compler-rt; git request-pull https://github.com/david-salinas/compiler-rt amd-hcc")		
 		}
 		
 		stage('Push and Create Pull Request for clang-tools-extra') {
-		
+		    sh (script: "cd hcc_fork/clang-tools-extra; git push clang-tools-extra_fork ${merge_name}:${merge_name}")
+			sh (script: "cd hcc/clang-tools-extra; git request-pull https://github.com/david-salinas/clang-tools-extra amd-hcc")				
 		}
 		
 	} catch(e) {
 	   send_email("FAILED")
 	  throw e
 	}
-	
-//  } // end of docker container
 }  // end of node
