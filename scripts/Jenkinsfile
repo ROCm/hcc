@@ -77,7 +77,9 @@ node ('upstream-merger')
 	     String merge_name = "auto_merge_" + dateFormat.format(date)
 	     String user_email = "dsalinas@amd.com"
      
-		stage ('Clone HCC with repo') 
+        sh "echo ${ params.START_STAGE}"
+        
+		stage ('Stage 1: Clone HCC with repo') 
 		{ 
 		    deleteDir()
 			sh (script: "repo init -u https://github.com/RadeonOpenCompute/HCC-Native-GCN-ISA.git")
@@ -87,14 +89,14 @@ node ('upstream-merger')
 			}
 		}
 		
-		stage('Initialize GIT submodules') { 
+		stage('Stage 2: Initialize GIT submodules') { 
 			if (!fileExists("hcc_fork")) {
 				sh (script:"git clone https://github.com/david-salinas/hcc.git hcc_fork")
 				sh (script:"cd hcc_fork; git checkout clang_tot_upgrade; git submodule update --init")
 			}
 		}
 		
-		stage ('Add all remotes and forks for submodules') {
+		stage ('Stage 3: Add all remotes and forks for submodules') {
 			git_remote_add("hcc_fork","hcc_fork", "https://github.com/david-salinas/hcc.git")
 			git_remote_add("hcc_fork/lld","lld_fork", "https://github.com/david-salinas/lld.git")
 			git_remote_add("hcc_fork/compiler","llvm_fork", "https://github.com/david-salinas/llvm.git")
@@ -106,11 +108,11 @@ node ('upstream-merger')
 			git_remote_add("hcc_fork/clang","clang", "https://github.com/RadeonOpenCompute/clang")
 		}
 		
-		stage ('Checkout latest master ROCM-Device-Libs') {
+		stage ('Stage 4:Checkout latest master ROCM-Device-Libs') {
 			sh (script: "cd hcc_fork/rocdl; git fetch --all; git checkout origin/master")
 		}
 				
-		stage ('Merge amd-common  commits') {
+		stage ('Stage 5: Merge amd-common  commits') {
 			dir("hcc_fork") {
 				git_config()
 				git_merge("lld", merge_name, "origin/amd-hcc", "origin/amd-common")
@@ -121,41 +123,29 @@ node ('upstream-merger')
 			}
 		}		
 		
-		stage ('Build merged HCC') {
+		stage ('Stage 6: Build merged HCC') {
 			sh (script: "mkdir -p build; cd build; cmake -DCMAKE_BUILD_TYPE=Release ../hcc; make -j10")
 		}
 		
-		stage ('Full sanity tests on merged HCC') {
+		stage ('Stage 7: Full sanity tests on merged HCC') {
 			sh (script: "cd build; make test")
 		}
 				
-		stage ('Quick sanity tests on merged HCC') {
+		stage ('Stage 8: Quick sanity tests on merged HCC') {
 			sh (script: "bash bin/hcc `bin/clamp-config --build --cxxflags --ldflags` -lm ~/hcc/tests/Unit/AmpMath/amp_math_cos.cpp; ./a.out ")
 			sh (script: "bash bin/hcc `bin/hcc-config --build --cxxflags --ldflags` -lhc_am ~/hcc/tests/Unit/GridLaunch/glp_const.cpp; ./a.out ")
 			sh (script: "bash bin/hcc `bin/hcc-config --build --cxxflags --ldflags` ~/hcc/tests/Unit/HC/hc_atomic_add_global.cpp ; ./a.out ")
 		}
 		
-		stage('Push and Create Pull Request for clang') {
+		stage('AStage 9: Push and Create Pull Requests') {
 			sh (script: "cd hcc_fork/clang; git push clang_fork ${merge_name}:${merge_name}")
 			sh (script: "cd hcc/clang; git request-pull https://github.com/david-salinas/hcc-clang-upgrade clang_tot_upgrade")
-		}
-		
-		stage('Push and Create Pull Request for lld') {
 			sh (script: "cd hcc_fork/lld; git push lld_fork ${merge_name}:${merge_name}")
 			sh (script: "cd hcc/lld; git request-pull https://github.com/david-salinas/lld amd-hcc")
-		}
-		
-		stage('Push and Create Pull Request for llvm') {
-		    sh (script: "cd hcc_fork/compiler; git push llvm_fork ${merge_name}:${merge_name}")
+			sh (script: "cd hcc_fork/compiler; git push llvm_fork ${merge_name}:${merge_name}")
 			sh (script: "cd hcc/compler; git request-pull https://github.com/david-salinas/llvm amd-hcc")
-		}
-				
-		stage('Push and Create Pull Request for compiler-rt') {
 		    sh (script: "cd hcc_fork/compiler-rt; git push compiler-rt_fork ${merge_name}:${merge_name}")
 			sh (script: "cd hcc/compler-rt; git request-pull https://github.com/david-salinas/compiler-rt amd-hcc")		
-		}
-		
-		stage('Push and Create Pull Request for clang-tools-extra') {
 		    sh (script: "cd hcc_fork/clang-tools-extra; git push clang-tools-extra_fork ${merge_name}:${merge_name}")
 			sh (script: "cd hcc/clang-tools-extra; git request-pull https://github.com/david-salinas/clang-tools-extra amd-hcc")				
 		}
