@@ -77,7 +77,7 @@ node ('upstream-merger')
      
 		stage ('Clone HCC with repo') 
 		{ 
-		  //  deleteDir()
+		    deleteDir()
 			sh (script: "repo init -u https://github.com/RadeonOpenCompute/HCC-Native-GCN-ISA.git")
 			sh (script: "repo sync")
 			if (!fileExists("manifest")) {
