@@ -82,7 +82,7 @@ node ('upstream-merger')
 // JENKINS-33510: the jenkinsfile dir() command is not workin well with docker.inside()
 //  hcc_build_image.inside( '--device=/dev/kfd' )
 //  { 
- // try { 
+  try { 
      def dateFormat = new SimpleDateFormat("yyyyMMddHHmm")
 	 def date = new Date()
      String build_org = "david-salinas"
@@ -100,7 +100,6 @@ node ('upstream-merger')
 		
 		stage('Initialize GIT submodules') { 
 			if (!fileExists("hcc_fork")) {
-				//sh (script:"git clone https://github.com/david-salinas/hcc.git hcc_fork")  
 				sh (script:"git clone https://github.com/david-salinas/hcc.git hcc_fork")
 				sh (script: 'cd hcc_fork; git checkout clang_tot_upgrade; git submodule update --init')
 			}
@@ -123,37 +122,22 @@ node ('upstream-merger')
 		}
 				
 		stage ('Merge amd-common LLD commits') {
-			//def dateFormat = new SimpleDateFormat("yyyyMMddHHmm")
-			//def date = new Date()
-			//String merge_name = "auto_merge_" + dateFormat.format(date)
 			sh (script: "cd hcc_fork/lld; git config user.email ${ user_email}; git config user.name David Salinas; git fetch --all ; git checkout -b ${merge_name} origin/amd-hcc; git merge origin/amd-common --no-edit")
 		}
 		
 		stage ('Merge amd-common LLVM commits') {
-			//def dateFormat = new SimpleDateFormat("yyyyMMddHHmm")
-			//def date = new Date()
-			//String merge_name = "auto_merge_" + dateFormat.format(date)
 			sh (script: "cd hcc_fork/compiler; git config user.email ${ user_email}m; git config user.name David Salinas; git fetch --all ; git checkout -b ${merge_name} origin/amd-hcc; git merge origin/amd-common --no-edit")
 		}
 		
 		stage ('Merge amd-common COMPILER-RT commits') {
-		//	def dateFormat = new SimpleDateFormat("yyyyMMddHHmm")
-		//	def date = new Date()
-		//	String merge_name = "auto_merge_" + dateFormat.format(date)
 			sh (script: "cd hcc_fork/compiler-rt; git config user.email ${ user_email}; git config user.name David Salinas; git fetch --all ; git checkout -b ${merge_name} origin/amd-hcc; git merge --no-ff compiler-rt/master --no-edit")
 		}
 		
 		stage ('Merge amd-common CLANG-TOOLS-EXTRA commits') {
-		//	def dateFormat = new SimpleDateFormat("yyyyMMddHHmm")
-		//	def date = new Date()
-		//	String merge_name = "auto_merge_" + dateFormat.format(date)
 			sh (script: "cd hcc_fork/clang-tools-extra; git config user.email ${ user_email}m; git config user.name David Salinas; git fetch --all ; git checkout -b ${merge_name} origin/amd-hcc; git merge clang-tools-extra/master --no-edit")
 		}
 		
 		stage ('Merge amd-common Clang commits') {
-		//	def dateFormat = new SimpleDateFormat("yyyyMMddHHmm")
-		//	def date = new Date()
-		//	String merge_name = "auto_merge_" + dateFormat.format(date)
 			sh (script: "cd hcc_fork/clang; git config user.email ${ user_email}; git config user.name David Salinas; git fetch --all ; git checkout -b ${merge_name} origin/clang_tot_upgrade; git merge --no-ff clang/amd-common --no-edit")
 		}
 		
@@ -195,10 +179,10 @@ node ('upstream-merger')
 		
 		}
 		
-//	} catch(e) {
-//	   send_email("FAILED")
-//	  throw e
-//	}
+	} catch(e) {
+	   send_email("FAILED")
+	  throw e
+	}
 	
 //  } // end of docker container
 }  // end of node
