@@ -47,11 +47,13 @@ def String timestamp = new SimpleDateFormat("yyyyMMddHHmm").format(new Date())
  
  def git_merge(workspace, merge_name, checkout_branch, merge_branch) {
  	try {
-	 	dir(workspace) {
+ 		dir(workspace) {
+ 			git_config()
 	    	sh "git fetch --all"
 	    	sh "git checkout -b ${merge_name} ${checkout_branch}"
 	    	sh "git merge ${ merge_branch} --no-edit"
-		}    	
+    	}   	
+		
     } catch (e) {
     	sh (script: "echo \"GIT MERGE failed\"")
     	throw e
