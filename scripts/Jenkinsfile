@@ -36,8 +36,12 @@ def String timestamp = new SimpleDateFormat("yyyyMMddHHmm").format(new Date())
 //}				
 
  def git_remote_add(workspace, remote_name, remote_url) {
-    dir (workspace) {
-	  sh (script:"git remote add ${remote_name} ${remote_url}")
+   try {
+	    dir (workspace) {
+		  sh (script:"git remote add ${remote_name} ${remote_url}")
+		}
+	} catch (e) { 
+		sh (script:"echo \"fork already exists\"")
 	}
  }
  
