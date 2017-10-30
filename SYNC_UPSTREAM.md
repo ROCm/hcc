@@ -39,15 +39,18 @@ git locations of repositories used in the merge process are:
 - amd-common LLD
   - URL: https://github.com/RadeonOpenCompute/lld.git
   - branch : amd-common
-- master COMPILER-RT
-  - URL: https://github.com/llvm-mirror/compiler-rt.git
-  - branch : master
-- amd-common CLANG-TOOLS-EXTRA
-  - URL: git@github.com:llvm-mirror/clang-tools-extra.git
-  - branch : master
 - amd-common Clang
   - URL: https://github.com/RadeonOpenCompute/clang.git
   - branch : amd-common
+- clang_tot_upgrade HCC Clang
+  - URL: https://github.com/RadeonOpenCompute/hcc-clang-upgrade.git
+  - branch : clang_tot_upgrade
+- master COMPILER-RT
+  - URL: https://github.com/llvm-mirror/compiler-rt.git
+  - branch : master
+- master CLANG-TOOLS-EXTRA
+  - URL: https://github.com/llvm-mirror/clang-tools-extra.git
+  - branch : master
 
 Set own forks for HCC modules
 -----------------------------
@@ -58,9 +61,9 @@ corresponding repositories.
 1) https://github.com/RadeonOpenCompute/hcc
 2) https://github.com/RadeonOpenCompute/hcc-clang-upgrade
 3) https://github.com/RadeonOpenCompute/llvm
-4) https://github.com/RadeonOpenCompute/compiler-rt
-5) https://github.com/RadeonOpenCompute/clang-tools-extra
-6) https://github.com/RadeonOpenCompute/lld
+4) https://github.com/RadeonOpenCompute/lld
+5) https://github.com/llvm-mirror/compiler-rt
+6) https://github.com/llvm-mirror/clang-tools-extra
 
 Note, you'd won't need to do this for rocdl, since we will use its master branch.
 
@@ -159,37 +162,37 @@ This directory would be referred as *HCC directory* hereafter.
 Fix any compilation failures if there is any. Repeat this step until HCC
 can be built.
 
-### Full sanity tests on merged HCC (optional)
-Test all unit tests.
-- change to HCC build directory
-- `make test`
-
-Resolve any issues encountered here. May see old test failures.
-
 ### Quick sanity tests on merged HCC
 Assume commands below are carried out in HCC build directory. And HCC
-directory is at `~/hcc`.
+directory is at `~/hcc_fork`.
 
 Test with one C++AMP FP math unit test.
 ```bash
 compiler/bin/hcc `bin/clamp-config --build --cxxflags --ldflags` -lm \
-  ~/hcc/tests/Unit/AmpMath/amp_math_cos.cpp
+  ~/hcc_fork/tests/Unit/AmpMath/amp_math_cos.cpp
 ./a.out ; echo $?
 ```
 
 Test with one grid_launch unit test with AM library usage.
 ```bash
 compiler/bin/hcc `bin/hcc-config --build --cxxflags --ldflags` -lhc_am \
-  ~/hcc/tests/Unit/GridLaunch/glp_const.cpp
+  ~/hcc_fork/tests/Unit/GridLaunch/glp_const.cpp
 ./a.out ; echo $?
 ```
 
 Test with one HC unit test with atomic function and 64-bit arithmetic.
 ```bash
-bin/hcc `bin/hcc-config --build --cxxflags --ldflags` \
-  ~/hcc/tests/Unit/HC/hc_atomic_add_global.cpp
+compiler/bin/hcc `bin/hcc-config --build --cxxflags --ldflags` \
+  ~/hcc_fork/tests/Unit/HC/hc_atomic_add_global.cpp
 ./a.out ; echo $?
 ```
+
+### Full sanity tests on merged HCC
+Test all unit tests.
+- change to HCC build directory
+- `make test`
+
+Resolve any issues encountered here.
 
 ### Push and Create Pull Request for HCC Clang submodule
 
