@@ -365,12 +365,13 @@ am_status_t am_memtracker_add(void* ptr, hc::AmPointerInfo &info)
 }
 
 
-am_status_t am_memtracker_update(const void* ptr, int appId, unsigned allocationFlags)
+am_status_t am_memtracker_update(const void* ptr, int appId, unsigned allocationFlags, void *appPtr)
 {
     auto iter = g_amPointerTracker.find(ptr);
     if (iter != g_amPointerTracker.end()) {
         iter->second._appId              = appId;
         iter->second._appAllocationFlags = allocationFlags;
+        iter->second._appPtr             = appPtr;;
         return AM_SUCCESS;
     } else {
         return AM_ERROR_MISC;

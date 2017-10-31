@@ -693,7 +693,7 @@ public:
     {
 
         if (dependent_op != nullptr) {
-            assert (dependent_op->getCommandKind() == hcCommandMarker);
+            assert (dependent_op->getCommandKind() == Kalmar::hcCommandMarker);
 
             depAsyncOps[0] = std::static_pointer_cast<HSABarrier> (dependent_op);
             depCount = 1;
@@ -719,7 +719,7 @@ public:
             for (int i = 0; i < count; ++i) {
                 if (dependent_op_array[i]) {
                     // squish null ops
-                    assert (dependent_op_array[i]->getCommandKind() == hcCommandMarker);
+                    assert (dependent_op_array[i]->getCommandKind() == Kalmar::hcCommandMarker);
                     depAsyncOps[depCount] = std::static_pointer_cast<HSABarrier> (dependent_op_array[i]);
                     depCount++;
                 }
