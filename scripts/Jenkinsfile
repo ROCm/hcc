@@ -128,9 +128,9 @@ node ('upstream-merger')
 		
 		if (startStage <= 8) { 		
 			stage ('Stage 8: Quick sanity tests on merged HCC') {
-				sh (script: "bash bin/hcc `bin/clamp-config --build --cxxflags --ldflags` -lm ~/hcc/tests/Unit/AmpMath/amp_math_cos.cpp; ./a.out ")
-				sh (script: "bash bin/hcc `bin/hcc-config --build --cxxflags --ldflags` -lhc_am ~/hcc/tests/Unit/GridLaunch/glp_const.cpp; ./a.out ")
-				sh (script: "bash bin/hcc `bin/hcc-config --build --cxxflags --ldflags` ~/hcc/tests/Unit/HC/hc_atomic_add_global.cpp ; ./a.out ")
+				sh (script: "/opt/rocm/bin/hcc `/opt/rocm/bin/clamp-config --build --cxxflags --ldflags` -lm hcc/tests/Unit/AmpMath/amp_math_cos.cpp; ./a.out ")
+				sh (script: "/opt/rocm/bin/hcc `/opt/rocm/bin/hcc-config --build --cxxflags --ldflags` -lhc_am hcc/tests/Unit/GridLaunch/glp_const.cpp; ./a.out ")
+				sh (script: "/opt/rocm/bin/hcc `/opt/rocm/bin/hcc-config --build --cxxflags --ldflags` hcc/tests/Unit/HC/hc_atomic_add_global.cpp ; ./a.out ")
 			}
 		}
 		
