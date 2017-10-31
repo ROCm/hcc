@@ -1,4 +1,10 @@
-// RUN: %cxxamp %s -o %t.out && %t.out
+// RUN: %cxxamp %s -o %t.out
+// && %t.out
+
+// ToDo: Temporarily disable running of the app due to
+// random failure on fiji. Re-enable it after JIRA
+// ticket 136805 is fixed.
+
 #include <amp.h>
 #include <amp_math.h>
 
