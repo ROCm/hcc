@@ -5,13 +5,6 @@ import java.text.SimpleDateFormat
 //===----------------------------------------------------------------------===//
 // Helpers.                                                                   //
 //===----------------------------------------------------------------------===//
-// test
-
-def dump(timestamp) { 
-
-   sh (script: "tar -cvf hcc.tar 2> tar.out") 
-
-}
 
 def git_config() {
   def git_email = "dsalinas@amd.com" // "jenkins-compute@amd.com"
@@ -19,23 +12,9 @@ def git_config() {
 
   sh (script:"git config user.email ${git_email}")
   sh (script:"git config user.name ${git_name}")
-}
+}	
 
-def String timestamp = new SimpleDateFormat("yyyyMMddHHmm").format(new Date())
-
-//def get_dateString() {
-//	def dateFormat = new SimpleDateFormat("yyyyMMddHHmm")
-//	def date = new Date()
-//}
-
-//def merge(subcomponent_name,checkout_origin_branch,merge_source) { 
-//	def dateFormat = new SimpleDateFormat("yyyyMMddHHmm")
-//	def date = new Date()
-//	String merge_name = "auto_merge_" + timestamp   // dateFormat.format(date)
-//	sh (script: "cd hcc_fork/${subcomponent_name}; git config user.email dsalinas@amd.com; git config user.name David Salinas; git fetch --all ; git checkout -b ${merge_name} origin/${ checkout_origin_branch}; git merge ${merge_source} --no-edit")
-//}				
-
- def git_remote_add(workspace, remote_name, remote_url) {
+def git_remote_add(workspace, remote_name, remote_url) {
    try {
 	    dir (workspace) {
 		  sh (script:"git remote add ${remote_name} ${remote_url}")
@@ -43,7 +22,7 @@ def String timestamp = new SimpleDateFormat("yyyyMMddHHmm").format(new Date())
 	} catch (e) { 
 		sh (script:"echo \"fork already exists\"")
 	}
- }
+}
  
  def git_merge(workspace, merge_name, checkout_branch, merge_branch) {
  	try {
@@ -60,7 +39,7 @@ def String timestamp = new SimpleDateFormat("yyyyMMddHHmm").format(new Date())
     }
  }
  
- def send_email(status) {
+def send_email(status) {
   emailext (
     to: 'dsalinas@amd.com',
     subject: "${status}: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'",
@@ -68,6 +47,7 @@ def String timestamp = new SimpleDateFormat("yyyyMMddHHmm").format(new Date())
   )
 }
 
+def getStartStage()
 node ('upstream-merger')   
 {
   try { 
@@ -78,78 +58,97 @@ node ('upstream-merger')
 	     String user_email = "dsalinas@amd.com"
      
         sh "echo ${ params.START_STAGE}"
+        def startStage = params.START_STAGE
+        // def startStage = getStartStage(params.START_STAGE)
         
-		stage ('Stage 1: Clone HCC with repo') 
-		{ 
-		    deleteDir()
-			sh (script: "repo init -u https://github.com/RadeonOpenCompute/HCC-Native-GCN-ISA.git")
-			sh (script: "repo sync")
-			if (!fileExists("manifest")) {
-			  sh (script:"git clone https://github.com/RadeonOpenCompute/HCC-Native-GCN-ISA.git manifest")
+        if (startStage <= 1) { 
+			stage ('Stage 1: Clone HCC with repo') 
+			{ 
+			    deleteDir()
+				sh (script: "repo init -u https://github.com/RadeonOpenCompute/HCC-Native-GCN-ISA.git")
+				sh (script: "repo sync")
+				if (!fileExists("manifest")) {
+				  sh (script:"git clone https://github.com/RadeonOpenCompute/HCC-Native-GCN-ISA.git manifest")
+				}
 			}
 		}
 		
-		stage('Stage 2: Initialize GIT submodules') { 
-			if (!fileExists("hcc_fork")) {
-				sh (script:"git clone https://github.com/david-salinas/hcc.git hcc_fork")
-				sh (script:"cd hcc_fork; git checkout clang_tot_upgrade; git submodule update --init")
+		if (startStage <= 2) { 
+			stage('Stage 2: Initialize GIT submodules') { 
+				if (!fileExists("hcc_fork")) {
+					sh (script:"git clone https://github.com/david-salinas/hcc.git hcc_fork")
+					sh (script:"cd hcc_fork; git checkout clang_tot_upgrade; git submodule update --init")
+				}
 			}
 		}
 		
-		stage ('Stage 3: Add all remotes and forks for submodules') {
-			git_remote_add("hcc_fork","hcc_fork", "https://github.com/david-salinas/hcc.git")
-			git_remote_add("hcc_fork/lld","lld_fork", "https://github.com/david-salinas/lld.git")
-			git_remote_add("hcc_fork/compiler","llvm_fork", "https://github.com/david-salinas/llvm.git")
-			git_remote_add("hcc_fork/compiler-rt","compiler-rt_fork", "https://github.com/david-salinas/compiler-rt.git")
-			git_remote_add("hcc_fork/compiler-rt","compiler-rt", "https://github.com/llvm-mirror/compiler-rt.git")
-			git_remote_add("hcc_fork/clang-tools-extra","clang-tools-extra_fork", "https://github.com/david-salinas/clang-tools-extra.git")
-			git_remote_add("hcc_fork/clang-tools-extra","clang-tools-extra", "https://github.com/llvm-mirror/clang-tools-extra.git")
-			git_remote_add("hcc_fork/clang","clang_fork", "https://github.com/david-salinas/hcc-clang-upgrade.git")
-			git_remote_add("hcc_fork/clang","clang", "https://github.com/RadeonOpenCompute/clang")
-		}
-		
-		stage ('Stage 4:Checkout latest master ROCM-Device-Libs') {
-			sh (script: "cd hcc_fork/rocdl; git fetch --all; git checkout origin/master")
-		}
-				
-		stage ('Stage 5: Merge amd-common  commits') {
-			dir("hcc_fork") {
-				git_config()
-				git_merge("lld", merge_name, "origin/amd-hcc", "origin/amd-common")
-				git_merge("compiler",merge_name,"origin/amd-hcc", "origin/amd-common")
-				git_merge("compiler-rt", merge_name, "origin/amd-hcc", "--no-ff compiler-rt/master")
-				git_merge("clang-tools-extra", merge_name, "origin/amd-hcc", "clang-tools-extra/master")
-				git_merge("clang", merge_name, "origin/clang_tot_upgrade", "--no-ff clang/amd-common")
+		if (startStage <= 3) { 
+			stage ('Stage 3: Add all remotes and forks for submodules') {
+				git_remote_add("hcc_fork","hcc_fork", "https://github.com/david-salinas/hcc.git")
+				git_remote_add("hcc_fork/lld","lld_fork", "https://github.com/david-salinas/lld.git")
+				git_remote_add("hcc_fork/compiler","llvm_fork", "https://github.com/david-salinas/llvm.git")
+				git_remote_add("hcc_fork/compiler-rt","compiler-rt_fork", "https://github.com/david-salinas/compiler-rt.git")
+				git_remote_add("hcc_fork/compiler-rt","compiler-rt", "https://github.com/llvm-mirror/compiler-rt.git")
+				git_remote_add("hcc_fork/clang-tools-extra","clang-tools-extra_fork", "https://github.com/david-salinas/clang-tools-extra.git")
+				git_remote_add("hcc_fork/clang-tools-extra","clang-tools-extra", "https://github.com/llvm-mirror/clang-tools-extra.git")
+				git_remote_add("hcc_fork/clang","clang_fork", "https://github.com/david-salinas/hcc-clang-upgrade.git")
+				git_remote_add("hcc_fork/clang","clang", "https://github.com/RadeonOpenCompute/clang")
 			}
-		}		
-		
-		stage ('Stage 6: Build merged HCC') {
-			sh (script: "mkdir -p build; cd build; cmake -DCMAKE_BUILD_TYPE=Release ../hcc; make -j10")
 		}
 		
-		stage ('Stage 7: Full sanity tests on merged HCC') {
-			sh (script: "cd build; make test")
-		}
-				
-		stage ('Stage 8: Quick sanity tests on merged HCC') {
-			sh (script: "bash bin/hcc `bin/clamp-config --build --cxxflags --ldflags` -lm ~/hcc/tests/Unit/AmpMath/amp_math_cos.cpp; ./a.out ")
-			sh (script: "bash bin/hcc `bin/hcc-config --build --cxxflags --ldflags` -lhc_am ~/hcc/tests/Unit/GridLaunch/glp_const.cpp; ./a.out ")
-			sh (script: "bash bin/hcc `bin/hcc-config --build --cxxflags --ldflags` ~/hcc/tests/Unit/HC/hc_atomic_add_global.cpp ; ./a.out ")
+		if (startStage <= 4) { 
+			stage ('Stage 4:Checkout latest master ROCM-Device-Libs') {
+				sh (script: "cd hcc_fork/rocdl; git fetch --all; git checkout origin/master")
+			}
 		}
 		
-		stage('Stage 9: Push and Create Pull Requests') {
-			sh (script: "cd hcc_fork/clang; git push clang_fork ${merge_name}:${merge_name}")
-			sh (script: "cd hcc/clang; git request-pull https://github.com/david-salinas/hcc-clang-upgrade clang_tot_upgrade")
-			sh (script: "cd hcc_fork/lld; git push lld_fork ${merge_name}:${merge_name}")
-			sh (script: "cd hcc/lld; git request-pull https://github.com/david-salinas/lld amd-hcc")
-			sh (script: "cd hcc_fork/compiler; git push llvm_fork ${merge_name}:${merge_name}")
-			sh (script: "cd hcc/compler; git request-pull https://github.com/david-salinas/llvm amd-hcc")
-		    sh (script: "cd hcc_fork/compiler-rt; git push compiler-rt_fork ${merge_name}:${merge_name}")
-			sh (script: "cd hcc/compler-rt; git request-pull https://github.com/david-salinas/compiler-rt amd-hcc")		
-		    sh (script: "cd hcc_fork/clang-tools-extra; git push clang-tools-extra_fork ${merge_name}:${merge_name}")
-			sh (script: "cd hcc/clang-tools-extra; git request-pull https://github.com/david-salinas/clang-tools-extra amd-hcc")				
+		if (startStage <= 5) { 		
+			stage ('Stage 5: Merge amd-common  commits') {
+				dir("hcc_fork") {
+					git_config()
+					git_merge("lld", merge_name, "origin/amd-hcc", "origin/amd-common")
+					git_merge("compiler",merge_name,"origin/amd-hcc", "origin/amd-common")
+					git_merge("compiler-rt", merge_name, "origin/amd-hcc", "--no-ff compiler-rt/master")
+					git_merge("clang-tools-extra", merge_name, "origin/amd-hcc", "clang-tools-extra/master")
+					git_merge("clang", merge_name, "origin/clang_tot_upgrade", "--no-ff clang/amd-common")
+				}
+			}		
 		}
 		
+		if (startStage <= 6) { 
+			stage ('Stage 6: Build merged HCC') {
+				sh (script: "mkdir -p build; cd build; cmake -DCMAKE_BUILD_TYPE=Release ../hcc; make -j10")
+			}
+		}
+		
+		if (startStage <= 7) { 
+			stage ('Stage 7: Full sanity tests on merged HCC') {
+				sh (script: "cd build; make test")
+			}
+		}
+		
+		if (startStage <= 8) { 		
+			stage ('Stage 8: Quick sanity tests on merged HCC') {
+				sh (script: "bash bin/hcc `bin/clamp-config --build --cxxflags --ldflags` -lm ~/hcc/tests/Unit/AmpMath/amp_math_cos.cpp; ./a.out ")
+				sh (script: "bash bin/hcc `bin/hcc-config --build --cxxflags --ldflags` -lhc_am ~/hcc/tests/Unit/GridLaunch/glp_const.cpp; ./a.out ")
+				sh (script: "bash bin/hcc `bin/hcc-config --build --cxxflags --ldflags` ~/hcc/tests/Unit/HC/hc_atomic_add_global.cpp ; ./a.out ")
+			}
+		}
+		
+		if (startStage <= 9) { 
+			stage('Stage 9: Push and Create Pull Requests') {
+				sh (script: "cd hcc_fork/clang; git push clang_fork ${merge_name}:${merge_name}")
+				sh (script: "cd hcc/clang; git request-pull https://github.com/david-salinas/hcc-clang-upgrade clang_tot_upgrade")
+				sh (script: "cd hcc_fork/lld; git push lld_fork ${merge_name}:${merge_name}")
+				sh (script: "cd hcc/lld; git request-pull https://github.com/david-salinas/lld amd-hcc")
+				sh (script: "cd hcc_fork/compiler; git push llvm_fork ${merge_name}:${merge_name}")
+				sh (script: "cd hcc/compler; git request-pull https://github.com/david-salinas/llvm amd-hcc")
+			    sh (script: "cd hcc_fork/compiler-rt; git push compiler-rt_fork ${merge_name}:${merge_name}")
+				sh (script: "cd hcc/compler-rt; git request-pull https://github.com/david-salinas/compiler-rt amd-hcc")		
+			    sh (script: "cd hcc_fork/clang-tools-extra; git push clang-tools-extra_fork ${merge_name}:${merge_name}")
+				sh (script: "cd hcc/clang-tools-extra; git request-pull https://github.com/david-salinas/clang-tools-extra amd-hcc")				
+			}
+		}
 	} catch(e) {
 	   send_email("FAILED")
 	  throw e
