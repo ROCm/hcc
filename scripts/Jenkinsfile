@@ -47,7 +47,6 @@ def send_email(status) {
   )
 }
 
-def getStartStage()
 node ('upstream-merger')   
 {
   try { 
