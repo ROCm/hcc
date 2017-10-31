@@ -57,7 +57,7 @@ node ('upstream-merger')
 	     String user_email = "dsalinas@amd.com"
      
         sh "echo ${ params.START_STAGE}"
-        def startStage = params.START_STAGE
+        def startStage = params.START_STAGE.toInteger()
         // def startStage = getStartStage(params.START_STAGE)
         
         if (startStage <= 1) { 
