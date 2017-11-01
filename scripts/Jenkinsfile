@@ -159,14 +159,14 @@ node ('upstream-merger')
 					sh (script: "git request-pull https://github.com/david-salinas/hcc-clang-upgrade clang_tot_upgrade")
 				}
 				
-				sh (script: "cd hcc_fork/lld; git push lld_fork ${merge_name}:${merge_name}")
-				sh (script: "cd hcc/lld; git request-pull https://github.com/david-salinas/lld amd-hcc")
-				sh (script: "cd hcc_fork/compiler; git push llvm_fork ${merge_name}:${merge_name}")
-				sh (script: "cd hcc/compler; git request-pull https://github.com/david-salinas/llvm amd-hcc")
-			    sh (script: "cd hcc_fork/compiler-rt; git push compiler-rt_fork ${merge_name}:${merge_name}")
-				sh (script: "cd hcc/compler-rt; git request-pull https://github.com/david-salinas/compiler-rt amd-hcc")		
-			    sh (script: "cd hcc_fork/clang-tools-extra; git push clang-tools-extra_fork ${merge_name}:${merge_name}")
-				sh (script: "cd hcc/clang-tools-extra; git request-pull https://github.com/david-salinas/clang-tools-extra amd-hcc")				
+			//	sh (script: "cd hcc_fork/lld; git push lld_fork ${merge_name}:${merge_name}")
+			//	sh (script: "cd hcc/lld; git request-pull https://github.com/david-salinas/lld amd-hcc")
+			//	sh (script: "cd hcc_fork/compiler; git push llvm_fork ${merge_name}:${merge_name}")
+			//	sh (script: "cd hcc/compler; git request-pull https://github.com/david-salinas/llvm amd-hcc")
+			//    sh (script: "cd hcc_fork/compiler-rt; git push compiler-rt_fork ${merge_name}:${merge_name}")
+			//	sh (script: "cd hcc/compler-rt; git request-pull https://github.com/david-salinas/compiler-rt amd-hcc")		
+			//   sh (script: "cd hcc_fork/clang-tools-extra; git push clang-tools-extra_fork ${merge_name}:${merge_name}")
+			//	sh (script: "cd hcc/clang-tools-extra; git request-pull https://github.com/david-salinas/clang-tools-extra amd-hcc")				
 			}
 		}
 	} catch(e) {
