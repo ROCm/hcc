@@ -506,7 +506,7 @@ if [ ${#LINK_KERNEL_ARGS[@]} != 0 ]; then
     done
 
     # Perform parallel opt and llc
-    $LTO -thinlto -thinlto-action=optllc "${LINK_IMPORTED_KERNEL_ARGS[@]}" -dce -globaldce -always-inline -mtriple amdgcn--amdhsa-amdgiz -mcpu=$AMDGPU_TARGET -infer-address-spaces -amdgpu-internalize-symbols -lto-freestanding -filetype=obj -enable-si-insert-waitcnts=0 $KMOPTOPT -codegen-opt-level=$KMOPTLLC
+    $LTO -thinlto -thinlto-action=optllc "${LINK_IMPORTED_KERNEL_ARGS[@]}" -select-accelerator-code -dce -globaldce -always-inline -mtriple amdgcn--amdhsa-amdgiz -mcpu=$AMDGPU_TARGET -infer-address-spaces -amdgpu-internalize-symbols -lto-freestanding -filetype=obj -enable-si-insert-waitcnts=0 $KMOPTOPT -codegen-opt-level=$KMOPTLLC
 
     for KERNEL in ${LINK_IMPORTED_KERNEL_ARGS[@]}
     do
