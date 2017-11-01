@@ -73,7 +73,7 @@ node ('upstream-merger')
 		if (startStage <= 2) { 
 			stage('Stage 2: Initialize GIT submodules') { 
 				if (!fileExists("hcc_fork")) {
-					sh (script:"git clone ssh://${ userID}@github.com/${ userID}/hcc.git hcc_fork")
+					sh (script:"git clone ssh://git@github.com/${ userID}/hcc.git hcc_fork")
 					sh (script:"cd hcc_fork; git checkout clang_tot_upgrade; git submodule update --init")
 				}
 			}
