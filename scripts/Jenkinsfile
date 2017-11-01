@@ -105,7 +105,7 @@ node ('upstream-merger')
 			stage ('Stage 5: Merge amd-common  commits') {
 			    
 			    if (!fileExists("merge-branch-name") ) { 
-			    	writeFile file: "merge-branch-name" text: "${ merge_name}"
+			    	writeFile file: "merge-branch-name", text: "${ merge_name}"
 				} 
 				merge_name = readFile "merge-branch-name"
 				
