@@ -50,7 +50,7 @@ def send_email(status) {
 node ('upstream-merger')   
 {
   try { 
-	     def dateFormat = new SimpleDateFormat("yyyyMMddHHmm")
+	     def dateFormat = new SimpleDateFormat("yyyyMMddHH")
 		 def date = new Date()
 	     String build_org = "david-salinas"
 	     String merge_name = "auto_merge_" + dateFormat.format(date)
@@ -103,6 +103,13 @@ node ('upstream-merger')
 		
 		if (startStage <= 5) { 		
 			stage ('Stage 5: Merge amd-common  commits') {
+			    
+			    if (!fileExists("merge-branch-name") ) { 
+					def fp = new File("merge-branch-name")
+					fp.Write("merge_name")
+				} 
+				merge_name = readFile "merge-branch-name"
+				
 				dir("hcc_fork") {
 					git_config()
 					git_merge("lld", merge_name, "origin/amd-hcc", "origin/amd-common")
