@@ -56,18 +56,16 @@ node ('upstream-merger')
 	     String merge_name = "auto_merge_" + dateFormat.format(date)
 	     String user_email = "dsalinas@amd.com"
      
-        sh "echo ${ params.START_STAGE}"
         def startStage = params.START_STAGE.toInteger()
-        // def startStage = getStartStage(params.START_STAGE)
         
         if (startStage <= 1) { 
 			stage ('Stage 1: Clone HCC with repo') 
 			{ 
 			    deleteDir()
-				sh (script: "repo init -u ssh://${userID}@github.com/RadeonOpenCompute/HCC-Native-GCN-ISA.git")
+				sh (script: "repo init -u https://github.com/RadeonOpenCompute/HCC-Native-GCN-ISA.git")
 				sh (script: "repo sync")
 				if (!fileExists("manifest")) {
-				  sh (script:"git clone ssh://${ userID}@github.com/RadeonOpenCompute/HCC-Native-GCN-ISA.git manifest")
+				  sh (script:"git clone https://github.com/RadeonOpenCompute/HCC-Native-GCN-ISA.git manifest")
 				}
 			}
 		}
