@@ -342,6 +342,9 @@ install(PROGRAMS $<TARGET_FILE:llvm-as>
 add_custom_target(clang_links DEPENDS clang)
 add_custom_command(TARGET clang_links POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E create_symlink ${CLANG_BIN_DIR}/lib/clang/6.0.0/lib/linux/libclang_rt.builtins-${CMAKE_SYSTEM_PROCESSOR}.a ${PROJECT_BINARY_DIR}/lib/libclang_rt.builtins-${CMAKE_SYSTEM_PROCESSOR}.a
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ${CLANG_BIN_DIR}/bin/clang ${PROJECT_BINARY_DIR}/bin/clang
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ${CLANG_BIN_DIR}/bin/clang++ ${PROJECT_BINARY_DIR}/bin/clang++
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ${CLANG_BIN_DIR}/bin/hcc ${PROJECT_BINARY_DIR}/bin/hcc
 )
 
 # install certain LLVM libraries needed by HIP
