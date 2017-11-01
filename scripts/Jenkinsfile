@@ -150,8 +150,15 @@ node ('upstream-merger')
 				
 				git_config()
 				
-				sh (script: "cd hcc_fork/clang; git push clang_fork ${merge_name}:${merge_name}")
-				sh (script: "cd hcc/clang; git request-pull https://github.com/david-salinas/hcc-clang-upgrade clang_tot_upgrade")
+				dir ("hcc_fork/clang") {
+					git_config()
+					sh (script: "git push clang_fork ${merge_name}:${merge_name}")
+				}
+				dir ("hcc/clang") {
+					git_config() 
+					sh (script: "git request-pull https://github.com/david-salinas/hcc-clang-upgrade clang_tot_upgrade")
+				}
+				
 				sh (script: "cd hcc_fork/lld; git push lld_fork ${merge_name}:${merge_name}")
 				sh (script: "cd hcc/lld; git request-pull https://github.com/david-salinas/lld amd-hcc")
 				sh (script: "cd hcc_fork/compiler; git push llvm_fork ${merge_name}:${merge_name}")
