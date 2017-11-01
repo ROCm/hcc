@@ -148,8 +148,6 @@ node ('upstream-merger')
 				} 
 				merge_name = readFile "merge-branch-name"
 				
-				git_config()
-				
 				dir ("hcc_fork/clang") {
 					git_config()
 					sh (script: "git push clang_fork ${merge_name}:${merge_name}")
