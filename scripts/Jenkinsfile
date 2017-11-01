@@ -142,6 +142,12 @@ node ('upstream-merger')
 		
 		if (startStage <= 9) { 
 			stage('Stage 9: Push and Create Pull Requests') {
+			
+				if (!fileExists("merge-branch-name") ) { 
+			    	writeFile file: "merge-branch-name", text: "${ merge_name}"
+				} 
+				merge_name = readFile "merge-branch-name"
+				
 				sh (script: "cd hcc_fork/clang; git push clang_fork ${merge_name}:${merge_name}")
 				sh (script: "cd hcc/clang; git request-pull https://github.com/david-salinas/hcc-clang-upgrade clang_tot_upgrade")
 				sh (script: "cd hcc_fork/lld; git push lld_fork ${merge_name}:${merge_name}")
