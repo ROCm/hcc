@@ -81,15 +81,15 @@ node ('upstream-merger')
 		
 		if (startStage <= 3) { 
 			stage ('Stage 3: Add all remotes and forks for submodules') {
-				git_remote_add("hcc_fork","hcc_fork", "https://github.com/${ userID}/hcc.git")
-				git_remote_add("hcc_fork/lld","lld_fork", "https://github.com/${ userID}/lld.git")
-				git_remote_add("hcc_fork/compiler","llvm_fork", "https://github.com/${ userID}/llvm.git")
-				git_remote_add("hcc_fork/compiler-rt","compiler-rt_fork", "https://github.com/${ userID}/compiler-rt.git")
-				git_remote_add("hcc_fork/compiler-rt","compiler-rt", "https://github.com/llvm-mirror/compiler-rt.git")
-				git_remote_add("hcc_fork/clang-tools-extra","clang-tools-extra_fork", "https://github.com/${ userID}/clang-tools-extra.git")
-				git_remote_add("hcc_fork/clang-tools-extra","clang-tools-extra", "https://github.com/llvm-mirror/clang-tools-extra.git")
-				git_remote_add("hcc_fork/clang","clang_fork", "https://github.com/${ userID}/hcc-clang-upgrade.git")
-				git_remote_add("hcc_fork/clang","clang", "https://github.com/RadeonOpenCompute/clang")
+				git_remote_add("hcc_fork","hcc_fork", "ssh://git@github.com/${ userID}/hcc.git")
+				git_remote_add("hcc_fork/lld","lld_fork", "ssh://git@github.com/${ userID}/lld.git")
+				git_remote_add("hcc_fork/compiler","llvm_fork", "ssh://git@github.com/${ userID}/llvm.git")
+				git_remote_add("hcc_fork/compiler-rt","compiler-rt_fork", "ssh://git@github.com/${ userID}/compiler-rt.git")
+				git_remote_add("hcc_fork/compiler-rt","compiler-rt", "ssh://git@github.com/llvm-mirror/compiler-rt.git")
+				git_remote_add("hcc_fork/clang-tools-extra","clang-tools-extra_fork", "ssh://git@github.com/${ userID}/clang-tools-extra.git")
+				git_remote_add("hcc_fork/clang-tools-extra","clang-tools-extra", "ssh://git@github.com/llvm-mirror/clang-tools-extra.git")
+				git_remote_add("hcc_fork/clang","clang_fork", "ssh://git@github.com/${ userID}/hcc-clang-upgrade.git")
+				git_remote_add("hcc_fork/clang","clang", "ssh://git@github.com/RadeonOpenCompute/clang")
 			}
 		}
 		
@@ -152,7 +152,7 @@ node ('upstream-merger')
 				}
 				dir ("hcc/clang") {
 					git_config() 
-					sh (script: "git request-pull https://github.com/${ userID}/hcc-clang-upgrade clang_tot_upgrade")
+					sh (script: "git request-pull ssh://git@github.com/${ userID}/hcc-clang-upgrade clang_tot_upgrade")
 				}
 				
 			//	sh (script: "cd hcc_fork/lld; git push lld_fork ${merge_name}:${merge_name}")
