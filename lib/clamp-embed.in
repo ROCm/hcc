@@ -24,5 +24,11 @@ if [[ "$FILE" != "$FILENAME" ]]; then
   $LLC -O=2 "$1.S" -relocation-model=pic -filetype=obj -o "$2"
   rm "$1.S"
 else
-  objcopy -B i386:x86-64 -I binary -O elf64-x86-64 --rename-section .data=.kernel "$1" "$2"
+  if [[ "@CMAKE_SYSTEM_PROCESSOR@" == "x86_64" ]]; then
+    objcopy -B i386:x86-64 -I binary -O elf64-x86-64 --rename-section .data=.kernel "$1" "$2"
+  elif [[ "@CMAKE_SYSTEM_PROCESSOR@" == "aarch64" ]]; then
+    objcopy -B aarch64 -I binary -O elf64-littleaarch64 --rename-section .data=.kernel "$1" "$2"
+  elif [[ "@CMAKE_SYSTEM_PROCESSOR@" == "ppc64" ]]; then
+    objcopy -B ppc64 -I binary -O elf64-powerpc --rename-section .data=.kernel "$1" "$2"
+  fi
 fi

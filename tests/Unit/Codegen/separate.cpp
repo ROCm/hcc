@@ -1,3 +1,4 @@
+// XFAIL: *
 // RUN: %amp_device -c -S -emit-llvm %s -o -|%FileCheck %s
 extern "C" {
 int foo(void) {

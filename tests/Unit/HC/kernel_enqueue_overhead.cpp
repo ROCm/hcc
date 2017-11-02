@@ -1,7 +1,7 @@
-
-// RUN: %hc %s -o %t.out && %t.out
+// RUN: %hc %s -lhc_am -o %t.out && %t.out
 
 #include <hc.hpp>
+#include <hc_am.hpp>
 
 #include <iostream>
 #include <random>
@@ -51,9 +51,6 @@ bool test2() {
   int table_a[vecSize];
   int table_b[vecSize];
   int table_c[vecSize];
-  int *p_a = &table_a[0];
-  int *p_b = &table_b[0];
-  int *p_c = &table_c[0];
 
   // initialize test data
   std::random_device rd;
@@ -62,6 +59,16 @@ bool test2() {
     table_a[i] = int_dist(rd);
     table_b[i] = int_dist(rd);
   }
+
+  auto acc = hc::accelerator();
+  int *p_a = (int*) hc::am_alloc(sizeof(int) * vecSize, acc, 0);
+  int *p_b = (int*) hc::am_alloc(sizeof(int) * vecSize, acc, 0);
+  int *p_c = (int*) hc::am_alloc(sizeof(int) * vecSize, acc, 0);
+
+  hc::accelerator_view av = acc.get_default_view();
+  av.copy(table_a, p_a, sizeof(int) * vecSize);
+  av.copy(table_b, p_b, sizeof(int) * vecSize);
+  av.copy(table_c, p_c, sizeof(int) * vecSize);
 
   long time_spent = 0, time_spent_once;
   struct timespec begin;
@@ -86,6 +93,10 @@ bool test2() {
 
   std::cout << "Enqueued " << DISPATCH_COUNT << " vector addition kernels\n";
   std::cout << "Average time per kernel: " << ((double)time_spent / DISPATCH_COUNT) << "us\n";
+
+  hc::am_free(p_a);
+  hc::am_free(p_b);
+  hc::am_free(p_c);
 
   return ret;
 }

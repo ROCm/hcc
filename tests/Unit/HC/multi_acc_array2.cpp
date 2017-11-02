@@ -1,4 +1,4 @@
-// RUN: %hc --amdgpu-target=gfx701 --amdgpu-target=gfx801 --amdgpu-target=gfx802 --amdgpu-target=gfx803 %s -o %t.out && %t.out
+// RUN: %hc %target_all_gpus %s -o %t.out && %t.out
 #include <random>
 #include <algorithm>
 #include <vector>

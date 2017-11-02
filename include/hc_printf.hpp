@@ -1,5 +1,6 @@
 #pragma once
 
+#include <type_traits>
 #include <cstdlib>
 #include <cstdio>
 #include <cassert>
@@ -9,10 +10,18 @@
 #include <iostream>
 #include <algorithm>
 
-#include "hc_am.hpp"
-#include "hc.hpp"
+#include "hc_am_internal.hpp"
 #include "hsa_atomic.h"
 
+// The printf on the accelerator is only enabled when
+// The HCC_ENABLE_ACCELERATOR_PRINTF is defined 
+//
+//#define HCC_ENABLE_ACCELERATOR_PRINTF (1)
+
+// Indicate whether hc::printf is supported
+#define HC_FEATURE_PRINTF (1)
+
+// Enable extra debug messages
 #define HC_PRINTF_DEBUG  (0)
 
 namespace hc {
@@ -23,6 +32,7 @@ union PrintfPacketData {
   float           f;
   void*           ptr;
   const void*     cptr;
+  double          d;
   
   // Header offset members (union uses same memory)
   // uia[0] - PrintfPacket buffer offset
@@ -51,6 +61,7 @@ enum PrintfPacketDataType {
   ,PRINTF_UNSIGNED_INT
   ,PRINTF_SIGNED_INT
   ,PRINTF_FLOAT
+  ,PRINTF_DOUBLE
   ,PRINTF_VOID_PTR
   ,PRINTF_CONST_VOID_PTR
   ,PRINTF_CHAR_PTR
@@ -63,6 +74,7 @@ public:
   void set(unsigned int d) [[hc,cpu]] { type = PRINTF_UNSIGNED_INT;   data.ui = d; }
   void set(int d)          [[hc,cpu]] { type = PRINTF_SIGNED_INT;     data.i = d; }
   void set(float d)        [[hc,cpu]] { type = PRINTF_FLOAT;          data.f = d; }
+  void set(double d)       [[hc,cpu]] { type = PRINTF_DOUBLE;         data.d = d; }
   void set(void* d)        [[hc,cpu]] { type = PRINTF_VOID_PTR;       data.ptr = d; }
   void set(const void* d)  [[hc,cpu]] { type = PRINTF_CONST_VOID_PTR; data.cptr = d; }
   void set(char* d)        [[hc,cpu]] { type = PRINTF_CHAR_PTR;       data.ptr = d; }
@@ -71,16 +83,21 @@ public:
   PrintfPacketData data;
 };
 
+// Global printf buffer
+// The actual variable is currently defined in mcwamp_hsa.cpp
+extern PrintfPacket* printf_buffer;
+
 enum PrintfError {
    PRINTF_SUCCESS = 0
   ,PRINTF_BUFFER_OVERFLOW = 1
   ,PRINTF_STRING_BUFFER_OVERFLOW = 2
+  ,PRINTF_UNKNOWN_ERROR = 3
 };
 
-static inline PrintfPacket* createPrintfBuffer(hc::accelerator& a, const unsigned int numElements) {
+static inline PrintfPacket* createPrintfBuffer(const unsigned int numElements) {
   PrintfPacket* printfBuffer = NULL;
   if (numElements > PRINTF_MIN_SIZE) {
-    printfBuffer = hc::am_alloc(sizeof(PrintfPacket) * numElements, a, amHostCoherent);
+    printfBuffer = hc::internal::am_alloc_host_coherent(sizeof(PrintfPacket) * numElements);
 
     // Initialize the Header elements of the Printf Buffer
     printfBuffer[PRINTF_BUFFER_SIZE].type = PRINTF_BUFFER_SIZE;
@@ -89,7 +106,7 @@ static inline PrintfPacket* createPrintfBuffer(hc::accelerator& a, const unsigne
     // Header includes a helper string buffer which holds all char* args
     // PrintfPacket is 12 bytes, equivalent string buffer size used
     printfBuffer[PRINTF_STRING_BUFFER].type = PRINTF_STRING_BUFFER;
-    printfBuffer[PRINTF_STRING_BUFFER].data.ptr = hc::am_alloc(sizeof(char) * numElements * 12, a, amHostCoherent);
+    printfBuffer[PRINTF_STRING_BUFFER].data.ptr = hc::internal::am_alloc_host_coherent(sizeof(char) * numElements * 12);
     printfBuffer[PRINTF_STRING_BUFFER_SIZE].type = PRINTF_STRING_BUFFER_SIZE;
     printfBuffer[PRINTF_STRING_BUFFER_SIZE].data.ui = numElements * 12;
 
@@ -101,7 +118,7 @@ static inline PrintfPacket* createPrintfBuffer(hc::accelerator& a, const unsigne
   return printfBuffer;
 }
 
-void deletePrintfBuffer(PrintfPacket*& buffer) {
+static inline void deletePrintfBuffer(PrintfPacket*& buffer) {
   if (buffer){
     if (buffer[PRINTF_STRING_BUFFER].data.ptr)
       hc::am_free(buffer[PRINTF_STRING_BUFFER].data.ptr);
@@ -123,25 +140,40 @@ static inline void copy_n(char* dest, const char* src, unsigned int len) [[hc,cp
   }
 }
 
+// return the memory size (including '/0') if it's a C-string
+template <typename T>
+std::size_t mem_size_if_string(typename std::enable_if< std::is_same<T,const char*>::value 
+                                                        || std::is_same<T,char*>::value, T>::type  s) [[hc,cpu]] {
+  return string_length(s) + 1;
+}
+
+template <typename T>
+std::size_t mem_size_if_string(typename std::enable_if< !std::is_same<T,const char*>::value 
+                                                         && !std::is_same<T,char*>::value, T>::type  s) [[hc,cpu]] {
+  return 0;
+}
+
 // get the argument count
 static inline void countArg(unsigned int& count_arg, unsigned int& count_char) [[hc,cpu]] {}
 template <typename T>
 static inline void countArg(unsigned int& count_arg, unsigned int& count_char, const T t) [[hc,cpu]] {
   ++count_arg;
-  if (std::is_same<T, char*>::value || std::is_same<T, const char*>::value){
-    count_char += string_length((const char*)t) + 1;
-  }
+  count_char += mem_size_if_string<T>(t);
 }
 template <typename T, typename... Rest>
 static inline void countArg(unsigned int& count_arg, unsigned int& count_char, const T t, const Rest&... rest) [[hc,cpu]] {
   ++count_arg;
-  if (std::is_same<T, char*>::value || std::is_same<T, const char*>::value){
-    count_char += string_length((const char*)t) + 1;
-  }
+  count_char += mem_size_if_string<T>(t);
   countArg(count_arg, count_char, rest...);
 }
 
-static inline PrintfError process_str_batch(PrintfPacket* queue, int poffset, unsigned int& soffset, const char* string) [[hc,cpu]] {
+template<typename T>
+PrintfError process_str_batch(PrintfPacket* queue, int poffset, unsigned int& soffset
+, typename std::enable_if< std::is_same<T,const char*>::value || std::is_same<T,char*>::value, T>::type string) [[hc,cpu]] {
+
+  if (queue[poffset].type != PRINTF_CHAR_PTR && queue[poffset].type != PRINTF_CONST_CHAR_PTR)
+    return PRINTF_UNKNOWN_ERROR;
+
   unsigned int str_len = string_length(string);
   unsigned int sb_offset = soffset;
   char* string_buffer = (char*) queue[PRINTF_STRING_BUFFER].data.ptr;
@@ -154,23 +186,32 @@ static inline PrintfError process_str_batch(PrintfPacket* queue, int poffset, un
   return PRINTF_SUCCESS;
 }
 
+template<typename T>
+PrintfError process_str_batch(PrintfPacket* queue, int poffset, unsigned int& soffset
+, typename std::enable_if< !std::is_same<T,const char*>::value && !std::is_same<T,char*>::value, T>::type data) [[hc,cpu]] {
+
+  if (queue[poffset].type == PRINTF_CHAR_PTR || queue[poffset].type == PRINTF_CONST_CHAR_PTR)
+    return PRINTF_UNKNOWN_ERROR;
+  else
+    return PRINTF_SUCCESS;
+}
+
 template <typename T>
 static inline PrintfError set_batch(PrintfPacket* queue, int poffset, unsigned int& soffset, const T t) [[hc,cpu]] {
   PrintfError err = PRINTF_SUCCESS;
   queue[poffset].set(t);
-  if (queue[poffset].type == PRINTF_CHAR_PTR || queue[poffset].type == PRINTF_CONST_CHAR_PTR){
-    err = process_str_batch(queue, poffset, soffset, (char*)t);
-  }
+  err = process_str_batch<T>(queue, poffset, soffset, t);
   return err;
 }
+
 template <typename T, typename... Rest>
 static inline PrintfError set_batch(PrintfPacket* queue, int poffset, unsigned int& soffset, const T t, Rest... rest) [[hc,cpu]] {
   PrintfError err = PRINTF_SUCCESS;
   queue[poffset].set(t);
-  if (queue[poffset].type == PRINTF_CHAR_PTR || queue[poffset].type == PRINTF_CONST_CHAR_PTR){
-    if ((err = process_str_batch(queue, poffset, soffset, (char*)t)) != PRINTF_SUCCESS)
-      return err;
-  }
+
+  if ((err = process_str_batch<T>(queue, poffset, soffset, t)) != PRINTF_SUCCESS)
+    return err;
+
   return set_batch(queue, poffset + 1, soffset, rest...);
 }
 
@@ -217,6 +258,27 @@ static inline PrintfError printf(PrintfPacket* queue, All... all) [[hc,cpu]] {
 
   return error;
 }
+
+
+// The presence of hc::printf may impact performance even when it's not being called.
+// Currently hcc's printf on accelerator is an opt-in feature.  This means that users 
+// have to define HCC_ENABLE_ACCELERATOR_PRINTF to enable it.   
+#ifdef HCC_ENABLE_ACCELERATOR_PRINTF
+
+template <typename... All>
+static inline PrintfError printf(const char* format_string, All... all) [[hc,cpu]] {
+  return printf(hc::printf_buffer, format_string, all...);
+}
+
+#else
+
+// this is just a stubs for printf that doesn't do anything
+template <typename... All>
+static inline PrintfError printf(const char* format_string, All... all) [[hc,cpu]] {
+  return PRINTF_SUCCESS;
+}
+
+#endif
 
 // regex for finding format string specifiers
 static std::regex specifierPattern("(%){1}[-+#0]*[0-9]*((.)[0-9]+){0,1}([diuoxXfFeEgGaAcsp]){1}");
@@ -272,7 +334,10 @@ static inline void processPrintfPackets(PrintfPacket* packets, const unsigned in
       } else if (std::regex_search(specifier, specifierTypeMatch, signedIntegerPattern)) {
         std::printf(specifier.c_str(), packets[i].data.i);
       } else if (std::regex_search(specifier, specifierTypeMatch, floatPattern)) {
-        std::printf(specifier.c_str(), packets[i].data.f);
+        if (packets[i].type == PRINTF_FLOAT)
+          std::printf(specifier.c_str(), packets[i].data.f);
+        else
+          std::printf(specifier.c_str(), packets[i].data.d);
       } else if (std::regex_search(specifier, specifierTypeMatch, pointerPattern)) {
         std::printf(specifier.c_str(), packets[i].data.cptr);
       }
@@ -286,20 +351,26 @@ static inline void processPrintfPackets(PrintfPacket* packets, const unsigned in
     formatString = std::regex_replace(formatString,doubleAmpersandPattern,"%");
     std::printf("%s",formatString.c_str());
   }
+  std::flush(std::cout);
 }
 
 static inline void processPrintfBuffer(PrintfPacket* gpuBuffer) {
 
-  if (gpuBuffer == NULL) return;
-  unsigned int bufferSize = gpuBuffer[PRINTF_BUFFER_SIZE].data.ui;
+  if (gpuBuffer == nullptr) return;
+
   unsigned int cursor = gpuBuffer[PRINTF_OFFSETS].data.uia[0];
-  unsigned int numPackets = ((bufferSize<cursor)?bufferSize:cursor) - PRINTF_HEADER_SIZE;
-  if (numPackets > 0) {
+
+  // check whether the printf buffer is non-empty
+  if (cursor !=  PRINTF_HEADER_SIZE) {
+    unsigned int bufferSize = gpuBuffer[PRINTF_BUFFER_SIZE].data.ui;
+    unsigned int numPackets = ((bufferSize<cursor)?bufferSize:cursor) - PRINTF_HEADER_SIZE;
+
     processPrintfPackets(gpuBuffer+PRINTF_HEADER_SIZE, numPackets);
+
+    // reset the printf buffer and string buffer
+    gpuBuffer[PRINTF_OFFSETS].data.uia[0] = PRINTF_HEADER_SIZE;
+    gpuBuffer[PRINTF_OFFSETS].data.uia[1] = 0;
   }
-  // reset the printf buffer and string buffer
-  gpuBuffer[PRINTF_OFFSETS].data.uia[0] = PRINTF_HEADER_SIZE;
-  gpuBuffer[PRINTF_OFFSETS].data.uia[1] = 0;
 }
 
 
