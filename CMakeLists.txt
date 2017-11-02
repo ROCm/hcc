@@ -203,7 +203,7 @@ endif( )
 
 # define HCC version information
 SET(HCC_VERSION_MAJOR "1")
-SET(HCC_VERSION_MINOR "0")
+SET(HCC_VERSION_MINOR "1")
 
 include(GenerateVersionFromGit)
 

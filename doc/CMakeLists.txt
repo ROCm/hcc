@@ -21,8 +21,8 @@ MESSAGE("Package installation path: ${CMAKE_INSTALL_PREFIX}")
 #################
 
 # define HCC version information
-SET(HCC_VERSION_MAJOR "0")
-SET(HCC_VERSION_MINOR "8")
+SET(HCC_VERSION_MAJOR "1")
+SET(HCC_VERSION_MINOR "1")
 
 # get date information
 # use the last two digits of year + week number as HCC_VERSION_PATCH
