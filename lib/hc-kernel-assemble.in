@@ -23,7 +23,12 @@ LLVM_DIS=$BINDIR/llvm-dis
 CLAMP_ASM=$BINDIR/clamp-assemble
 LIBPATH=$BINDIR/../lib
 
-CXXFLAGS="-std=c++amp -I$BINDIR/../../include -fPIC"
+# At build directory, HCC compiler tools are placed under compiler/bin/, and
+# header files are placed under include/. At install directory, HCC compiler
+# tools are placed under bin/, and header files are placed under include/.
+# Have -I$BIN/../include and -I$BINDIR/../../include ensures headers can
+# always be found either in build directory or installed directory.
+CXXFLAGS="-std=c++amp -I$BINDIR/../include -I$BINDIR/../../include -fPIC"
 
 # Add additional flags if using libc++ for C++ runtime
 USE_LIBCXX=@USE_LIBCXX@

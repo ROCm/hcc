@@ -17,6 +17,9 @@ OUT OF OR INN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
+#include <cassert>
+#include <atomic>
+#include <hc.hpp>
 #include <hc_am.hpp>
 
 #include <hsa/hsa_ext_amd.h>
