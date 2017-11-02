@@ -38,8 +38,7 @@ bool test() {
   { \
     parallel_for_each(ex, [=](index<1>& idx) __HC__ { \
       table3(idx) = func(table1(idx), table2(idx)); \
-    }); \
-    accelerator().get_default_view().wait(); \
+    }).wait(); \
     int error = 0; \
     for (size_t i = 0; i < GRID_SIZE; ++i) { \
       R actual = table3[i];\
@@ -61,7 +60,7 @@ int main() {
 
   ret &= test<16, float,float,float>();
   ret &= test<16, int,float,float>();
-  //ret &= test<16, float,int,float>(); // FIXME: skip this test as it breaks AMDGPU backend as of now
+  ret &= test<16, float,int,float>();
   ret &= test<16, int,int,float>();
   ret &= test<16, double,double,double>();
   ret &= test<16, int,double,double>();
@@ -70,7 +69,7 @@ int main() {
 
   ret &= test<4096, float,float,float>();
   ret &= test<4096, int,float,float>();
-  //ret &= test<4096, float,int,float>(); // FIXME: skip this test as it breaks AMDGPU backend as of now
+  ret &= test<4096, float,int,float>();
   ret &= test<4096, int,int,float>();
   ret &= test<4096, double,double,double>();
   ret &= test<4096, int,double,double>();

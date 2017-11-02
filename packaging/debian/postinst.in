@@ -20,7 +20,7 @@ SOFTLINKS=(
   "$LIBRARY_DIR" "lib" "libmcwamp_atomic.a"
   "$LIBRARY_DIR" "lib" "libmcwamp_cpu.so"
   "$LIBRARY_DIR" "lib" "libmcwamp_hsa.so"
-  "$LIBRARY_DIR" "lib" "libclang_rt.builtins-x86_64.a"
+  "$LIBRARY_DIR" "lib" "libclang_rt.builtins-@CMAKE_SYSTEM_PROCESSOR@.a"
 )
 
 do_softlinks() {

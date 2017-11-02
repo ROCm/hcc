@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <iostream>
 #include <amp_math.h>
+#include <random>
 
 using namespace concurrency;
 
