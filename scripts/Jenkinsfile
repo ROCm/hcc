@@ -7,8 +7,8 @@ import java.text.SimpleDateFormat
 //===----------------------------------------------------------------------===//
 
 def git_config() {
-  def git_email = "dsalinas@amd.com" // "jenkins-compute@amd.com"
-  def git_name = "David Salinas" // Jenkins Compute"
+  def git_email = "rocmhcc@amd.com" // "jenkins-compute@amd.com"
+  def git_name = "ROCm HCC" // Jenkins Compute"
 
   sh (script:"git config user.email ${git_email}")
   sh (script:"git config user.name ${git_name}")
@@ -41,7 +41,7 @@ def git_remote_add(workspace, remote_name, remote_url) {
  
 def send_email(status) {
   emailext (
-    to: 'dsalinas@amd.com',
+    to: 'rocm.hcc@amd.com',
     subject: "${status}: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'",
     body: "${status}: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'; see console output at ${env.BUILD_URL}"
   )
@@ -52,9 +52,9 @@ node ('upstream-merger')
   try { 
 	     def dateFormat = new SimpleDateFormat("yyyyMMddHH")
 		 def date = new Date()
-	     String userID = "david-salinas"
+	     String userID = "rocm-hcc"
 	     String merge_name = "auto_merge_" + dateFormat.format(date)
-	     String user_email = "dsalinas@amd.com"
+	     String user_email = "rocm.hcc@amd.com"
      
         def startStage = params.START_STAGE.toInteger()
         
