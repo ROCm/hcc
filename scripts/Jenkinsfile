@@ -52,6 +52,7 @@ node ('upstream-merger')
   try { 
 	     def dateFormat = new SimpleDateFormat("yyyyMMddHH")
 		 def date = new Date()
+		 def nproc = 8
 	     String userID = "rocm-hcc"
 	     String merge_name = "auto_merge_" + dateFormat.format(date)
 	     String user_email = "rocm.hcc@amd.com"
