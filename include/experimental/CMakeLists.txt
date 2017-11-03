@@ -20,7 +20,7 @@ endforeach(InFName)
 # Set location for exp/ output directory
 set(exp_output_dir "${PROJECT_BINARY_DIR}/include/experimental")
 # Set location for exp/impl/ output directory
-set(impl_output_dir "${PROJECT_BINARY_DIR}/include/experimental/impl")
+set(impl_output_dir "${PROJECT_BINARY_DIR}/include/experimental")
 
 set(exp_out_files)
 set(impl_out_files)
