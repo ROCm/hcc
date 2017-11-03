@@ -52,6 +52,7 @@ node ('upstream-merger')
   try { 
 	     def dateFormat = new SimpleDateFormat("yyyyMMddHH")
 		 def date = new Date()
+		 def nproc = 8
 	     String userID = "rocm-hcc"
 	     String merge_name = "auto_merge_" + dateFormat.format(date)
 	     String user_email = "rocm.hcc@amd.com"
@@ -111,13 +112,13 @@ node ('upstream-merger')
 		
 		if (startStage <= 5) { 
 			stage ('Stage 5: Build merged HCC') {
-				sh (script: "mkdir -p build; cd build; cmake -DCMAKE_BUILD_TYPE=Release ../hcc; make -j$(nproc)")
+				sh (script: "mkdir -p build; cd build; cmake -DCMAKE_BUILD_TYPE=Release ../hcc; make -j${ nproc}")
 			}
 		}
 		
 		if (startStage <= 6) { 
 			stage ('Stage 6: Full sanity tests on merged HCC') {
-				sh (script: "cd build; make test -j$(nproc)")
+				sh (script: "cd build; make test -j${ nproc}")
 			}
 		}
 		
