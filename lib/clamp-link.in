@@ -508,7 +508,12 @@ if [ ${#LINK_KERNEL_ARGS[@]} != 0 ]; then
     echo "Imported Kernels: ${LINK_IMPORTED_KERNEL_ARGS[@]}"
 
     # Perform parallel opt and llc
-    $LTO -thinlto -thinlto-action=optllc "${LINK_IMPORTED_KERNEL_ARGS[@]}" -select-accelerator-code -dce -globaldce -always-inline -mtriple amdgcn--amdhsa-amdgiz -mcpu=$AMDGPU_TARGET -infer-address-spaces -amdgpu-internalize-symbols -lto-freestanding -filetype=obj -enable-si-insert-waitcnts=0 $KMOPTOPT -codegen-opt-level=$KMOPTLLC -thinlto-save-temps="$TEMP_DIR/"
+    $LTO -thinlto -thinlto-action=optllc "${LINK_IMPORTED_KERNEL_ARGS[@]}" -select-accelerator-code -dce -globaldce -always-inline -mtriple amdgcn--amdhsa-amdgiz -mcpu=$AMDGPU_TARGET -infer-address-spaces -amdgpu-internalize-symbols -lto-freestanding -enable-si-insert-waitcnts=0 $KMOPTOPT -codegen-opt-level=$KMOPTLLC -thinlto-save-temps="$TEMP_DIR/"
+
+    if [ $KMDUMPISA == "1" ]; then
+      $LTO -thinlto -thinlto-action=optllc "${LINK_IMPORTED_KERNEL_ARGS[@]}" -select-accelerator-code -dce -globaldce -always-inline -mtriple amdgcn--amdhsa-amdgiz -mcpu=$AMDGPU_TARGET -infer-address-spaces -amdgpu-internalize-symbols -lto-freestanding -dump-isa -enable-si-insert-waitcnts=0 $KMOPTOPT -codegen-opt-level=$KMOPTLLC
+      for f in $TEMP_DIR/*.thinlto.isa; do bn="${f##*/}"; cp "$f" "${KMDUMPDIR}/dump-${bn%%.*}.isa"; done
+    fi
 
     for KERNEL in ${LINK_IMPORTED_KERNEL_ARGS[@]}
     do
@@ -561,7 +566,7 @@ if [ ${#LINK_KERNEL_ARGS[@]} != 0 ]; then
   ret=$?
 
 fi # if [ -n $LINK_KERNEL_ARGS ];
-
+exit $ret
 # remove temp files
 if [ -e $TEMP_DIR/kernel_hsa.o ]; then
   rm $TEMP_DIR/kernel_hsa.o
