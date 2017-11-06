@@ -42,7 +42,7 @@ def git_remote_add(workspace, remote_name, remote_url) {
 def git_push(repo_name, branch_name) { 
 
 	git_config()
-	sh (script: "git push ${ reppo_name} ${branch_name}:${branch_name}")
+	sh (script: "git push ${ repo_name} ${branch_name}:${branch_name}")
 }
 
  
