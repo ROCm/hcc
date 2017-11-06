@@ -39,6 +39,13 @@ def git_remote_add(workspace, remote_name, remote_url) {
     }
  }
  
+def git_push(repo_name, branch_name) { 
+
+	git_config()
+	sh (script: "git push ${ reppo_name} ${branch_name}:${branch_name}")
+}
+
+ 
 def send_email(status) {
   emailext (
     to: 'rocm.hcc@amd.com',
@@ -124,9 +131,9 @@ node ('upstream-merger')
 		
 		if (startStage <= 7) { 		
 			stage ('Stage 7: Quick sanity tests on merged HCC') {
-				sh (script: "/opt/rocm/bin/hcc `/opt/rocm/bin/clamp-config --build --cxxflags --ldflags` -lm hcc/tests/Unit/AmpMath/amp_math_cos.cpp; ./a.out ")
-				sh (script: "/opt/rocm/bin/hcc `/opt/rocm/bin/hcc-config --build --cxxflags --ldflags` -lhc_am hcc/tests/Unit/GridLaunch/glp_const.cpp; ./a.out ")
-				sh (script: "/opt/rocm/bin/hcc `/opt/rocm/bin/hcc-config --build --cxxflags --ldflags` hcc/tests/Unit/HC/hc_atomic_add_global.cpp ; ./a.out ")
+				sh (script: "/opt/rocm/bin/hcc `/opt/rocm/bin/clamp-config --build --cxxflags --ldflags` -lm hcc_fork/tests/Unit/AmpMath/amp_math_cos.cpp; ./a.out ")
+				sh (script: "/opt/rocm/bin/hcc `/opt/rocm/bin/hcc-config --build --cxxflags --ldflags` -lhc_am hcc_fork/tests/Unit/GridLaunch/glp_const.cpp; ./a.out ")
+				sh (script: "/opt/rocm/bin/hcc `/opt/rocm/bin/hcc-config --build --cxxflags --ldflags` hcc_fork/tests/Unit/HC/hc_atomic_add_global.cpp ; ./a.out ")
 			}
 		}
 		
@@ -136,25 +143,35 @@ node ('upstream-merger')
 				if (!fileExists("merge-branch-name") ) { 
 			    	writeFile file: "merge-branch-name", text: "${ merge_name}"
 				} 
+				
 				merge_name = readFile "merge-branch-name"
 				
-				dir ("hcc_fork/clang") {
-					git_config()
-					sh (script: "git push clang_fork ${merge_name}:${merge_name}")
+				dir ("hcc_fork") {
+					dir ("clang") {
+						git_push("clang_fork", merge_name)
+						//sh (script: "git push clang_fork ${merge_name}:${merge_name}")
+					}
+									
+					dir ("lld") {
+						git_push("lld_fork", merge_name)
+					//	sh (script: "git push lld_fork ${merge_name}:${merge_name}")
+					}
+					
+					dir ("compiler") {
+						git_push("compiler_fork", merge_name)
+						//sh (script: "git push compiler_fork ${merge_name}:${merge_name}")
+					}
+					
+					dir ("compiler-rt") {
+						git_push("compiler-rt_fork", merge_name)
+					//	sh (script: "git push compiler-rt_fork ${merge_name}:${merge_name}")
+					}
+					
+					dir ("clang-tools-extra") {			
+						git_push("clang-tools-extra_fork", merge_name)			
+						//sh (script: "git push clang-tools-extra_fork ${merge_name}:${merge_name}")
+					}
 				}
-				dir ("hcc/clang") {
-					git_config() 
-					sh (script: "git request-pull ssh://git@github.com/${ userID}/hcc-clang-upgrade clang_tot_upgrade")
-				}
-				
-			//	sh (script: "cd hcc_fork/lld; git push lld_fork ${merge_name}:${merge_name}")
-			//	sh (script: "cd hcc/lld; git request-pull https://github.com/david-salinas/lld amd-hcc")
-			//	sh (script: "cd hcc_fork/compiler; git push llvm_fork ${merge_name}:${merge_name}")
-			//	sh (script: "cd hcc/compler; git request-pull https://github.com/david-salinas/llvm amd-hcc")
-			//    sh (script: "cd hcc_fork/compiler-rt; git push compiler-rt_fork ${merge_name}:${merge_name}")
-			//	sh (script: "cd hcc/compler-rt; git request-pull https://github.com/david-salinas/compiler-rt amd-hcc")		
-			//   sh (script: "cd hcc_fork/clang-tools-extra; git push clang-tools-extra_fork ${merge_name}:${merge_name}")
-			//	sh (script: "cd hcc/clang-tools-extra; git request-pull https://github.com/david-salinas/clang-tools-extra amd-hcc")				
 			}
 		}
 	} catch(e) {
