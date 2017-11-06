@@ -158,7 +158,7 @@ node ('upstream-merger')
 					}
 					
 					dir ("compiler") {
-						git_push("compiler_fork", merge_name)
+						git_push("llvm_fork", merge_name)
 						//sh (script: "git push compiler_fork ${merge_name}:${merge_name}")
 					}
 					
