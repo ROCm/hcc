@@ -153,7 +153,6 @@ do
     ################################################
     -dump-isa)
     export KMDUMPISA=1
-    KMDUMPISA=1
     continue
     ;;
     -dump-llvm)
@@ -395,18 +394,15 @@ ret=0
 if [ ${#LINK_KERNEL_ARGS[@]} != 0 ]; then
 
   # combine kernel sections together
-  #$LINK "${LINK_KERNEL_ARGS[@]}" | $OPT -always-inline - -o $TEMP_DIR/kernel.bc
-  echo "Kernels: ${LINK_KERNEL_ARGS[@]}"
+  if [ $VERBOSE != 0 ]; then
+    echo "Generating AMD GCN Kernels: ${LINK_KERNEL_ARGS[@]}"
+  fi
+
   for KERNEL in ${LINK_KERNEL_ARGS[@]} ; do
     $OPT -thinlto-bc -disable-opt -module-summary $KERNEL -o $KERNEL
   done
   $LTO -thinlto -thinlto-action=thinlink "${LINK_KERNEL_ARGS[@]}" -o $TEMP_DIR/kernel.thinlto.index
   $LTO -thinlto -thinlto-action=import "${LINK_KERNEL_ARGS[@]}" -thinlto-index=$TEMP_DIR/kernel.thinlto.index -import-instr-limit=1048576 -force-import-weak
-
-  # lower to GCN ISA
-  if [ $VERBOSE == 1 ]; then
-    echo "Generating AMD GCN kernel"
-  fi
 
   # touch an empty object for host part, to accomodate rule required by
   # clang-offload-bundler
@@ -415,6 +411,7 @@ if [ ${#LINK_KERNEL_ARGS[@]} != 0 ]; then
   # invoke clang-offload-bundler to create kernel bundle
   CLANG_OFFLOAD_BUNDLER_INPUTS_ARGS="-inputs=$TEMP_DIR/__empty.o"
   CLANG_OFFLOAD_BUNDLER_TARGETS_ARGS="-targets=host-x86_64-unknown-linux"
+
   declare -a pids
   declare -a ISABIN_FILES
   MAX_LIMIT=8
@@ -422,7 +419,9 @@ if [ ${#LINK_KERNEL_ARGS[@]} != 0 ]; then
   # for each GPU target, lower to GCN ISA in HSACO format
   for KERNEL in ${LINK_KERNEL_ARGS[@]}
   do
-    echo "$KERNEL"
+    if [ $VERBOSE != 0 ]; then
+      echo "Processing: $KERNEL"
+    fi
     # Only allow at most $MAX_LIMIT sub-processes
     if [ $(jobs 2>&1 | grep -c Running) -ge "$MAX_LIMIT" ] ; then
       for pid in ${pids[*]}; do
@@ -439,7 +438,10 @@ if [ ${#LINK_KERNEL_ARGS[@]} != 0 ]; then
       pids=("${pids[@]}" "$!")
 
       ISABIN_FILES[$i]="${ISABIN_FILES[$i]} $KERNEL-$AMDGPU_TARGET.isabin"
-      echo "$KERNEL-$AMDGPU_TARGET.isabin"
+
+      if [ $VERBOSE != 0 ]; then
+        echo "Constructing: $KERNEL-$AMDGPU_TARGET.isabin"
+      fi
       i+=1
     done
   done
@@ -467,8 +469,9 @@ if [ ${#LINK_KERNEL_ARGS[@]} != 0 ]; then
       cp $KERNEL-$AMDGPU_TARGET.hsaco ${KMDUMPDIR}/dump-$AMDGPU_TARGET.hsaco
     fi
 
-    #ISABIN_FILES=("")
-    echo "$KERNEL-$AMDGPU_TARGET.hsaco"
+    if [ $VERBOSE != 0 ]; then
+      echo "Generated: $KERNEL-$AMDGPU_TARGET.hsaco"
+    fi
 
     # augment arguments to clang-offload-bundler
     CLANG_OFFLOAD_BUNDLER_INPUTS_ARGS+=",$KERNEL-$AMDGPU_TARGET.hsaco"
@@ -476,7 +479,9 @@ if [ ${#LINK_KERNEL_ARGS[@]} != 0 ]; then
     i+=1
   done
 
-  echo "Finished clamp-device"
+  if [ $VERBOSE != 0 ]; then
+    echo "Finished generation of AMD GCN kernels"
+  fi
 
   # invoke clang-offload-bundler
   $CLANG_OFFLOAD_BUNDLER -type=o $CLANG_OFFLOAD_BUNDLER_INPUTS_ARGS $CLANG_OFFLOAD_BUNDLER_TARGETS_ARGS -outputs=$TEMP_DIR/kernel.bundle

@@ -228,18 +228,5 @@ if [ $KMDUMPISA == "1" ]; then
   mv $2.isa ${KMDUMPDIR}/dump-$AMDGPU_TARGET.isa
 fi
 
-#$LLD -shared $2.isabin -o $2
-
-# error handling for ld.lld
-#RETVAL=$?
-#if [ $RETVAL != 0 ]; then
-#  echo "Generating AMD GCN kernel failed in ld.lld for target: $AMDGPU_TARGET"
-#  exit $RETVAL
-#fi
-
-#if [ $KMDUMPISA == "1" ]; then
-#  cp $2 ${KMDUMPDIR}/dump-$AMDGPU_TARGET.hsaco
-#fi
-
 # remove temp file
 rm -f $2.promote.bc $2.linked.bc $2.opt.bc $2.isa
