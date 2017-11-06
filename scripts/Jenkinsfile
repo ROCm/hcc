@@ -112,7 +112,7 @@ node ('upstream-merger')
 		
 		if (startStage <= 5) { 
 			stage ('Stage 5: Build merged HCC') {
-				sh (script: "mkdir -p build; cd build; cmake -DCMAKE_BUILD_TYPE=Release ../hcc; make -j${ nproc}")
+				sh (script: "mkdir -p build; cd build; cmake -DCMAKE_BUILD_TYPE=Release ../hcc_fork; make -j${ nproc}")
 			}
 		}
 		
