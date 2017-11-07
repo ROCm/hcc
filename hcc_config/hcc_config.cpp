@@ -150,12 +150,11 @@ void ldflags(void) {
         }
     }
 
-    // extra libraries if using libc++ for C++ runtime   
+    // extra libraries if using libc++ for C++ runtime
+    // If using RHEL or CentOS, must also use c++abi
 #ifdef USE_LIBCXX
-    std::cout << " -stdlib=libc++ ";
-    #ifndef HCC_TOOLCHAIN_RHEL
-      std::cout << " -lc++abi ";
-    #endif
+    std::cout << " -stdlib=libc++";
+    std::cout << " -lc++ -lc++abi ";
 #endif
     std::cout << " -ldl -lm -lpthread";
 
@@ -166,6 +165,7 @@ void ldflags(void) {
         if (p == std::string("ON"))
         std::cout << " -lmcwamp_atomic";
 
+    std::cout << " -lhc_am";
     std::cout << " -Wl,--whole-archive -lmcwamp -Wl,--no-whole-archive";
 
 #ifdef CODEXL_ACTIVITY_LOGGER_ENABLED
@@ -199,7 +199,7 @@ void gtest(void) {
 
 // Compiling as a shared library
 void shared(void) {
-    std::cout << " -shared -fPIC -Wl,-Bsymbolic ";
+    std::cout << " -shared -fPIC ";
 }
 
 // print command line usage

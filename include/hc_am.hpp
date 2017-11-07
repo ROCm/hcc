@@ -1,6 +1,8 @@
 #pragma once
 
 #include "hc.hpp"
+#include <cstddef>
+#include <mutex>
 #include <initializer_list>
 
 typedef int am_status_t;
@@ -21,7 +23,7 @@ public:
     void *      _hostPointer;   ///< Host pointer.  If host access is not allowed, NULL.
     void *      _devicePointer; ///< Device pointer.
     void *      _unalignedDevicePointer; ///< Unaligned device pointer
-    size_t      _sizeBytes;     ///< Size of allocation.
+    std::size_t      _sizeBytes;     ///< Size of allocation.
     hc::accelerator _acc;       ///< Accelerator where allocation is physically located.
     bool        _isInDeviceMem; ///< Memory is physically resident on a device (if false, memory is located on host)
     bool        _isAmManaged;   ///< Memory was allocated by AM and should be freed when am_reset is called.
@@ -31,8 +33,20 @@ public:
     unsigned    _appAllocationFlags; ///< App-specific allocation flags.  (Used by HIP to store allocation flags)
     void *      _appPtr;             ///< App-specific pointer to additional information.
 
+    // creates a dummy copy of AmPointerInfo
+    AmPointerInfo() :
+        _hostPointer(nullptr),
+        _devicePointer(nullptr),
+        _unalignedDevicePointer(nullptr),
+        _sizeBytes(0),
+        _isInDeviceMem(false),
+        _isAmManaged(false),
+        _allocSeqNum(0),
+        _appId(-1),
+        _appAllocationFlags(0),
+        _appPtr(nullptr)  {};
 
-    AmPointerInfo(void *hostPointer, void *devicePointer, void* unalignedDevicePointer, size_t sizeBytes, hc::accelerator &acc,  bool isInDeviceMem=false, bool isAmManaged=false) :
+    AmPointerInfo(void *hostPointer, void *devicePointer, void* unalignedDevicePointer, std::size_t sizeBytes, hc::accelerator &acc,  bool isInDeviceMem=false, bool isAmManaged=false) :
         _hostPointer(hostPointer),
         _devicePointer(devicePointer),
         _unalignedDevicePointer(unalignedDevicePointer),
@@ -75,7 +89,8 @@ namespace hc {
  *
  * @see am_free, am_copy
  */
-auto_voidp am_aligned_alloc(size_t size, hc::accelerator &acc, unsigned flags, size_t alignment = 0);
+
+auto_voidp am_aligned_alloc(std::size_t size, hc::accelerator &acc, unsigned flags, std::size_t alignment = 0);
 
 /**
  * Allocate a block of @p size bytes of memory on the specified @p acc.
@@ -95,7 +110,7 @@ auto_voidp am_aligned_alloc(size_t size, hc::accelerator &acc, unsigned flags, s
  *
  * @see am_free, am_copy
  */
-auto_voidp am_alloc(size_t size, hc::accelerator &acc, unsigned flags);
+auto_voidp am_alloc(std::size_t size, hc::accelerator &acc, unsigned flags);
 
 /**
  * Free a block of memory previously allocated with am_alloc.
@@ -112,7 +127,7 @@ am_status_t am_free(void*  ptr);
  * @return AM_SUCCESS on error or AM_ERROR_MISC if an error occurs.
  * @see am_alloc, am_free
  */
-am_status_t am_copy(void*  dst, const void*  src, size_t size) __attribute__ (( deprecated ("use accelerator_view::copy instead (and note src/dst order reversal)" ))) ;
+am_status_t am_copy(void*  dst, const void*  src, std::size_t size) __attribute__ (( deprecated ("use accelerator_view::copy instead (and note src/dst order reversal)" ))) ;
 
 
 
@@ -152,7 +167,7 @@ am_status_t am_memtracker_add(void* ptr, hc::AmPointerInfo &info);
  *
  * @see am_memtracker_getinfo, am_memtracker_add
  */
-am_status_t am_memtracker_update(const void* ptr, int appId, unsigned allocationFlags);
+am_status_t am_memtracker_update(const void* ptr, int appId, unsigned allocationFlags, void *appPtr=nullptr);
 
 
 /** 
@@ -173,7 +188,7 @@ am_status_t am_memtracker_remove(void* ptr);
  * @returns Number of entries reset.
  * @see am_memtracker_getinfo
  */
-size_t am_memtracker_reset(const hc::accelerator &acc);
+std::size_t am_memtracker_reset(const hc::accelerator &acc);
 
 /**
  * Print the entries in the memory tracker table.
@@ -189,7 +204,7 @@ void am_memtracker_print(void * targetAddress=nullptr);
  *
  * User memory is registered with am_tracker_add.
  **/
-void am_memtracker_sizeinfo(const hc::accelerator &acc, size_t *deviceMemSize, size_t *hostMemSize, size_t *userMemSize);
+void am_memtracker_sizeinfo(const hc::accelerator &acc, std::size_t *deviceMemSize, std::size_t *hostMemSize, std::size_t *userMemSize);
 
 
 void am_memtracker_update_peers(const hc::accelerator &acc, int peerCnt, hsa_agent_s *agents);
@@ -206,7 +221,7 @@ void am_memtracker_update_peers(const hc::accelerator &acc, int peerCnt, hsa_age
  * @return AM_ERROR_MISC if @p ptr is not found in the pointer tracker.
  * @return AM_ERROR_MISC if @p peers incudes a non peer accelerator.
  */
-am_status_t am_map_to_peers(void* ptr, size_t num_peer, const hc::accelerator* peers); 
+am_status_t am_map_to_peers(void* ptr, std::size_t num_peer, const hc::accelerator* peers); 
 
 /*
  * Locks a host pointer to a vector of agents
@@ -219,7 +234,7 @@ am_status_t am_map_to_peers(void* ptr, size_t num_peer, const hc::accelerator* p
  * @return AM_SUCCESS if lock is successfully.
  * @return AM_ERROR_MISC if lock is unsuccessful.
  */
-am_status_t am_memory_host_lock(hc::accelerator &ac, void *hostPtr, size_t size, hc::accelerator *visibleAc, size_t numVisibleAc);
+am_status_t am_memory_host_lock(hc::accelerator &ac, void *hostPtr, std::size_t size, hc::accelerator *visibleAc, std::size_t numVisibleAc);
 
 /*
  * Unlock page locked host memory

@@ -21,8 +21,8 @@ else()
   if( EXISTS "/etc/os-release" )
     file( STRINGS "/etc/os-release" DISTRO_ID REGEX "^ID=" )
     file( STRINGS "/etc/os-release" DISTRO_RELEASE REGEX "^VERSION_ID=" )
-    string( REPLACE "ID=" "" DISTRO_ID ${DISTRO_ID} )
-    string( REPLACE "VERSION_ID=" "" DISTRO_RELEASE ${DISTRO_RELEASE} )
+    string( REPLACE "ID=" "" DISTRO_ID "${DISTRO_ID}" )
+    string( REPLACE "VERSION_ID=" "" DISTRO_RELEASE "${DISTRO_RELEASE}" )
   endif( )
 endif( )
 
@@ -153,7 +153,7 @@ if (NOT CODEXL_ACTIVITY_LOGGER_HEADER)
   MESSAGE("CodeXL header not found. use -DCODEXL_ACTIVITY_LOGGER_HEADER_DIR=<path_to_CXLActivityLogger.h>.")
 endif (NOT CODEXL_ACTIVITY_LOGGER_HEADER)
 
-find_path(CODEXL_ACTIVITY_LOGGER_LIBRARY NAMES libCXLActivityLogger.so PATHS ${CODEXL_ACTIVITY_LOGGER_LIBRARY_DIR} ${ROCM_ROOT}/profiler/CXLActivityLogger/bin/x86_64 NO_DEFAULT_PATH)
+find_path(CODEXL_ACTIVITY_LOGGER_LIBRARY NAMES libCXLActivityLogger.so PATHS ${CODEXL_ACTIVITY_LOGGER_LIBRARY_DIR} ${ROCM_ROOT}/profiler/CXLActivityLogger/bin/${CMAKE_SYSTEM_PROCESSOR} NO_DEFAULT_PATH)
 find_path(CODEXL_ACTIVITY_LOGGER_LIBRARY NAMES libCXLActivityLogger.so)
 
 if (NOT CODEXL_ACTIVITY_LOGGER_LIBRARY)
@@ -202,23 +202,23 @@ endif( )
 #################
 
 # define HCC version information
-SET(KALMAR_VERSION_MAJOR "1")
-SET(KALMAR_VERSION_MINOR "0")
+SET(HCC_VERSION_MAJOR "1")
+SET(HCC_VERSION_MINOR "1")
 
 include(GenerateVersionFromGit)
 
-if (NOT KALMAR_VERSION_STRING)
-  set(KALMAR_VERSION_STRING
-    "${KALMAR_VERSION_MAJOR}.${KALMAR_VERSION_MINOR}")
+if (NOT HCC_VERSION_STRING)
+  set(HCC_VERSION_STRING
+    "${HCC_VERSION_MAJOR}.${HCC_VERSION_MINOR}")
 endif()
 
 # Set HCC version string. The rule for version string is:
-# KALMAR_VERSION_MAJOR . KALMAR_VERSION_MINOR . KALMAR_VERSION_PATCH-KALMAR_SDK_COMIT-KALMAR_FRONTEND_COMMIT-KALMAR_BACKEND_COMMIT
-add_version_info_from_git(KALMAR_VERSION_STRING
-  KALMAR_VERSION_PATCH KALMAR_SDK_COMMIT KALMAR_FRONTEND_COMMIT KALMAR_BACKEND_COMMIT)
+# HCC_VERSION_MAJOR . HCC_VERSION_MINOR . HCC_VERSION_PATCH-KALMAR_SDK_COMIT-KALMAR_FRONTEND_COMMIT-KALMAR_BACKEND_COMMIT
+add_version_info_from_git(HCC_VERSION_STRING
+  HCC_VERSION_PATCH KALMAR_SDK_COMMIT KALMAR_FRONTEND_COMMIT KALMAR_BACKEND_COMMIT)
 
 # set default installation path
-set(INSTALL_DIR_NAME "hcc-${KALMAR_VERSION_MAJOR}.${KALMAR_VERSION_MINOR}")
+set(INSTALL_DIR_NAME "hcc-${HCC_VERSION_MAJOR}.${HCC_VERSION_MINOR}")
 if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT AND CMAKE_INSTALL_PREFIX MATCHES "/usr/local")
   set(CMAKE_INSTALL_PREFIX "/opt/rocm/${INSTALL_DIR_NAME}" CACHE PATH "Default installation path of hcc" FORCE)
 endif ()
@@ -236,7 +236,7 @@ MESSAGE("Installer package installation path: ${HCC_PACKAGE_INSTALL_PREFIX}")
 
 # show HCC version string
 MESSAGE("=============================================")
-MESSAGE("HCC version: ${KALMAR_VERSION_STRING}")
+MESSAGE("HCC version: ${HCC_VERSION_STRING}")
 MESSAGE("=============================================")
 
 #################
@@ -309,7 +309,18 @@ endif ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
 set(LLVM_EXTERNAL_CLANG_SOURCE_DIR "${PROJECT_SOURCE_DIR}/clang")
 set(LLVM_EXTERNAL_COMPILER_RT_SOURCE_DIR "${PROJECT_SOURCE_DIR}/compiler-rt")
 set(LLVM_EXTERNAL_LLD_SOURCE_DIR "${PROJECT_SOURCE_DIR}/lld")
-set(LLVM_TARGETS_TO_BUILD "AMDGPU" "X86" CACHE STRING "" FORCE)
+
+# determine LLVM targets to be built
+# AMDGPU is always on
+# For host target, x86_64, aarch64, ppc64 are currently supported
+if (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "x86_64")
+  set(LLVM_HOST_TARGET "X86")
+elseif (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "aarch64")
+  set(LLVM_HOST_TARGET "AArch64")
+elseif (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "ppc64")
+  set(LLVM_HOST_TARGET "PowerPC")
+endif()
+set(LLVM_TARGETS_TO_BUILD "AMDGPU" ${LLVM_HOST_TARGET} CACHE STRING "" FORCE)
 set(LLVM_INSTALL_TOOLCHAIN_ONLY ON CACHE BOOL "" FORCE)
 
 if(EXISTS ${PROJECT_SOURCE_DIR}/clang-tools-extra/CMakeLists.txt)
@@ -330,7 +341,10 @@ install(PROGRAMS $<TARGET_FILE:llvm-as>
 
 add_custom_target(clang_links DEPENDS clang)
 add_custom_command(TARGET clang_links POST_BUILD
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ${CLANG_BIN_DIR}/lib/clang/6.0.0/lib/linux/libclang_rt.builtins-x86_64.a ${PROJECT_BINARY_DIR}/lib/libclang_rt.builtins-x86_64.a
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ${CLANG_BIN_DIR}/lib/clang/6.0.0/lib/linux/libclang_rt.builtins-${CMAKE_SYSTEM_PROCESSOR}.a ${PROJECT_BINARY_DIR}/lib/libclang_rt.builtins-${CMAKE_SYSTEM_PROCESSOR}.a
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ${CLANG_BIN_DIR}/bin/clang ${PROJECT_BINARY_DIR}/bin/clang
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ${CLANG_BIN_DIR}/bin/clang++ ${PROJECT_BINARY_DIR}/bin/clang++
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ${CLANG_BIN_DIR}/bin/hcc ${PROJECT_BINARY_DIR}/bin/hcc
 )
 
 # install certain LLVM libraries needed by HIP
@@ -341,7 +355,7 @@ install(PROGRAMS $<TARGET_FILE:LLVMAMDGPUDesc>
                  $<TARGET_FILE:LLVMSupport>
                  $<TARGET_FILE:LLVMCpuRename>
                  $<TARGET_FILE:LLVMDirectFuncCall>
-                 $<TARGET_FILE:LLVMEraseNonkernel>
+                 $<TARGET_FILE:LLVMSelectAcceleratorCode>
                  $<TARGET_FILE:LLVMHello>
                  $<TARGET_FILE:LLVMTileUniform>
                  $<TARGET_FILE:LLVMWrapperGen>
@@ -349,7 +363,10 @@ install(PROGRAMS $<TARGET_FILE:LLVMAMDGPUDesc>
         COMPONENT compiler
 )
 
-install(FILES ${CLANG_BIN_DIR}/lib/clang/6.0.0/lib/linux/libclang_rt.builtins-x86_64.a
+# force library install path to lib
+set(CMAKE_INSTALL_LIBDIR "lib" CACHE INTERNAL "Installation directory for libraries" FORCE)
+
+install(FILES ${CLANG_BIN_DIR}/lib/clang/6.0.0/lib/linux/libclang_rt.builtins-${CMAKE_SYSTEM_PROCESSOR}.a
         DESTINATION  ${CMAKE_INSTALL_LIBDIR}
         COMPONENT compiler)
 
@@ -485,10 +502,10 @@ execute_process(COMMAND ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/process_packaging_scri
                 WORKING_DIRECTORY ${PROJECT_BINARY_DIR})
 
 set(CPACK_PACKAGE_VENDOR "Advanced Micro Devices, Inc")
-set(CPACK_PACKAGE_VERSION "${KALMAR_VERSION_MAJOR}.${KALMAR_VERSION_MINOR}.${KALMAR_VERSION_PATCH}")
-set(CPACK_PACKAGE_VERSION_MAJOR ${KALMAR_VERSION_MAJOR})
-set(CPACK_PACKAGE_VERSION_MINOR ${KALMAR_VERSION_MINOR})
-set(CPACK_PACKAGE_VERSION_PATCH ${KALMAR_VERSION_PATCH})
+set(CPACK_PACKAGE_VERSION "${HCC_VERSION_MAJOR}.${HCC_VERSION_MINOR}.${HCC_VERSION_PATCH}")
+set(CPACK_PACKAGE_VERSION_MAJOR ${HCC_VERSION_MAJOR})
+set(CPACK_PACKAGE_VERSION_MINOR ${HCC_VERSION_MINOR})
+set(CPACK_PACKAGE_VERSION_PATCH ${HCC_VERSION_PATCH})
 
 set(PACKAGE_DESCRIPTION "HCC: An Open Source, Optimizing C++ Compiler for Heterogeneous Compute")
 
@@ -543,7 +560,7 @@ set(CPACK_RPM_PRE_UNINSTALL_SCRIPT_FILE "${PROJECT_BINARY_DIR}/packaging/debian/
 # disable automatic shared libraries dependency detection
 set(CPACK_RPM_PACKAGE_AUTOREQ 0)
 
-set(HCC_GENERAL_RPM_DEP "findutils, elfutils-libelf, pciutils-libs, file, pth, libunwind")
+set(HCC_GENERAL_RPM_DEP "findutils, elfutils-libelf, pciutils-libs, file, pth, libunwind, libunwind-devel, libcxx, libcxxabi")
 set(CPACK_RPM_PACKAGE_REQUIRES "${HCC_GENERAL_RPM_DEP} ${HCC_ROCR_DEP}" )
 
 set(CPACK_COMPONENTS_ALL compiler)

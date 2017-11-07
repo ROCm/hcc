@@ -67,7 +67,7 @@ else {
   $NumberOfBundles = unpack("s", $NumberOfBundles);
 
   my $ClangOffloadBundlerOutputsArgs="-outputs=/dev/null";
-  my $ClangOffloadBundlerTargetsArgs="-targets=host-x86_64-unknown-linux";
+  my $ClangOffloadBundlerTargetsArgs="-targets=host-@CMAKE_SYSTEM_PROCESSOR@-unknown-linux";
 
   for (my $iter = 0; $iter < $NumberOfBundles; $iter++) {
     # read offset

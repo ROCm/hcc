@@ -33,7 +33,7 @@ endif (USE_LIBCXX)
 
 # Library interface for building shared libraries
 add_library(hccshared INTERFACE)
-target_link_libraries(hccshared INTERFACE -fPIC -Wl,-Bsymbolic)
+target_link_libraries(hccshared INTERFACE -fPIC)
 
 ####################
 # C++AMP tools
@@ -50,6 +50,9 @@ install(PROGRAMS ${PROJECT_BINARY_DIR}/compiler/bin/clamp-device
 # C++AMP tools (HSA-specific)
 ####################
 install(PROGRAMS ${PROJECT_BINARY_DIR}/bin/extractkernel
+    DESTINATION bin)
+
+install(PROGRAMS ${PROJECT_SOURCE_DIR}/lib/rpt
     DESTINATION bin)
 
 ####################
@@ -100,7 +103,7 @@ configure_package_config_file(
 
 write_basic_package_version_file(
   ${CMAKE_CURRENT_BINARY_DIR}/hcc-config-version.cmake
-  VERSION "${KALMAR_VERSION_MAJOR}.${KALMAR_VERSION_MINOR}.${KALMAR_VERSION_PATCH}"
+  VERSION "${HCC_VERSION_MAJOR}.${HCC_VERSION_MINOR}.${HCC_VERSION_PATCH}"
   COMPATIBILITY SameMajorVersion
 )
 
