@@ -268,7 +268,11 @@ static inline uint64_t Read8byteIntegerFromBuffer(const char *data, size_t pos) 
 #define HCC_TRIPLE_PREFIX "hcc-amdgcn--amdhsa-"
 #define HCC_TRIPLE_PREFIX_LENGTH (19)
 
-inline void DetermineAndGetProgram(KalmarQueue* pQueue, size_t* kernel_size, void** kernel_source) {
+// Try determine a compatible code object within kernel bundle for a queue
+// Returns true if a compatible code object is found, and returns its size and
+// pointer to the code object. Returns false in case no compatible code object
+// is found.
+inline bool DetermineAndGetProgram(KalmarQueue* pQueue, size_t* kernel_size, void** kernel_source) {
 
   bool FoundCompatibleKernel = false;
 
@@ -342,17 +346,17 @@ inline void DetermineAndGetProgram(KalmarQueue* pQueue, size_t* kernel_size, voi
     }
   }
 
-  if (!FoundCompatibleKernel) {
-    RUNTIME_ERROR(1, "Fail to find compatible kernel", __LINE__)
-  }
+  return FoundCompatibleKernel;
 }
 
 void BuildProgram(KalmarQueue* pQueue) {
   size_t kernel_size = 0;
   void* kernel_source = nullptr;
 
-  DetermineAndGetProgram(pQueue, &kernel_size, &kernel_source);
-  pQueue->getDev()->BuildProgram((void*)kernel_size, kernel_source);
+  // Only call BuildProgram in case a compatible code object is found
+  if (DetermineAndGetProgram(pQueue, &kernel_size, &kernel_source)) {
+    pQueue->getDev()->BuildProgram((void*)kernel_size, kernel_source);
+  }
 }
 
 // used in parallel_for_each.h
