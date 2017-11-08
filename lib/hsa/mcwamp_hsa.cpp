@@ -377,6 +377,26 @@ namespace
     }
 
     inline
+    const std::vector<hsa_agent_t>& all_agents()
+    {
+        using namespace std;
+
+        static vector<hsa_agent_t> r;
+        static once_flag f;
+
+        call_once(f, []() {
+            for (auto&& acc : hc::accelerator::get_all()) {
+                if (acc.is_hsa_accelerator()) {
+                    r.push_back(
+                        *static_cast<hsa_agent_t*>(acc.get_hsa_agent()));
+                }
+            }
+        });
+
+        return r;
+    }
+
+    inline
     void associate_code_object_symbols_with_host_allocation(
         const ELFIO::elfio& reader,
         const ELFIO::elfio& self_reader,
@@ -412,12 +432,14 @@ namespace
                     static mutex mtx;
                     lock_guard<mutex> lck{mtx};
 
+
                     void* p = nullptr;
                     hsa_amd_memory_lock(
                         reinterpret_cast<void*>(it1->second.first),
                         it1->second.second,
-                        &agent,
-                        1,
+                        // Awful cast because ROCr interface is misspecified.
+                        const_cast<hsa_agent_t*>(all_agents().data()),
+                        all_agents().size(),
                         &p);
 
                     hsa_executable_agent_global_variable_define(
