@@ -1,6 +1,6 @@
 function(add_version_info_from_git VERS PATCH_P SDK_COMMIT_P FRONTEND_COMMIT_P BACKEND_COMMIT_P)
   # get date information based on UTC
-  # use the last two digits of year + week number + day in the week as KALMAR_VERSION_PATCH
+  # use the last two digits of year + week number + day in the week as HCC_VERSION_PATCH
   # use the commit date, instead of build date
   # add xargs to remove strange trailing newline character
   execute_process(COMMAND git show -s --format=@%ct

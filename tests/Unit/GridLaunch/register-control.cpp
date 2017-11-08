@@ -1,4 +1,4 @@
-// RUN: %hc -lhc_am %s -o %t.out -Xlinker -dump-llvm -Xlinker -dump-dir=%T --amdgpu-target=gfx803
+// RUN: %hc -lhc_am %s -o %t.out -Xlinker -dump-llvm -Xlinker -dump-dir=%T %target_all_gpus
 // RUN: %llvm-dis %T/dump-gfx803.opt.bc -f -o - | %FileCheck %s
 // RUN: %t.out
 

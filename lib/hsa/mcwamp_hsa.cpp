@@ -626,6 +626,7 @@ protected:
     HSAOpCoord _opCoord;
     int        _asyncOpsIndex;
 };
+std::ostream& operator<<(std::ostream& os, const HSAOp & op);
 
 
 class HSACopy : public HSAOp {
@@ -830,7 +831,7 @@ public:
     {
 
         if (dependent_op != nullptr) {
-            assert (dependent_op->getCommandKind() == hcCommandMarker);
+            assert (dependent_op->getCommandKind() == Kalmar::hcCommandMarker);
 
             depAsyncOps[0] = std::static_pointer_cast<HSABarrier> (dependent_op);
             depCount = 1;
@@ -856,7 +857,7 @@ public:
             for (int i = 0; i < count; ++i) {
                 if (dependent_op_array[i]) {
                     // squish null ops
-                    assert (dependent_op_array[i]->getCommandKind() == hcCommandMarker);
+                    assert (dependent_op_array[i]->getCommandKind() == Kalmar::hcCommandMarker);
                     depAsyncOps[depCount] = std::static_pointer_cast<HSABarrier> (dependent_op_array[i]);
                     depCount++;
                 }
@@ -1309,7 +1310,7 @@ public:
 
         op->setSeqNumFromQueue();
 
-        DBOUT(DB_CMD, "  pushing " << op << " completion_signal="<< std::hex  << ((hsa_signal_t*)op->getNativeHandle())->handle << std::dec
+        DBOUT(DB_CMD, "  pushing " << *op << " completion_signal="<< std::hex  << ((hsa_signal_t*)op->getNativeHandle())->handle << std::dec
                     << "  commandKind=" << getHcCommandKindString(op->getCommandKind())
                     << " "
                     << (op->getCommandKind() == hcCommandKernel ? ((static_cast<HSADispatch*> (op.get()))->getKernelName()) : "")  // change to getLongKernelName() for mangled name
@@ -1979,15 +1980,23 @@ public:
                     // state here.   If the host then waits on the freshly created marker,
                     // runtime will issue a system-release fence.
                     if (depOp->barrierNextKernelNeedsSysAcquire()) {
-                        DBOUTL(DB_CMD2, *this << " setting NextKernelNeedsSysAcquire(true) due to dependency on barrier " << depOp)
+                        DBOUTL(DB_CMD2, *this << " setting NextKernelNeedsSysAcquire(true) due to dependency on barrier " << *depOp)
                         setNextKernelNeedsSysAcquire(true);
                     }
                     if (depOp->barrierNextSyncNeedsSysRelease()) {
-                        DBOUTL(DB_CMD2, *this << " setting NextSyncNeedsSysRelease(true) due to dependency on barrier " << depOp)
+                        DBOUTL(DB_CMD2, *this << " setting NextSyncNeedsSysRelease(true) due to dependency on barrier " << *depOp)
                         setNextSyncNeedsSysRelease(true);
                     }
-                    if (HCC_FORCE_CROSS_QUEUE_FLUSH) {
+                    if (HCC_FORCE_CROSS_QUEUE_FLUSH & 0x1) {
+                        if (!depOp->barrierNextKernelNeedsSysAcquire()) {
+                            DBOUTL(DB_RESOURCE, *this << " force setting NextSyncNeedsSysAcquire(true) even though barrier didn't require it " << *depOp)
+                        }
                         setNextKernelNeedsSysAcquire(true);
+                    }
+                    if (HCC_FORCE_CROSS_QUEUE_FLUSH & 0x2) {
+                        if (!depOp->barrierNextSyncNeedsSysRelease()) {
+                            DBOUTL(DB_RESOURCE, *this << " force setting NextSyncNeedsSysRelease(true) even though barrier didn't require it " << *depOp)
+                        }
                         setNextSyncNeedsSysRelease(true);
                     }
 
@@ -3586,7 +3595,7 @@ void HSAContext::ReadHccEnv()
     GET_ENV_INT(HCC_DB_SYMBOL_FORMAT, "Select format of symbol (kernel) name used in debug.  0=short,1=mangled,1=demangled.  Bit 0x10 removes arguments.");
 
     GET_ENV_INT(HCC_OPT_FLUSH, "Perform system-scope acquire/release only at CPU sync boundaries (rather than after each kernel)");
-    GET_ENV_INT(HCC_FORCE_CROSS_QUEUE_FLUSH, "create_blocking_marker will assume sys acquire and release needed in queue where the marker is created");
+    GET_ENV_INT(HCC_FORCE_CROSS_QUEUE_FLUSH, "create_blocking_marker will force need for sys acquire (0x1) and release (0x2) queue where the marker is created. 0x3 sets need for both flags.");
     GET_ENV_INT(HCC_MAX_QUEUES, "Set max number of HSA queues this process will use.  accelerator_views will share the allotted queues and steal from each other as necessary");
 
 
@@ -3829,14 +3838,6 @@ std::ostream& operator<<(std::ostream& os, const HSAQueue & hav)
 }
 
 
-// op printer
-inline std::ostream& operator<<(std::ostream& os, const HSAOp & op)
-{
-     os << "#" << op.opCoord()._deviceId << "." ;
-     os << op.opCoord()._queueId << "." ;
-     os << op.getSeqNum();
-    return os;
-}
 
 
 HSAQueue::HSAQueue(KalmarDevice* pDev, hsa_agent_t agent, execute_order order) :
@@ -5045,7 +5046,7 @@ hsa_status_t HSACopy::hcc_memory_async_copy(Kalmar::hcCommandKind copyKind, cons
 
     // Next kernel needs to acquire the result of the copy.
     // This holds true for any copy direction, since host memory can also be cached on this GPU.
-    DBOUT( DB_CMD2, "  H2D copy setNextKernelNeedsSysAcquire(true)\n");
+    DBOUT( DB_CMD2, "  copy setNextKernelNeedsSysAcquire(true)\n");
     // HSA memory copy requires a system-scope acquire before the next kernel command - set flag here so we remember:
     hsaQueue()->setNextKernelNeedsSysAcquire(true);
 
@@ -5428,6 +5429,16 @@ extern "C" void PushArgPtrImpl(void *ker, int idx, size_t sz, const void *v) {
       reinterpret_cast<HSADispatch*>(ker);
   void *val = const_cast<void*>(v);
   dispatch->pushPointerArg(val);
+}
+
+
+// op printer
+std::ostream& operator<<(std::ostream& os, const HSAOp & op)
+{
+     os << "#" << op.opCoord()._deviceId << "." ;
+     os << op.opCoord()._queueId << "." ;
+     os << op.getSeqNum();
+    return os;
 }
 
 // TODO;

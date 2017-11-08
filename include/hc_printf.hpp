@@ -301,8 +301,6 @@ static inline void processPrintfPackets(PrintfPacket* packets, const unsigned in
     assert(packets[formatStringIndex].type == PRINTF_CHAR_PTR
            || packets[formatStringIndex].type == PRINTF_CONST_CHAR_PTR);
     std::string formatString((const char*)packets[formatStringIndex].data.cptr);
-
-    unsigned int formatStringCursor = 0;
     std::smatch specifierMatches;
 
 #if HC_PRINTF_DEBUG

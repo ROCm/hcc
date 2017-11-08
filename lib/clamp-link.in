@@ -61,13 +61,24 @@ TEMP_DIR=`mktemp -d`
 CXXAMP_SERIALIZE_SYMBOL_FILE=$TEMP_DIR/symbol.txt
 touch $CXXAMP_SERIALIZE_SYMBOL_FILE
 
+# determine `file` output per host architecture
+if [[ "@CMAKE_SYSTEM_PROCESSOR@" == "x86_64" ]]; then
+  OBJ_FILE_FORMAT_STRING="ELF 64-bit LSB  relocatable, x86-64"
+elif [[ "@CMAKE_SYSTEM_PROCESSOR@" == "aarch64" ]]; then
+  OBJ_FILE_FORMAT_STRING="ELF 64-bit LSB  relocatable, ARM aarch64"
+elif [[ "@CMAKE_SYSTEM_PROCESSOR@" == "ppc64" ]]; then
+  OBJ_FILE_FORMAT_STRING="ELF 64-bit LSB  relocatable, ppc64"
+else
+  OBJ_FILE_FORMAT_STRING="ELF 64-bit LSB  relocatable"
+fi
+
 # find object file
 _find_object() {
   local FILE=$1
   local ret=${FILE%.o}
 
   if [ -e $FILE ]; then
-    local file_output=`file $FILE | grep 'ELF 64-bit LSB  relocatable, x86-64'`
+    local file_output=`file $FILE | grep "$OBJ_FILE_FORMAT_STRING"`
     local readelf_output=`readelf -h $FILE 2>&1 | grep 'Relocatable file'`
 
     if [ ! -z "$file_output" ] && [ ! -z "$readelf_output" ]; then
@@ -284,7 +295,7 @@ do
     fi  # if [[ $DETECTED_STATIC_LIBRARY != "" ]]; then
   elif [ -f "$ARG" ]; then
     # an object file but doesn't have an .o extension??
-    file_output=`file "$ARG" | grep 'ELF 64-bit LSB  relocatable, x86-64'`
+    file_output=`file "$ARG" | grep "$OBJ_FILE_FORMAT_STRING"`
     readelf_output=`readelf -h "$ARG" 2>&1 | grep 'Relocatable file'`
     if [ ! -z "$file_output" ] && [ ! -z "$readelf_output" ]; then
       OBJS_TO_PROCESS+=( "$ARG" )
@@ -402,7 +413,7 @@ if [ ${#LINK_KERNEL_ARGS[@]} != 0 ]; then
 
   # invoke clang-offload-bundler to create kernel bundle
   CLANG_OFFLOAD_BUNDLER_INPUTS_ARGS="-inputs=$TEMP_DIR/__empty.o"
-  CLANG_OFFLOAD_BUNDLER_TARGETS_ARGS="-targets=host-x86_64-unknown-linux"
+  CLANG_OFFLOAD_BUNDLER_TARGETS_ARGS="-targets=host-@CMAKE_SYSTEM_PROCESSOR@-unknown-linux"
 
   declare -a pids
   # for each GPU target, lower to GCN ISA in HSACO format
