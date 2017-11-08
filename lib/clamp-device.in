@@ -34,6 +34,9 @@ KMOPTLLC="${KMOPTLLC:="-O2"}"
 # enable LLVM hijacking
 KMHACKLLVM="${KMHACKLLVM:=0}"
 
+# enable ThinLTO
+KMTHINLTO="${KMTHINLTO:=0}"
+
 if [ $KMDBSCRIPT == "1" ]
 then
   set -x
@@ -213,7 +216,11 @@ if [ $KMDUMPLLVM == "1" ]; then
   cp $2.opt.bc ${KMDUMPDIR}/dump-$AMDGPU_TARGET.opt.bc
 fi
 
-$LLC $KMOPTLLC -mtriple amdgcn--amdhsa-amdgiz -mcpu=$AMDGPU_TARGET -filetype=obj -enable-si-insert-waitcnts=0 -o $2 $2.opt.bc
+if [ $KMTHINLTO == "1" ]; then
+  $LLC $KMOPTLLC -mtriple amdgcn--amdhsa-amdgiz -mcpu=$AMDGPU_TARGET -filetype=obj -enable-si-insert-waitcnts=0 -o $2 $2.opt.bc
+else
+  $LLC $KMOPTLLC -mtriple amdgcn--amdhsa-amdgiz -mcpu=$AMDGPU_TARGET -filetype=obj -enable-si-insert-waitcnts=0 -o $2.isabin $2.opt.bc
+fi
 
 # error handling for llc
 RETVAL=$?
@@ -223,9 +230,28 @@ if [ $RETVAL != 0 ]; then
 fi
 
 if [ $KMDUMPISA == "1" ]; then
-  cp $2 ./dump-$AMDGPU_TARGET.isabin
+  if [ $KMTHINLTO == "1" ]; then
+    cp $2 ./dump-$AMDGPU_TARGET.isabin
+  else
+    cp $2.isabin ./dump-$AMDGPU_TARGET.isabin
+  fi
   $LLC $KMOPTLLC -mtriple amdgcn--amdhsa-amdgiz -mcpu=$AMDGPU_TARGET -filetype=asm -enable-si-insert-waitcnts=0 -o $2.isa $2.opt.bc
   mv $2.isa ${KMDUMPDIR}/dump-$AMDGPU_TARGET.isa
+fi
+
+if [ $KMTHINLTO != "1" ]; then
+  $LLD -shared $2.isabin -o $2
+  # error handling for ld.lld
+  RETVAL=$?
+  if [ $RETVAL != 0 ]; then
+    echo "Generating AMD GCN kernel failed in ld.lld for target: $AMDGPU_TARGET"
+    exit $RETVAL
+  fi
+
+  if [ $KMDUMPISA == "1" ]; then
+    cp $2 ${KMDUMPDIR}/dump-$AMDGPU_TARGET.hsaco
+  fi
+  rm -f $2.isabin
 fi
 
 # remove temp file
