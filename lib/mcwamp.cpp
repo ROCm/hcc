@@ -349,7 +349,7 @@ inline bool DetermineAndGetProgram(KalmarQueue* pQueue, size_t* kernel_size, voi
   return FoundCompatibleKernel;
 }
 
-void BuildProgram(KalmarQueue* pQueue) {
+void LoadInMemoryProgram(KalmarQueue* pQueue) {
   size_t kernel_size = 0;
   void* kernel_source = nullptr;
 
@@ -401,13 +401,14 @@ public:
 
       const std::vector<KalmarDevice*> devices = context->getDevices();
 
+      // load kernels on the default queue for each device
       for (auto dev = devices.begin(); dev != devices.end(); dev++) {
 
-        // get default queue on the default device
+        // get default queue on the device
         std::shared_ptr<KalmarQueue> queue = (*dev)->get_default_queue();
 
-        // build kernels on the default queue on the default device
-        CLAMP::BuildProgram(queue.get());
+        // load kernels on the default queue for the device
+        CLAMP::LoadInMemoryProgram(queue.get());
       }
     }
   }
