@@ -6,7 +6,7 @@ int CPU_Func()
 {
   auto a_lambda = []() restrict(amp)
   {
-    
+
   };
   return 0;
 }
@@ -15,11 +15,12 @@ int CPU_Func_1() restrict(cpu)
 {
   auto a_lambda = []() restrict(amp)
   {
-    
+
   };
   return 1;
 }
 
+inline
 int CPU_Func_X()
 {
   parallel_for_each(extent<1>(1), [](index<1>) restrict(amp)
@@ -29,6 +30,7 @@ int CPU_Func_X()
   return 0;
 }
 
+inline
 int CPU_Func_Y() restrict(cpu)
 {
   parallel_for_each(extent<1>(1), [](index<1>) restrict(amp)

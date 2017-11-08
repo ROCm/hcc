@@ -3,6 +3,7 @@
 using namespace concurrency;
 
 
+inline
 int fooAMP() restrict(amp)
 {
   auto a_lambda = []() restrict(cpu) {}; // OK
