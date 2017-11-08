@@ -43,6 +43,9 @@ int CPU_Func_Y() restrict(cpu)
 
 int main(void)
 {
+  // This test outlines a subtle issue with how we obtain mangled kernel names
+  // which is tracked in SWDEV-137849. CPU_Func_X and CPU_Func_Y are made
+  // inline to work around this and ensure matched mangling.
   CPU_Func();
   CPU_Func_1();
   CPU_Func_X();
