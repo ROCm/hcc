@@ -17,6 +17,7 @@
 #include <functional>
 #include <memory>
 #include <utility>
+#include <array>
 
 static
 inline
