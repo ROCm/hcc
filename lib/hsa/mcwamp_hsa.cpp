@@ -8,6 +8,7 @@
 
 #include "../hc2/headers/types/program_state.hpp"
 
+#include <algorithm>
 #include <cassert>
 #include <chrono>
 #include <cstdio>
@@ -21,9 +22,9 @@
 #include <sstream>
 #include <string>
 #include <thread>
+#include <unordered_map>
 #include <utility>
 #include <vector>
-#include <algorithm>
 
 #ifndef USE_LIBCXX
 #include <cxxabi.h>
@@ -273,6 +274,29 @@ static unsigned extractBits(unsigned v, unsigned pos, unsigned w)
 
 namespace
 {
+    struct Symbol {
+        std::string name;
+        ELFIO::Elf64_Addr value = 0;
+        ELFIO::Elf_Xword size = 0;
+        ELFIO::Elf_Half sect_idx = 0;
+        std::uint8_t bind = 0;
+        std::uint8_t type = 0;
+        std::uint8_t other = 0;
+    };
+
+    inline
+    Symbol read_symbol(
+        const ELFIO::symbol_section_accessor& section, unsigned int idx)
+    {
+        assert(idx < section.get_symbols_num());
+
+        Symbol r;
+        section.get_symbol(
+            idx, r.name, r.value, r.size, r.bind, r.type, r.sect_idx, r.other);
+
+        return r;
+    }
+
     template<typename P>
     inline
     ELFIO::section* find_section_if(ELFIO::elfio& reader, P p)
@@ -297,19 +321,10 @@ namespace
         for (auto i = 0u; i != section.get_symbols_num(); ++i) {
             // TODO: this is boyscout code, caching the temporaries
             //       may be of worth.
-            string name;
-            Elf64_Addr value = 0;
-            Elf_Xword size = 0;
-            Elf_Half sect_idx = 0;
-            uint8_t bind = 0;
-            uint8_t type = 0;
-            uint8_t other = 0;
 
-            section.get_symbol(
-                i, name, value, size, bind, type, sect_idx, other);
-
-            if (sect_idx == SHN_UNDEF && !name.empty()) {
-                r.push_back(std::move(name));
+            auto tmp = read_symbol(section, i);
+            if (tmp.sect_idx == SHN_UNDEF && !tmp.name.empty()) {
+                r.push_back(std::move(tmp.name));
             }
         }
 
@@ -317,31 +332,67 @@ namespace
     }
 
     inline
-    std::pair<ELFIO::Elf64_Addr, ELFIO::Elf_Xword> find_symbol_address(
-        const ELFIO::symbol_section_accessor& section,
-        const std::string& symbol_name)
+    const std::unordered_map<
+        std::string,
+        std::pair<ELFIO::Elf64_Addr, ELFIO::Elf_Xword>>& symbol_addresses()
     {
         using namespace ELFIO;
         using namespace std;
 
-        static constexpr pair<Elf64_Addr, Elf_Xword> r{0, 0};
+        static unordered_map<string, pair<Elf64_Addr, Elf_Xword>> r;
+        static once_flag f;
 
-        for (auto i = 0u; i != section.get_symbols_num(); ++i) {
-            // TODO: this is boyscout code, caching the temporaries
-            //       may be of worth.
-            string name;
-            Elf64_Addr value = 0;
-            Elf_Xword size = 0;
-            Elf_Half sect_idx = 0;
-            uint8_t bind = 0;
-            uint8_t type = 0;
-            uint8_t other = 0;
+        call_once(f, []() {
+            dl_iterate_phdr([](dl_phdr_info* info, size_t, void*) {
+                static constexpr const char self[] = "/proc/self/exe";
+                elfio reader;
 
-            section.get_symbol(
-                i, name, value, size, bind, type, sect_idx, other);
+                static unsigned int iter = 0u;
+                if (reader.load(!iter++ ? self : info->dlpi_name)) {
+                    auto it = find_section_if(
+                        reader, [](const class section* x) {
+                        return x->get_type() == SHT_SYMTAB;
+                    });
 
-            if (name == symbol_name) return make_pair(value, size);
-        }
+                    if (it) {
+                        const symbol_section_accessor symtab{reader, it};
+
+                        for (auto i = 0u; i != symtab.get_symbols_num(); ++i) {
+                            auto tmp = read_symbol(symtab, i);
+
+                            if (tmp.type == STT_OBJECT &&
+                                tmp.sect_idx != SHN_UNDEF) {
+                                r.emplace(
+                                    move(tmp.name),
+                                    make_pair(tmp.value, tmp.size));
+                            }
+                        }
+                    }
+                }
+
+                return 0;
+            }, nullptr);
+        });
+
+        return r;
+    }
+
+    inline
+    const std::vector<hsa_agent_t>& all_agents()
+    {
+        using namespace std;
+
+        static vector<hsa_agent_t> r;
+        static once_flag f;
+
+        call_once(f, []() {
+            for (auto&& acc : hc::accelerator::get_all()) {
+                if (acc.is_hsa_accelerator()) {
+                    r.push_back(
+                        *static_cast<hsa_agent_t*>(acc.get_hsa_agent()));
+                }
+            }
+        });
 
         return r;
     }
@@ -364,24 +415,38 @@ namespace
             symbol_section_accessor{reader, code_object_dynsym});
 
         for (auto&& x : undefined_symbols) {
-            const auto tmp = find_symbol_address(
-                symbol_section_accessor{self_reader, process_symtab}, x);
+            using RAII_global =
+                unique_ptr<void, decltype(hsa_amd_memory_unlock)*>;
+            static unordered_map<string, RAII_global> globals;
+            static once_flag f;
+            call_once(f, [=]() { globals.reserve(symbol_addresses().size()); });
 
-            assert(tmp.first);
+            if (globals.find(x) == globals.cend()) {
+                const auto it1 = symbol_addresses().find(x);
 
-            void* p = nullptr;
-            hsa_amd_memory_lock(
-                reinterpret_cast<void*>(tmp.first), tmp.second, &agent, 1, &p);
+                if (it1 == symbol_addresses().cend()) {
+                    throw runtime_error{
+                        "Global symbol: " + x + " is undefined."};
+                }
 
-            hsa_executable_agent_global_variable_define(
-                executable, agent, x.c_str(), p);
+                if (globals.find(x) == globals.cend()) {
+                    static mutex mtx;
+                    lock_guard<mutex> lck{mtx};
 
-            static vector<
-                unique_ptr<void, decltype(hsa_amd_memory_unlock)*>> globals;
-            static mutex mtx;
 
-            lock_guard<std::mutex> lck{mtx};
-            globals.emplace_back(p, hsa_amd_memory_unlock);
+                    void* p = nullptr;
+                    hsa_amd_memory_lock(
+                        reinterpret_cast<void*>(it1->second.first),
+                        it1->second.second,
+                        // Awful cast because ROCr interface is misspecified.
+                        const_cast<hsa_agent_t*>(all_agents().data()),
+                        all_agents().size(),
+                        &p);
+
+                    hsa_executable_agent_global_variable_define(
+                        executable, agent, x.c_str(), p);
+                }
+            }
         }
     }
 
