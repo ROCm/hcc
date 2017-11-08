@@ -239,6 +239,10 @@ if [ $KMDUMPISA == "1" ]; then
   mv $2.isa ${KMDUMPDIR}/dump-$AMDGPU_TARGET.isa
 fi
 
+# ThinLTO does not performs LLD here inside clamp-device.in.
+# It will perform LLD in clamp-link.in after all parallel kernels
+# running clamp-device are finished for each target, linking the
+# isabin files into a single hsaco. Default path has single kernel.
 if [ $KMTHINLTO != "1" ]; then
   $LLD -shared $2.isabin -o $2
   # error handling for ld.lld
