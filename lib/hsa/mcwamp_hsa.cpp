@@ -433,7 +433,6 @@ namespace
                     static mutex mtx;
                     lock_guard<mutex> lck{mtx};
 
-
                     void* p = nullptr;
                     hsa_amd_memory_lock(
                         reinterpret_cast<void*>(it1->second.first),
@@ -445,6 +444,8 @@ namespace
 
                     hsa_executable_agent_global_variable_define(
                         executable, agent, x.c_str(), p);
+
+                    globals.emplace(x, RAII_global{p, hsa_amd_memory_unlock});
                 }
             }
         }
