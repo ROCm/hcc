@@ -416,37 +416,37 @@ namespace
         for (auto&& x : undefined_symbols) {
             using RAII_global =
                 unique_ptr<void, decltype(hsa_amd_memory_unlock)*>;
+
             static unordered_map<string, RAII_global> globals;
             static once_flag f;
             call_once(f, [=]() { globals.reserve(symbol_addresses().size()); });
 
-            if (globals.find(x) == globals.cend()) {
-                const auto it1 = symbol_addresses().find(x);
+            if (globals.find(x) != globals.cend()) return;
 
-                if (it1 == symbol_addresses().cend()) {
-                    throw runtime_error{
-                        "Global symbol: " + x + " is undefined."};
-                }
+            const auto it1 = symbol_addresses().find(x);
 
-                if (globals.find(x) == globals.cend()) {
-                    static mutex mtx;
-                    lock_guard<mutex> lck{mtx};
-
-                    void* p = nullptr;
-                    hsa_amd_memory_lock(
-                        reinterpret_cast<void*>(it1->second.first),
-                        it1->second.second,
-                        // Awful cast because ROCr interface is misspecified.
-                        const_cast<hsa_agent_t*>(all_agents().data()),
-                        all_agents().size(),
-                        &p);
-
-                    hsa_executable_agent_global_variable_define(
-                        executable, agent, x.c_str(), p);
-
-                    globals.emplace(x, RAII_global{p, hsa_amd_memory_unlock});
-                }
+            if (it1 == symbol_addresses().cend()) {
+                throw runtime_error{"Global symbol: " + x + " is undefined."};
             }
+
+            static mutex mtx;
+            lock_guard<mutex> lck{mtx};
+
+            if (globals.find(x) != globals.cend()) return;
+
+            void* p = nullptr;
+            hsa_amd_memory_lock(
+                reinterpret_cast<void*>(it1->second.first),
+                it1->second.second,
+                // Awful cast because ROCr interface is misspecified.
+                const_cast<hsa_agent_t*>(all_agents().data()),
+                all_agents().size(),
+                &p);
+
+            hsa_executable_agent_global_variable_define(
+                executable, agent, x.c_str(), p);
+
+            globals.emplace(x, RAII_global{p, hsa_amd_memory_unlock});
         }
     }
 
