@@ -130,13 +130,35 @@ cmake \
     <ToT HCC checkout directory>
 ```
 
-In your application compiled using hcc, include the CodeXL Activiy Logger header:
+In your application compiled using hcc, include the CodeXL Activity Logger header:
 ```
 #include <CXLActivityLogger.h>
 ```
 
 For information about the usage of the Activity Logger for profiling, please 
 refer to its [documentation][8].
+
+HCC with ThinLTO Linking
+========================
+To enable the ThinLTO link time, use the `KMTHINLTO` environment variable.
+
+Set up your environment in the following way:
+```
+export KMTHINLTO=1
+```
+ThinLTO Phase 1 - Implemented
+-----------------------------
+For applications compiled using hcc, ThinLTO could significantly improve link-time
+performance. This implementation will maintain kernels in their .bc file format,
+create module-summaries for each, perform llvm-lto's cross-module function importing
+and then perform clamp-device (which uses opt and llc tools) on each of the
+kernel files. These files are linked with lld into one .hsaco per target specified.
+
+ThinLTO Phase 2 - Under development
+-----------------------------------
+This ThinLTO implementation which will use llvm-lto LLVM tool to replace
+clamp-device bash script. It adds an optllc option into ThinLTOGenerator,
+which will perform in-program opt and codegen in parallel.
 
 [//]: # (References)
 [1]: https://github.com/RadeonOpenCompute/hcc/wiki
