@@ -8,6 +8,7 @@
 
 #include "../hc2/headers/types/program_state.hpp"
 
+#include <algorithm>
 #include <cassert>
 #include <chrono>
 #include <cstdio>
@@ -21,9 +22,9 @@
 #include <sstream>
 #include <string>
 #include <thread>
+#include <unordered_map>
 #include <utility>
 #include <vector>
-#include <algorithm>
 
 #ifndef USE_LIBCXX
 #include <cxxabi.h>
@@ -271,6 +272,208 @@ static unsigned extractBits(unsigned v, unsigned pos, unsigned w)
 };
 
 
+namespace
+{
+    struct Symbol {
+        std::string name;
+        ELFIO::Elf64_Addr value = 0;
+        ELFIO::Elf_Xword size = 0;
+        ELFIO::Elf_Half sect_idx = 0;
+        std::uint8_t bind = 0;
+        std::uint8_t type = 0;
+        std::uint8_t other = 0;
+    };
+
+    inline
+    Symbol read_symbol(
+        const ELFIO::symbol_section_accessor& section, unsigned int idx)
+    {
+        assert(idx < section.get_symbols_num());
+
+        Symbol r;
+        section.get_symbol(
+            idx, r.name, r.value, r.size, r.bind, r.type, r.sect_idx, r.other);
+
+        return r;
+    }
+
+    template<typename P>
+    inline
+    ELFIO::section* find_section_if(ELFIO::elfio& reader, P p)
+    {
+        using namespace std;
+
+        const auto it = find_if(
+            reader.sections.begin(), reader.sections.end(), move(p));
+
+        return it != reader.sections.end() ? *it : nullptr;
+    }
+
+    inline
+    std::vector<std::string> copy_names_of_undefined_symbols(
+        const ELFIO::symbol_section_accessor& section)
+    {
+        using namespace ELFIO;
+        using namespace std;
+
+        vector<string> r;
+
+        for (auto i = 0u; i != section.get_symbols_num(); ++i) {
+            // TODO: this is boyscout code, caching the temporaries
+            //       may be of worth.
+
+            auto tmp = read_symbol(section, i);
+            if (tmp.sect_idx == SHN_UNDEF && !tmp.name.empty()) {
+                r.push_back(std::move(tmp.name));
+            }
+        }
+
+        return r;
+    }
+
+    inline
+    const std::unordered_map<
+        std::string,
+        std::pair<ELFIO::Elf64_Addr, ELFIO::Elf_Xword>>& symbol_addresses()
+    {
+        using namespace ELFIO;
+        using namespace std;
+
+        static unordered_map<string, pair<Elf64_Addr, Elf_Xword>> r;
+        static once_flag f;
+
+        call_once(f, []() {
+            dl_iterate_phdr([](dl_phdr_info* info, size_t, void*) {
+                static constexpr const char self[] = "/proc/self/exe";
+                elfio reader;
+
+                static unsigned int iter = 0u;
+                if (reader.load(!iter++ ? self : info->dlpi_name)) {
+                    auto it = find_section_if(
+                        reader, [](const class section* x) {
+                        return x->get_type() == SHT_SYMTAB;
+                    });
+
+                    if (it) {
+                        const symbol_section_accessor symtab{reader, it};
+
+                        for (auto i = 0u; i != symtab.get_symbols_num(); ++i) {
+                            auto tmp = read_symbol(symtab, i);
+
+                            if (tmp.type == STT_OBJECT &&
+                                tmp.sect_idx != SHN_UNDEF) {
+                                r.emplace(
+                                    move(tmp.name),
+                                    make_pair(tmp.value, tmp.size));
+                            }
+                        }
+                    }
+                }
+
+                return 0;
+            }, nullptr);
+        });
+
+        return r;
+    }
+
+    inline
+    const std::vector<hsa_agent_t>& all_agents()
+    {
+        using namespace std;
+
+        static vector<hsa_agent_t> r;
+        static once_flag f;
+
+        call_once(f, []() {
+            for (auto&& acc : hc::accelerator::get_all()) {
+                if (acc.is_hsa_accelerator()) {
+                    r.push_back(
+                        *static_cast<hsa_agent_t*>(acc.get_hsa_agent()));
+                }
+            }
+        });
+
+        return r;
+    }
+
+    inline
+    void associate_code_object_symbols_with_host_allocation(
+        const ELFIO::elfio& reader,
+        const ELFIO::elfio& self_reader,
+        ELFIO::section* code_object_dynsym,
+        ELFIO::section* process_symtab,
+        hsa_agent_t agent,
+        hsa_executable_t executable)
+    {
+        using namespace ELFIO;
+        using namespace std;
+
+        if (!code_object_dynsym || !process_symtab) return;
+
+        const auto undefined_symbols = copy_names_of_undefined_symbols(
+            symbol_section_accessor{reader, code_object_dynsym});
+
+        for (auto&& x : undefined_symbols) {
+            using RAII_global =
+                unique_ptr<void, decltype(hsa_amd_memory_unlock)*>;
+
+            static unordered_map<string, RAII_global> globals;
+            static once_flag f;
+            call_once(f, [=]() { globals.reserve(symbol_addresses().size()); });
+
+            if (globals.find(x) != globals.cend()) return;
+
+            const auto it1 = symbol_addresses().find(x);
+
+            if (it1 == symbol_addresses().cend()) {
+                throw runtime_error{"Global symbol: " + x + " is undefined."};
+            }
+
+            static mutex mtx;
+            lock_guard<mutex> lck{mtx};
+
+            if (globals.find(x) != globals.cend()) return;
+
+            void* p = nullptr;
+            hsa_amd_memory_lock(
+                reinterpret_cast<void*>(it1->second.first),
+                it1->second.second,
+                // Awful cast because ROCr interface is misspecified.
+                const_cast<hsa_agent_t*>(all_agents().data()),
+                all_agents().size(),
+                &p);
+
+            hsa_executable_agent_global_variable_define(
+                executable, agent, x.c_str(), p);
+
+            globals.emplace(x, RAII_global{p, hsa_amd_memory_unlock});
+        }
+    }
+
+    inline
+    hsa_code_object_reader_t load_code_object_and_freeze_executable(
+        void* elf,
+        std::size_t byte_cnt,
+        hsa_agent_t agent,
+        hsa_executable_t executable)
+    {   // TODO: the following sequence is inefficient, should be refactored
+        //       into a single load of the file and subsequent ELFIO
+        //       processing.
+        using namespace std;
+
+        hsa_code_object_reader_t r = {};
+        hsa_code_object_reader_create_from_memory(elf, byte_cnt, &r);
+
+        hsa_executable_load_agent_code_object(
+            executable, agent, r, nullptr, nullptr);
+
+        hsa_executable_freeze(executable, nullptr);
+
+        return r;
+    }
+}
+
 
 
 namespace hc {
@@ -354,16 +557,16 @@ namespace CLAMP {
 /// modeling of HSA executable
 class HSAExecutable {
 private:
-    hsa_code_object_t hsaCodeObject;
+    hsa_code_object_reader_t hsaCodeObjectReader;
     hsa_executable_t hsaExecutable;
     friend class HSAKernel;
     friend class Kalmar::HSADevice;
 
 public:
     HSAExecutable(hsa_executable_t _hsaExecutable,
-                  hsa_code_object_t _hsaCodeObject) :
+                  hsa_code_object_reader_t _hsaCodeObjectReader) :
         hsaExecutable(_hsaExecutable),
-        hsaCodeObject(_hsaCodeObject) {}
+        hsaCodeObjectReader(_hsaCodeObjectReader) {}
 
     ~HSAExecutable() {
       hsa_status_t status;
@@ -373,7 +576,7 @@ public:
       status = hsa_executable_destroy(hsaExecutable);
       STATUS_CHECK(status, __LINE__);
 
-      status = hsa_code_object_destroy(hsaCodeObject);
+      status = hsa_code_object_reader_destroy(hsaCodeObjectReader);
       STATUS_CHECK(status, __LINE__);
     }
 
@@ -2970,22 +3173,22 @@ public:
 private:
 
     void BuildOfflineFinalizedProgramImpl(void* kernelBuffer, int kernelSize) {
+        using namespace ELFIO;
+        using namespace std;
+
         hsa_status_t status;
 
-        std::string index = kernel_checksum((size_t)kernelSize, kernelBuffer);
+        string index = kernel_checksum((size_t)kernelSize, kernelBuffer);
 
         // load HSA program if we haven't done so
         if (executables.find(index) == executables.end()) {
-            // Deserialize code object.
-            hsa_code_object_t code_object = {0};
-            status = hsa_code_object_deserialize(kernelBuffer, kernelSize, NULL, &code_object);
-            STATUS_CHECK(status, __LINE__);
-            assert(0 != code_object.handle);
-
             // Create the executable.
             hsa_executable_t hsaExecutable;
-            status = hsa_executable_create(HSA_PROFILE_FULL, HSA_EXECUTABLE_STATE_UNFROZEN,
-                                           NULL, &hsaExecutable);
+            status = hsa_executable_create_alt(
+                HSA_PROFILE_FULL,
+                HSA_DEFAULT_FLOAT_ROUNDING_MODE_DEFAULT,
+                nullptr,
+                &hsaExecutable);
             STATUS_CHECK(status, __LINE__);
 
             // Define the global symbol hc::printf_buffer with the actual address
@@ -2994,20 +3197,43 @@ private:
                                                             , hc::printf_buffer_locked_va);
             STATUS_CHECK(status, __LINE__);
 
-#if KALMAR_DEBUG
-            dumpHSAAgentInfo(agent, "Loading code object ");
-#endif
+            elfio reader;
+            istringstream tmp{string{
+                static_cast<char*>(kernelBuffer),
+                static_cast<char*>(kernelBuffer) + kernelSize}};
+            reader.load(tmp);
 
-            // Load the code object.
-            status = hsa_executable_load_code_object(hsaExecutable, agent, code_object, NULL);
-            STATUS_CHECK(status, __LINE__);
+            elfio self_reader;
+            self_reader.load("/proc/self/exe");
 
-            // Freeze the executable.
-            status = hsa_executable_freeze(hsaExecutable, NULL);
-            STATUS_CHECK(status, __LINE__);
+            const auto symtab =
+                find_section_if(self_reader, [](const ELFIO::section* x) {
+                    return x->get_type() == SHT_SYMTAB;
+            });
+
+            const auto code_object_dynsym =
+                find_section_if(reader, [](const ELFIO::section* x) {
+                    return x->get_type() == SHT_DYNSYM;
+            });
+
+            associate_code_object_symbols_with_host_allocation(
+                reader,
+                self_reader,
+                code_object_dynsym,
+                symtab,
+                agent,
+                hsaExecutable);
+
+            auto code_object_reader = load_code_object_and_freeze_executable(
+                kernelBuffer, kernelSize, agent, hsaExecutable);
+
+            #if KALMAR_DEBUG
+                dumpHSAAgentInfo(agent, "Loading code object ");
+            #endif
 
             // save everything as an HSAExecutable instance
-            executables[index] = new HSAExecutable(hsaExecutable, code_object);
+            executables[index] = new HSAExecutable(
+                hsaExecutable, code_object_reader);
         }
     }
 
@@ -3399,7 +3625,7 @@ public:
         if (hc::printf_buffer_locked_va == nullptr) {
           hsa_status_t status = HSA_STATUS_SUCCESS;
           hsa_agent_t* hsa_agents = agents.data();
-          status = hsa_amd_memory_lock(&hc::printf_buffer, sizeof(hc::printf_buffer), 
+          status = hsa_amd_memory_lock(&hc::printf_buffer, sizeof(hc::printf_buffer),
                                        hsa_agents, agents.size(), (void**)&hc::printf_buffer_locked_va);
           STATUS_CHECK(status, __LINE__);
         }
