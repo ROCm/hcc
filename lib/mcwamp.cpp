@@ -268,11 +268,7 @@ static inline uint64_t Read8byteIntegerFromBuffer(const char *data, size_t pos) 
 #define HCC_TRIPLE_PREFIX "hcc-amdgcn--amdhsa-"
 #define HCC_TRIPLE_PREFIX_LENGTH (19)
 
-// Try determine a compatible code object within kernel bundle for a queue
-// Returns true if a compatible code object is found, and returns its size and
-// pointer to the code object. Returns false in case no compatible code object
-// is found.
-inline bool DetermineAndGetProgram(KalmarQueue* pQueue, size_t* kernel_size, void** kernel_source) {
+inline void DetermineAndGetProgram(KalmarQueue* pQueue, size_t* kernel_size, void** kernel_source) {
 
   bool FoundCompatibleKernel = false;
 
@@ -346,17 +342,17 @@ inline bool DetermineAndGetProgram(KalmarQueue* pQueue, size_t* kernel_size, voi
     }
   }
 
-  return FoundCompatibleKernel;
+  if (!FoundCompatibleKernel) {
+    RUNTIME_ERROR(1, "Fail to find compatible kernel", __LINE__)
+  }
 }
 
-void LoadInMemoryProgram(KalmarQueue* pQueue) {
+void BuildProgram(KalmarQueue* pQueue) {
   size_t kernel_size = 0;
   void* kernel_source = nullptr;
 
-  // Only call BuildProgram in case a compatible code object is found
-  if (DetermineAndGetProgram(pQueue, &kernel_size, &kernel_source)) {
-    pQueue->getDev()->BuildProgram((void*)kernel_size, kernel_source);
-  }
+  DetermineAndGetProgram(pQueue, &kernel_size, &kernel_source);
+  pQueue->getDev()->BuildProgram((void*)kernel_size, kernel_source);
 }
 
 // used in parallel_for_each.h
@@ -389,8 +385,6 @@ public:
     if (lazyinit_env != nullptr) {
       if (std::string("ON") == lazyinit_env) {
         to_init = false;
-      } else if (strtol(lazyinit_env, nullptr, 0)) {
-        to_init = false;
       }
     }
 
@@ -403,14 +397,13 @@ public:
 
       const std::vector<KalmarDevice*> devices = context->getDevices();
 
-      // load kernels on the default queue for each device
       for (auto dev = devices.begin(); dev != devices.end(); dev++) {
 
-        // get default queue on the device
+        // get default queue on the default device
         std::shared_ptr<KalmarQueue> queue = (*dev)->get_default_queue();
 
-        // load kernels on the default queue for the device
-        CLAMP::LoadInMemoryProgram(queue.get());
+        // build kernels on the default queue on the default device
+        CLAMP::BuildProgram(queue.get());
       }
     }
   }
