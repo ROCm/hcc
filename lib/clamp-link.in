@@ -29,6 +29,9 @@ KMOPTLLC="${KMOPTLLC:=2}"
 # enable LLVM hijacking
 KMHACKLLVM="${KMHACKLLVM:=0}"
 
+# determine if we want to use ThinLTO
+KMTHINLTO="${KMTHINLTO:=0}"
+
 # check number of arguments
 if [ "$#" -eq 0 ]; then
   echo "$0 is NOT recommended to be directly used" >&2
@@ -125,7 +128,160 @@ fi
 #very verbose
 #VERBOSE=2
 
+# Using ThinLTO for link-time independent kernels calling in-parallel clamp-device opt and llc
+_thinlto_path() {
+  declare -n LinkKernelArgs=$1
+  declare -n AMDGPUTargetArray=$2
 
+  if [ $VERBOSE != 0 ]; then
+    echo "Generating AMD GCN Kernels: ${LinkKernelArgs[@]}"
+  fi
+
+  ################
+  # Determine the ROCm device libs path
+  ################
+
+  ROCM_DEVICE_LIBS_SEARCH_PATHS="@ROCM_DEVICE_LIB_PATHS@"
+  ROCM_LIB=""
+  for SEARCH_PATH in $(echo $ROCM_DEVICE_LIBS_SEARCH_PATHS | tr ";" "\n")
+  do
+    if [ -f "$SEARCH_PATH/ocml.amdgcn.bc" ]; then
+      ROCM_LIB=$SEARCH_PATH
+      break
+    fi
+  done
+  if [ ! -f "$ROCM_LIB/ocml.amdgcn.bc" ]; then
+    echo "ROCm Device Libs is missing"
+    exit 1
+  fi
+
+  # create module summaries for each kernel
+  for KERNEL in ${LinkKernelArgs[@]} ; do
+    $OPT -thinlto-bc -disable-opt -module-summary $KERNEL -o $KERNEL
+  done
+
+  declare -a ISABIN_FILES
+  # for each GPU target, lower LLVM IR kernels into GCN ISA
+  for AMDGPU_TARGET in ${AMDGPUTargetArray[@]}
+  do
+    HCC_BC_LIBS="$ROCM_LIB/hc.amdgcn.bc $ROCM_LIB/opencl.amdgcn.bc $ROCM_LIB/ocml.amdgcn.bc $ROCM_LIB/ockl.amdgcn.bc $ROCM_LIB/irif.amdgcn.bc $OCLC_ISA_VERSION_LIB $ROCM_LIB/oclc_finite_only_off.amdgcn.bc $ROCM_LIB/oclc_daz_opt_off.amdgcn.bc $ROCM_LIB/oclc_correctly_rounded_sqrt_on.amdgcn.bc $ROCM_LIB/oclc_unsafe_math_off.amdgcn.bc"
+    HCC_EXTRA_ARCH_FILE=""
+    # select appropriate ROCm-Device-Libs per AMDGPU_TARGET
+    if [ $AMDGPU_TARGET == "gfx700" ]; then
+      OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_700.amdgcn.bc"
+      HCC_EXTRA_ARCH_FILE=$HCC_EXTRA_LIBRARIES_GFX700
+    elif [ $AMDGPU_TARGET == "gfx701" ]; then
+      OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_701.amdgcn.bc"
+      HCC_EXTRA_ARCH_FILE=$HCC_EXTRA_LIBRARIES_GFX701
+    elif [ $AMDGPU_TARGET == "gfx801" ]; then
+      OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_801.amdgcn.bc"
+      HCC_EXTRA_ARCH_FILE=$HCC_EXTRA_LIBRARIES_GFX801
+    elif [ $AMDGPU_TARGET == "gfx802" ]; then
+      OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_802.amdgcn.bc"
+      HCC_EXTRA_ARCH_FILE=$HCC_EXTRA_LIBRARIES_GFX802
+    elif [ $AMDGPU_TARGET == "gfx803" ]; then
+      OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_803.amdgcn.bc"
+      HCC_EXTRA_ARCH_FILE=$HCC_EXTRA_LIBRARIES_GFX803
+    elif [ $AMDGPU_TARGET == "gfx900" ]; then
+      OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_900.amdgcn.bc"
+      HCC_EXTRA_ARCH_FILE=$HCC_EXTRA_LIBRARIES_GFX900
+    elif [ $AMDGPU_TARGET == "gfx901" ]; then
+      OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_901.amdgcn.bc"
+      HCC_EXTRA_ARCH_FILE=$HCC_EXTRA_LIBRARIES_GFX901
+    fi
+    HCC_BC_LIBS="$HCC_BC_LIBS $HCC_EXTRA_LIBRARIES $HCC_EXTRA_ARCH_FILE"
+
+    # perform ThinLTO indexing and cross-module importing
+    $LTO -thinlto -thinlto-action=thinlink "${LinkKernelArgs[@]}" -o $TEMP_DIR/kernel.thinlto.index
+    $LTO -thinlto -thinlto-action=import "${LinkKernelArgs[@]}" -thinlto-index=$TEMP_DIR/kernel.thinlto.index -import-instr-limit=1048576 -force-import-weak
+
+    # prepare all kernels for opt and llc passes by linking with rocdl lib
+    declare -a LINK_IMPORTED_KERNEL_ARGS
+    for KERNEL in ${LinkKernelArgs[@]}
+    do
+      LINK_IMPORTED_KERNEL_ARGS+=( $KERNEL.thinlto.imported.bc )
+      $LINK -suppress-warnings -o $KERNEL.thinlto.imported.bc $KERNEL.thinlto.imported.bc $HCC_BC_LIBS
+    done
+
+    if [ $VERBOSE != 0 ]; then
+      echo "Imported Kernels: ${LINK_IMPORTED_KERNEL_ARGS[@]}"
+    fi
+
+    # perform parallel opt and llc in-program
+    $LTO -thinlto -thinlto-action=optllc "${LINK_IMPORTED_KERNEL_ARGS[@]}" -select-accelerator-code -dce -globaldce -always-inline -mtriple amdgcn--amdhsa-amdgiz -mcpu=$AMDGPU_TARGET -infer-address-spaces -amdgpu-internalize-symbols -lto-freestanding -enable-si-insert-waitcnts=0 $KMOPTOPT -codegen-opt-level=$KMOPTLLC -thinlto-save-temps="$TEMP_DIR/"
+
+    if [ $KMDUMPISA == "1" ]; then
+      $LTO -thinlto -thinlto-action=optllc "${LINK_IMPORTED_KERNEL_ARGS[@]}" -select-accelerator-code -dce -globaldce -always-inline -mtriple amdgcn--amdhsa-amdgiz -mcpu=$AMDGPU_TARGET -infer-address-spaces -amdgpu-internalize-symbols -lto-freestanding -dump-isa -enable-si-insert-waitcnts=0 $KMOPTOPT -codegen-opt-level=$KMOPTLLC
+      for f in $TEMP_DIR/*.thinlto.isa; do bn="${f##*/}"; cp "$f" "${KMDUMPDIR}/dump-${bn%%.*}.isa"; done
+    fi
+
+    # collect the ISABIN files for lld linking
+    for KERNEL in ${LINK_IMPORTED_KERNEL_ARGS[@]}
+    do
+      ISABIN_FILES+=( $KERNEL.thinlto.isabin )
+    done
+
+    if [ $VERBOSE != 0 ]; then
+      echo "ISABIN Kernels: ${ISABIN_FILES[@]}"
+    fi
+
+    # combine all ISABIN files into HSACO format
+    $LLD -shared ${ISABIN_FILES[@]} -o $TEMP_DIR/kernel-$AMDGPU_TARGET.hsaco
+    ret=$?
+    if [ $ret != 0 ]; then
+      echo "Generating AMD GCN kernel failed in ld.lld for target: $AMDGPU_TARGET"
+      exit $ret
+    fi
+    if [ $KMDUMPISA == "1" ]; then
+      cp $TEMP_DIR/kernel-$AMDGPU_TARGET.hsaco ${KMDUMPDIR}/dump-$AMDGPU_TARGET.hsaco
+    fi
+
+    if [ $VERBOSE != 0 ]; then
+      echo "Generated: $TEMP_DIR/kernel-$AMDGPU_TARGET.hsaco"
+    fi
+
+    # augment arguments to clang-offload-bundler
+    CLANG_OFFLOAD_BUNDLER_INPUTS_ARGS+=",$TEMP_DIR/kernel-$AMDGPU_TARGET.hsaco"
+    CLANG_OFFLOAD_BUNDLER_TARGETS_ARGS+=",hcc-amdgcn--amdhsa-$AMDGPU_TARGET"
+    ISABIN_FILES=("")
+    LINK_IMPORTED_KERNEL_ARGS=("")
+  done
+}
+
+# Using default path for link-time opt and llc in clamp-device
+_default_path() {
+  declare -n LinkKernelArgs=$1
+  declare -n AMDGPUTargetArray=$2
+
+  # combine kernel sections together
+  $LINK "${LinkKernelArgs[@]}" | $OPT -always-inline - -o $TEMP_DIR/kernel.bc
+
+  if [ $VERBOSE == 1 ]; then
+    echo "Generating AMD GCN kernel"
+  fi
+
+  declare -a pids
+  # for each GPU target, lower to GCN ISA in HSACO format
+  for AMDGPU_TARGET in ${AMDGPUTargetArray[@]}; do
+    { $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel-$AMDGPU_TARGET.hsaco --amdgpu-target=$AMDGPU_TARGET; } &
+
+    # error handling
+    pids+=("${pids[@]}" "$!")
+
+    # augment arguments to clang-offload-bundler
+    CLANG_OFFLOAD_BUNDLER_INPUTS_ARGS+=",$TEMP_DIR/kernel-$AMDGPU_TARGET.hsaco"
+    CLANG_OFFLOAD_BUNDLER_TARGETS_ARGS+=",hcc-amdgcn--amdhsa-$AMDGPU_TARGET"
+  done
+
+  # collect all the error codes from forked processes
+  # error handling
+  for pid in ${pids[*]}; do
+    wait $pid || ret=$((ret+$?))
+  done
+  if [ $ret != 0 ]; then
+    exit $ret
+  fi
+}
 
 # gather a list of library search paths
 LIB_SEARCH_PATHS=()
@@ -187,7 +343,6 @@ do
     ;;
     -dump-isa)
     export KMDUMPISA=1
-    KMDUMPISA=1
     continue
     ;;
     -dump-llvm)
@@ -427,16 +582,6 @@ ret=0
 
 # only do kernel lowering if there are objects given
 if [ ${#LINK_KERNEL_ARGS[@]} != 0 ]; then
-  # combine kernel sections together
-  echo "Kernels: ${LINK_KERNEL_ARGS[@]}"
-  for KERNEL in ${LINK_KERNEL_ARGS[@]} ; do
-    $OPT -thinlto-bc -disable-opt -module-summary $KERNEL -o $KERNEL
-  done
-
-  # lower to GCN ISA
-  if [ $VERBOSE == 1 ]; then
-    echo "Generating AMD GCN kernel"
-  fi
 
   # touch an empty object for host part, to accomodate rule required by
   # clang-offload-bundler
@@ -446,101 +591,15 @@ if [ ${#LINK_KERNEL_ARGS[@]} != 0 ]; then
   CLANG_OFFLOAD_BUNDLER_INPUTS_ARGS="-inputs=$TEMP_DIR/__empty.o"
   CLANG_OFFLOAD_BUNDLER_TARGETS_ARGS="-targets=host-@CMAKE_SYSTEM_PROCESSOR@-unknown-linux"
 
-  ################
-  # Determine the ROCm device libs path
-  ################
-
-  ROCM_DEVICE_LIBS_SEARCH_PATHS="@ROCM_DEVICE_LIB_PATHS@"
-  ROCM_LIB=""
-  for SEARCH_PATH in $(echo $ROCM_DEVICE_LIBS_SEARCH_PATHS | tr ";" "\n")
-  do
-    if [ -f "$SEARCH_PATH/ocml.amdgcn.bc" ]; then
-      ROCM_LIB=$SEARCH_PATH
-      break
-    fi
-  done
-  if [ ! -f "$ROCM_LIB/ocml.amdgcn.bc" ]; then
-    echo "ROCm Device Libs is missing"
-    exit 1
+  if [ $KMTHINLTO == "1" ]; then
+    _thinlto_path LINK_KERNEL_ARGS AMDGPU_TARGET_ARRAY
+  else
+    _default_path LINK_KERNEL_ARGS AMDGPU_TARGET_ARRAY
   fi
 
-  declare -a ISABIN_FILES
-  #for KERNEL in ${LINK_KERNEL_ARGS[@]}
-  for AMDGPU_TARGET in ${AMDGPU_TARGET_ARRAY[@]}
-  do
-    HCC_BC_LIBS="$ROCM_LIB/hc.amdgcn.bc $ROCM_LIB/opencl.amdgcn.bc $ROCM_LIB/ocml.amdgcn.bc $ROCM_LIB/ockl.amdgcn.bc $ROCM_LIB/irif.amdgcn.bc $OCLC_ISA_VERSION_LIB $ROCM_LIB/oclc_finite_only_off.amdgcn.bc $ROCM_LIB/oclc_daz_opt_off.amdgcn.bc $ROCM_LIB/oclc_correctly_rounded_sqrt_on.amdgcn.bc $ROCM_LIB/oclc_unsafe_math_off.amdgcn.bc"
-    HCC_EXTRA_ARCH_FILE=""
-    # select appropriate ROCm-Device-Libs per AMDGPU_TARGET
-    if [ $AMDGPU_TARGET == "gfx700" ]; then
-      OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_700.amdgcn.bc"
-      HCC_EXTRA_ARCH_FILE=$HCC_EXTRA_LIBRARIES_GFX700
-    elif [ $AMDGPU_TARGET == "gfx701" ]; then
-      OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_701.amdgcn.bc"
-      HCC_EXTRA_ARCH_FILE=$HCC_EXTRA_LIBRARIES_GFX701
-    elif [ $AMDGPU_TARGET == "gfx801" ]; then
-      OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_801.amdgcn.bc"
-      HCC_EXTRA_ARCH_FILE=$HCC_EXTRA_LIBRARIES_GFX801
-    elif [ $AMDGPU_TARGET == "gfx802" ]; then
-      OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_802.amdgcn.bc"
-      HCC_EXTRA_ARCH_FILE=$HCC_EXTRA_LIBRARIES_GFX802
-    elif [ $AMDGPU_TARGET == "gfx803" ]; then
-      OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_803.amdgcn.bc"
-      HCC_EXTRA_ARCH_FILE=$HCC_EXTRA_LIBRARIES_GFX803
-    elif [ $AMDGPU_TARGET == "gfx900" ]; then
-      OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_900.amdgcn.bc"
-      HCC_EXTRA_ARCH_FILE=$HCC_EXTRA_LIBRARIES_GFX900
-    elif [ $AMDGPU_TARGET == "gfx901" ]; then
-      OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_901.amdgcn.bc"
-      HCC_EXTRA_ARCH_FILE=$HCC_EXTRA_LIBRARIES_GFX901
-    fi
-    HCC_BC_LIBS="$HCC_BC_LIBS $HCC_EXTRA_LIBRARIES $HCC_EXTRA_ARCH_FILE"
-
-    $LTO -thinlto -thinlto-action=thinlink "${LINK_KERNEL_ARGS[@]}" -o $TEMP_DIR/kernel.thinlto.index
-    $LTO -thinlto -thinlto-action=import "${LINK_KERNEL_ARGS[@]}" -thinlto-index=$TEMP_DIR/kernel.thinlto.index -import-instr-limit=1048576 -force-import-weak
-
-    # Prepare all Kernels for opt and llc passes
-    declare -a LINK_IMPORTED_KERNEL_ARGS
-    for KERNEL in ${LINK_KERNEL_ARGS[@]}
-    do
-      LINK_IMPORTED_KERNEL_ARGS+=( $KERNEL.thinlto.imported.bc )
-      $LINK -suppress-warnings -o $KERNEL.thinlto.imported.bc $KERNEL.thinlto.imported.bc $HCC_BC_LIBS
-    done
-    echo "Imported Kernels: ${LINK_IMPORTED_KERNEL_ARGS[@]}"
-
-    # Perform parallel opt and llc
-    $LTO -thinlto -thinlto-action=optllc "${LINK_IMPORTED_KERNEL_ARGS[@]}" -select-accelerator-code -dce -globaldce -always-inline -mtriple amdgcn--amdhsa-amdgiz -mcpu=$AMDGPU_TARGET -infer-address-spaces -amdgpu-internalize-symbols -lto-freestanding -enable-si-insert-waitcnts=0 $KMOPTOPT -codegen-opt-level=$KMOPTLLC -thinlto-save-temps="$TEMP_DIR/"
-
-    if [ $KMDUMPISA == "1" ]; then
-      $LTO -thinlto -thinlto-action=optllc "${LINK_IMPORTED_KERNEL_ARGS[@]}" -select-accelerator-code -dce -globaldce -always-inline -mtriple amdgcn--amdhsa-amdgiz -mcpu=$AMDGPU_TARGET -infer-address-spaces -amdgpu-internalize-symbols -lto-freestanding -dump-isa -enable-si-insert-waitcnts=0 $KMOPTOPT -codegen-opt-level=$KMOPTLLC
-      for f in $TEMP_DIR/*.thinlto.isa; do bn="${f##*/}"; cp "$f" "${KMDUMPDIR}/dump-${bn%%.*}.isa"; done
-    fi
-
-    for KERNEL in ${LINK_IMPORTED_KERNEL_ARGS[@]}
-    do
-      ISABIN_FILES+=( $KERNEL.thinlto.isabin )
-    done
-    echo "ISABIN Kernels: ${ISABIN_FILES[@]}"
-
-    # Combine all .isabin files into HSACO format
-    $LLD -shared ${ISABIN_FILES[@]} -o $TEMP_DIR/kernel-$AMDGPU_TARGET.hsaco
-    ret=$?
-    if [ $ret != 0 ]; then
-      echo "Generating AMD GCN kernel failed in ld.lld for target: $AMDGPU_TARGET"
-      exit $ret
-    fi
-    if [ $KMDUMPISA == "1" ]; then
-      cp $TEMP_DIR/kernel-$AMDGPU_TARGET.hsaco ${KMDUMPDIR}/dump-$AMDGPU_TARGET.hsaco
-    fi
-
-    # augment arguments to clang-offload-bundler
-    CLANG_OFFLOAD_BUNDLER_INPUTS_ARGS+=",$TEMP_DIR/kernel-$AMDGPU_TARGET.hsaco"
-    CLANG_OFFLOAD_BUNDLER_TARGETS_ARGS+=",hcc-amdgcn--amdhsa-$AMDGPU_TARGET"
-    ISABIN_FILES=("")
-    LINK_IMPORTED_KERNEL_ARGS=("")
-    echo "HSACO: $TEMP_DIR/kernel-$AMDGPU_TARGET.hsaco"
-  done
-
-  echo "Finished ThinLTO"
+  if [ $VERBOSE != 0 ]; then
+    echo "Finished generation of AMD GCN kernels"
+  fi
 
   # invoke clang-offload-bundler
   $CLANG_OFFLOAD_BUNDLER -type=o $CLANG_OFFLOAD_BUNDLER_INPUTS_ARGS $CLANG_OFFLOAD_BUNDLER_TARGETS_ARGS -outputs=$TEMP_DIR/kernel.bundle
@@ -566,7 +625,7 @@ if [ ${#LINK_KERNEL_ARGS[@]} != 0 ]; then
   ret=$?
 
 fi # if [ -n $LINK_KERNEL_ARGS ];
-exit $ret
+
 # remove temp files
 if [ -e $TEMP_DIR/kernel_hsa.o ]; then
   rm $TEMP_DIR/kernel_hsa.o
