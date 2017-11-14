@@ -312,12 +312,14 @@ set(LLVM_EXTERNAL_LLD_SOURCE_DIR "${PROJECT_SOURCE_DIR}/lld")
 
 # determine LLVM targets to be built
 # AMDGPU is always on
-# For host target, x86_64, aarch64, ppc64 are currently supported
+# For host target, x86_64, aarch64, ppc64, ppc64le are currently supported
 if (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "x86_64")
   set(LLVM_HOST_TARGET "X86")
 elseif (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "aarch64")
   set(LLVM_HOST_TARGET "AArch64")
 elseif (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "ppc64")
+  set(LLVM_HOST_TARGET "PowerPC")
+elseif (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "ppc64le")
   set(LLVM_HOST_TARGET "PowerPC")
 endif()
 set(LLVM_TARGETS_TO_BUILD "AMDGPU" ${LLVM_HOST_TARGET} CACHE STRING "" FORCE)
@@ -341,8 +343,13 @@ install(PROGRAMS $<TARGET_FILE:llvm-as>
         COMPONENT compiler)
 
 add_custom_target(clang_links DEPENDS clang)
+if (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "ppc64le")
+  set(RT_BUILTIN_SUFFIX "powerpc64le")
+else()
+  set(RT_BUILTIN_SUFFIX ${CMAKE_SYSTEM_PROCESSOR})
+endif()
 add_custom_command(TARGET clang_links POST_BUILD
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ${CLANG_BIN_DIR}/lib/clang/6.0.0/lib/linux/libclang_rt.builtins-${CMAKE_SYSTEM_PROCESSOR}.a ${PROJECT_BINARY_DIR}/lib/libclang_rt.builtins-${CMAKE_SYSTEM_PROCESSOR}.a
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ${CLANG_BIN_DIR}/lib/clang/6.0.0/lib/linux/libclang_rt.builtins-${RT_BUILTIN_SUFFIX}.a ${PROJECT_BINARY_DIR}/lib/libclang_rt.builtins-${RT_BUILTIN_SUFFIX}.a
   COMMAND ${CMAKE_COMMAND} -E create_symlink ${CLANG_BIN_DIR}/bin/clang ${PROJECT_BINARY_DIR}/bin/clang
   COMMAND ${CMAKE_COMMAND} -E create_symlink ${CLANG_BIN_DIR}/bin/clang++ ${PROJECT_BINARY_DIR}/bin/clang++
   COMMAND ${CMAKE_COMMAND} -E create_symlink ${CLANG_BIN_DIR}/bin/hcc ${PROJECT_BINARY_DIR}/bin/hcc
@@ -367,7 +374,7 @@ install(PROGRAMS $<TARGET_FILE:LLVMAMDGPUDesc>
 # force library install path to lib
 set(CMAKE_INSTALL_LIBDIR "lib" CACHE INTERNAL "Installation directory for libraries" FORCE)
 
-install(FILES ${CLANG_BIN_DIR}/lib/clang/6.0.0/lib/linux/libclang_rt.builtins-${CMAKE_SYSTEM_PROCESSOR}.a
+install(FILES ${CLANG_BIN_DIR}/lib/clang/6.0.0/lib/linux/libclang_rt.builtins-${RT_BUILTIN_SUFFIX}.a
         DESTINATION  ${CMAKE_INSTALL_LIBDIR}
         COMPONENT compiler)
 
