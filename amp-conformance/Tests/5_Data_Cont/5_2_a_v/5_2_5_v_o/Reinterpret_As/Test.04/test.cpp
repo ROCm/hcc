@@ -43,7 +43,7 @@ int main()
     array_view<float, 1> av_float = av_rbg.reinterpret_as<float>();
 
     int expected_size = av_rbg.get_extent().size() * sizeof(Foo) / sizeof(float);
-    Log() << "Expected size: " << expected_size << " actual: " << av_float.get_extent()[0] << std::endl;
+    Log(LogType::Info, true) << "Expected size: " << expected_size << " actual: " << av_float.get_extent()[0] << std::endl;
     if (av_float.get_extent()[0] != expected_size)
     {
         return runall_fail;

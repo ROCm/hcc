@@ -1,10 +1,10 @@
-// XFAIL: Linux
+
 // RUN: %hc %s -o %t.out && %t.out
 
 #include <iostream>
 #include <amp.h>
 
-int flag;
+[[hc]] int flag;
 
 void foo(bool set) restrict(amp, cpu)
 {

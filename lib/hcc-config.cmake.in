@@ -1,0 +1,35 @@
+@PACKAGE_INIT@
+
+set_and_check( hcc_INCLUDE_DIR "@PACKAGE_INCLUDE_INSTALL_DIR@" )
+set_and_check( hcc_INCLUDE_DIRS "${hcc_INCLUDE_DIR}" )
+set_and_check( hcc_LIB_INSTALL_DIR "@PACKAGE_LIB_INSTALL_DIR@" )
+
+find_path(HSA_HEADER hsa/hsa.h
+  PATHS
+    /opt/rocm/include
+)
+
+find_library(HSA_LIBRARY hsa-runtime64
+  PATHS
+    /opt/rocm/lib
+)
+
+add_library(hsa-runtime64 SHARED IMPORTED GLOBAL)
+
+set_target_properties(hsa-runtime64 PROPERTIES
+  INTERFACE_INCLUDE_DIRECTORIES "${HSA_HEADER}"
+  IMPORTED_LOCATION "${HSA_LIBRARY}"
+  INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${HSA_HEADER}"
+)
+
+include( "${CMAKE_CURRENT_LIST_DIR}/ImportedTargets.cmake" )
+include( "${CMAKE_CURRENT_LIST_DIR}/hcc-targets.cmake" )
+
+set( hcc_LIBRARIES hcc::hccrt hcc::hc_am)
+set( hcc_LIBRARY ${hcc_LIBRARIES})
+
+set(HCC_INCLUDE_DIR ${hcc_INCLUDE_DIR})
+set(HCC_INCLUDE_DIRS ${hcc_INCLUDE_DIRS})
+set(HCC_LIB_INSTALL_DIR ${hcc_LIB_INSTALL_DIR})
+set(HCC_LIBRARIES ${hcc_LIBRARIES})
+set(HCC_LIBRARY ${hcc_LIBRARY})

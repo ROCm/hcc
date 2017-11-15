@@ -8,6 +8,7 @@
 #pragma once
 
 #include <memory>
+#include <stdlib.h>
 
 /** \cond HIDDEN_SYMBOLS */
 namespace Kalmar {
@@ -24,21 +25,17 @@ inline void* kalmar_aligned_alloc(std::size_t alignment, std::size_t size) noexc
     if (alignment < N) {
         alignment = N;
     }
-    std::size_t n = size + alignment - N;
-    void* p1 = 0;
-    void* p2 = std::malloc(n + sizeof p1);
-    if (p2) {
-        p1 = static_cast<char*>(p2) + sizeof p1;
-        (void)std::align(alignment, size, p1, n);
-        *(static_cast<void**>(p1) - 1) = p2;
-    }
-    return p1;
+    void* memptr = NULL;
+    // posix_memalign shall return 0 upon successfully allocate aligned memory
+    posix_memalign(&memptr, alignment, size);
+    assert(memptr);
+
+    return memptr;
 }
 
 inline void kalmar_aligned_free(void* ptr) noexcept {
     if (ptr) {
-        void* p = *(static_cast<void**>(ptr) - 1);
-        std::free(p);
+        free(ptr);
     }
 }
 

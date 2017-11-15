@@ -1,24 +1,24 @@
-// XFAIL: Linux
+
 // RUN: %hc %s -o %t.out && %t.out
 
-#include <climits>
-#include <cassert>
-#include <cstdio>
-#include <iostream>
-#include <vector>
-#include <random>
-#include <algorithm>
-#include <type_traits>
-
-
 #include <hc.hpp>
+
+#include <algorithm>
+#include <cassert>
+#include <climits>
+#include <cstdio>
+#include <functional>
+#include <iostream>
+#include <random>
+#include <type_traits>
+#include <vector>
 
 //#define DEBUG 1
 
 #ifdef DEBUG
   #define DEBUG_MSG(MSG,...)  fprintf(stderr,"%s:%d ", __FILE__,__LINE__); fprintf(stderr, MSG, __VA_ARGS__); fprintf(stderr, "\n");
 #else
-  #define DEBUG_MSG(MSG,...)   
+  #define DEBUG_MSG(MSG,...)
 #endif
 
 
@@ -35,7 +35,8 @@ bool run_test(const int num) {
   T max = std::is_signed<T>::value ? INT_MAX : UINT_MAX;
   T min = std::is_signed<T>::value ? INT_MIN : 0;
 
-  std::uniform_int_distribution<T> distribution(min, max);
+  typedef typename std::conditional<std::is_signed<T>::value, int, unsigned int>::type _RangeType;
+  std::uniform_int_distribution<_RangeType> distribution(static_cast<_RangeType>(min), static_cast<_RangeType>(max));
   auto gen = std::bind(distribution, random_gen);
   std::generate(input_x.begin(), input_x.end(), gen);
 
@@ -55,7 +56,7 @@ bool run_test(const int num) {
 
   std::vector<T> actual(num);
   hc::array_view<T,1> av_actual(num, actual);
-  hc::parallel_for_each(av_input_x.get_extent(), 
+  hc::parallel_for_each(av_input_x.get_extent(),
                         [=](hc::index<1> idx) [[hc]] {
     av_actual[idx] = hc::__amdgcn_ds_bpermute(av_input_y[idx]<<2, av_input_x[idx]);
   });
@@ -67,7 +68,7 @@ bool run_test(const int num) {
       expected[j+i] = input_x[j+input_y[j+i]];
     }
   }
- 
+
   return std::equal(expected.begin(), expected.end(), actual.begin());
 }
 

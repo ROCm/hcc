@@ -1,4 +1,4 @@
-// XFAIL: Linux
+
 // RUN: %hc -lhc_am %s -o %t.out && %t.out
 
 #include "hc.hpp"
@@ -13,6 +13,8 @@ struct Foo
   {
     return a+m_bar;
   }
+
+  __attribute__((hc,cpu)) Foo() = default;
 };
 
 __attribute__((hc_grid_launch)) void kernel(const grid_launch_parm lp, const int a, int* data_d)

@@ -1,4 +1,4 @@
-// XFAIL: Linux
+
 // RUN: %hc %s -o %t.out && %t.out
 
 #include <amp.h>
@@ -21,7 +21,7 @@ using namespace concurrency;
 template<typename _Tp>
 class user_functor {
 public:
-  user_functor() {}
+  user_functor() restrict(amp,cpu) {}
 
   _Tp value(const _Tp& i) const restrict(amp,cpu) { return i + 1; }
 };

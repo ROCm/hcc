@@ -29,13 +29,13 @@ using namespace Concurrency::Test;
 
 runall_result test_main()
 {
-    accelerator acc = require_device();
-	
+    accelerator acc = require_device(device_flags::NOT_SPECIFIED);
+
     if(acc.get_supports_cpu_shared_memory())
     {
         acc.set_default_cpu_access_type(ACCESS_TYPE);
     }
-	
+
     OverlapTest<int, 2> t(extent<2>(10, 10));
     ArrayViewTest<int, 2> remote = t.original().section(index<2>(5, 0), extent<2>(5, 10));
     ArrayViewTest<int, 1, 2> local = t.original().projection(2).section(extent<1>(5));

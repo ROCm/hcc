@@ -5,15 +5,17 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hc_rt_debug.h"
+#include "mcwamp_impl.hpp"
+
 #include <iostream>
 #include <string>
 #include <cassert>
+#include <cstddef>
 #include <tuple>
 
 #include <amp.h>
 #include <mutex>
-
-#include "mcwamp_impl.hpp"
 
 #include <dlfcn.h>
 
@@ -24,27 +26,13 @@ const wchar_t accelerator::default_accelerator[] = L"default";
 
 } // namespace Concurrency
 
-std::vector<std::string> __mcw_kernel_names;
-
 // weak symbols of kernel codes
 
-// OpenCL kernel codes
-extern "C" char * cl_kernel_source[] asm ("_binary_kernel_cl_start") __attribute__((weak));
-extern "C" char * cl_kernel_end[] asm ("_binary_kernel_cl_end") __attribute__((weak));
+// Kernel bundle
+extern "C" char * kernel_bundle_source[] asm ("_binary_kernel_bundle_start") __attribute__((visibility("hidden")));
+extern "C" char * kernel_bundle_end[] asm ("_binary_kernel_bundle_end") __attribute__((visibility("hidden")));
 
-// SPIR kernel codes
-extern "C" char * spir_kernel_source[] asm ("_binary_kernel_spir_start") __attribute__((weak));
-extern "C" char * spir_kernel_end[] asm ("_binary_kernel_spir_end") __attribute__((weak));
-
-// HSA kernel codes
-extern "C" char * hsa_kernel_source[] asm ("_binary_kernel_brig_start") __attribute__((weak));
-extern "C" char * hsa_kernel_end[] asm ("_binary_kernel_brig_end") __attribute__((weak));
-
-// HSA offline finalized kernel codes
-extern "C" char * hsa_offline_finalized_kernel_source[] asm ("_binary_kernel_isa_start") __attribute__((weak));
-extern "C" char * hsa_offline_finalized_kernel_end[] asm ("_binary_kernel_isa_end") __attribute__((weak));
-
-// interface of C++AMP runtime implementation
+// interface of HCC runtime implementation
 struct RuntimeImpl {
   RuntimeImpl(const char* libraryName) :
     m_ImplName(libraryName),
@@ -115,7 +103,7 @@ public:
 
     void* handle = nullptr;
 
-    // detect if C++AMP runtime is available and 
+    // detect if C++AMP runtime is available and
     // whether all platform library dependencies are satisfied
     //std::cout << "dlopen(" << m_ampRuntimeLibrary << ")\n";
     handle = dlopen(m_ampRuntimeLibrary.c_str(), RTLD_LAZY|RTLD_NODELETE);
@@ -137,40 +125,12 @@ private:
   void* m_kernel_source;
 };
 
-class OpenCLPlatformDetect : public PlatformDetect {
-public:
-    OpenCLPlatformDetect()
-      : PlatformDetect("OpenCL", "libmcwamp_opencl.so",  cl_kernel_source) {}
-
-  bool hasSPIR() {
-    void* ocl_version_test_handle = nullptr;
-    typedef int (*spir_test_t) ();
-    spir_test_t test_func = nullptr;
-    bool result = false;
-
-    ocl_version_test_handle = dlopen("libmcwamp_opencl_version.so", RTLD_LAZY|RTLD_NODELETE);
-    if (!ocl_version_test_handle) {
-      result = false;
-    } else {
-      test_func = (spir_test_t) dlsym(ocl_version_test_handle, "IsSPIRAvailable");
-      if (!test_func) {
-        result = false;
-      } else {
-        result = (test_func() > 0);
-      }
-    }
-    if (ocl_version_test_handle)
-      dlclose(ocl_version_test_handle);
-    return result;
-  }
-};
-
 /**
  * \brief HSA runtime detection
  */
 class HSAPlatformDetect : public PlatformDetect {
 public:
-  HSAPlatformDetect() : PlatformDetect("HSA", "libmcwamp_hsa.so",  hsa_kernel_source) {}
+  HSAPlatformDetect() : PlatformDetect("HSA", "libmcwamp_hsa.so",  kernel_bundle_source) {}
 };
 
 
@@ -178,22 +138,6 @@ public:
  * \brief Flag to turn on/off platform-dependent runtime messages
  */
 static bool mcwamp_verbose = false;
-
-static RuntimeImpl* LoadOpenCLRuntime() {
-  RuntimeImpl* runtimeImpl = nullptr;
-  // load OpenCL C++AMP runtime
-  if (mcwamp_verbose)
-    std::cout << "Use OpenCL runtime" << std::endl;
-  runtimeImpl = new RuntimeImpl("libmcwamp_opencl.so");
-  if (!runtimeImpl->m_RuntimeHandle) {
-    std::cerr << "Can't load OpenCL runtime!" << std::endl;
-    delete runtimeImpl;
-    exit(-1);
-  } else {
-    //std::cout << "OpenCL C++AMP runtime loaded" << std::endl;
-  }
-  return runtimeImpl;
-}
 
 static RuntimeImpl* LoadHSARuntime() {
   RuntimeImpl* runtimeImpl = nullptr;
@@ -229,7 +173,6 @@ RuntimeImpl* GetOrInitRuntime() {
   static RuntimeImpl* runtimeImpl = nullptr;
   if (runtimeImpl == nullptr) {
     HSAPlatformDetect hsa_rt;
-    OpenCLPlatformDetect opencl_rt;
 
     char* verbose_env = getenv("HCC_VERBOSE");
     if (verbose_env != nullptr) {
@@ -247,12 +190,6 @@ RuntimeImpl* GetOrInitRuntime() {
         } else {
           std::cerr << "Ignore unsupported HCC_RUNTIME environment variable: " << runtime_env << std::endl;
         }
-      } else if (runtime_env[0] == 'C' && runtime_env[1] == 'L') {
-          if (opencl_rt.detect()) {
-              runtimeImpl = LoadOpenCLRuntime();
-          } else {
-              std::cerr << "Ignore unsupported HCC_RUNTIME environment variable: " << runtime_env << std::endl;
-          }
       } else if(std::string("CPU") == runtime_env) {
           // CPU runtime should be available
           runtimeImpl = LoadCPURuntime();
@@ -266,8 +203,6 @@ RuntimeImpl* GetOrInitRuntime() {
     if (runtimeImpl == nullptr) {
       if (hsa_rt.detect()) {
         runtimeImpl = LoadHSARuntime();
-      } else if (opencl_rt.detect()) {
-        runtimeImpl = LoadOpenCLRuntime();
       } else {
           runtimeImpl = LoadCPURuntime();
           runtimeImpl->set_cpu();
@@ -288,111 +223,146 @@ bool in_cpu_kernel() { return in_kernel; }
 void enter_kernel() { in_kernel = true; }
 void leave_kernel() { in_kernel = false; }
 
-void DetermineAndGetProgram(KalmarQueue* pQueue, size_t* kernel_size, void** kernel_source, bool* needs_compilation) {
-  static bool firstTime = true;
-  static bool hasSPIR = false;
-  static bool hasFinalized = false;
 
-  char* kernel_env = nullptr;
+/// Handler for binary files. The bundled file will have the following format
+/// (all integers are stored in little-endian format):
+///
+/// "OFFLOAD_BUNDLER_MAGIC_STR" (ASCII encoding of the string)
+///
+/// NumberOfOffloadBundles (8-byte integer)
+///
+/// OffsetOfBundle1 (8-byte integer)
+/// SizeOfBundle1 (8-byte integer)
+/// NumberOfBytesInTripleOfBundle1 (8-byte integer)
+/// TripleOfBundle1 (byte length defined before)
+///
+/// ...
+///
+/// OffsetOfBundleN (8-byte integer)
+/// SizeOfBundleN (8-byte integer)
+/// NumberOfBytesInTripleOfBundleN (8-byte integer)
+/// TripleOfBundleN (byte length defined before)
+///
+/// Bundle1
+/// ...
+/// BundleN
 
-  // FIXME need a more elegant way
-  if (GetOrInitRuntime()->m_ImplName.find("libmcwamp_opencl") != std::string::npos) {
-    if (firstTime) {
-      // force use OpenCL C kernel from HCC_NOSPIR environment variable
-      kernel_env = getenv("HCC_NOSPIR");
-      if (kernel_env == nullptr) {
-          OpenCLPlatformDetect opencl_rt;
-        if (opencl_rt.hasSPIR()) {
-          if (mcwamp_verbose)
-            std::cout << "Use OpenCL SPIR kernel\n";
-          hasSPIR = true;
-        } else {
-          if (mcwamp_verbose)
-            std::cout << "Use OpenCL C kernel\n";
-        }
-      } else {
-        if (mcwamp_verbose)
-          std::cout << "Use OpenCL C kernel\n";
-      }
-      firstTime = false;
-    }
-    if (hasSPIR) {
-      // SPIR path
-      *kernel_size =
-        (ptrdiff_t)((void *)spir_kernel_end) -
-        (ptrdiff_t)((void *)spir_kernel_source);
-      *kernel_source = spir_kernel_source;
-      *needs_compilation = true;
-    } else {
-      // OpenCL path
-      *kernel_size =
-        (ptrdiff_t)((void *)cl_kernel_end) -
-        (ptrdiff_t)((void *)cl_kernel_source);
-      *kernel_source = cl_kernel_source;
-      *needs_compilation = true;
-    }
-  } else {
-    // HSA path
-
-    if (firstTime) {
-      // force use HSA BRIG kernel from HCC_NOISA environment variable
-      kernel_env = getenv("HCC_NOISA");
-      if (kernel_env == nullptr) {
-        // check if offline finalized kernels are available
-        size_t kernel_finalized_size = 
-          (ptrdiff_t)((void *)hsa_offline_finalized_kernel_end) -
-          (ptrdiff_t)((void *)hsa_offline_finalized_kernel_source);
-        // check if offline finalized kernel is compatible with ISA of the HSA agent
-        if ((kernel_finalized_size > 0) &&
-            (pQueue->getDev()->IsCompatibleKernel((void*)kernel_finalized_size, hsa_offline_finalized_kernel_source))) {
-          if (mcwamp_verbose)
-            std::cout << "Use offline finalized HSA kernels\n";
-          hasFinalized = true;
-        } else {
-          if (mcwamp_verbose)
-            std::cout << "Use HSA BRIG kernel\n";
-        }
-      } else {
-        // force use BRIG kernel
-        if (mcwamp_verbose)
-          std::cout << "Use HSA BRIG kernel\n";
-      }
-      firstTime = false;
-    }
-    if (hasFinalized) {
-      *kernel_size =
-        (ptrdiff_t)((void *)hsa_offline_finalized_kernel_end) -
-        (ptrdiff_t)((void *)hsa_offline_finalized_kernel_source);
-      *kernel_source = hsa_offline_finalized_kernel_source;
-      *needs_compilation = false;
-    } else {
-      *kernel_size = 
-        (ptrdiff_t)((void *)hsa_kernel_end) -
-        (ptrdiff_t)((void *)hsa_kernel_source);
-      *kernel_source = hsa_kernel_source;
-      *needs_compilation = true;
-    }
+static inline uint64_t Read8byteIntegerFromBuffer(const char *data, size_t pos) {
+  uint64_t Res = 0;
+  for (unsigned i = 0; i < 8; ++i) {
+    Res <<= 8;
+    uint64_t Char = (uint64_t)data[pos + 7 - i];
+    Res |= 0xffu & Char;
   }
+  return Res;
 }
 
-void BuildProgram(KalmarQueue* pQueue) {
+#define RUNTIME_ERROR(val, error_string, line) { \
+  hc::print_backtrace(); \
+  printf("### HCC RUNTIME ERROR: %s at file:%s line:%d\n", error_string, __FILENAME__, line); \
+  exit(val); \
+}
+
+#define OFFLOAD_BUNDLER_MAGIC_STR "__CLANG_OFFLOAD_BUNDLE__"
+#define OFFLOAD_BUNDLER_MAGIC_STR_LENGTH (24)
+#define HCC_TRIPLE_PREFIX "hcc-amdgcn--amdhsa-"
+#define HCC_TRIPLE_PREFIX_LENGTH (19)
+
+// Try determine a compatible code object within kernel bundle for a queue
+// Returns true if a compatible code object is found, and returns its size and
+// pointer to the code object. Returns false in case no compatible code object
+// is found.
+inline bool DetermineAndGetProgram(KalmarQueue* pQueue, size_t* kernel_size, void** kernel_source) {
+
+  bool FoundCompatibleKernel = false;
+
+  // walk through bundle header
+  // get bundle file size
+  size_t bundle_size =
+    (std::ptrdiff_t)((void *)kernel_bundle_end) -
+    (std::ptrdiff_t)((void *)kernel_bundle_source);
+
+  // point to bundle file data
+  const char *data = (const char *)kernel_bundle_source;
+
+  // skip OFFLOAD_BUNDLER_MAGIC_STR
+  size_t pos = 0;
+  if (pos + OFFLOAD_BUNDLER_MAGIC_STR_LENGTH > bundle_size) {
+    RUNTIME_ERROR(1, "Bundle size too small", __LINE__)
+  }
+  std::string MagicStr(data + pos, OFFLOAD_BUNDLER_MAGIC_STR_LENGTH);
+  if (MagicStr.compare(OFFLOAD_BUNDLER_MAGIC_STR) != 0) {
+    RUNTIME_ERROR(1, "Incorrect magic string", __LINE__)
+  }
+  pos += OFFLOAD_BUNDLER_MAGIC_STR_LENGTH;
+
+  // Read number of bundles.
+  if (pos + 8 > bundle_size) {
+    RUNTIME_ERROR(1, "Fail to parse number of bundles", __LINE__)
+  }
+  uint64_t NumberOfBundles = Read8byteIntegerFromBuffer(data, pos);
+  pos += 8;
+
+  for (uint64_t i = 0; i < NumberOfBundles; ++i) {
+    // Read offset.
+    if (pos + 8 > bundle_size) {
+      RUNTIME_ERROR(1, "Fail to parse bundle offset", __LINE__)
+    }
+    uint64_t Offset = Read8byteIntegerFromBuffer(data, pos);
+    pos += 8;
+
+    // Read size.
+    if (pos + 8 > bundle_size) {
+      RUNTIME_ERROR(1, "Fail to parse bundle size", __LINE__)
+    }
+    uint64_t Size = Read8byteIntegerFromBuffer(data, pos);
+    pos += 8;
+
+    // Read triple size.
+    if (pos + 8 > bundle_size) {
+      RUNTIME_ERROR(1, "Fail to parse triple size", __LINE__)
+    }
+    uint64_t TripleSize = Read8byteIntegerFromBuffer(data, pos);
+    pos += 8;
+
+    // Read triple.
+    if (pos + TripleSize > bundle_size) {
+      RUNTIME_ERROR(1, "Fail to parse triple", __LINE__)
+    }
+    std::string Triple(data + pos, TripleSize);
+    pos += TripleSize;
+
+    // only check bundles with HCC triple prefix string
+    if (Triple.compare(0, HCC_TRIPLE_PREFIX_LENGTH, HCC_TRIPLE_PREFIX) == 0) {
+      // use KalmarDevice::IsCompatibleKernel to check
+      size_t SizeST = (size_t)Size;
+      void *Content = (unsigned char *)data + Offset;
+      if (pQueue->getDev()->IsCompatibleKernel((void*)SizeST, Content)) {
+        *kernel_size = SizeST;
+        *kernel_source = Content;
+        FoundCompatibleKernel = true;
+        break;
+      }
+    }
+  }
+
+  return FoundCompatibleKernel;
+}
+
+void LoadInMemoryProgram(KalmarQueue* pQueue) {
   size_t kernel_size = 0;
   void* kernel_source = nullptr;
-  bool needs_compilation = true;
 
-  DetermineAndGetProgram(pQueue, &kernel_size, &kernel_source, &needs_compilation);
-  pQueue->getDev()->BuildProgram((void*)kernel_size, kernel_source, needs_compilation);
+  // Only call BuildProgram in case a compatible code object is found
+  if (DetermineAndGetProgram(pQueue, &kernel_size, &kernel_source)) {
+    pQueue->getDev()->BuildProgram((void*)kernel_size, kernel_source);
+  }
 }
 
 // used in parallel_for_each.h
 void *CreateKernel(std::string s, KalmarQueue* pQueue) {
-  size_t kernel_size = 0;
-  void* kernel_source = nullptr;
-  bool needs_compilation = true;
-
-  DetermineAndGetProgram(pQueue, &kernel_size, &kernel_source, &needs_compilation);
-
-  return pQueue->getDev()->CreateKernel(s.c_str(), (void *)kernel_size, kernel_source, needs_compilation);
+  // TODO - should create a HSAQueue:: CreateKernel member function that creates and returns a dispatch.
+  return pQueue->getDev()->CreateKernel(s.c_str(), pQueue);
 }
 
 void PushArg(void *k_, int idx, size_t sz, const void *s) {
@@ -419,25 +389,28 @@ public:
     if (lazyinit_env != nullptr) {
       if (std::string("ON") == lazyinit_env) {
         to_init = false;
+      } else if (strtol(lazyinit_env, nullptr, 0)) {
+        to_init = false;
       }
     }
 
     if (to_init) {
       // initialize runtime
       runtime = CLAMP::GetOrInitRuntime();
-  
+
       // get context
       KalmarContext* context = static_cast<KalmarContext*>(runtime->m_GetContextImpl());
-    
+
       const std::vector<KalmarDevice*> devices = context->getDevices();
 
+      // load kernels on the default queue for each device
       for (auto dev = devices.begin(); dev != devices.end(); dev++) {
 
-        // get default queue on the default device
+        // get default queue on the device
         std::shared_ptr<KalmarQueue> queue = (*dev)->get_default_queue();
-  
-        // build kernels on the default queue on the default device
-        CLAMP::BuildProgram(queue.get());
+
+        // load kernels on the default queue for the device
+        CLAMP::LoadInMemoryProgram(queue.get());
       }
     }
   }
@@ -458,7 +431,7 @@ static inline std::uint32_t f32_as_u32(float f) { union { float f; std::uint32_t
 static inline float u32_as_f32(std::uint32_t u) { union { float f; std::uint32_t u; } v; v.u = u; return v.f; }
 static inline int clamp_int(int i, int l, int h) { return std::min(std::max(i, l), h); }
 
-// half à float, the f16 is in the low 16 bits of the input argument ¿a¿
+// half ï¿½ float, the f16 is in the low 16 bits of the input argument ï¿½aï¿½
 static inline float __convert_half_to_float(std::uint32_t a) noexcept {
   std::uint32_t u = ((a << 13) + 0x70000000U) & 0x8fffe000U;
   std::uint32_t v = f32_as_u32(u32_as_f32(u) * 0x1.0p+112f) + 0x38000000U;
@@ -466,7 +439,7 @@ static inline float __convert_half_to_float(std::uint32_t a) noexcept {
   return u32_as_f32(u) * 0x1.0p-112f;
 }
 
-// float à half with nearest even rounding
+// float ï¿½ half with nearest even rounding
 // The lower 16 bits of the result is the bit pattern for the f16
 static inline std::uint32_t __convert_float_to_half(float a) noexcept {
   std::uint32_t u = f32_as_u32(a);

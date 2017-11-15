@@ -30,7 +30,7 @@ bool compare_ulp(float a, float b, std::uint32_t max_ulp_diff)
 
 runall_result test_main()
 {
-	accelerator_view av = require_device().get_default_view();
+	accelerator_view av = require_device(device_flags::NOT_SPECIFIED).get_default_view();
 
 	std::vector<float> res_0_(5);
 	std::vector<float> res_1_(14);
@@ -69,7 +69,7 @@ runall_result test_main()
 		float f111 = -1.99999988f;
 		float f112 = -2.00000000f;
 		float f113 = -3.402823466e+38f;
-		
+
 		// Long literals
 		float f200 = .3333333333333333333333333333333333333333333333333333333333333333333333333333333f;
 		float f201 = 100000000000000000000000000000000000000.f;
@@ -121,18 +121,18 @@ runall_result test_main()
 		if(idx[0] == 1)
 		{
 			DEOPT(f000);DEOPT(f001);DEOPT(f002);DEOPT(f003);DEOPT(f004);
-			
+
 			DEOPT(f100);DEOPT(f101);DEOPT(f102);DEOPT(f103);DEOPT(f104);
 			DEOPT(f105);DEOPT(f106);DEOPT(f107);DEOPT(f108);DEOPT(f109);
 			DEOPT(f110);DEOPT(f111);DEOPT(f112);DEOPT(f113);
-			
+
 			DEOPT(f200);DEOPT(f201);DEOPT(f202);
-			
+
 			DEOPT(f300);DEOPT(f301);DEOPT(f302);DEOPT(f303);DEOPT(f304);
 			DEOPT(f305);DEOPT(f306);DEOPT(f307);DEOPT(f308);DEOPT(f309);
 			DEOPT(f310);DEOPT(f311);DEOPT(f312);DEOPT(f313);DEOPT(f314);
 			DEOPT(f315);DEOPT(f316);DEOPT(f317);DEOPT(f318);DEOPT(f319);
-			
+
 			DEOPT(f400);DEOPT(f401);DEOPT(f402);DEOPT(f403);DEOPT(f404);
 			DEOPT(f405);DEOPT(f406);DEOPT(f407);
 
@@ -141,7 +141,7 @@ runall_result test_main()
 
 		// Store results
 		unsigned i;
-		
+
 		// res_0 := f0xx
 		i = 0;
 		STORE(0, f000);STORE(0, f001);STORE(0, f002);STORE(0, f003);STORE(0, f004);

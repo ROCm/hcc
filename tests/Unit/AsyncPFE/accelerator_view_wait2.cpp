@@ -1,4 +1,4 @@
-// XFAIL: Linux
+
 // RUN: %hc %s -o %t.out && %t.out
 
 #include <hc.hpp>
@@ -6,7 +6,7 @@
 #include <iostream>
 #include <random>
 
-#define LOOP_COUNT (1024)
+#define LOOP_COUNT (10240)
 
 /// test which checks the behavior of:
 /// accelerator_view::wait()

@@ -1,4 +1,4 @@
-// XFAIL: Linux
+
 // RUN: %hc %s -o %t.out && %t.out
 
 #include <amp.h>
@@ -23,7 +23,7 @@ class user_functor {
 public:
   _Tp (&input)[N];
 
-  user_functor(_Tp (&t)[N]) : input(t) {}
+  user_functor(_Tp (&t)[N]) restrict(amp,cpu) : input(t) {}
 
   void operator() (index<1>& idx) restrict(amp) {
     input[idx[0]] = idx[0];
@@ -35,7 +35,7 @@ class prog {
   _Tp& kernel;
 
 public:
-  prog(_Tp& f) : kernel(f) {
+  prog(_Tp& f) restrict(amp,cpu) : kernel(f) {
   }
 
   void operator() (index<1>& idx) restrict(amp) {

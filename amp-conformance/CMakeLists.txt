@@ -1,10 +1,14 @@
-#OpenCL
-include_directories(${OPENCL_HEADER}/../ ${CMAKE_CURRENT_SOURCE_DIR}/amp_test_lib/inc)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/amp_test_lib/inc)
+if (USE_LIBCXX)
+  include_directories(${LIBCXX_HEADER})
+endif(USE_LIBCXX)
 
 add_mcwamp_library(amptest
 amp_test_lib/src/context.cpp amp_test_lib/src/device.cpp amp_test_lib/src/logging.cpp
 amp_test_lib/src/main.cpp amp_test_lib/src/runall.cpp amp_test_lib/src/string_utils.cpp
 )
+
+target_link_libraries(amptest PRIVATE c++)
 
 set(AMP_CONFORMANCE_NUM_THREADS 1 CACHE INT "The number of threads to use when running amp conformance")
 
@@ -39,11 +43,9 @@ add_custom_target(conformance-all-hw
   DEPENDS amptest
   COMMENT "Running all C++AMP conformance tests skipping build only tests")
 
-set(AMP_PASSLIST passlist.txt)
-
-if (HSA_USE_AMDGPU_BACKEND)
-  set(AMP_PASSLIST amdgpu-passlist.txt)
-endif()
+# obsolete
+#set(AMP_PASSLIST passlist.txt)
+set(AMP_PASSLIST amdgpu-passlist.txt)
 
 add_custom_target(conformance
   COMMAND perl ${CMAKE_CURRENT_BINARY_DIR}/run_tests.pl ${CMAKE_CURRENT_SOURCE_DIR}/Tests ${CMAKE_CURRENT_SOURCE_DIR}/${AMP_PASSLIST}

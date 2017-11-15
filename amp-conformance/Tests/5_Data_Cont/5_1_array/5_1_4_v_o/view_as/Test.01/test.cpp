@@ -19,7 +19,6 @@ using namespace Concurrency::Test;
 
 runall_result test_main()
 {
-	runall_result;
     extent<3> ex(4, 5, 3);
     ArrayTest<int, 1> original(extent<1>(ex.size()));
 

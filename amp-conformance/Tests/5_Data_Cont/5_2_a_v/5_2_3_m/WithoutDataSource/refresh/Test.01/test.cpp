@@ -19,25 +19,25 @@ runall_result test1(accelerator *device)
 {
 	runall_result result;
 	const int M = 256;
-	
+
 	accelerator_view default_av = device->get_default_view();
 	accelerator_view av = device->create_view();
 
 	array_view<int,1> arrViewSrc(M);
 	arrViewSrc.refresh();
-	
+
 	parallel_for_each(default_av,arrViewSrc.get_extent(),[=](index<1> idx) restrict(amp){
 		arrViewSrc(idx) = idx[0];
 	});
-	
+
 	parallel_for_each(av,arrViewSrc.get_extent(),[=](index<1> idx) restrict(amp){
 		arrViewSrc(idx) += 10;
 	});
 	arrViewSrc.refresh();
-	
+
 	int cmp_result = 0;
 	array_view<int,1> av_result(1,&cmp_result);
-	
+
 	parallel_for_each(arrViewSrc.get_extent(),[=](index<1> idx) restrict(amp){
 		if(arrViewSrc(idx) != (idx[0] + 10))
 		{
@@ -45,14 +45,14 @@ runall_result test1(accelerator *device)
 		}
 	});
 	av_result.synchronize();
-	
+
 	result &= REPORT_RESULT(cmp_result == 0);
 	return result;
 }
 
 runall_result test_main()
 {
-    accelerator a = require_device();
+    accelerator a = require_device(device_flags::NOT_SPECIFIED);
 
     runall_result res;
     res &= REPORT_RESULT(test1(&a));

@@ -1,4 +1,4 @@
-// XFAIL: Linux
+
 // RUN: %hc %s -I%hsa_header_path -L%hsa_library_path -lhsa-runtime64 -o %t.out && %t.out
 
 #include <hc.hpp>
@@ -6,9 +6,9 @@
 #include <iostream>
 #include <random>
 
-#include <hsa.h>
+#include <hsa/hsa.h>
 
-#define LOOP_COUNT (1024)
+#define LOOP_COUNT (10240)
 
 #define TEST_DEBUG (0)
 

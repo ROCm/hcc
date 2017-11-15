@@ -1,4 +1,4 @@
-// XFAIL: Linux
+
 // RUN: %hc %s -o %t.out && %t.out
 
 // Parallel STL headers
@@ -39,7 +39,7 @@ bool test(void) {
 
 
 
-  auto pred = [](const T& v) { return static_cast<int>(v) % 3 == 0; };
+  auto pred = [](const T& v) [[hc,cpu]] { return static_cast<int>(v) % 3 == 0; };
 
   ret &= run_and_compare<T, SIZE, stdArray>([&eq, pred](stdArray &input, stdArray &output1,
                                                                          stdArray &output2) {

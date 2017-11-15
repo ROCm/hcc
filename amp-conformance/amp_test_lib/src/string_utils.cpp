@@ -9,6 +9,7 @@
 #include <stdexcept>
 #include <codecvt>
 #include <cstdlib>
+#include <cstring>
 
 namespace Concurrency
 {

@@ -1,4 +1,4 @@
-// XFAIL: Linux
+
 // RUN: %hc %s -o %t.out && %t.out
 
 // Parallel STL headers
@@ -15,7 +15,7 @@ bool test(void) {
 
 
   // test kernel
-  auto f = [&](T& v)
+  auto f = [&](T& v) [[hc,cpu]]
   {
     v *= 8;
     v += 3;

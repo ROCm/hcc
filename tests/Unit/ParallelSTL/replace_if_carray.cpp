@@ -1,4 +1,4 @@
-// XFAIL: Linux
+
 // RUN: %hc %s -o %t.out && %t.out
 
 // Parallel STL headers
@@ -13,7 +13,7 @@
 template<typename T, size_t SIZE>
 bool test(void) {
 
-  auto f = [](T& v) { return static_cast<int>(v) % 3 == 0; };
+  auto f = [](T& v) [[hc,cpu]] { return static_cast<int>(v) % 3 == 0; };
 
   using std::experimental::parallel::par;
 

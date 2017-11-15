@@ -1,4 +1,4 @@
-// XFAIL: Linux
+
 // RUN: %hc %s -o %t.out && %t.out
 
 // Parallel STL headers
@@ -13,7 +13,7 @@
 template<typename T, size_t SIZE>
 bool test(void) {
 
-  auto op = [](const T &x) { return x+1; };
+  auto op = [](const T &x) [[hc,cpu]] { return x+1; };
   auto binary_op = std::plus<T>();
   auto init = T{};
 

@@ -8,87 +8,89 @@
 
 #include <amptest.h>
 #include <amptest_main.h>
-#include <vector>
 #include <amp_short_vectors.h>
-#include <d3d11.h>
+
+#include <vector>
 
 using namespace Concurrency;
 using namespace Concurrency::Test;
 
 // Helper methods for some tests that rely on Direct3D interop
-HRESULT CopyOut(ID3D11Device *pDevice, ID3D11Buffer *pBuffer, void *pData)
-{
-    if ((pDevice == NULL) || (pBuffer == NULL) || (pData == NULL)) {
-        return E_FAIL;
-    }
-
-    D3D11_BUFFER_DESC bufferDescription;
-    pBuffer->GetDesc(&bufferDescription);
-
-    D3D11_BUFFER_DESC stagingBufferDescription;
-    ZeroMemory(&stagingBufferDescription, sizeof(D3D11_BUFFER_DESC));
-    stagingBufferDescription.ByteWidth = bufferDescription.ByteWidth;
-    stagingBufferDescription.Usage = D3D11_USAGE_STAGING;
-    stagingBufferDescription.BindFlags = 0;
-    stagingBufferDescription.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE | D3D11_CPU_ACCESS_READ;
-    stagingBufferDescription.MiscFlags = 0;
-
-    ID3D11Buffer *pStagingBuffer = NULL;
-    if (pDevice->CreateBuffer(&stagingBufferDescription, NULL, &pStagingBuffer) != S_OK) {
-        return E_FAIL;
-    }
-
-    ID3D11DeviceContext *pContext = NULL;
-    pDevice->GetImmediateContext(&pContext);
-
-    D3D11_BOX box;
-    box.left = 0;
-    box.top = 0;
-    box.front = 0;
-    box.right = bufferDescription.ByteWidth;
-    box.bottom = 1;
-    box.back = 1;
-    pContext->CopySubresourceRegion(pStagingBuffer, 0, 0, 0, 0, pBuffer, 0, &box);
-
-    D3D11_MAPPED_SUBRESOURCE dOutBuf;
-
-    if (pContext->Map(pStagingBuffer, 0, D3D11_MAP_WRITE, 0, &dOutBuf) != S_OK) {
-        pStagingBuffer->Release();
-        pContext->Release();
-        return E_FAIL;
-    }
-
-    memcpy(pData, dOutBuf.pData, bufferDescription.ByteWidth);
-    pContext->Unmap(pStagingBuffer, 0);
-
-    pStagingBuffer->Release();
-    pContext->Release();
-
-    return S_OK;
-}
+// TODO: neither of these make sense with HCC, hence why they are disabled,
+//       pending refactoring.
+//HRESULT CopyOut(ID3D11Device *pDevice, ID3D11Buffer *pBuffer, void *pData)
+//{
+//    if ((pDevice == NULL) || (pBuffer == NULL) || (pData == NULL)) {
+//        return E_FAIL;
+//    }
+//
+//    D3D11_BUFFER_DESC bufferDescription;
+//    pBuffer->GetDesc(&bufferDescription);
+//
+//    D3D11_BUFFER_DESC stagingBufferDescription;
+//    ZeroMemory(&stagingBufferDescription, sizeof(D3D11_BUFFER_DESC));
+//    stagingBufferDescription.ByteWidth = bufferDescription.ByteWidth;
+//    stagingBufferDescription.Usage = D3D11_USAGE_STAGING;
+//    stagingBufferDescription.BindFlags = 0;
+//    stagingBufferDescription.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE | D3D11_CPU_ACCESS_READ;
+//    stagingBufferDescription.MiscFlags = 0;
+//
+//    ID3D11Buffer *pStagingBuffer = NULL;
+//    if (pDevice->CreateBuffer(&stagingBufferDescription, NULL, &pStagingBuffer) != S_OK) {
+//        return E_FAIL;
+//    }
+//
+//    ID3D11DeviceContext *pContext = NULL;
+//    pDevice->GetImmediateContext(&pContext);
+//
+//    D3D11_BOX box;
+//    box.left = 0;
+//    box.top = 0;
+//    box.front = 0;
+//    box.right = bufferDescription.ByteWidth;
+//    box.bottom = 1;
+//    box.back = 1;
+//    pContext->CopySubresourceRegion(pStagingBuffer, 0, 0, 0, 0, pBuffer, 0, &box);
+//
+//    D3D11_MAPPED_SUBRESOURCE dOutBuf;
+//
+//    if (pContext->Map(pStagingBuffer, 0, D3D11_MAP_WRITE, 0, &dOutBuf) != S_OK) {
+//        pStagingBuffer->Release();
+//        pContext->Release();
+//        return E_FAIL;
+//    }
+//
+//    memcpy(pData, dOutBuf.pData, bufferDescription.ByteWidth);
+//    pContext->Unmap(pStagingBuffer, 0);
+//
+//    pStagingBuffer->Release();
+//    pContext->Release();
+//
+//    return S_OK;
+//}
 
 // Helper function to get the ID3D11Device pointer corresponding to a concurrency::accelerator_view object
-ID3D11Device *get_d3d11_device(accelerator_view &av)
-{
-    IUnknown *pTemp = direct3d::get_device(av);
-    ID3D11Device *pDevice = NULL;
-    pTemp->QueryInterface(__uuidof(ID3D11Device), reinterpret_cast<void**>(&pDevice));
-    pTemp->Release();
-
-    return pDevice;
-}
+//ID3D11Device *get_d3d11_device(accelerator_view &av)
+//{
+//    IUnknown *pTemp = direct3d::get_device(av);
+//    ID3D11Device *pDevice = NULL;
+//    pTemp->QueryInterface(__uuidof(ID3D11Device), reinterpret_cast<void**>(&pDevice));
+//    pTemp->Release();
+//
+//    return pDevice;
+//}
 
 // Helper function to get the ID3D11Buffer pointer corresponding to a concurrency::array object
-template<typename T, int Rank>
-ID3D11Buffer *get_d3d11_buffer(array<T, Rank> &arr)
-{
-    IUnknown *pTemp = direct3d::get_buffer(arr);
-    ID3D11Buffer *pBuffer = NULL;
-    pTemp->QueryInterface(__uuidof(ID3D11Buffer), reinterpret_cast<void**>(&pBuffer));
-    pTemp->Release();
-
-    return pBuffer;
-}
+//template<typename T, int Rank>
+//ID3D11Buffer *get_d3d11_buffer(array<T, Rank> &arr)
+//{
+//    IUnknown *pTemp = direct3d::get_buffer(arr);
+//    ID3D11Buffer *pBuffer = NULL;
+//    pTemp->QueryInterface(__uuidof(ID3D11Buffer), reinterpret_cast<void**>(&pBuffer));
+//    pTemp->Release();
+//
+//    return pBuffer;
+//}
 
 // Basic test for an array_view without a data source
 bool Test1(const accelerator_view &av)
@@ -114,12 +116,12 @@ bool Test1(const accelerator_view &av)
     bool passed = true;
     for (size_t i = 0; i < vecA.size(); ++i) {
         if (arrViewSum(i / N, i % N) != (vecA[i] + vecB[i])) {
-            Log(LogType::Error) << "Sum(" << i / N << ", " << i % N << ") = " << arrViewSum(i / N, i % N) << ", Expected = " << (vecA[i] + vecB[i]) << std::endl;
+            Log(LogType::Error, true) << "Sum(" << i / N << ", " << i % N << ") = " << arrViewSum(i / N, i % N) << ", Expected = " << (vecA[i] + vecB[i]) << std::endl;
             passed = false;
         }
 
         if (arrViewDiff(i / N, i % N) != (vecA[i] - vecB[i])) {
-            Log(LogType::Error) << "Diff(" << i / N << ", " << i % N << ") = " << arrViewDiff(i / N, i % N) << ", Expected = " << (vecA[i] - vecB[i]) << std::endl;
+            Log(LogType::Error, true) << "Diff(" << i / N << ", " << i % N << ") = " << arrViewDiff(i / N, i % N) << ", Expected = " << (vecA[i] - vecB[i]) << std::endl;
             passed = false;
         }
     }
@@ -159,22 +161,22 @@ bool Test2()
     for (size_t i = 0; i < vecA.size(); ++i)
     {
         if (arrViewSum(i / N, i % N) != (vecA[i] + vecB[i])) {
-            Log(LogType::Error) << "Sum(" << i / N << ", " << i % N << ") = " << arrViewSum(i / N, i % N) << ", Expected = " << (vecA[i] + vecB[i]) << std::endl;
+            Log(LogType::Error, true) << "Sum(" << i / N << ", " << i % N << ") = " << arrViewSum(i / N, i % N) << ", Expected = " << (vecA[i] + vecB[i]) << std::endl;
             passed = false;
         }
 
         if (arrViewDiff(i / N, i % N) != (vecA[i] - vecB[i])) {
-            Log(LogType::Error) << "Diff(" << i / N << ", " << i % N << ") = " << arrViewDiff(i / N, i % N) << ", Expected = " << (vecA[i] - vecB[i]) << std::endl;
+            Log(LogType::Error, true) << "Diff(" << i / N << ", " << i % N << ") = " << arrViewDiff(i / N, i % N) << ", Expected = " << (vecA[i] - vecB[i]) << std::endl;
             passed = false;
         }
 
         if (arrViewMul(i / N, i % N) != (vecA[i] * vecB[i])) {
-            Log(LogType::Error) << "Mul(" << i / N << ", " << i % N << ") = " << arrViewMul(i / N, i % N) << ", Expected = " << (vecA[i] * vecB[i]) << std::endl;
+            Log(LogType::Error, true) << "Mul(" << i / N << ", " << i % N << ") = " << arrViewMul(i / N, i % N) << ", Expected = " << (vecA[i] * vecB[i]) << std::endl;
             passed = false;
         }
 
         if (arrViewDiv(i / N, i % N) != (vecA[i] / (vecB[i] + 1))) {
-            Log(LogType::Error) << "Div(" << i / N << ", " << i % N << ") = " << arrViewDiv(i / N, i % N) << ", Expected = " << (vecA[i] / (vecB[i] + 1)) << std::endl;
+            Log(LogType::Error, true) << "Div(" << i / N << ", " << i % N << ") = " << arrViewDiv(i / N, i % N) << ", Expected = " << (vecA[i] / (vecB[i] + 1)) << std::endl;
             passed = false;
         }
     }
@@ -226,22 +228,22 @@ bool Test3(const accelerator_view &av)
     for (size_t i = 0; i < vecA.size(); ++i)
     {
         if (arrViewSum(i / N, i % N) != (vecA[i] + vecB[i])) {
-            Log(LogType::Error) << "Sum(" << i / N << ", " << i % N << ") = " << arrViewSum(i / N, i % N) << ", Expected = " << (vecA[i] + vecB[i]) << std::endl;
+            Log(LogType::Error, true) << "Sum(" << i / N << ", " << i % N << ") = " << arrViewSum(i / N, i % N) << ", Expected = " << (vecA[i] + vecB[i]) << std::endl;
             passed = false;
         }
 
         if (arrViewDiff(i / N, i % N) != (vecA[i] - vecB[i])) {
-            Log(LogType::Error) << "Diff(" << i / N << ", " << i % N << ") = " << arrViewDiff(i / N, i % N) << ", Expected = " << (vecA[i] - vecB[i]) << std::endl;
+            Log(LogType::Error, true) << "Diff(" << i / N << ", " << i % N << ") = " << arrViewDiff(i / N, i % N) << ", Expected = " << (vecA[i] - vecB[i]) << std::endl;
             passed = false;
         }
 
         if (arrViewMul(i / N, i % N) != (vecA[i] * vecB[i])) {
-            Log(LogType::Error) << "Mul(" << i / N << ", " << i % N << ") = " << arrViewMul(i / N, i % N) << ", Expected = " << (vecA[i] * vecB[i]) << std::endl;
+            Log(LogType::Error, true) << "Mul(" << i / N << ", " << i % N << ") = " << arrViewMul(i / N, i % N) << ", Expected = " << (vecA[i] * vecB[i]) << std::endl;
             passed = false;
         }
 
         if (arrViewDiv(i / N, i % N) != (vecA[i] / (vecB[i] + 1))) {
-            Log(LogType::Error) << "Div(" << i / N << ", " << i % N << ") = " << arrViewDiv(i / N, i % N) << ", Expected = " << (vecA[i] / (vecB[i] + 1)) << std::endl;
+            Log(LogType::Error, true) << "Div(" << i / N << ", " << i % N << ") = " << arrViewDiv(i / N, i % N) << ", Expected = " << (vecA[i] / (vecB[i] + 1)) << std::endl;
             passed = false;
         }
     }
@@ -280,22 +282,22 @@ bool Test4()
     for (size_t i = 0; i < vecA.size(); ++i)
     {
         if (arrViewSum(i) != (vecA[i] + vecB[i])) {
-            Log(LogType::Error) << "Sum(" << i << ") = " << arrViewSum(i) << ", Expected = " << (vecA[i] + vecB[i]) << std::endl;
+            Log(LogType::Error, true) << "Sum(" << i << ") = " << arrViewSum(i) << ", Expected = " << (vecA[i] + vecB[i]) << std::endl;
             passed = false;
         }
 
         if (arrViewDiff(i) != (vecA[i] - vecB[i])) {
-            Log(LogType::Error) << "Diff(" << i << ") = " << arrViewDiff(i) << ", Expected = " << (vecA[i] - vecB[i]) << std::endl;
+            Log(LogType::Error, true) << "Diff(" << i << ") = " << arrViewDiff(i) << ", Expected = " << (vecA[i] - vecB[i]) << std::endl;
             passed = false;
         }
 
         if (arrViewMul(i) != (vecA[i] * vecB[i])) {
-            Log(LogType::Error) << "Mul(" << i << ") = " << arrViewMul(i) << ", Expected = " << (vecA[i] * vecB[i]) << std::endl;
+            Log(LogType::Error, true) << "Mul(" << i << ") = " << arrViewMul(i) << ", Expected = " << (vecA[i] * vecB[i]) << std::endl;
             passed = false;
         }
 
         if (arrViewDiv(i) != (vecA[i] / (vecB[i] + 1))) {
-            Log(LogType::Error) << "Div(" << i << ") = " << arrViewDiv(i) << ", Expected = " << (vecA[i] / (vecB[i] + 1)) << std::endl;
+            Log(LogType::Error, true) << "Div(" << i << ") = " << arrViewDiv(i) << ", Expected = " << (vecA[i] / (vecB[i] + 1)) << std::endl;
             passed = false;
         }
     }
@@ -347,22 +349,22 @@ bool Test5(const accelerator_view &av)
     for (size_t i = 0; i < vecA.size(); ++i)
     {
         if (arrViewSum(i) != (vecA[i] + vecB[i])) {
-            Log(LogType::Error) << "Sum(" << i << ") = " << arrViewSum(i) << ", Expected = " << (vecA[i] + vecB[i]) << std::endl;
+            Log(LogType::Error, true) << "Sum(" << i << ") = " << arrViewSum(i) << ", Expected = " << (vecA[i] + vecB[i]) << std::endl;
             passed = false;
         }
 
         if (arrViewDiff(i) != (vecA[i] - vecB[i])) {
-            Log(LogType::Error) << "Diff(" << i << ") = " << arrViewDiff(i) << ", Expected = " << (vecA[i] - vecB[i]) << std::endl;
+            Log(LogType::Error, true) << "Diff(" << i << ") = " << arrViewDiff(i) << ", Expected = " << (vecA[i] - vecB[i]) << std::endl;
             passed = false;
         }
 
         if (arrViewMul(i) != (vecA[i] * vecB[i])) {
-            Log(LogType::Error) << "Mul(" << i << ") = " << arrViewMul(i) << ", Expected = " << (vecA[i] * vecB[i]) << std::endl;
+            Log(LogType::Error, true) << "Mul(" << i << ") = " << arrViewMul(i) << ", Expected = " << (vecA[i] * vecB[i]) << std::endl;
             passed = false;
         }
 
         if (arrViewDiv(i) != (vecA[i] / (vecB[i] + 1))) {
-            Log(LogType::Error) << "Div(" << i << ") = " << arrViewDiv(i) << ", Expected = " << (vecA[i] / (vecB[i] + 1)) << std::endl;
+            Log(LogType::Error, true) << "Div(" << i << ") = " << arrViewDiv(i) << ", Expected = " << (vecA[i] / (vecB[i] + 1)) << std::endl;
             passed = false;
         }
     }
@@ -405,12 +407,12 @@ bool Test6()
     for (size_t i = 0; i < vecA.size(); ++i)
     {
         if (arrViewSum(i / N, i % N) != (vecA[i] + vecB[i])) {
-            Log(LogType::Error) << "Sum(" << i / N << ", " << i % N << ") = " << arrViewSum(i / N, i % N) << ", Expected = " << (vecA[i] + vecB[i]) << std::endl;
+            Log(LogType::Error, true) << "Sum(" << i / N << ", " << i % N << ") = " << arrViewSum(i / N, i % N) << ", Expected = " << (vecA[i] + vecB[i]) << std::endl;
             passed = false;
         }
 
         if (arrViewDiff(i / N, i % N) != (vecA[i] - vecB[i])) {
-            Log(LogType::Error) << "Diff(" << i / N << ", " << i % N << ") = " << arrViewDiff(i / N, i % N) << ", Expected = " << (vecA[i] - vecB[i]) << std::endl;
+            Log(LogType::Error, true) << "Diff(" << i / N << ", " << i % N << ") = " << arrViewDiff(i / N, i % N) << ", Expected = " << (vecA[i] - vecB[i]) << std::endl;
             passed = false;
         }
     }
@@ -454,12 +456,12 @@ bool Test7()
     for (size_t i = 0; i < vecA.size(); ++i)
     {
         if (arrViewSum(i / N, i % N) != (vecA[i] + vecB[i])) {
-            Log(LogType::Error) << "Sum(" << i / N << ", " << i % N << ") = " << arrViewSum(i / N, i % N) << ", Expected = " << (vecA[i] + vecB[i]) << std::endl;
+            Log(LogType::Error, true) << "Sum(" << i / N << ", " << i % N << ") = " << arrViewSum(i / N, i % N) << ", Expected = " << (vecA[i] + vecB[i]) << std::endl;
             passed = false;
         }
 
         if (arrViewDiff(i / N, i % N) != (vecA[i] - vecB[i])) {
-            Log(LogType::Error) << "Diff(" << i / N << ", " << i % N << ") = " << arrViewDiff(i / N, i % N) << ", Expected = " << (vecA[i] - vecB[i]) << std::endl;
+            Log(LogType::Error, true) << "Diff(" << i / N << ", " << i % N << ") = " << arrViewDiff(i / N, i % N) << ", Expected = " << (vecA[i] - vecB[i]) << std::endl;
             passed = false;
         }
     }
@@ -509,12 +511,12 @@ bool Test8()
     for (size_t i = 0; i < vecA.size(); ++i)
     {
         if (arrViewSum(i / N, i % N) != (vecA[i] + vecB[i])) {
-            Log(LogType::Error) << "Sum(" << i / N << ", " << i % N << ") = " << arrViewSum(i / N, i % N) << ", Expected = " << (vecA[i] + vecB[i]) << std::endl;
+            Log(LogType::Error, true) << "Sum(" << i / N << ", " << i % N << ") = " << arrViewSum(i / N, i % N) << ", Expected = " << (vecA[i] + vecB[i]) << std::endl;
             passed = false;
         }
 
         if (arrViewDiff(i / N, i % N) != (vecA[i] - vecB[i])) {
-            Log(LogType::Error) << "Diff(" << i / N << ", " << i % N << ") = " << arrViewDiff(i / N, i % N) << ", Expected = " << (vecA[i] - vecB[i]) << std::endl;
+            Log(LogType::Error, true) << "Diff(" << i / N << ", " << i % N << ") = " << arrViewDiff(i / N, i % N) << ", Expected = " << (vecA[i] - vecB[i]) << std::endl;
             passed = false;
         }
     }
@@ -588,12 +590,12 @@ runall_result Test9()
     for (size_t i = 0; i < vecA.size(); ++i)
     {
         if (arrViewSum(i / N, i % N) != (vecA[i] + vecB[i])) {
-            Log(LogType::Error) << "Sum(" << i / N << ", " << i % N << ") = " << arrViewSum(i / N, i % N) << ", Expected = " << (vecA[i] + vecB[i]) << std::endl;
+            Log(LogType::Error, true) << "Sum(" << i / N << ", " << i % N << ") = " << arrViewSum(i / N, i % N) << ", Expected = " << (vecA[i] + vecB[i]) << std::endl;
             passed = runall_fail;
         }
 
         if (arrViewDiff(i / N, i % N) != (vecA[i] - vecB[i])) {
-            Log(LogType::Error) << "Diff(" << i / N << ", " << i % N << ") = " << arrViewDiff(i / N, i % N) << ", Expected = " << (vecA[i] - vecB[i]) << std::endl;
+            Log(LogType::Error, true) << "Diff(" << i / N << ", " << i % N << ") = " << arrViewDiff(i / N, i % N) << ", Expected = " << (vecA[i] - vecB[i]) << std::endl;
             passed = runall_fail;
         }
     }
@@ -628,12 +630,12 @@ bool Test10()
     bool passed = true;
     for (size_t i = 0; i < vecA.size(); ++i) {
         if (arrViewSum(i / N, i % N) != (vecA[i] + vecB[i])) {
-            Log(LogType::Error) << "Sum(" << i / N << ", " << i % N << ") = " << arrViewSum(i / N, i % N) << ", Expected = " << (vecA[i] + vecB[i]) << std::endl;
+            Log(LogType::Error, true) << "Sum(" << i / N << ", " << i % N << ") = " << arrViewSum(i / N, i % N) << ", Expected = " << (vecA[i] + vecB[i]) << std::endl;
             passed = false;
         }
 
         if (arrViewDiff(i / N, i % N) != (vecA[i] - vecB[i])) {
-            Log(LogType::Error) << "Diff(" << i / N << ", " << i % N << ") = " << arrViewDiff(i / N, i % N) << ", Expected = " << (vecA[i] - vecB[i]) << std::endl;
+            Log(LogType::Error, true) << "Diff(" << i / N << ", " << i % N << ") = " << arrViewDiff(i / N, i % N) << ", Expected = " << (vecA[i] - vecB[i]) << std::endl;
             passed = false;
         }
     }
@@ -669,12 +671,12 @@ bool Test11()
         bool passed = true;
         for (size_t i = 0; i < vecA.size(); ++i) {
             if (arrViewSum(i / N, i % N) != (vecA[i] + vecB[i])) {
-                Log(LogType::Error) << "Sum(" << i / N << ", " << i % N << ") = " << arrViewSum(i / N, i % N) << ", Expected = " << (vecA[i] + vecB[i]) << std::endl;
+                Log(LogType::Error, true) << "Sum(" << i / N << ", " << i % N << ") = " << arrViewSum(i / N, i % N) << ", Expected = " << (vecA[i] + vecB[i]) << std::endl;
                 passed = false;
             }
 
             if (arrViewDiff(i / N, i % N) != (vecA[i] - vecB[i])) {
-                Log(LogType::Error) << "Diff(" << i / N << ", " << i % N << ") = " << arrViewDiff(i / N, i % N) << ", Expected = " << (vecA[i] - vecB[i]) << std::endl;
+                Log(LogType::Error, true) << "Diff(" << i / N << ", " << i % N << ") = " << arrViewDiff(i / N, i % N) << ", Expected = " << (vecA[i] - vecB[i]) << std::endl;
                 passed = false;
             }
         }
@@ -710,12 +712,12 @@ bool Test12()
     bool passed = true;
     for (size_t i = 0; i < vecA.size(); ++i) {
         if (arrViewSum(i / N, i % N) != (vecA[i] + vecB[i])) {
-            Log(LogType::Error) << "Sum(" << i / N << ", " << i % N << ") = " << arrViewSum(i / N, i % N) << ", Expected = " << (vecA[i] + vecB[i]) << std::endl;
+            Log(LogType::Error, true) << "Sum(" << i / N << ", " << i % N << ") = " << arrViewSum(i / N, i % N) << ", Expected = " << (vecA[i] + vecB[i]) << std::endl;
             passed = false;
         }
 
         if (arrViewDiff(i / N, i % N) != (vecA[i] - vecB[i])) {
-            Log(LogType::Error) << "Diff(" << i / N << ", " << i % N << ") = " << arrViewDiff(i / N, i % N) << ", Expected = " << (vecA[i] - vecB[i]) << std::endl;
+            Log(LogType::Error, true) << "Diff(" << i / N << ", " << i % N << ") = " << arrViewDiff(i / N, i % N) << ", Expected = " << (vecA[i] - vecB[i]) << std::endl;
             passed = false;
         }
     }
@@ -755,12 +757,12 @@ bool Test13()
     bool passed = true;
     for (size_t i = 0; i < vecA.size(); ++i) {
         if (arrViewSum(i / N, i % N) != (vecA[i] + vecB[i])) {
-            Log(LogType::Error) << "Sum(" << i / N << ", " << i % N << ") = " << arrViewSum(i / N, i % N) << ", Expected = " << (vecA[i] + vecB[i]) << std::endl;
+            Log(LogType::Error, true) << "Sum(" << i / N << ", " << i % N << ") = " << arrViewSum(i / N, i % N) << ", Expected = " << (vecA[i] + vecB[i]) << std::endl;
             passed = false;
         }
 
         if (arrViewDiff(i / N, i % N) != (vecA[i] - vecB[i])) {
-            Log(LogType::Error) << "Diff(" << i / N << ", " << i % N << ") = " << arrViewDiff(i / N, i % N) << ", Expected = " << (vecA[i] - vecB[i]) << std::endl;
+            Log(LogType::Error, true) << "Diff(" << i / N << ", " << i % N << ") = " << arrViewDiff(i / N, i % N) << ", Expected = " << (vecA[i] - vecB[i]) << std::endl;
             passed = false;
         }
     }
@@ -803,12 +805,12 @@ bool Test14()
     for (size_t i = 0; i < vecA.size(); ++i)
     {
         if (pArrViewSum[i] != (vecA[i] + vecB[i])) {
-            Log(LogType::Error) << "Sum(" << i << ") = " << pArrViewSum[i] << ", Expected = " << (vecA[i] + vecB[i]) << std::endl;
+            Log(LogType::Error, true) << "Sum(" << i << ") = " << pArrViewSum[i] << ", Expected = " << (vecA[i] + vecB[i]) << std::endl;
             passed = false;
         }
 
         if (pArrViewDiff[i] != (vecA[i] - vecB[i])) {
-            Log(LogType::Error) << "Diff(" << i << ") = " << pArrViewDiff[i] << ", Expected = " << (vecA[i] - vecB[i]) << std::endl;
+            Log(LogType::Error, true) << "Diff(" << i << ") = " << pArrViewDiff[i] << ", Expected = " << (vecA[i] - vecB[i]) << std::endl;
             passed = false;
         }
     }
@@ -819,62 +821,64 @@ bool Test14()
 // Tests that when using an array_view without a data source
 // the p_f_e target selected is always the one where the input
 // data is pre-cached
-bool Test15()
-{
-    const int size = (1023 * 5);
-    accelerator_view av = accelerator().create_view();
-    ID3D11Device *pDevice = get_d3d11_device(av);
-
-    array<int> arrA(size, av), arrB(size, av);
-    ID3D11Buffer *pBufferA = get_d3d11_buffer(arrA);
-    ID3D11Buffer *pBufferB = get_d3d11_buffer(arrB);
-
-    parallel_for_each(arrA.get_extent(), [&](const index<1> &idx) restrict(amp) {
-        arrA[idx] = idx[0];
-    });
-
-    array_view<const int> arrViewA(arrA);
-    array_view<int> arrViewB(arrB);
-    arrViewB.discard_data();
-    array_view<int> arrViewC(size);
-    parallel_for_each(extent<1>(size), [=](const index<1> &idx) restrict(amp) {
-        arrViewB[idx] = arrViewA[idx] + idx[0];
-        arrViewC[idx] = arrViewA[idx] + idx[0];
-    });
-
-    bool passed = true;
-
-    // Now lets copy the contents of the ID3D11Buffer underlying the array source "arrB"
-    // without synchonizing to ensure that the p_f_e was indeed launched on "av"
-    std::vector<int> vec(arrB.get_extent().size(), 0);
-
-    if (CopyOut(pDevice, pBufferB, vec.data()) != S_OK) {
-        Log() << "Failed to copy from D3D buffer to host!" << std::endl;
-        passed = false;
-    }
-    else {
-        // Verify the contents of pBufferB
-        for (size_t i = 0; i < vec.size(); ++i) {
-            if (vec[i] != (2 * i)) {
-                Log() << "pBufferB[" << i << "] = " << vec[i] << ", Expected = " << (2 * i) << std::endl;
-                passed = false;
-            }
-        }
-    }
-
-    pDevice->Release();
-    pBufferA->Release();
-    pBufferB->Release();
-
-    return passed;
-}
+// TODO: This makes no sense on HCC at the moment, hence why it is disabled,
+//       pending refactoring.
+//bool Test15()
+//{
+//    const int size = (1023 * 5);
+//    accelerator_view av = accelerator().create_view();
+//    ID3D11Device *pDevice = get_d3d11_device(av);
+//
+//    array<int> arrA(size, av), arrB(size, av);
+//    ID3D11Buffer *pBufferA = get_d3d11_buffer(arrA);
+//    ID3D11Buffer *pBufferB = get_d3d11_buffer(arrB);
+//
+//    parallel_for_each(arrA.get_extent(), [&](const index<1> &idx) restrict(amp) {
+//        arrA[idx] = idx[0];
+//    });
+//
+//    array_view<const int> arrViewA(arrA);
+//    array_view<int> arrViewB(arrB);
+//    arrViewB.discard_data();
+//    array_view<int> arrViewC(size);
+//    parallel_for_each(extent<1>(size), [=](const index<1> &idx) restrict(amp) {
+//        arrViewB[idx] = arrViewA[idx] + idx[0];
+//        arrViewC[idx] = arrViewA[idx] + idx[0];
+//    });
+//
+//    bool passed = true;
+//
+//    // Now lets copy the contents of the ID3D11Buffer underlying the array source "arrB"
+//    // without synchonizing to ensure that the p_f_e was indeed launched on "av"
+//    std::vector<int> vec(arrB.get_extent().size(), 0);
+//
+//    if (CopyOut(pDevice, pBufferB, vec.data()) != S_OK) {
+//        Log(LogType::Info, true) << "Failed to copy from D3D buffer to host!" << std::endl;
+//        passed = false;
+//    }
+//    else {
+//        // Verify the contents of pBufferB
+//        for (size_t i = 0; i < vec.size(); ++i) {
+//            if (vec[i] != (2 * i)) {
+//                Log(LogType::Info, true) << "pBufferB[" << i << "] = " << vec[i] << ", Expected = " << (2 * i) << std::endl;
+//                passed = false;
+//            }
+//        }
+//    }
+//
+//    pDevice->Release();
+//    pBufferA->Release();
+//    pBufferB->Release();
+//
+//    return passed;
+//}
 
 runall_result test_main()
 {
-    accelerator_view av = require_device().get_default_view();
+    accelerator_view av = require_device(device_flags::NOT_SPECIFIED).get_default_view();
     runall_result res;
 
-#ifdef test_set1	
+#ifdef test_set1
 	res &= REPORT_RESULT(Test1(av));
 	res &= REPORT_RESULT(Test2());
 	res &= REPORT_RESULT(Test3(av));

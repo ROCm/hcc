@@ -1,4 +1,4 @@
-// XFAIL: Linux
+
 // RUN: %hc %s -o %t.out && %t.out
 
 #include <hc.hpp>
@@ -36,7 +36,7 @@ bool test(size_t N, size_t groupElements) {
         size_t gid = tidx.global[0];
         size_t tid = tidx.local[0];
 
-        __attribute__((address_space(3))) T* sdata = (__attribute__((address_space(3))) T*) get_dynamic_group_segment_base_pointer();
+        T* sdata = (T*) get_dynamic_group_segment_base_pointer();
 
         // initialize dynamic shared memory
         if (tid < groupElements) {

@@ -1,4 +1,4 @@
-// XFAIL: Linux
+
 // RUN: %hc -DSTATIC_LIB %s -c -o %T/static_library1.o
 // RUN: ar rcs %T/libstatic_library1.a %T/static_library1.o
 // RUN: %hc %s -L%T -lstatic_library1 -o %t.out && %t.out

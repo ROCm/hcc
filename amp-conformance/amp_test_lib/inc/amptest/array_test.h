@@ -88,7 +88,7 @@ namespace Test
         _known_values(new known_values_store()),
         _arr(extent, (*_data.get()).begin())
         {
-            Log(LogType::Info) << "Created Array of: " << extent << std::endl;
+            Log(LogType::Info, true) << "Created Array of: " << extent << std::endl;
         }
 
         ///<summary>Creates a new ArrayTest -- with initial data, and an array from it</summary>
@@ -100,8 +100,8 @@ namespace Test
         {
             assert(_data.get()->size() == extent.size());
 
-            Log(LogType::Info) << "Created Array of: " << extent << std::endl;
-            Log(LogType::Info) << "Initial data: ";
+            Log(LogType::Info, true) << "Created Array of: " << extent << std::endl;
+            Log(LogType::Info, true) << "Initial data: ";
             std::ostream_iterator<value_type> os_iter(LogStream(), ", ");
             std::copy(_data.get()->begin(), _data.get()->end(), os_iter);
             LogStream() << std::endl;
@@ -119,7 +119,7 @@ namespace Test
             _arr(view)
         {
         };
-		
+
 		///<summary>Creates a new ArrayTest</summary>
         ArrayTest(
             std::shared_ptr<coordinate_nest<rank, _data_rank>> coordinates,
@@ -163,7 +163,7 @@ namespace Test
         ///</remarks>
         ArrayViewTest<value_type, rank - 1, _data_rank> projection(array_view<value_type, rank - 1> other, int i)
         {
-            Log(LogType::Info) << "Creating projection on: " << i << std::endl;
+            Log(LogType::Info, true) << "Creating projection on: " << i << std::endl;
 
             std::shared_ptr<coordinate_nest<rank - 1, _data_rank>> p(new projected_coordinate_nest<rank - 1, rank, _data_rank>(_coordinates, index<1>(i)));
             return ArrayViewTest<value_type, rank - 1, _data_rank>(
@@ -214,9 +214,9 @@ namespace Test
         ///</remarks>
         ArrayViewTest<value_type, rank, _data_rank> section(array_view<value_type, rank> other, index<rank> origin)
         {
-            Log(LogType::Info) << "Creating section: (origin: " << origin << " extent: "
+            Log(LogType::Info, true) << "Creating section: (origin: " << origin << " extent: "
                 << other.get_extent() << ")" << std::endl;
-			
+
 			// make a copy
 			std::shared_ptr<coordinate_nest<rank, _data_rank>> p(new offset_coordinate_nest<rank, _data_rank>(_coordinates, origin));
             ArrayViewTest<value_type, rank, _data_rank> otherTest(
@@ -230,7 +230,7 @@ namespace Test
         template<int new_rank>
         ArrayViewTest<_value_type, new_rank, _data_rank> view_as(extent<new_rank> ex)
         {
-            Log(LogType::Info) << "Creating reshaped view: (extent: " << ex << ")" << std::endl;
+            Log(LogType::Info, true) << "Creating reshaped view: (extent: " << ex << ")" << std::endl;
             std::shared_ptr<coordinate_nest<new_rank, _data_rank>> p(new reshaped_coordinate_nest<new_rank, _data_rank>(_coordinates, ex));
             return ArrayViewTest<_value_type, new_rank, _data_rank>(
                 p,
@@ -250,7 +250,7 @@ namespace Test
         ///<summary>sets the given value in the known-values store</summary>
         void set_known_value(index<rank> i, value_type value)
         {
-            Log(LogType::Info) << "Added known value at: " << i << " (this view) or " << _coordinates.get()->get_absolute(i) <<
+            Log(LogType::Info, true) << "Added known value at: " << i << " (this view) or " << _coordinates.get()->get_absolute(i) <<
             " (original array view) of: " << value << std::endl;
 
             (*_known_values)[_coordinates.get()->get_absolute(i)] = value;
@@ -301,7 +301,7 @@ namespace Test
                     return fail();
                 }
             }
-            Log(LogType::Info) << "Pass" << std::endl;
+            Log(LogType::Info, true) << "Pass" << std::endl;
             return runall_pass;
         };
 
@@ -314,16 +314,16 @@ namespace Test
 				// Only log the failing elements
 				if(this->data()[_coordinates.get()->get_linear(iter->first)] != iter->second)
 				{
-					Log(LogType::Error) << "Known value at: " << iter->first << " should be: " << iter->second << " was: "
+					Log(LogType::Error, true) << "Known value at: " << iter->first << " should be: " << iter->second << " was: "
 						<< this->data()[_coordinates.get()->get_linear(iter->first)] << std::endl;
 				}
             }
 
-            Log(LogType::Info) << "Raw data: ";
+            Log(LogType::Info, true) << "Raw data: ";
             std::ostream_iterator<value_type> os_iter(LogStream(), ", ");
             std::copy(_data.get()->begin(), _data.get()->end(), os_iter);
             LogStream() << std::endl;
-            Log(LogType::Error) << "Fail" << std::endl;
+            Log(LogType::Error, true) << "Fail" << std::endl;
             return runall_fail;
         };
 
@@ -340,13 +340,13 @@ namespace Test
 	{
 		return details::gpu_read(src,idx);
 	}
-	
+
 	template<typename value_type, int rank>
     void gpu_write(array<value_type, rank> &dest, index<rank> idx, value_type value)
 	{
 		details::gpu_write(dest,idx,value);
 	}
-	
+
     template<typename value_type, int rank>
     bool TestSection(ArrayTest<value_type, rank> &original, index<rank> origin)
     {
@@ -384,37 +384,37 @@ namespace Test
 
         // set a value in the section on the GPU
         value_type expected_value = static_cast<value_type>(rand());
-        Log() << "Setting a value in the section AV on the GPU" << std::endl;
+        Log(LogType::Info, true) << "Setting a value in the section AV on the GPU" << std::endl;
         details::gpu_write(section.view(), set_section_on_gpu, expected_value);
         section.set_known_value(set_section_on_gpu, expected_value);
         value_type actual_value = details::gpu_read(original.arr(),set_section_on_gpu + origin);
         if (!comparer.are_equal(actual_value, expected_value))
         {
-            Log(LogType::Error) << "Reading original (CPU) expected: " << expected_value << " actual: " << actual_value << std::endl;
+            Log(LogType::Error, true) << "Reading original (CPU) expected: " << expected_value << " actual: " << actual_value << std::endl;
             return false;
         }
 
         // set a value in the original on the GPU
         expected_value = static_cast<value_type>(rand());
-        Log() << "Setting a value in the original AV on the GPU" << std::endl;
+        Log(LogType::Info, true) << "Setting a value in the original AV on the GPU" << std::endl;
         details::gpu_write(original.arr(), set_original_on_gpu, expected_value);
         original.set_known_value(set_original_on_gpu, expected_value);
         actual_value = details::gpu_read(section.view(), set_original_on_gpu - origin);
         if (!comparer.are_equal(actual_value, expected_value))
         {
-            Log(LogType::Error) << "Reading section (GPU) expected: " << expected_value << " actual: " << actual_value << std::endl;
+            Log(LogType::Error, true) << "Reading section (GPU) expected: " << expected_value << " actual: " << actual_value << std::endl;
             return false;
         }
 
         // set a value in the section on the CPU
         expected_value = static_cast<value_type>(rand());
-        Log() << "Setting a value in the section AV on the CPU" << std::endl;
+        Log(LogType::Info, true) << "Setting a value in the section AV on the CPU" << std::endl;
         section.view()[set_section_on_gpu] = expected_value;
         section.set_known_value(set_section_on_gpu, expected_value);
         actual_value = details::gpu_read(original.arr(), set_section_on_gpu + origin);
         if (!comparer.are_equal(actual_value, expected_value))
         {
-            Log(LogType::Error) << "Reading original (GPU) expected: " << expected_value << " actual: " << actual_value << std::endl;
+            Log(LogType::Error, true) << "Reading original (GPU) expected: " << expected_value << " actual: " << actual_value << std::endl;
             return false;
         }
 

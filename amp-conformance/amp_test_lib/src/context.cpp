@@ -77,7 +77,7 @@ namespace Concurrency
 				// First determine if the new filestream already exists for stdout.
 				// If so, just copy it.
 				if (_cout_logfile_path == stderr_filename)
-				{	
+				{
 					_cerr_logfile_override = _cout_logfile_override;
 				}
 				else
@@ -101,7 +101,7 @@ namespace Concurrency
 				// First determine if the new filestream already exists for stderr.
 				// If so, just copy it.
 				if (_cerr_logfile_path == stdout_filename)
-				{	
+				{
 					_cout_logfile_override = _cerr_logfile_override;
 				}
 				else
@@ -178,8 +178,8 @@ namespace Concurrency
 		}
 
 		bool amptest_context_t::is_buffer_aliasing_forced() const {
-		
-			return get_environment_variable("CPPAMP_FORCE_ALIASED_SHADER", false);			
+
+			return get_environment_variable("CPPAMP_FORCE_ALIASED_SHADER", false);
 		}
 
 		int amptest_context_t::load_environment_variable_cache_from_file(const std::string& file_path)
@@ -192,7 +192,7 @@ namespace Concurrency
 
 			if (infile.fail() == 1)
 			{
-				Log(LogType::Error) << "environment variable cache file not found" << std::endl;
+				Log(LogType::Error, true) << "environment variable cache file not found" << std::endl;
 				return count;
 			}
 
@@ -259,15 +259,15 @@ namespace Concurrency
 		{
 			if (!_using_env_cache)
 			{
-				Log() << "Environment Variable Cache is not being used" << std::endl;
+				Log(LogType::Info, true) << "Environment Variable Cache is not being used" << std::endl;
 				return 0;
 			}
 
 			int count = 0;
-			Log() << "Environment Variable Cache: dumping entries" << std::endl;
+			Log(LogType::Info, true) << "Environment Variable Cache: dumping entries" << std::endl;
 			std::for_each(_env_cache.begin(), _env_cache.end(), [&](std::pair<std::string, std::string> value)
 			{
-				Log() << "    " << value.first << "=" << value.second <<std::endl;
+				Log(LogType::Info, true) << "    " << value.first << "=" << value.second <<std::endl;
 				++count;
 			});
 

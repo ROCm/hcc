@@ -103,7 +103,7 @@ public:
 
 runall_result test_main()
 {
-    accelerator_view av = require_device().get_default_view();
+    accelerator_view av = require_device(device_flags::NOT_SPECIFIED).get_default_view();
 
     runall_result result;
     array_view<runall_result, 1> result_av(1, &result);
@@ -124,7 +124,7 @@ runall_result test_main()
 
     if(!result_av[0].get_is_pass())
     {
-        Log(LogType::Error) << "a1 object was not constructed as expected" << std::endl;
+        Log(LogType::Error, true) << "a1 object was not constructed as expected" << std::endl;
         return result_av[0];
     }
 
@@ -144,7 +144,7 @@ runall_result test_main()
 
     if(!result_av[0].get_is_pass())
     {
-        Log(LogType::Error) << "a2 object was not constructed as expected" << std::endl;
+        Log(LogType::Error, true) << "a2 object was not constructed as expected" << std::endl;
         return runall_fail;
     }
 
@@ -162,7 +162,7 @@ runall_result test_main()
 
     if(!result_av[0].get_is_pass())
     {
-        Log(LogType::Error) << "a3 object was not constructed as expected" << std::endl;
+        Log(LogType::Error, true) << "a3 object was not constructed as expected" << std::endl;
         return runall_fail;
     }
 
@@ -185,7 +185,7 @@ runall_result test_main()
 
     if(!result_av[0].get_is_pass())
     {
-        Log(LogType::Error) << "a4 object was not constructed as expected" << std::endl;
+        Log(LogType::Error, true) << "a4 object was not constructed as expected" << std::endl;
         return runall_fail;
     }
 
@@ -218,7 +218,7 @@ runall_result test_main()
 
     if(!result_av[0].get_is_pass())
     {
-        Log(LogType::Error) << "a5 object was not constructed as expected" << std::endl;
+        Log(LogType::Error, true) << "a5 object was not constructed as expected" << std::endl;
         return runall_fail;
     }
 

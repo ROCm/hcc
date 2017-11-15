@@ -1,4 +1,3 @@
-// XFAIL: Linux
 // RUN: %hc -Xclang -fauto-compile-for-accelerator %s -o %t.out && %t.out
 
 #include <hc.hpp>

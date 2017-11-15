@@ -1,4 +1,4 @@
-// XFAIL: Linux
+
 // RUN: %hc %s -o %t.out && %t.out
 
 #include <amp.h>
@@ -21,7 +21,7 @@ class prog {
   _Tp (&input)[N];
 
 public:
-  prog(_Tp (&t)[N]) : input(t) {
+  prog(_Tp (&t)[N]) restrict(amp,cpu) : input(t) {
   }
 
   void operator() (index<1>& idx) restrict(amp) {

@@ -1,4 +1,4 @@
-// XFAIL: Linux
+
 // RUN: %hc %s -o %t.out && %t.out
 
 // Parallel STL headers
@@ -27,7 +27,7 @@ bool test() {
   std::generate(std::begin(table), std::end(table), [&] { return n++; });
 
   // test kernel
-  auto f = [](_Tp& v)
+  auto f = [](_Tp& v) [[hc,cpu]]
   {
     v *= 8;
     v += 3;

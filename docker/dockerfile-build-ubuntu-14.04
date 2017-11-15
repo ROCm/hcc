@@ -1,0 +1,84 @@
+FROM ubuntu:14.04
+MAINTAINER Kent Knox <kent.knox@amd>
+
+# Parameters related to building hcc-lc
+ARG rocm_install_path=/opt/rocm
+ARG rocm_build_path=/usr/local/src/hcc-lc
+ARG build_type=Release
+
+# Download and install an up to date version of cmake, because compiling
+# LLVM has implemented a requirement of cmake v3.4.4 or greater
+ARG cmake_prefix=/opt/cmake
+ARG cmake_ver_major=3.7
+ARG cmake_ver_minor=3.7.2
+
+# Install Packages
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends curl && \
+    curl -sL http://packages.amd.com/rocm/apt/debian/rocm.gpg.key | apt-key add - && \
+    sh -c 'echo deb [arch=amd64] http://packages.amd.com/rocm/apt/debian/ trusty main > /etc/apt/sources.list.d/rocm.list' && \
+    apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    sudo \
+    file \
+    build-essential \
+    git \
+    software-properties-common \
+    wget \
+    python \
+    rpm \
+    pkg-config \
+    g++-multilib \
+    gcc-multilib \
+    findutils \
+    libncurses5-dev \
+    libelf-dev \
+    libelf1 \
+    libpci3 \
+    libc++abi-dev \
+    libc++-dev \
+    hsa-rocr-dev && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# This installs the new cmake side-by-side with the old cmake using update-alternatives
+RUN cd /usr/local/src && \
+    curl -L https://cmake.org/files/v${cmake_ver_major}/cmake-${cmake_ver_minor}.tar.gz -o cmake-${cmake_ver_minor}.tar.gz && \
+    tar -xf cmake-${cmake_ver_minor}.tar.gz && \
+    cd cmake-${cmake_ver_minor} && \
+    ./bootstrap --prefix=${cmake_prefix} && \
+    make -j $(nproc) && \
+    make install && \
+    cd .. && rm -rf cmake-${cmake_ver_minor} && \
+    update-alternatives --install /usr/local/bin/cmake cmake ${cmake_prefix}/bin/cmake 80 --slave /usr/local/bin/ccmake ccmake ${cmake_prefix}/bin/ccmake --slave /usr/local/bin/cpack cpack ${cmake_prefix}/bin/cpack --slave /usr/local/bin/ctest ctest ${cmake_prefix}/bin/ctest --slave /usr/local/share/cmake-${cmake_ver_major} share-cmake-${cmake_ver_major} ${cmake_prefix}/share/cmake-${cmake_ver_major} # --slave /usr/local/bin/cmake-gui cmake-gui ${cmake_prefix}/bin/cmake-gui
+
+# Compiling hcc-lc requires a custom build tool
+RUN curl http://commondatastorage.googleapis.com/git-repo-downloads/repo > /usr/local/bin/repo && \
+    chmod a+x /usr/local/bin/repo
+
+RUN mkdir -p ${rocm_build_path} && \
+    cd ${rocm_build_path} && \
+    repo init --depth=1 -u https://github.com/RadeonOpenCompute/HCC-Native-GCN-ISA.git -b clang_tot_upgrade && \
+    repo sync && \
+
+    # build amd-common LLVM/LLD/Clang
+    cd ${rocm_build_path}/llvm && \
+    mkdir -p build && \
+    cd build && \
+    cmake \
+      -DCMAKE_INSTALL_PREFIX=${rocm_install_path} \
+      -DCMAKE_BUILD_TYPE=${build_type} \
+      -DLLVM_TARGETS_TO_BUILD="AMDGPU;X86" \
+      -DLLVM_APPEND_VC_REV=ON .. && \
+    make -j $(nproc) && \
+
+    # build ROCm-Device-Libs with amd-common Clang
+    cd ${rocm_build_path}/ocml/ && \
+    mkdir -p build && \
+    cd build && \
+    CC=${rocm_build_path}/llvm/build/bin/clang cmake \
+      -DCMAKE_INSTALL_PREFIX=${rocm_install_path} \
+      -DCMAKE_BUILD_TYPE=${build_type} \
+      -DAMDHSACOD=/opt/rocm/bin/amdhsacod \
+      -DLLVM_DIR="${rocm_build_path}/llvm/build" \
+      .. && \
+    make -j $(nproc) package && \
+    dpkg -i rocm-device-libs-*.deb

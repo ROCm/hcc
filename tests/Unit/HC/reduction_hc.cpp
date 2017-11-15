@@ -1,4 +1,6 @@
-// XFAIL: Linux
+// XFAIL: *
+// JIRA SWDEV-129742
+
 // RUN: %hc %s -o %t.out && %t.out
 
 //----------------------------------------------------------------------------
@@ -19,6 +21,7 @@
 #include <iostream>
 #include <numeric>
 #include <assert.h>
+#include <climits>
 
 using namespace hc;
 

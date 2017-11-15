@@ -1,4 +1,4 @@
-// XFAIL: Linux
+
 // RUN: %hc %s -o %t.out && %t.out
 
 // Parallel STL headers
@@ -15,7 +15,7 @@ template<typename T, size_t SIZE>
 bool test(void) {
 
   // test kernel
-  auto f = [](const T& v1, const T& v2)
+  auto f = [](const T& v1, const T& v2) [[hc,cpu]]
   {
     return 5 * v1 + 6 * v2;
   };

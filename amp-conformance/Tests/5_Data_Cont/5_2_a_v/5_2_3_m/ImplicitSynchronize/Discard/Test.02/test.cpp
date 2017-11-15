@@ -31,43 +31,43 @@ using namespace Concurrency;
 using namespace Concurrency::Test;
 
 runall_result test_main()
-{	
-	accelerator acc = require_device();
-	
+{
+	accelerator acc = require_device(device_flags::NOT_SPECIFIED);
+
 	if(acc.get_supports_cpu_shared_memory())
 	{
 		acc.set_default_cpu_access_type(ACCESS_TYPE);
 	}
-	
+
 	std::vector<int> data(1000, 20);
 	array_view<int, 3> arr_v(10, 10, 10, data);
-	
+
 	index<3> origin(0, 0, 0);
 	extent<3> range(8, 8, 8);
-	
+
 	for(int n = 0; n < 100; n++)
 	{
 		index<3> idx1 = GetRandomIndex(origin, range);
 		index<3> idx2 = GetRandomIndex(origin, range);
-		index<3> idx3 = GetRandomIndex(origin, range);	
-		
+		index<3> idx3 = GetRandomIndex(origin, range);
+
 		array_view<int, 3> arr_v1 = arr_v.section(idx1);
 		array_view<int, 3> arr_v2 = arr_v.section(idx2);
 		array_view<int, 3> arr_v3 = arr_v.section(idx3);
-		
+
 		parallel_for_each(extent<3>(2, 2, 2), [=] (index<3> idx) restrict(amp) {
 			arr_v1[idx] = 2;
 			arr_v2[idx] = 3;
 			arr_v3[idx] = 4;
 		});
-		
+
 		arr_v1.discard_data();
 		arr_v2.discard_data();
 		arr_v3.discard_data();
-				
+
 		arr_v.synchronize();
 	}
-	
+
 	return (VerifyAllSameValue(data, 20) == -1);
 }
 

@@ -2,6 +2,9 @@
 
 namespace details {
 
+// FIXME sort algorithm implementation breaks Clang 4.0 as of now
+#if 0
+
 #define WG_SIZE                 256
 #define BITONIC_SORT_WGSIZE     64
 #define RADICES                 16
@@ -867,6 +870,7 @@ sort_dispatch(const InputIt& first, const InputIt& last, const Compare& comp)
         }
     }
 }
+#endif
  
 template<class InputIt, class Compare>
 void sort_impl(InputIt first, InputIt last, Compare comp, std::input_iterator_tag) {
@@ -881,11 +885,16 @@ void sort_impl(InputIt first, InputIt last, Compare comp,
   if (N == 0)
       return;
 
+  // FIXME sort algorithm implementation breaks Clang 4.0 as of now
+#if 0
   // call to std::sort when small data size
   if (N <= details::PARALLELIZE_THRESHOLD) {
       std::sort(first, last, comp);
   }
   sort_dispatch(first, last, comp);
+#endif
+
+  std::sort(first, last, comp);
 }
 
 

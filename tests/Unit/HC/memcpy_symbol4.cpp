@@ -1,4 +1,4 @@
-// XFAIL: Linux
+
 // RUN: %hc %s -o %t.out && %t.out
 
 #include <hc.hpp>
@@ -7,11 +7,9 @@
 
 #define GRID_SIZE (16)
 
-#define __DEVICE __attribute__((address_space(1)))
-
 // globalVar would be agent-allocated global variable with program linkage
 // add an initial value to prevent a bug in HLC
-__DEVICE float tableGlobal[GRID_SIZE] = { 0.1 };
+[[hc]] float tableGlobal[GRID_SIZE] = { 0.1 };
 
 using namespace hc;
 

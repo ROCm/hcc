@@ -1,0 +1,10 @@
+#pragma once
+#define CMAKE_BUILD_INC_DIR     "@HCC_SOURCE_DIR@/include"
+#define CMAKE_BUILD_LIB_DIR     "@PROJECT_BINARY_DIR@/lib"
+#define CMAKE_BUILD_COMPILER_RT_LIB_DIR   "@PROJECT_BINARY_DIR@/compiler/lib/clang/6.0.0/lib/linux"
+
+#define CMAKE_INSTALL_LIB       "@CMAKE_INSTALL_LIBDIR@"
+
+#define CMAKE_ROCM_ROOT     "@ROCM_ROOT@"
+
+#define CMAKE_GTEST_INC_DIR "@PROJECT_SOURCE_DIR@/utils"

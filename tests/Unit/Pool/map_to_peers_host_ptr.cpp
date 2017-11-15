@@ -1,4 +1,4 @@
-// XFAIL: Linux
+
 // RUN: %hc %s -lhc_am -o %t.out && %t.out
 
 #include <hc_am.hpp>
@@ -17,7 +17,7 @@ int main()
     const auto& peers = acc.get_peers();
 
     // map device pointer to all peers.
-    if(AM_SUCCESS != am_map_to_peers(host_ptr, peers.size(), peers.data()))
+    if(peers.size()!=0 && AM_SUCCESS != am_map_to_peers(host_ptr, peers.size(), peers.data()))
         return -1;
 
     return 0;

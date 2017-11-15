@@ -20,21 +20,21 @@ runall_result test_main()
     std::for_each(accs.begin(), accs.end(),
         [&](accelerator& acc)
     {
-        Log(LogType::Info) << "For device : " << acc.get_description() << std::endl;
+        Log(LogType::Info, true) << "For device : " << acc.get_description() << std::endl;
 
         // default accelerator view
-        Log(LogType::Info) << "Default view : " << std::endl;
+        Log(LogType::Info, true) << "Default view : " << std::endl;
         result &= REPORT_RESULT(acc.get_default_view().get_queuing_mode() == queuing_mode_automatic);
         result &= REPORT_RESULT(acc.get_default_view().get_queuing_mode() != queuing_mode_immediate);
 
         // immediate accelerator view
-        Log(LogType::Info) << "Test view with immediate queue mode : " << std::endl;
+        Log(LogType::Info, true) << "Test view with immediate queue mode : " << std::endl;
         accelerator_view av_imm = acc.create_view(queuing_mode_immediate);
         result &= REPORT_RESULT(av_imm.get_queuing_mode() == queuing_mode_immediate);
         result &= REPORT_RESULT(av_imm.get_queuing_mode() != queuing_mode_automatic);
 
         // automatic accelerator view
-        Log(LogType::Info) << "Test view with automatic queue mode : " << std::endl;
+        Log(LogType::Info, true) << "Test view with automatic queue mode : " << std::endl;
         accelerator_view av_auto = acc.create_view(queuing_mode_automatic);
         result &= REPORT_RESULT(av_auto.get_queuing_mode() == queuing_mode_automatic);
         result &= REPORT_RESULT(av_auto.get_queuing_mode() != queuing_mode_immediate);

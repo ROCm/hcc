@@ -3,109 +3,113 @@ option(HCC_RUNTIME_DEBUG "Enable debug build for HCC Runtime" OFF)
 
 if (HCC_RUNTIME_DEBUG)
   add_compile_options(-g -O0)
-  add_definitions(-DKALMAR_DEBUG=1)
 endif (HCC_RUNTIME_DEBUG)
 
-####################
-# C++AMP config (clamp-config)
-####################
-add_config_executable(clamp-config mcwamp_main.cpp)
-add_config_executable(hcc-config mcwamp_main.cpp)
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
+
+include(GNUInstallDirs)
+set( LIB_INSTALL_DIR ${CMAKE_INSTALL_LIBDIR} )
+set( INCLUDE_INSTALL_DIR ${CMAKE_INSTALL_INCLUDEDIR} )
+set( CONFIG_PACKAGE_INSTALL_DIR ${LIB_INSTALL_DIR}/cmake/hcc )
 
 ####################
 # C++AMP runtime (mcwamp)
 ####################
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
 add_mcwamp_library(mcwamp mcwamp.cpp)
 add_mcwamp_library(mcwamp_atomic mcwamp_atomic.cpp)
 
-install(TARGETS clamp-config hcc-config mcwamp mcwamp_atomic
-    RUNTIME DESTINATION bin
-    LIBRARY DESTINATION lib
-    ARCHIVE DESTINATION lib
-    )
+# Library interface to use runtime
+add_library(hccrt INTERFACE)
+target_compile_options(hccrt INTERFACE -hc)
+target_link_libraries(hccrt INTERFACE "-hc -L $<TARGET_FILE_DIR:$<TARGET_NAME:mcwamp>> -Wl,-rpath $<TARGET_FILE_DIR:$<TARGET_NAME:mcwamp>>" "-Wl,--whole-archive" mcwamp "-Wl,--no-whole-archive")
+target_link_libraries(hccrt INTERFACE dl m)
+
+if (USE_LIBCXX)
+  target_link_libraries(hccrt INTERFACE -stdlib=libc++)
+  if (NOT HCC_TOOLCHAIN_RHEL)
+    target_link_libraries(hccrt INTERFACE c++abi)
+  endif()
+endif (USE_LIBCXX)
+
+# Library interface for building shared libraries
+add_library(hccshared INTERFACE)
+target_link_libraries(hccshared INTERFACE -fPIC)
 
 ####################
 # C++AMP tools
 ####################
 install(PROGRAMS ${PROJECT_BINARY_DIR}/compiler/bin/clamp-device
-    ${PROJECT_BINARY_DIR}/compiler/bin/clamp-spirify
     ${PROJECT_BINARY_DIR}/compiler/bin/clamp-embed
     ${PROJECT_BINARY_DIR}/compiler/bin/clamp-assemble
     ${PROJECT_BINARY_DIR}/compiler/bin/clamp-link
     ${PROJECT_BINARY_DIR}/compiler/bin/hc-kernel-assemble
     ${PROJECT_BINARY_DIR}/compiler/bin/hc-host-assemble
-#    ${PROJECT_BINARY_DIR}/compiler/bin/clamp-preprocess
-    DESTINATION compiler/bin)
+    DESTINATION bin)
 
 ####################
 # C++AMP tools (HSA-specific)
 ####################
-install(PROGRAMS ${PROJECT_BINARY_DIR}/compiler/bin/clamp-hsatools
-    ${PROJECT_BINARY_DIR}/compiler/bin/clamp-hsail
-    DESTINATION compiler/bin)
-
 install(PROGRAMS ${PROJECT_BINARY_DIR}/bin/extractkernel
     DESTINATION bin)
 
-####################
-# builtin functions CL kernel (OpenCL C)
-####################
-INSTALL(FILES opencl_math.cl DESTINATION lib)
-# Copy the file to directory matching the install directory
-file(COPY opencl_math.cl DESTINATION "${PROJECT_BINARY_DIR}/lib")
+install(PROGRAMS ${PROJECT_SOURCE_DIR}/lib/rpt
+    DESTINATION bin)
 
 ####################
-# builtin functions bitcode (SPIR)
+# CodeXL Activity Logger
 ####################
-install(FILES opencl_math.bc DESTINATION lib)
-# Copy the file to directory matching the install directory
-file(COPY opencl_math.bc DESTINATION "${PROJECT_BINARY_DIR}/lib")
+if (USE_CODEXL_ACTIVITY_LOGGER EQUAL 1)
 
-####################
-# builtin functions bitcode (HSA)
-####################
-install(FILES hsa_math.bc DESTINATION lib)
-install(FILES builtins-hsail.opt.bc DESTINATION lib)
-install(FILES hsail-amdgpu-wrapper.ll DESTINATION lib)
-# Copy the file to directory matching the install directory
-file(COPY hsa_math.bc DESTINATION "${PROJECT_BINARY_DIR}/lib")
-file(COPY builtins-hsail.opt.bc DESTINATION "${PROJECT_BINARY_DIR}/lib")
-file(COPY hsail-amdgpu-wrapper.ll DESTINATION "${PROJECT_BINARY_DIR}/lib")
+if (CODEXL_ACTIVITY_LOGGER_HEADER)
+  include_directories(${CODEXL_ACTIVITY_LOGGER_HEADER})
+endif (CODEXL_ACTIVITY_LOGGER_HEADER)
 
-####################
-# OpenCL runtime version detection
-####################
-if (HAS_OPENCL EQUAL 1)
-add_mcwamp_library_opencl(mcwamp_opencl_version opencl_version.cpp)
-install(TARGETS mcwamp_opencl_version
-    LIBRARY DESTINATION lib
-    ARCHIVE DESTINATION lib)
-endif (HAS_OPENCL EQUAL 1)
+if (CODEXL_ACTIVITY_LOGGER_LIBRARY)
+  include_directories(${CODEXL_ACTIVITY_LOGGER_LIBRARY})
+endif (CODEXL_ACTIVITY_LOGGER_LIBRARY)
 
-####################
-# OpenCL C double type detection
-####################
-install(FILES opencl_prefix.cl DESTINATION lib)
-# Copy the file to directory matching the install directory
-file(COPY opencl_prefix.cl DESTINATION "${PROJECT_BINARY_DIR}/lib")
-
-####################
-# Dynamic memory allocation HSAIL logic (HSA)
-####################
-install(FILES hsa_builtins.hsail DESTINATION lib)
-# Copy the file to directory matching the install directory
-file(COPY hsa_builtins.hsail DESTINATION "${PROJECT_BINARY_DIR}/lib")
+endif (USE_CODEXL_ACTIVITY_LOGGER EQUAL 1)
 
 ####################
 # add subdirectories
 ####################
-add_subdirectory(opencl)
 add_subdirectory(hsa)
 add_subdirectory(cpu)
 
-# Build plugins for clang
-# FIXME: codes in this directory is obsolete, need to clean it up
-#if (CXXAMP_ENABLE_BOLT)
-#  add_subdirectory(clang-plugins)
-#endif (CXXAMP_ENABLE_BOLT)
+####################
+# install targets
+####################
+install(TARGETS mcwamp mcwamp_atomic hccrt hccshared
+    EXPORT hcc-targets
+    RUNTIME DESTINATION bin
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    )
+
+install( EXPORT hcc-targets
+  DESTINATION
+    ${CONFIG_PACKAGE_INSTALL_DIR}
+  NAMESPACE hcc::
+)
+
+include( CMakePackageConfigHelpers )
+
+configure_package_config_file(
+  hcc-config.cmake.in
+  ${CMAKE_CURRENT_BINARY_DIR}/hcc-config.cmake
+  INSTALL_DESTINATION ${CONFIG_PACKAGE_INSTALL_DIR}
+  PATH_VARS LIB_INSTALL_DIR INCLUDE_INSTALL_DIR
+)
+
+write_basic_package_version_file(
+  ${CMAKE_CURRENT_BINARY_DIR}/hcc-config-version.cmake
+  VERSION "${HCC_VERSION_MAJOR}.${HCC_VERSION_MINOR}.${HCC_VERSION_PATCH}"
+  COMPATIBILITY SameMajorVersion
+)
+
+
+install( FILES
+  ${CMAKE_CURRENT_BINARY_DIR}/hcc-config.cmake
+  ${CMAKE_CURRENT_BINARY_DIR}/hcc-config-version.cmake
+  DESTINATION
+    ${CONFIG_PACKAGE_INSTALL_DIR} )

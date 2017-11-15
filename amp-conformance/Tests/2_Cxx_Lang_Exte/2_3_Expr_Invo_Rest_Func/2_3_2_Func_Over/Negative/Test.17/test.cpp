@@ -4,7 +4,8 @@
 // THIS CODE IS PROVIDED *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION ANY IMPLIED WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT.
 // See the Apache Version 2.0 License for specific language governing permissions and limitations under the License.
 /// <tags>P2</tags>
-/// <summary>(Negative) If call less restricted function, all candicate function must be provided.</summary>
+/// <summary>(Negative) If calling less restricted function, all candidate
+///  functions must be provided.</summary>
 //#Expects: Error: error C3930
 
 #include <amptest.h>
@@ -13,11 +14,15 @@ using std::vector;
 using namespace Concurrency;
 using namespace Concurrency::Test;
 
+static
+inline
 int f() restrict(amp)
 {
     return 0;
 }
 
+static
+inline
 int f(float) restrict(amp)
 {
     return 1;

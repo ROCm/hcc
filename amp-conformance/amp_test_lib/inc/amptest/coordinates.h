@@ -23,6 +23,7 @@
 #include <amp.h>
 #include <iterator>
 #include <memory>
+#include <cstddef>
 
 namespace Concurrency
 {
@@ -213,7 +214,7 @@ namespace Test
 
         typedef std::input_iterator_tag iterator_category;
         typedef index<rank> value_type;
-        typedef ptrdiff_t difference_type;
+        typedef std::ptrdiff_t difference_type;
         typedef index<rank>* pointer;
         typedef index<rank>& reference;
 

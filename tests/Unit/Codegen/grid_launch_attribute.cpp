@@ -13,7 +13,7 @@ int bar()
 }
 
 // CHECK-NOT: alwaysinline
-// CHECK: define void @_Z3foo16grid_launch_parmii(i32 %arg1, i32 %arg2) [[HC:#[0-9]+]] {
+// CHECK: define void @_Z3foo16grid_launch_parmii(i32{{.*}}, i32{{.*}}) [[HC:#[0-9]+]] {
 // CHECK: define i32 @_Z3barv() [[NHC:#[0-9]+]] {
 // CHECK: [[HC]] = { {{.*}} "hc_grid_launch" {{.*}} }
 // CHECK-NOT: [[NHC]] = { {{.*}} "hc_grid_launch" {{.*}} }

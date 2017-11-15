@@ -1,4 +1,4 @@
-// XFAIL: Linux
+
 // RUN: %hc %s -o %t.out && %t.out
 
 // Parallel STL headers
@@ -12,8 +12,8 @@
 template<typename T, size_t SIZE>
 bool test(void) {
   // test kernel
-  auto f = [](const T& v1, const T& v2) { return v1 + v2; };
-  auto g = [](const T& v1, const T& v2) { return v1 - v2; };
+  auto f = [](const T& v1, const T& v2) [[hc,cpu]] { return v1 + v2; };
+  auto g = [](const T& v1, const T& v2) [[hc,cpu]] { return v1 - v2; };
 
   using std::experimental::parallel::par;
 

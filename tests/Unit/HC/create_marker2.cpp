@@ -1,4 +1,4 @@
-// XFAIL: Linux
+
 // RUN: %hc %s -o %t.out && %t.out
 
 #include <hc.hpp>
@@ -13,7 +13,7 @@
 
 // An example which shows how to use accelerator_view::create_marker()
 // and use hc::completion_future::wait() with different hcWaitMode
-bool test(bool useWaitMode, hc::hcWaitMode mode = hc::hcWaitModeBlocked) {
+bool test(bool useWaitMode, hc::memory_scope releaseScope, hc::hcWaitMode mode = hc::hcWaitModeBlocked) {
   bool ret = true;
 
   // define inputs and output
@@ -42,7 +42,7 @@ bool test(bool useWaitMode, hc::hcWaitMode mode = hc::hcWaitModeBlocked) {
 
   // create a barrier packet
   hc::accelerator_view av = hc::accelerator().get_default_view();
-  hc::completion_future fut2 = av.create_marker();
+  hc::completion_future fut2 = av.create_marker(releaseScope);
 
   // wait on the barrier packet
   if (!useWaitMode) {
@@ -71,9 +71,16 @@ bool test(bool useWaitMode, hc::hcWaitMode mode = hc::hcWaitModeBlocked) {
 int main() {
   bool ret = true;
 
-  ret &= test(false);
-  ret &= test(true, hc::hcWaitModeBlocked);
-  ret &= test(true, hc::hcWaitModeActive);
+  ret &= test(false, hc::system_scope);
+
+  ret &= test(true, hc::system_scope, hc::hcWaitModeBlocked);
+  ret &= test(true, hc::system_scope, hc::hcWaitModeActive);
+
+  ret &= test(true, hc::accelerator_scope, hc::hcWaitModeBlocked);
+  ret &= test(true, hc::accelerator_scope, hc::hcWaitModeActive);
+
+  ret &= test(true, hc::no_scope, hc::hcWaitModeBlocked);
+  ret &= test(true, hc::no_scope, hc::hcWaitModeActive);
 
   return !(ret == true);
 }

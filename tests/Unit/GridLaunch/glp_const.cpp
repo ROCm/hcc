@@ -1,4 +1,4 @@
-// XFAIL: Linux
+
 // RUN: %hc -lhc_am %s -o %t.out && %t.out
 
 // FIXME: GridLaunch tests would hang HSA dGPU if executed in multi-thread
@@ -45,6 +45,8 @@ int main() {
   bool ret = true;
 
   for(int i = 0; i < sz; ++i) {
+    if (data1[i] != i)
+      std::cout << "Mismatch at #" << i << ": " << data1[i] << "\n";
     ret &= (data1[i] == i);
   }
 

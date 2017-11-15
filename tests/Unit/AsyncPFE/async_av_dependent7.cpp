@@ -1,4 +1,4 @@
-// XFAIL: Linux
+
 // RUN: %hc %s -o %t.out && %t.out
 
 #include <hc.hpp>
@@ -6,16 +6,15 @@
 #include <iostream>
 
 // loop to deliberately slow down kernel execution
-#define LOOP_COUNT (1024)
+#define LOOP_COUNT (10240)
 
 #define TEST_DEBUG (0)
 
 /// test implicit synchronization of array_view and kernel dispatches
 ///
 template<size_t grid_size, size_t tile_size>
-bool test1D() {
+void test1D() {
 
-  bool ret = true;
 
   // dependency graph
   // pfe1: av1 + av2 -> av3
@@ -85,13 +84,11 @@ bool test1D() {
 
   // now there must be 1 pending async operations for the accelerator_view
   // pfe1 and pfe2 must be completed by now
-  ret &= (hc::accelerator().get_default_view().get_pending_async_ops() == 1);
+  assert(hc::accelerator().get_default_view().get_pending_async_ops() == 1);
 
   // for this test case we deliberately NOT wait on kernels
   // we want to check when array_view instances go to destruction
   // would all dependent kernels be waited or not 
-
-  return ret;
 }
 
 int main() {
@@ -99,16 +96,16 @@ int main() {
 
   hc::accelerator_view av = hc::accelerator().get_default_view();
 
-  ret &= test1D<32, 16>();
-  ret &= (av.get_pending_async_ops() == 0);
-  ret &= test1D<64, 8>();
-  ret &= (av.get_pending_async_ops() == 0);
-  ret &= test1D<128, 32>();
-  ret &= (av.get_pending_async_ops() == 0);
-  ret &= test1D<256, 64>();
-  ret &= (av.get_pending_async_ops() == 0);
-  ret &= test1D<1024, 256>();
-  ret &= (av.get_pending_async_ops() == 0);
+  test1D<32, 16>();
+  assert(av.get_pending_async_ops() == 0);
+  test1D<64, 8>();
+  assert(av.get_pending_async_ops() == 0);
+  test1D<128, 32>();
+  assert(av.get_pending_async_ops() == 0);
+  test1D<256, 64>();
+  assert(av.get_pending_async_ops() == 0);
+  test1D<1024, 256>();
+  assert(av.get_pending_async_ops() == 0);
 
   return !(ret == true);
 }

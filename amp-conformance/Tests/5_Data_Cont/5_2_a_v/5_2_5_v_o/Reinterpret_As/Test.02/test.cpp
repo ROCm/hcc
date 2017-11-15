@@ -35,6 +35,6 @@ int main()
     array_view<const float, 1> av_float(static_cast<int>(v.size()), v);
     array_view<const int, 1> av_int = av_float.reinterpret_as<const int>();
 
-    return Verify<const int>(reinterpret_cast<const int *>(av_float.data()), av_int.data(), v.size()) ? runall_pass : runall_fail;
+    return Verify<int>(reinterpret_cast<const int *>(av_float.data()), av_int.data(), v.size()) ? runall_pass : runall_fail;
 }
 

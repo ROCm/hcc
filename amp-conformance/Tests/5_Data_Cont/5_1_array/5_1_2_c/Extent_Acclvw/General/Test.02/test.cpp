@@ -14,17 +14,17 @@
 template<typename _type, int _rank>
 int test_feature()
 {
-	vector<accelerator> devices = get_available_devices();
+	vector<accelerator> devices = get_available_devices(device_flags::NOT_SPECIFIED);
 	if(devices.empty()) {
-		Log(LogType::Warning) << "No device exists." << std::endl;
+		Log(LogType::Warning, true) << "No device exists." << std::endl;
 		return runall_skip;
 	}
-	Log() << "Found " << devices.size() << " devices." << std::endl;
+	Log(LogType::Info, true) << "Found " << devices.size() << " devices." << std::endl;
 
 	int edata[_rank];
 	for (int i = 0; i < _rank; i++)
 		edata[i] = 3;
-	
+
 	for (size_t i = 0; i < devices.size(); i++)
 	{
 		accelerator device1 = devices[i];
@@ -134,7 +134,7 @@ int test_feature()
 			}
 		}
 
-		printf("Finished with device %d \n", i);
+		printf("Finished with device %zu \n", i);
 	}
 
 	return runall_pass;
@@ -146,15 +146,15 @@ int test_feature()
 	// For doubles, we require limited double support
 	vector<accelerator> devices = get_available_devices(device_flags::LIMITED_DOUBLE);
 	if(devices.empty()) {
-		Log(LogType::Warning) << "No device exists with limited double support." << std::endl;
+		Log(LogType::Warning, true) << "No device exists with limited double support." << std::endl;
 		return runall_skip;
 	}
-	Log() << "Found " << devices.size() << " devices." << std::endl;
+	Log(LogType::Info, true) << "Found " << devices.size() << " devices." << std::endl;
 
 	int edata[_rank];
 	for (int i = 0; i < _rank; i++)
 		edata[i] = 3;
-	
+
 	for (size_t i = 0; i < devices.size(); i++)
 	{
 		accelerator device1 = devices[i];
@@ -264,7 +264,7 @@ int test_feature()
 			}
 		}
 
-		printf("Finished with device %d \n", i);
+		printf("Finished with device %zu \n", i);
 	}
 
 	return runall_pass;

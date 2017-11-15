@@ -60,7 +60,7 @@ $CLAMP_CXXFLAGS =~ s/\s+$//;
 my $CLAMP_LDFLAGS=`$CLAMP_CONFIG --build --ldflags`;
 $CLAMP_LDFLAGS =~ s/^\s+//;
 $CLAMP_LDFLAGS =~ s/\s+$//;
-my $SHARED_CXXFLAGS="$CLAMP_CXXFLAGS -I$AMPTESTINC -I/usr/include -I$CLANG_AMP_BUILD_DIR/compiler/lib/clang/3.5.0/include/";
+my $SHARED_CXXFLAGS="$CLAMP_CXXFLAGS -I$AMPTESTINC -I/usr/include -I$CLANG_AMP_BUILD_DIR/compiler/lib/clang/5.0.0/include/";
 
 ### Execute tests
 use constant PASS => 0;
@@ -116,11 +116,14 @@ foreach my $def_set (@{$Test::config{'definitions'}})
             $CLANG_AMP -cc1 -fcxx-exceptions -fsyntax-only -D__CPU__=1 $SHARED_CXXFLAGS $include_main $test $cflags_defs";
     } elsif ($ENV{TEST_CPU} eq "ON") {
         $command = "\\
-            $CLANG_AMP -std=c++amp -cpu $SHARED_CXXFLAGS $include_main $test $AMPTESTLIB $cflags_defs $CLAMP_LDFLAGS -o $tmpdir/test.out -g";
+            $CLANG_AMP -std=c++amp -cpu $SHARED_CXXFLAGS $include_main $test $AMPTESTLIB $cflags_defs $CLAMP_LDFLAGS -o $tmpdir/test.out";
     } else {
             $command = "\\
-                $CLANG_AMP $SHARED_CXXFLAGS $include_main $test $AMPTESTLIB $cflags_defs $CLAMP_LDFLAGS -o $tmpdir/test.out -g";
+                $CLANG_AMP $SHARED_CXXFLAGS $include_main $test $AMPTESTLIB $cflags_defs $CLAMP_LDFLAGS -o $tmpdir/test.out";
     }
+
+    # append HCC_TILECHECK=ON in front of $command
+    $command = "HCC_TILECHECK=ON " . $command;
 
     log_message("Command: $command\n"
         ."Build output:\n"

@@ -1,11 +1,11 @@
-// XFAIL: Linux
+
 // RUN: %hc %s -I%hsa_header_path -L%hsa_library_path -lhsa-runtime64 -o %t.out && %t.out
 
 #include <hc.hpp>
 
 #include <iostream>
 
-#include <hsa.h>
+#include <hsa/hsa.h>
 
 // loop to deliberately slow down kernel execution
 #define LOOP_COUNT (1024)

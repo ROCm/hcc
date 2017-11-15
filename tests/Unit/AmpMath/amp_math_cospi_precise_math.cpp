@@ -2,9 +2,10 @@
 #include <amp.h>
 #include <amp_math.h>
 
+#include <cmath>
+#include <cassert>
 #include <iostream>
 #include <random>
-#include <cmath>
 
 using namespace concurrency;
 
@@ -39,12 +40,17 @@ bool test() {
   });
 
   for(unsigned i = 0; i < vecSize; i++) {
-    gb[i] = precise_math::cospi(ga[i]);
+    gb[i] = std::cos(static_cast<_Tp>(M_PI) * ga[i]);
   }
 
   _Tp sum = 0.0;
   for(unsigned i = 0; i < vecSize; i++) {
-    sum += precise_math::fabs(precise_math::fabs(gc[i]) - precise_math::fabs(gb[i]));
+    if (std::isnan(gc[i])) {
+      printf("gc[%d] is NaN!\n", i);
+      assert(false);
+    }
+    _Tp diff = precise_math::fabs(gc[i] - gb[i]);
+    sum += diff;
   }
   return (sum < ERROR_THRESHOLD);
 }

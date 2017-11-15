@@ -1,0 +1,44 @@
+FROM ubuntu:16.04
+MAINTAINER Kent Knox <kent.knox@amd>
+
+# Parameters related to building hcc-lc
+ARG rocm_install_path=/opt/rocm
+ARG rocm_build_path=/usr/local/src/hcc-lc
+ARG build_type=Release
+
+# Download and install an up to date version of cmake, because compiling
+# LLVM has implemented a requirement of cmake v3.4.4 or greater
+ARG cmake_prefix=/opt/cmake
+ARG cmake_ver_major=3.7
+ARG cmake_ver_minor=3.7.2
+ARG REPO_RADEON=repo.radeon.com
+
+# Install Packages
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends curl && \
+    curl -sL http://${REPO_RADEON}/rocm/apt/debian/rocm.gpg.key | apt-key add - && \
+    echo deb [arch=amd64] http://${REPO_RADEON}/rocm/apt/debian/ xenial main | tee /etc/apt/sources.list.d/rocm.list && \
+    apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    sudo \
+    file \
+    build-essential \
+    git \
+    software-properties-common \
+    wget \
+    python \
+    pkg-config \
+    gcc-multilib \
+    g++-multilib \
+    gcc-multilib \
+    findutils \
+    libncurses5-dev \
+    libelf-dev \
+    findutils \
+    libpci3 \
+    debianutils \
+    cmake \
+    libunwind-dev \
+    hsa-rocr-dev && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN chmod 777 $(find /opt/rocm -type d)

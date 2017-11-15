@@ -1,0 +1,24 @@
+[submodule "llvm"]
+	path = compiler
+	url = https://github.com/RadeonOpenCompute/llvm.git
+	branch = amd-hcc
+[submodule "lld"]
+	path = lld
+	url = https://github.com/RadeonOpenCompute/lld.git
+	branch = amd-hcc
+[submodule "clang"]
+	path = clang
+	url = https://github.com/RadeonOpenCompute/hcc-clang-upgrade.git
+	branch = clang_tot_upgrade
+[submodule "compiler-rt"]
+	path = compiler-rt
+	url = https://github.com/RadeonOpenCompute/compiler-rt
+    branch = amd-hcc
+[submodule "rocdl"]
+	path = rocdl
+	url = http://github.com/RadeonOpenCompute/ROCm-Device-Libs.git
+    branch = master
+[submodule "clang-tools-extra"]
+	path = clang-tools-extra
+	url = https://github.com/RadeonOpenCompute/clang-tools-extra.git
+	branch = amd-hcc

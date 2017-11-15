@@ -38,7 +38,7 @@ void kernel_switch(index<2> idx, array<int, 2> &aA, int e1, int e2) __GPU
     int i = DEFAULT;
     switch (e1 || e2 || (++i))
     {
-    case 0:
+    case false:
         aA[idx] = 3;
         break;
     }
@@ -94,7 +94,7 @@ bool verify(vector<int> &v, array<int, 2> &aA)
             return false;
     }
 
-    return true;	
+    return true;
 }
 
 // Main entry point
@@ -125,7 +125,7 @@ runall_result test_main()
 
     if (!verify(A, aA))
     {
-        Log() << "kernel_if: failed at line: " << __LINE__ << std::endl;;
+        Log(LogType::Info, true) << "kernel_if: failed at line: " << __LINE__ << std::endl;;
         return runall_fail;
     }
 
@@ -137,7 +137,7 @@ runall_result test_main()
 
     if (!verify(A, aA))
     {
-        Log() << "kernel_switch: failed at line: " << __LINE__ << std::endl;;
+        Log(LogType::Info, true) << "kernel_switch: failed at line: " << __LINE__ << std::endl;;
         return runall_fail;
     }
 
@@ -149,7 +149,7 @@ runall_result test_main()
 
     if (!verify(A, aA))
     {
-        Log() << "kernel_whiledo: failed at line: " << __LINE__ << std::endl;;
+        Log(LogType::Info, true) << "kernel_whiledo: failed at line: " << __LINE__ << std::endl;;
         return runall_fail;
     }
 
@@ -161,7 +161,7 @@ runall_result test_main()
 
     if (!verify(A, aA))
     {
-        Log() << "kernel_dowhile: failed at line: " << __LINE__ << std::endl;;
+        Log(LogType::Info, true) << "kernel_dowhile: failed at line: " << __LINE__ << std::endl;;
         return runall_fail;
     }
 
@@ -174,11 +174,11 @@ runall_result test_main()
 
     if (!verify(A, aA))
     {
-        Log() << "kernel_for: failed at line: " << __LINE__ << std::endl;;
+        Log(LogType::Info, true) << "kernel_for: failed at line: " << __LINE__ << std::endl;;
         return runall_fail;
     }
 
-    Log() << "passed" << std::endl;
+    Log(LogType::Info, true) << "passed" << std::endl;
     return runall_pass;
 }
 

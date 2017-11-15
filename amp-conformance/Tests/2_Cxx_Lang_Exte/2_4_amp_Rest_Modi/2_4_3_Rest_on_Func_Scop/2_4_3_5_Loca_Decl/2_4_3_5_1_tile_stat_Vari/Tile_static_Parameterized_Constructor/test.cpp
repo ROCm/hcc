@@ -12,10 +12,7 @@
 class A
 {
 public:
-    A a(int x)
-    {
-        m1 = x;
-    }
+    A(int x) __GPU_ONLY : m1{x} {}
 
 private:
     int m1;
@@ -23,7 +20,7 @@ private:
 
 void test(int x) __GPU_ONLY
 {
-	tile_static A a(x);
+	tile_static A a{x};
 }
 
 int main()

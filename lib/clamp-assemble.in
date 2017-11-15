@@ -9,17 +9,17 @@ if [ "$#" -ne 2 ]; then
   exit 1
 fi
 
-if [ ! -f $1 ]; then
+if [ ! -f "$1" ]; then
   echo "kernel-bitcode $1 is not valid" >&2
   exit 1
 fi
 
-if [ -f $2 ]; then
-  mv $2 $2.host.o
-  $EMBED $1 $2.kernel.o
-  ld -r $2.kernel.o $2.host.o -o $2
-  rm $2.kernel.o $2.host.o
+if [ -f "$2" ]; then
+  mv "$2" "$2.host.o"
+  $EMBED "$1" "$2.kernel.o"
+  ld -r "$2.kernel.o" "$2.host.o" -o "$2"
+  rm "$2.kernel.o" "$2.host.o"
 else
-  $EMBED $1 $2
+  $EMBED "$1" "$2"
 fi
 

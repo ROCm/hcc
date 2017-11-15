@@ -32,18 +32,18 @@ int test1() restrict(amp,cpu)
     int vIndex[R];
 	fill<R>(vIndex, 6);
 	index<R> idx(vIndex);
-		
+
 	int vExtent[R];
 	fill<R>(vExtent, 25);
 	extent<R> exOrig(vExtent);
 	extent<R> exAddend(exOrig);
 	extent<R> exMinuend(exOrig);
-	
-	
+
+
 	int vAddResult[R];
 	fill<R>(vAddResult, 25 + 6);
 	extent<R> addResult(vAddResult);
-	
+
 	int vSubResult[R];
 	fill<R>(vSubResult, 25 - 6);
 	extent<R> subResult(vSubResult);
@@ -53,25 +53,25 @@ int test1() restrict(amp,cpu)
 	{
 		return 11*R;
 	}
-	
+
 	exMinuend -= idx;
 	if (exMinuend != subResult)
 	{
 		return 12*R;
 	}
 
-	exAddend = exOrig;	
+	exAddend = exOrig;
 	if ((exAddend + idx) != addResult)
 	{
 		return 13*R;
 	}
-	
-	exMinuend = exOrig;	
+
+	exMinuend = exOrig;
 	if ((exMinuend - idx) != subResult)
 	{
 		return 14*R;
 	}
-	
+
 	return 0;
 }
 
@@ -85,17 +85,17 @@ int test2() restrict(amp,cpu)
     int vOperand[R];
 	fill<R>(vOperand, 6);
 	extent<R> operand(vOperand);
-		
+
 	int vExtent[R];
 	fill<R>(vExtent, 25);
 	extent<R> exOrig(vExtent);
 	extent<R> exAddend(vExtent);
 	extent<R> exMinuend(vExtent);
-	
+
 	int vAddResult[R];
 	fill<R>(vAddResult, 25 + 6);
 	extent<R> addResult(vAddResult);
-	
+
 	int vSubResult[R];
 	fill<R>(vSubResult, 25 - 6);
 	extent<R> subResult(vSubResult);
@@ -105,25 +105,25 @@ int test2() restrict(amp,cpu)
 	{
 		return 21*R;
 	}
-	
+
 	exMinuend -= operand;
 	if (exMinuend != subResult)
 	{
 		return 22*R;
 	}
-	
-	exAddend = exOrig;	
+
+	exAddend = exOrig;
 	if ((exAddend + operand) != addResult)
 	{
 		return 23*R;
 	}
-	
-	exMinuend = exOrig;	
+
+	exMinuend = exOrig;
 	if ((exMinuend - operand) != subResult)
 	{
 		return 24*R;
 	}
-	
+
 	return 0;
 }
 
@@ -146,7 +146,7 @@ int test() restrict(amp,cpu)
 	    result = test2<3>();
 	if (result == 0)
 	    result = test2<6>();
-		
+
     return result;
 
 }
@@ -160,7 +160,7 @@ const int size = 10;
 
 int test_device()
 {
-    accelerator_view av = require_device().get_default_view();
+    accelerator_view av = require_device(device_flags::NOT_SPECIFIED).get_default_view();
 
     extent<1> e(size);
     array<int, 1> result(e, av);
@@ -185,7 +185,7 @@ int test_device()
 runall_result test_main()
 {
     runall_result result;
-	
+
 	result &= REPORT_RESULT(test());
 	result &= REPORT_RESULT(test_device());
 

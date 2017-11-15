@@ -26,10 +26,10 @@ runall_result test_main()
     }
     catch (runtime_exception &re)
     {
-        Log() << re.what() << std::endl;
+        Log(LogType::Info, true) << re.what() << std::endl;
 		result &= runall_pass;
     }
-	
+
 	try
     {
         // this should not throw
@@ -38,7 +38,7 @@ runall_result test_main()
     }
     catch (runtime_exception &re)
     {
-        Log() << re.what() << std::endl;
+        Log(LogType::Info, true) << re.what() << std::endl;
 		result &= runall_fail;
     }
 	return result;

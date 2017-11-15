@@ -30,7 +30,7 @@ using namespace concurrency::Test;
 
 runall_result test_main()
 {
-	accelerator_view av = require_device().get_default_view();
+	accelerator_view av = require_device(device_flags::NOT_SPECIFIED).get_default_view();
 
 	runall_result result;
 
@@ -39,7 +39,7 @@ runall_result test_main()
 	result &= REPORT_RESULT(expect_exception(av, extent<2>(0, 5)));
 	result &= REPORT_RESULT(expect_exception(av, extent<2>(16, 0)));
 	result &= REPORT_RESULT(expect_exception(av, extent<3>(8, 0, 8)));
-	
+
 	int dimSize[128];
 
 	std::fill(dimSize, dimSize + 128, 0);

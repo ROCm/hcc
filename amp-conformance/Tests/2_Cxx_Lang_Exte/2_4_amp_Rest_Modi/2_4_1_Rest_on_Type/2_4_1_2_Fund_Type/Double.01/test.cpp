@@ -39,7 +39,7 @@ runall_result test_rank_dbl()
 
     for (int i = 0; i < max_size; i++) {
         if (AreAlmostEqual(data_out[i], RESULT) == false) {
-            Log(LogType::Error) << "Expected: " << RESULT << "get: " << data_out[i] << std::endl;
+            Log(LogType::Error, true) << "Expected: " << RESULT << "get: " << data_out[i] << std::endl;
             return runall_fail;
         }
     }
@@ -57,7 +57,7 @@ runall_result test_main()
     // Test is using doubles therefore we have to make sure that it is not executed
     // on devices that does not support double types.
     // Test is relying on default device, therefore check below is also done on default device.
-    accelerator device = require_device_for<double>();
+    accelerator device = require_device_for<double>(device_flags::NOT_SPECIFIED, false);
 
     return test();
 }

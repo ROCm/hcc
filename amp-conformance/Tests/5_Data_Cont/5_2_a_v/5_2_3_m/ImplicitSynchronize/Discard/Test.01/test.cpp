@@ -27,25 +27,25 @@ using namespace Concurrency;
 using namespace Concurrency::Test;
 
 runall_result test_main()
-{	
-	accelerator acc = require_device();
-	
+{
+	accelerator acc = require_device(device_flags::NOT_SPECIFIED);
+
 	if(acc.get_supports_cpu_shared_memory())
 	{
 		acc.set_default_cpu_access_type(ACCESS_TYPE);
 	}
-	
+
 	std::vector<int> data(10, 20);
-	array_view<int, 1> arr_v(10, data);	
-	
+	array_view<int, 1> arr_v(10, data);
+
 	arr_v.discard_data();
-	
+
 	parallel_for_each(arr_v.get_extent(), [=] (index<1> idx) restrict(amp) {
 		arr_v[idx] = 5;
 	});
-	
+
 	arr_v.synchronize();
-	
+
 	return (VerifyAllSameValue(data, 5) == -1);
 }
 

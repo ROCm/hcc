@@ -85,7 +85,7 @@ int main()
     {
         if(vec[i] != vec_copy[i] + 1)
         {
-            printf("Incorrect updated data. Expected [%d] Actual: [%d] FAIL!\n", vec_copy[i] + 1, vec[i]);
+            printf("Incorrect updated data. Expected [%f] Actual: [%f] FAIL!\n", vec_copy[i] + 1, vec[i]);
             return runall_fail;
         }
     }

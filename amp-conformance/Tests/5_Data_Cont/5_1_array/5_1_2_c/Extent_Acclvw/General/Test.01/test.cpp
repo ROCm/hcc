@@ -16,7 +16,7 @@ int test_feature()
 {
     vector<accelerator> devices = accelerator::get_all();
 
-    printf("Found %d devices\n", devices.size());
+    printf("Found %lu devices\n", devices.size());
 
     for (size_t i = 0; i < devices.size(); i++)
     {
@@ -25,13 +25,13 @@ int test_feature()
 
         accelerator device = devices[i];
 
-		printf("Device %d: %ws (%ws)\n", i, device.get_description().c_str(), device.get_device_path().c_str());
-        printf("Version %d \t Memory %u\n", device.get_version(), device.get_dedicated_memory());
+		printf("Device %zu: %ls (%ls)\n", i, device.get_description().c_str(), device.get_device_path().c_str());
+        printf("Version %d \t Memory %zu\n", device.get_version(), device.get_dedicated_memory());
         printf("Debug:%c \t Emulated:%c \t Display: %c\n", device.get_is_debug() ? 'Y' : 'N', device.get_is_emulated() ? 'Y' : 'N', device.get_has_display() ? 'Y' : 'N');
 
         test_accl_constructor<_type, _rank, accelerator_view>(device.get_default_view());
 
-        printf("Finished with device %d\n", i);
+        printf("Finished with device %zu\n", i);
     }
 
     return runall_pass;
@@ -43,7 +43,7 @@ int test_feature()
 {
     vector<accelerator> devices = accelerator::get_all();
 
-    printf("Found %d devices\n", devices.size());
+    printf("Found %lu devices\n", devices.size());
 
     for (size_t i = 0; i < devices.size(); i++)
     {
@@ -57,13 +57,13 @@ int test_feature()
             return runall_skip;
         }
 
-		printf("Device %d: %ws (%ws)\n", i, device.get_description().c_str(), device.get_device_path().c_str());
-        printf("Version %d \t Memory %u\n", device.get_version(), device.get_dedicated_memory());
+		printf("Device %zu: %ls (%ls)\n", i, device.get_description().c_str(), device.get_device_path().c_str());
+        printf("Version %d \t Memory %zu\n", device.get_version(), device.get_dedicated_memory());
         printf("Debug:%c \t Emulated:%c \t Display: %c\n", device.get_is_debug() ? 'Y' : 'N', device.get_is_emulated() ? 'Y' : 'N', device.get_has_display() ? 'Y' : 'N');
 
         test_accl_constructor<double, _rank, accelerator_view>(device.get_default_view());
 
-        printf("Finished with device %d\n", i);
+        printf("Finished with device %zu\n", i);
     }
 
     return runall_pass;

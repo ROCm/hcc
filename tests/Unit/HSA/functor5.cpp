@@ -1,4 +1,4 @@
-// XFAIL: Linux
+
 // RUN: %hc %s -o %t.out && %t.out
 
 #include <amp.h>
@@ -32,7 +32,7 @@ class prog {
   user_functor<_Tp, N>& kernel;
 
 public:
-  prog(_Tp (&t)[N], user_functor<_Tp, N>& f) : input(t), kernel(f) {
+  prog(_Tp (&t)[N], user_functor<_Tp, N>& f) restrict(amp,cpu) : input(t), kernel(f) {
   }
 
   void operator() (index<1>& idx) restrict(amp) {

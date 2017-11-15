@@ -23,6 +23,7 @@
 
 #include "hsa_atomic.h"
 #include "kalmar_cpu_launch.h"
+#include "hcc_features.hpp"
 
 #ifndef __HC__
 #   define __HC__ [[hc]]
@@ -204,7 +205,10 @@ public:
      *                     hcWaitModeActive would be used to reduce latency with
      *                     the expense of using one CPU core for active waiting.
      */
-    void wait(hcWaitMode waitMode = hcWaitModeBlocked) { pQueue->wait(waitMode); }
+    void wait(hcWaitMode waitMode = hcWaitModeBlocked) { 
+      pQueue->wait(waitMode); 
+      Kalmar::getContext()->flushPrintfBuffer();
+    }
 
     /**
      * Sends the queued up commands in the accelerator_view to the device for
@@ -242,10 +246,20 @@ public:
      * commands that were submitted prior to the marker event creation have
      * completed, the future is ready.
      *
+     * Regardless of the accelerator_view's execute_order (execute_any_order, execute_in_order), 
+     * the marker always ensures older commands complete before the returned completion_future
+     * is marked ready.   Thus, markers provide a mechanism to enforce order between
+     * commands in an execute_any_order accelerator_view.
+     *
+     * fence_scope controls the scope of the acquire and release fences applied after the marker executes.  Options are:
+     *   - no_scope : No fence operation is performed.
+     *   - accelerator_scope: Memory is acquired from and released to the accelerator scope where the marker executes.
+     *   - system_scope: Memory is acquired from and released to system scope (all accelerators including CPUs)
+     *
      * @return A future which can be waited on, and will block until the
      *         current batch of commands has completed.
      */
-    completion_future create_marker() const;
+    completion_future create_marker(memory_scope fence_scope=system_scope) const;
 
     /**
      * This command inserts a marker event into the accelerator_view's command
@@ -255,25 +269,69 @@ public:
      * dependent event and all commands submitted prior to the marker event
      * creation have been completed, the future is ready.
      *
+     * Regardless of the accelerator_view's execute_order (execute_any_order, execute_in_order), 
+     * the marker always ensures older commands complete before the returned completion_future
+     * is marked ready.   Thus, markers provide a mechanism to enforce order between
+     * commands in an execute_any_order accelerator_view.
+     *
+     * fence_scope controls the scope of the acquire and release fences applied after the marker executes.  Options are:
+     *   - no_scope : No fence operation is performed.
+     *   - accelerator_scope: Memory is acquired from and released to the accelerator scope where the marker executes.
+     *   - system_scope: Memory is acquired from and released to system scope (all accelerators including CPUs)
+     *
+     * dependent_futures may be recorded in another queue or another accelerator.  If in another accelerator,
+     * the runtime performs cross-accelerator sychronization.  
+     *
      * @return A future which can be waited on, and will block until the
      *         current batch of commands, plus the dependent event have
      *         been completed.
      */
-    completion_future create_blocking_marker(completion_future& dependent_future) const;
+    completion_future create_blocking_marker(completion_future& dependent_future, memory_scope fence_scope=system_scope) const;
 
     /**
      * This command inserts a marker event into the accelerator_view's command
      * queue with arbitrary number of dependent asynchronous events.
      *
      * This marker is returned as a completion_future object. When its
-     * dependent event and all commands submitted prior to the marker event
-     * creation have been completed, the future is ready.
+     * dependent events and all commands submitted prior to the marker event
+     * creation have been completed, the completion_future is ready.
+     *
+     * Regardless of the accelerator_view's execute_order (execute_any_order, execute_in_order), 
+     * the marker always ensures older commands complete before the returned completion_future
+     * is marked ready.   Thus, markers provide a mechanism to enforce order between
+     * commands in an execute_any_order accelerator_view.
+     *
+     * fence_scope controls the scope of the acquire and release fences applied after the marker executes.  Options are:
+     *   - no_scope : No fence operation is performed.
+     *   - accelerator_scope: Memory is acquired from and released to the accelerator scope where the marker executes.
+     *   - system_scope: Memory is acquired from and released to system scope (all accelerators including CPUs)
      *
      * @return A future which can be waited on, and will block until the
      *         current batch of commands, plus the dependent event have
      *         been completed.
      */
-    completion_future create_blocking_marker(std::initializer_list<completion_future> dependent_future_list) const;
+    completion_future create_blocking_marker(std::initializer_list<completion_future> dependent_future_list, memory_scope fence_scope=system_scope) const;
+
+
+    /**
+     * This command inserts a marker event into the accelerator_view's command
+     * queue with arbitrary number of dependent asynchronous events.
+     *
+     * This marker is returned as a completion_future object. When its
+     * dependent events and all commands submitted prior to the marker event
+     * creation have been completed, the completion_future is ready.
+     *
+     * Regardless of the accelerator_view's execute_order (execute_any_order, execute_in_order), 
+     * the marker always ensures older commands complete before the returned completion_future
+     * is marked ready.   Thus, markers provide a mechanism to enforce order between
+     * commands in an execute_any_order accelerator_view.
+     *
+     * @return A future which can be waited on, and will block until the
+     *         current batch of commands, plus the dependent event have
+     *         been completed.
+     */
+    template<typename InputIterator>
+    completion_future create_blocking_marker(InputIterator first, InputIterator last, memory_scope scope) const;
 
     /**
      * Copies size_bytes bytes from src to dst.  
@@ -297,24 +355,58 @@ public:
      * This interface is intended for language runtimes such as HIP.
     
      @p copyDir : Specify direction of copy.  Must be hcMemcpyHostToHost, hcMemcpyHostToDevice, hcMemcpyDeviceToHost, or hcMemcpyDeviceToDevice. 
-     @p forceHostCopyEngine : Force copy to be performed with host involvement rather than with accelerator copy engines.
+     @p forceUnpinnedCopy : Force copy to be performed with host involvement rather than with accelerator copy engines.
      */
-    void copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, bool forceHostCopyEngine) {
-        pQueue->copy_ext(src, dst, size_bytes, copyDir, srcInfo, dstInfo, forceHostCopyEngine);
-    };
+    void copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, const hc::accelerator *copyAcc, bool forceUnpinnedCopy);
+
+
+    // TODO - this form is deprecated, provided for use with older HIP runtimes.
+    void copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, bool forceUnpinnedCopy) ;
 
     /**
      * Copies size_bytes bytes from src to dst.  
      * Src and dst must not overlap.  
      * Note the src is the first parameter and dst is second, following C++ convention.  
      * This is an asynchronous copy command, and this call may return before the copy operation completes.
+     * If the source or dest is host memory, the memory must be pinned or a runtime exception will be thrown.
+     * Pinned memory can be created with am_alloc with flag=amHostPinned flag.
      *
      * The copy command will be implicitly ordered with respect to commands previously equeued to this accelerator_view:
-     * - If the queue execute_order is execute_in_order (the default), then the copy will execute after all previously sent commands finish execution.
-     * - If the queue execute_order is execute_any_order, then the copy will start after all previously send commands start but can execute in any order.
+     * - If the accelerator_view execute_order is execute_in_order (the default), then the copy will execute after all previously sent commands finish execution.
+     * - If the accelerator_view execute_order is execute_any_order, then the copy will start after all previously send commands start but can execute in any order.
+     *
      *
      */
     completion_future copy_async(const void *src, void *dst, size_t size_bytes);
+
+
+    /**
+     * Copies size_bytes bytes from src to dst.  
+     * Src and dst must not overlap.  
+     * Note the src is the first parameter and dst is second, following C++ convention.  
+     * This is an asynchronous copy command, and this call may return before the copy operation completes.
+     * If the source or dest is host memory, the memory must be pinned or a runtime exception will be thrown.
+     * Pinned memory can be created with am_alloc with flag=amHostPinned flag.
+     *
+     * The copy command will be implicitly ordered with respect to commands previously enqueued to this accelerator_view:
+     * - If the accelerator_view execute_order is execute_in_order (the default), then the copy will execute after all previously sent commands finish execution.
+     * - If the accelerator_view execute_order is execute_any_order, then the copy will start after all previously send commands start but can execute in any order.
+     *   The copyAcc determines where the copy is executed and does not affect the ordering.
+     *
+     * The copy_async_ext flavor allows caller to provide additional information about each pointer, which can improve performance by eliminating replicated lookups,
+     * and also allow control over which device performs the copy.  
+     * This interface is intended for language runtimes such as HIP.
+     *
+     *  @p copyDir : Specify direction of copy.  Must be hcMemcpyHostToHost, hcMemcpyHostToDevice, hcMemcpyDeviceToHost, or hcMemcpyDeviceToDevice. 
+     *  @p copyAcc : Specify which accelerator performs the copy operation.  The specified accelerator must have access to the source and dest pointers - either
+     *               because the memory is allocated on those devices or because the accelerator has peer access to the memory.
+     *               If copyAcc is nullptr, then the copy will be performed by the host.  In this case, the host accelerator must have access to both pointers.
+     *               The copy operation will be performed by the specified engine but is not synchronized with respect to any operations on that device.  
+     *
+     */
+    completion_future copy_async_ext(const void *src, void *dst, size_t size_bytes, 
+                                     hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, 
+                                     const hc::accelerator *copyAcc);
 
     /**
      * Compares "this" accelerator_view with the passed accelerator_view object
@@ -350,11 +442,21 @@ public:
      * Returns the number of pending asynchronous operations on this
      * accelerator view.
      *
-     * The number returned would be immediately obsolete. This functions shall
-     * only be used for testing and debugging purpose.
+     * Care must be taken to use this API in a thread-safe manner,
      */
     int get_pending_async_ops() {
         return pQueue->getPendingAsyncOps();
+    }
+
+    /**
+     * Returns true if the accelerator_view is currently empty.
+     *
+     * Care must be taken to use this API in a thread-safe manner.
+     * As the accelerator completes work, the queue may become empty
+     * after this function returns false;
+     */
+    bool get_is_empty() {
+        return pQueue->isEmpty();
     }
 
     /**
@@ -400,6 +502,18 @@ public:
      */
     void* get_hsa_am_system_region() {
         return pQueue->getHSAAMHostRegion();
+    }
+
+    /**
+     * Returns an opaque handle which points to the AM system region on the HSA agent.
+     * This region can be used to allocate finegrained system memory which is accessible from the 
+     * specified accelerator.
+     *
+     * @return An opaque handle of the region, if the accelerator is based
+     *         on HSA.  NULL otherwise.
+     */
+    void* get_hsa_am_finegrained_system_region() {
+        return pQueue->getHSACoherentAMHostRegion();
     }
 
     /**
@@ -470,6 +584,9 @@ public:
      *          returned and the caller must use other synchronization techniqueues 
      *          such as calling accelerator_view::wait() or waiting on a younger command
      *          in the same queue.
+     * @p kernel_name : Optionally specify the name of the kernel for debug and profiling.  
+     * May be null.  If specified, the caller is responsible for ensuring the memory for the name remains allocated until the kernel completes.
+     *        
      *
      * The dispatch_hsa_kernel call will perform the following operations:
      *    - Efficiently allocate a kernarg region and copy the arguments.
@@ -479,9 +596,9 @@ public:
      */
     void dispatch_hsa_kernel(const hsa_kernel_dispatch_packet_t *aql, 
                            const void * args, size_t argsize,
-                           hc::completion_future *cf=NULL) 
+                           hc::completion_future *cf=nullptr, const char *kernel_name = nullptr) 
     {
-        pQueue->dispatch_hsa_kernel(aql, args, argsize, cf);
+        pQueue->dispatch_hsa_kernel(aql, args, argsize, cf, kernel_name);
     }
 
     /**
@@ -495,7 +612,7 @@ public:
      *        the extra elements are ignored.
      *        It is user's responsibility to make sure the input is meaningful.
      *
-     * @return a bool variable to indicate if the setting is successful.
+     * @return true if operations succeeds or false if not.
      *
      */
      bool set_cu_mask(const std::vector<bool>& cu_mask) {
@@ -559,9 +676,6 @@ private:
     template <typename Kernel> friend
         completion_future parallel_for_each(const accelerator_view&, const tiled_extent<1>&, const Kernel&);
 
-    // private member function template to create a marker from iterators
-    template<typename InputIterator>
-    completion_future create_blocking_marker(InputIterator first, InputIterator last) const;
 
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
 public:
@@ -637,7 +751,7 @@ public:
         std::vector<accelerator> ret(Devices.size());
         for (int i = 0; i < ret.size(); ++i)
             ret[i] = Devices[i];
-        return std::move(ret);
+        return ret;
     }
 
     /**
@@ -877,6 +991,18 @@ public:
     }
 
     /**
+     * Returns an opaque handle which points to the AM system region on the HSA agent.
+     * This region can be used to allocate finegrained system memory which is accessible from the 
+     * specified accelerator.
+     *
+     * @return An opaque handle of the region, if the accelerator is based
+     *         on HSA.  NULL otherwise.
+     */
+    void* get_hsa_am_finegrained_system_region() const {
+        return get_default_view().get_hsa_am_finegrained_system_region();
+    }
+
+    /**
      * Returns an opaque handle which points to the Kernarg region on the HSA
      * agent.
      *
@@ -930,7 +1056,7 @@ public:
      * Check if @p other is peer of this accelerator.
      *
      * @return true if other can access this accelerator's device memory pool or false if not.
-     * the acceleratos is its own peer.
+     * The acceleratos is not its own peer.
      */
     bool get_is_peer(const accelerator& other) const {
         return pDev->is_peer(other.pDev);
@@ -960,6 +1086,14 @@ public:
      */
     unsigned int get_cu_count() const {
         return pDev->get_compute_unit_count();
+    }
+
+    /**
+     * Return the unique integer sequence-number for the accelerator.
+     * Sequence-numbers are assigned in monotonically increasing order starting with 0.
+     */
+    int get_seqnum() const {
+        return pDev->get_seqnum();
     }
 
 
@@ -1106,6 +1240,8 @@ public:
             //TODO-ASYNC - need to reclaim older AsyncOps here.
             __amp_future.wait();
         }
+
+        Kalmar::getContext()->flushPrintfBuffer();
     }
 
     template <class _Rep, class _Period>
@@ -1325,53 +1461,106 @@ inline accelerator
 accelerator_view::get_accelerator() const { return pQueue->getDev(); }
 
 inline completion_future
-accelerator_view::create_marker() const {
-    return completion_future(pQueue->EnqueueMarker());
+accelerator_view::create_marker(memory_scope scope) const {
+    std::shared_ptr<Kalmar::KalmarAsyncOp> deps[1]; 
+    // If necessary create an explicit dependency on previous command
+    // This is necessary for example if copy command is followed by marker - we need the marker to wait for the copy to complete.
+    std::shared_ptr<Kalmar::KalmarAsyncOp> depOp = pQueue->detectStreamDeps(hcCommandMarker, nullptr);
+
+    int cnt = 0;
+    if (depOp) {
+        deps[cnt++] = depOp; // retrieve async op associated with completion_future
+    }
+
+    return completion_future(pQueue->EnqueueMarkerWithDependency(cnt, deps, scope));
 }
 
 inline unsigned int accelerator_view::get_version() const { return get_accelerator().get_version(); }
 
-inline completion_future accelerator_view::create_blocking_marker(completion_future& dependent_future) const {
-    return completion_future(pQueue->EnqueueMarkerWithDependency(dependent_future.__asyncOp));
+inline completion_future accelerator_view::create_blocking_marker(completion_future& dependent_future, memory_scope scope) const {
+    std::shared_ptr<Kalmar::KalmarAsyncOp> deps[2]; 
+
+    // If necessary create an explicit dependency on previous command
+    // This is necessary for example if copy command is followed by marker - we need the marker to wait for the copy to complete.
+    std::shared_ptr<Kalmar::KalmarAsyncOp> depOp = pQueue->detectStreamDeps(hcCommandMarker, nullptr);
+
+    int cnt = 0;
+    if (depOp) {
+        deps[cnt++] = depOp; // retrieve async op associated with completion_future
+    }
+
+    if (dependent_future.__asyncOp) {
+        deps[cnt++] = dependent_future.__asyncOp; // retrieve async op associated with completion_future
+    } 
+    
+    return completion_future(pQueue->EnqueueMarkerWithDependency(cnt, deps, scope));
 }
 
 template<typename InputIterator>
 inline completion_future
-accelerator_view::create_blocking_marker(InputIterator first, InputIterator last) const {
-    bool atLeastOne = false; // have we sent at least one marker
-    int cnt = 0;
+accelerator_view::create_blocking_marker(InputIterator first, InputIterator last, memory_scope scope) const {
     std::shared_ptr<Kalmar::KalmarAsyncOp> deps[5]; // array of 5 pointers to the native handle of async ops. 5 is the max supported by barrier packet
     hc::completion_future lastMarker;
+
+
+    // If necessary create an explicit dependency on previous command
+    // This is necessary for example if copy command is followed by marker - we need the marker to wait for the copy to complete.
+    std::shared_ptr<Kalmar::KalmarAsyncOp> depOp = pQueue->detectStreamDeps(hcCommandMarker, nullptr);
+
+    int cnt = 0;
+    if (depOp) {
+        deps[cnt++] = depOp; // retrieve async op associated with completion_future
+    }
+
 
     // loop through signals and group into sections of 5
     // every 5 signals goes into one barrier packet
     // since HC sets the barrier bit in each AND barrier packet, we know
     // the barriers will execute in-order
     for (auto iter = first; iter != last; ++iter) {
-        deps[cnt++] = iter->__asyncOp; // retrieve async op associated with completion_future
-        if (cnt == 5) {
-            atLeastOne = true;
-            lastMarker = completion_future(pQueue->EnqueueMarkerWithDependency(cnt, deps));
-            cnt = 0;
+        if (iter->__asyncOp) {
+            deps[cnt++] = iter->__asyncOp; // retrieve async op associated with completion_future
+            if (cnt == 5) {
+                lastMarker = completion_future(pQueue->EnqueueMarkerWithDependency(cnt, deps, hc::no_scope));
+                cnt = 0;
+            }
         }
     }
 
-    if (cnt || !atLeastOne) {
-        lastMarker = completion_future(pQueue->EnqueueMarkerWithDependency(cnt, deps));
+    if (cnt) {
+        lastMarker = completion_future(pQueue->EnqueueMarkerWithDependency(cnt, deps, scope));
     }
 
     return lastMarker;
 }
 
 inline completion_future
-accelerator_view::create_blocking_marker(std::initializer_list<completion_future> dependent_future_list) const {
-    return create_blocking_marker(dependent_future_list.begin(), dependent_future_list.end());
+accelerator_view::create_blocking_marker(std::initializer_list<completion_future> dependent_future_list, memory_scope scope) const {
+    return create_blocking_marker(dependent_future_list.begin(), dependent_future_list.end(), scope);
 }
+
+
+inline void accelerator_view::copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, const hc::accelerator *copyAcc, bool forceUnpinnedCopy) {
+    pQueue->copy_ext(src, dst, size_bytes, copyDir, srcInfo, dstInfo, copyAcc ? copyAcc->pDev : nullptr, forceUnpinnedCopy);
+};
+
+inline void accelerator_view::copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, bool forceHostCopyEngine) {
+    pQueue->copy_ext(src, dst, size_bytes, copyDir, srcInfo, dstInfo, forceHostCopyEngine);
+};
 
 inline completion_future
 accelerator_view::copy_async(const void *src, void *dst, size_t size_bytes) {
     return completion_future(pQueue->EnqueueAsyncCopy(src, dst, size_bytes));
 }
+
+inline completion_future
+accelerator_view::copy_async_ext(const void *src, void *dst, size_t size_bytes,
+                             hcCommandKind copyDir, 
+                             const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, 
+                             const hc::accelerator *copyAcc)
+{
+    return completion_future(pQueue->EnqueueAsyncCopyExt(src, dst, size_bytes, copyDir, srcInfo, dstInfo, copyAcc ? copyAcc->pDev : nullptr));
+};
 
 
 // ------------------------------------------------------------------------
@@ -2259,11 +2448,12 @@ extern "C" uint64_t __bitmask_b64(unsigned int src0, unsigned int src1) __HC__;
  * Reverse the bits
  *
  * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/bit_string.htm">HSA PRM 5.7</a> for more detailed specification of these functions.
- * TODO: Use __builtin_bitreverse when we upgrade clang to 3.9.
  */
-extern "C" unsigned int __bitrev_b32(unsigned int src0) __HC__;
 
-extern "C" uint64_t __bitrev_b64(uint64_t src0) __HC__;
+unsigned int __bitrev_b32(unsigned int src0) [[hc]] __asm("llvm.bitreverse.i32");
+
+uint64_t __bitrev_b64(uint64_t src0) [[hc]] __asm("llvm.bitreverse.i64");
+
 /** @} */
 
 /** @{ */
@@ -2579,13 +2769,6 @@ extern "C" inline unsigned int __activelanecount_u32_b1(unsigned int input) __HC
  return  __popcount_u32_b64(__activelanemask_v4_b64_b1(input));
 }
 
-/**
- * Permute active work-items in the wavefront.
- *
- * Please refer to: <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/09_Parallel/cross_lane.htm">HSA PRM</a> for more detailed information of this instruction.
- */
-extern "C" unsigned int __activelanepermute_b32(unsigned int src, unsigned int laneId, unsigned int identity, unsigned int useIdentity) __HC__;
-
 // ------------------------------------------------------------------------
 // Wavefront Vote Functions
 // ------------------------------------------------------------------------
@@ -2649,19 +2832,31 @@ union __u {
  * __HSA_WAVEFRONT_SIZE__.
  */
 
-extern "C" __attribute__((const)) unsigned int __hsail_get_lane_id(void) __HC__;
+#if __hcc_backend__==HCC_BACKEND_AMDGPU
 
-// returns the lane ID within a wavefront
+/*
+ * FIXME: We need to add __builtin_amdgcn_mbcnt_{lo,hi} to clang and call
+ * them here instead.
+ */
+
+int __amdgcn_mbcnt_lo(int mask, int src) [[hc]] __asm("llvm.amdgcn.mbcnt.lo");
+int __amdgcn_mbcnt_hi(int mask, int src) [[hc]] __asm("llvm.amdgcn.mbcnt.hi");
+
 inline int __lane_id(void) [[hc]] {
-  return __hsail_get_lane_id();
+  int lo = __amdgcn_mbcnt_lo(-1, 0);
+  return __amdgcn_mbcnt_hi(-1, lo);
 }
+
+#endif
 
 #if __hcc_backend__==HCC_BACKEND_AMDGPU
 
 /**
  * ds_bpermute intrinsic
+ * FIXME: We need to add __builtin_amdgcn_ds_bpermute to clang and call it here
+ * instead.
  */
-extern "C" int __amdgcn_ds_bpermute(int index, int src) [[hc]];
+int __amdgcn_ds_bpermute(int index, int src) [[hc]] __asm("llvm.amdgcn.ds.bpermute");
 inline unsigned int __amdgcn_ds_bpermute(int index, unsigned int src) [[hc]] {
   __u tmp; tmp.u = src;
   tmp.i = __amdgcn_ds_bpermute(index, tmp.i);
@@ -2790,17 +2985,6 @@ inline float __amdgcn_wave_rl1(float src) [[hc]] {
   return tmp.f;
 }
 
-#elif __hcc_backend__==HCC_BACKEND_HSAIL
-
-extern "C" unsigned int __hsail_activelanepermute_b32(unsigned int src, unsigned int lid, unsigned int ival, bool useival) __HC__;
-inline int __wavefront_shift_right(int var) __HC__ {
-    return  __hsail_activelanepermute_b32(var, __lane_id()-1
-                                        , var, __lane_id()==0);
-}
-inline int __wavefront_shift_left(int var) __HC__ {
-    return  __hsail_activelanepermute_b32(var, __lane_id()+1
-                                        , var, __lane_id()==63);
-}
 #endif
 
 /* definition to expand macro then apply to pragma message 
@@ -2816,22 +3000,6 @@ inline int __shfl(int var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) __HC__
   int self = __lane_id();
   int index = srcLane + (self & ~(width-1));
   return __amdgcn_ds_bpermute(index<<2, var);
-}
-
-#elif __hcc_backend__==HCC_BACKEND_HSAIL
-
-inline int __shfl(int var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
-    switch (width) {
-      case 64:
-        return __hsail_activelanepermute_b32(var,srcLane&63, 0, 0);
-      default: {
-        unsigned int ulane = (unsigned int)srcLane;
-        unsigned int uwidth = (unsigned int)width;
-        unsigned int laneId = __lane_id();
-        unsigned int newSrcLane = (laneId&((unsigned int)0xFFFFFFFF-(uwidth-1))) + (ulane&(uwidth-1));
-        return __hsail_activelanepermute_b32(var,newSrcLane, 0, 0);
-      }
-   };
 }
 
 #endif
@@ -2883,19 +3051,6 @@ inline int __shfl_up(int var, const unsigned int delta, const int width=__HSA_WA
   return __amdgcn_ds_bpermute(index<<2, var);
 }
 
-#elif __hcc_backend__==HCC_BACKEND_HSAIL
-
-inline int __shfl_up(int var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
-    if (delta == 1 
-        && width == __HSA_WAVEFRONT_SIZE__) {
-        return __wavefront_shift_right(var);
-    }
-    else {
-        int laneId = __lane_id();
-        int newSrcLane = laneId - delta;
-        return __hsail_activelanepermute_b32(var, newSrcLane, var, newSrcLane < (laneId&(~(width-1))));
-    }
-}
 #endif
 
 inline unsigned int __shfl_up(unsigned int var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
@@ -2945,20 +3100,6 @@ inline int __shfl_down(int var, const unsigned int delta, const int width=__HSA_
   return __amdgcn_ds_bpermute(index<<2, var);
 }
 
-#elif __hcc_backend__==HCC_BACKEND_HSAIL
-
-inline int __shfl_down(int var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
-    if (delta == 1
-        && width == __HSA_WAVEFRONT_SIZE__) {
-        return __wavefront_shift_left(var);
-    }
-    else {
-        unsigned int laneId = __lane_id();
-        unsigned int newSrcLane = laneId + delta;
-        return __hsail_activelanepermute_b32(var, newSrcLane, var, newSrcLane >= ((laneId&(~(width-1))) + width ));
-    }
-}
-
 #endif
 
 inline unsigned int __shfl_down(unsigned int var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
@@ -3003,17 +3144,6 @@ inline int __shfl_xor(int var, int laneMask, int width=__HSA_WAVEFRONT_SIZE__) _
   int index = self^laneMask;
   index = index >= ((self+width)&~(width-1))?self:index;
   return __amdgcn_ds_bpermute(index<<2, var);
-}
-
-
-#elif __hcc_backend__==HCC_BACKEND_HSAIL
-
-
-inline int __shfl_xor(int var, int laneMask, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
-    int self = __lane_id();
-    int index = self^laneMask;
-    index = index >= ((self+width)&~(width-1))?self:index;
-    return __hsail_activelanepermute_b32(var, index, 0, 0);
 }
 
 #endif
@@ -3081,7 +3211,9 @@ inline int __mad24(int x, int y, int z) [[hc]] {
   return __mul24(x,y) + z;
 }
 
-
+inline void abort() __HC__ {
+  __builtin_trap();
+}
 
 // ------------------------------------------------------------------------
 // group segment
@@ -3106,12 +3238,12 @@ extern "C" unsigned int get_static_group_segment_size() __HC__;
 /**
  * Fetch the address of the beginning of group segment.
  */
-extern "C" __attribute__((address_space(3))) void* get_group_segment_base_pointer() __HC__;
+extern "C" void* get_group_segment_base_pointer() __HC__;
 
 /**
  * Fetch the address of the beginning of dynamic group segment.
  */
-extern "C" __attribute__((address_space(3))) void* get_dynamic_group_segment_base_pointer() __HC__;
+extern "C" void* get_dynamic_group_segment_base_pointer() __HC__;
 
 // ------------------------------------------------------------------------
 // utility class for tiled_barrier
@@ -3321,7 +3453,7 @@ public:
      * @param[in] other An object of type tiled_index from which to initialize
      *                  this.
      */
-    tiled_index(const tiled_index& other) __CPU__ __HC__ : global(other.global), local(other.local), tile(other.tile), tile_origin(other.tile_origin), barrier(other.barrier), tile_dim(other.dim) {}
+    tiled_index(const tiled_index& other) __CPU__ __HC__ : global(other.global), local(other.local), tile(other.tile), tile_origin(other.tile_origin), barrier(other.barrier), tile_dim(other.tile_dim) {}
 
     /**
      * An index of rank 1, 2, or 3 that represents the global index within an

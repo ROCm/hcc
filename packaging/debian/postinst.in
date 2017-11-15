@@ -4,57 +4,59 @@ set -e
 
 PACKAGE_NAME=@PACKAGE_NAME@
 INSTALL_PATH=@INSTALL_PATH@
+LIBRARY_DIR=@LIBRARY_DIR@
 
 ROCM_PATH="/opt/rocm"
 
 # NOTE: if you modify this table, also update the same table in prerm
 SOFTLINKS=(
-# <DIRECTORY>  <FILE>
-  "bin" "clamp-config"
-  "bin" "extractkernel"
-  "bin" "hcc"
-  "bin" "hcc-config"
-  "lib" "libhc_am.so"
-  "lib" "libmcwamp.a"
-  "lib" "libmcwamp_atomic.a"
-  "lib" "libmcwamp_cpu.so"
-  "lib" "libmcwamp_hsa.so"
+# <SOURCE DIRECTORY> <DESTINATION DIRECTORY> <FILE>
+  "bin" "bin" "clamp-config"
+  "bin" "bin" "extractkernel"
+  "bin" "bin" "hcc"
+  "bin" "bin" "hcc-config"
+  "$LIBRARY_DIR" "lib" "libhc_am.so"
+  "$LIBRARY_DIR" "lib" "libmcwamp.a"
+  "$LIBRARY_DIR" "lib" "libmcwamp_atomic.a"
+  "$LIBRARY_DIR" "lib" "libmcwamp_cpu.so"
+  "$LIBRARY_DIR" "lib" "libmcwamp_hsa.so"
+  "$LIBRARY_DIR" "lib" "libclang_rt.builtins-@CMAKE_SYSTEM_PROCESSOR@.a"
 )
 
 do_softlinks() {
-
-  if [ ! -e $INSTALL_PATH/include/hcc ] ; then
-    ln -sf $INSTALL_PATH/include $INSTALL_PATH/include/hcc
-  fi
 
   if [ $PACKAGE_NAME == "hcc_hsail" ] && [ -L "$ROCM_PATH/hcc" ] && [ $(readlink -f $ROCM_PATH/hcc) == "$ROCM_PATH/hcc-lc" ] ; then
       return
   fi
 
-  mkdir -p /opt/rocm/lib
-  mkdir -p /opt/rocm/bin
+  mkdir -p "$ROCM_PATH/lib"
+  mkdir -p "$ROCM_PATH/lib/cmake"
+  mkdir -p "$ROCM_PATH/bin"
 
   if [ -L "$ROCM_PATH/hcc" ] ; then
     rm -f "$ROCM_PATH/hcc" 
   fi
   ln -sf $INSTALL_PATH $ROCM_PATH/hcc
+  ln -sf $ROCM_PATH/hcc/$LIBRARY_DIR/cmake/hcc $ROCM_PATH/lib/cmake/hcc
 
   if [ ! -e $ROCM_PATH/include/hcc ] ; then
     ln -sf $ROCM_PATH/hcc/include $ROCM_PATH/include/hcc
   fi
 
-  for (( i=0; i<${#SOFTLINKS[@]}; i+=2 ))
+  for (( i=0; i<${#SOFTLINKS[@]}; i+=3 ))
   do
-    DIR=${SOFTLINKS[i]}
-    FILE=${SOFTLINKS[i+1]}
-    if [ ! -e $ROCM_PATH/$DIR/$FILE ] ; then
-      ln -sf $ROCM_PATH/hcc/$DIR/$FILE $ROCM_PATH/$DIR/$FILE
+    SOURCE_DIR=${SOFTLINKS[i]}
+    DEST_DIR=${SOFTLINKS[i+1]}
+    FILE=${SOFTLINKS[i+2]}
+
+    if [ ! -e $ROCM_PATH/$DEST_DIR/$FILE ] ; then
+      ln -sf $ROCM_PATH/hcc/$SOURCE_DIR/$FILE $ROCM_PATH/$DEST_DIR/$FILE
     fi
   done
 }
 
 case "$1" in
-   configure|upgrade)
+   configure|upgrade|1|2)
    do_softlinks
    ;;
 
