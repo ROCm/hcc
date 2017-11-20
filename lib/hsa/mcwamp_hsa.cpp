@@ -1494,22 +1494,31 @@ public:
     bool isEmpty() override {
         // Have to walk asyncOps since it can contain null pointers (if event is waited on and removed)
         // Also not all commands contain signals.
-        for (int i = 0; i < asyncOps.size(); ++i) {
-            if (asyncOps[i] != nullptr) {
-                auto &asyncOp = asyncOps[i];
+        bool oldestNoSignal=false;
+        for (int i = asyncOps.size()-1; i >= 0;  i--) {
+            auto &asyncOp = asyncOps[i];
+            if (asyncOp != nullptr) {
                 hsa_signal_t signal = *(static_cast <hsa_signal_t*> (asyncOp->getNativeHandle()));
                 if (signal.handle) {
+                    oldestNoSignal=false;
                     hsa_signal_value_t v = hsa_signal_load_relaxed(signal);
                     if (v != 0) {
                         return false;
                     }
                 } else {
                     // no signal, have to assume the command is still running
-                    return false;
+                    oldestNoSignal=true;
                 }
             }
         };
-        return true;
+
+        if (oldestNoSignal) {
+            auto marker = EnqueueMarker(hc::system_scope);
+            DBOUTL(DB_CMD2, "Inside HSAQueue::isEmpty and queue contained only no-signal ops, enqueued marker " << marker << " into " << *this);
+            return false;
+        } else {
+            return true;
+        }
     };
 
 
