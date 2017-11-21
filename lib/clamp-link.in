@@ -95,6 +95,8 @@ elif [[ "@CMAKE_SYSTEM_PROCESSOR@" == "aarch64" ]]; then
   OBJ_FILE_FORMAT_STRING="ELF 64-bit LSB  relocatable, ARM aarch64"
 elif [[ "@CMAKE_SYSTEM_PROCESSOR@" == "ppc64" ]]; then
   OBJ_FILE_FORMAT_STRING="ELF 64-bit LSB  relocatable, ppc64"
+elif [[ "@CMAKE_SYSTEM_PROCESSOR@" == "ppc64le" ]]; then
+  OBJ_FILE_FORMAT_STRING="ELF 64-bit LSB  relocatable, ppc64le"
 else
   OBJ_FILE_FORMAT_STRING="ELF 64-bit LSB  relocatable"
 fi
