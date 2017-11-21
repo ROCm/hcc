@@ -691,18 +691,21 @@ public:
 
     void asyncOpsIndex(int asyncOpsIndex) { _asyncOpsIndex = asyncOpsIndex; };
 
+    void* getNativeHandle() override { return &signal; }
+
 protected:
     uint64_t   apiStartTick;
     HSAOpCoord _opCoord;
     int        _asyncOpsIndex;
+
+    hsa_signal_t signal;
+    int signalIndex;
 };
 std::ostream& operator<<(std::ostream& os, const HSAOp & op);
 
 
 class HSACopy : public HSAOp {
 private:
-    hsa_signal_t signal;
-    int signalIndex;
     bool isSubmitted;
     bool isAsync;          // copy was performed asynchronously
     bool isSingleStepCopy;; // copy was performed on fast-path via a single call to the HSA copy routine
@@ -735,7 +738,6 @@ public:
     std::shared_future<void>* getFuture() override { return future; }
     const Kalmar::HSADevice* getCopyDevice() { return copyDevice; } ;  // Which device did the copy.
 
-    void* getNativeHandle() override { return &signal; }
 
     void setWaitMode(Kalmar::hcWaitMode mode) override {
         switch (mode) {
@@ -835,8 +837,6 @@ private:
 
 class HSABarrier : public HSAOp {
 private:
-    hsa_signal_t signal;
-    int signalIndex;
     bool isDispatched;
     hsa_wait_state_t waitMode;
 
@@ -869,7 +869,6 @@ public:
     bool barrierNextSyncNeedsSysRelease() const { return _barrierNextSyncNeedsSysRelease; };
     bool barrierNextKernelNeedsSysAcquire() const { return _barrierNextKernelNeedsSysAcquire; };
 
-    void* getNativeHandle() override { return &signal; }
 
     void setWaitMode(Kalmar::hcWaitMode mode) override {
         switch (mode) {
@@ -908,8 +907,6 @@ public:
         } else {
             depCount = 0;
         }
-        signal.handle = 0;
-        signalIndex = -1;
     }
 
     // constructor with at most 5 prior dependencies
@@ -936,8 +933,6 @@ public:
             // throw an exception
             throw Kalmar::runtime_exception("Incorrect number of dependent signals passed to HSABarrier constructor", count);
         }
-        signal.handle = 0;
-        signalIndex = -1;
     }
 
     ~HSABarrier() {
@@ -985,8 +980,6 @@ private:
     int kernargMemoryIndex;
 
 
-    hsa_signal_t signal;
-    int signalIndex;
     hsa_kernel_dispatch_packet_t aql;
     bool isDispatched;
     hsa_wait_state_t waitMode;
@@ -1002,7 +995,6 @@ public:
     const char *getKernelName() { return kernel_name ? kernel_name : (kernel ? kernel->shortKernelName.c_str() : "<unknown_kernel>"); };
     const char *getLongKernelName() { return (kernel ? kernel->getLongKernelName().c_str() : "<unknown_kernel>"); };
 
-    void* getNativeHandle() override { return &signal; }
 
     void setWaitMode(Kalmar::hcWaitMode mode) override {
         switch (mode) {
@@ -1478,7 +1470,7 @@ public:
             if (asyncOp != nullptr) {
                 hsa_signal_t signal = *(static_cast <hsa_signal_t*> (asyncOp->getNativeHandle()));
                 if (signal.handle) {
-                    hsa_signal_value_t v = hsa_signal_load_relaxed(signal);
+                    hsa_signal_value_t v = hsa_signal_load_acquire(signal);
                     if (v != 0) {
                         ++count;
                     }
@@ -1494,31 +1486,29 @@ public:
     bool isEmpty() override {
         // Have to walk asyncOps since it can contain null pointers (if event is waited on and removed)
         // Also not all commands contain signals.
-        bool oldestNoSignal=false;
-        for (int i = asyncOps.size()-1; i >= 0;  i--) {
-            auto &asyncOp = asyncOps[i];
-            if (asyncOp != nullptr) {
-                hsa_signal_t signal = *(static_cast <hsa_signal_t*> (asyncOp->getNativeHandle()));
-                if (signal.handle) {
-                    oldestNoSignal=false;
-                    hsa_signal_value_t v = hsa_signal_load_relaxed(signal);
-                    if (v != 0) {
-                        return false;
-                    }
-                } else {
-                    // no signal, have to assume the command is still running
-                    oldestNoSignal=true;
-                }
-            }
-        };
+        
+        bool isEmpty = true;
 
-        if (oldestNoSignal) {
-            auto marker = EnqueueMarker(hc::system_scope);
-            DBOUTL(DB_CMD2, "Inside HSAQueue::isEmpty and queue contained only no-signal ops, enqueued marker " << marker << " into " << *this);
-            return false;
-        } else {
-            return true;
+        const auto& oldest = find_if(
+                    asyncOps.crbegin(), asyncOps.crend(), [](const std::shared_ptr<HSAOp> &asyncOp) { return asyncOp != nullptr; });
+
+
+        if (oldest != asyncOps.crend()) {
+            hsa_signal_t signal = *(static_cast <hsa_signal_t*> ((*oldest)->getNativeHandle()));
+            if (signal.handle) {
+                hsa_signal_value_t v = hsa_signal_load_acquire(signal);
+                if (v != 0) {
+                    isEmpty=false;
+                }
+            } else {
+                // oldest has no signal - enqueue a new one:
+                auto marker = EnqueueMarker(hc::system_scope);
+                DBOUTL(DB_CMD2, "Inside HSAQueue::isEmpty and queue contained only no-signal ops, enqueued marker " << marker << " into " << *this);
+                isEmpty=false;
+            }
         }
+
+        return isEmpty;
     };
 
 
@@ -4222,8 +4212,6 @@ HSADispatch::HSADispatch(Kalmar::HSADevice* _device, Kalmar::KalmarQueue *queue,
     future(nullptr),
     kernargMemory(nullptr)
 {
-    signal.handle = 0;
-    signalIndex = -1;
     if (aql) {
         this->aql = *aql;
     }
@@ -4944,8 +4932,11 @@ HSAOpCoord::HSAOpCoord(Kalmar::HSAQueue *queue) :
 HSAOp::HSAOp(Kalmar::KalmarQueue *queue, hc::hcCommandKind commandKind) :
     KalmarAsyncOp(queue, commandKind),
     _opCoord(static_cast<Kalmar::HSAQueue*> (queue)),
-    _asyncOpsIndex(-1)
+    _asyncOpsIndex(-1),
+
+    signalIndex(-1)
 {
+    signal.handle=0;
     apiStartTick = Kalmar::ctx.getSystemTicks();
 };
 
@@ -4958,11 +4949,10 @@ HSAOp::HSAOp(Kalmar::KalmarQueue *queue, hc::hcCommandKind commandKind) :
 HSACopy::HSACopy(Kalmar::KalmarQueue *queue, const void* src_, void* dst_, size_t sizeBytes_) : HSAOp(queue, Kalmar::hcCommandInvalid),
     isSubmitted(false), isAsync(false), isSingleStepCopy(false), isPeerToPeer(false), future(nullptr), depAsyncOp(nullptr), copyDevice(nullptr), waitMode(HSA_WAIT_STATE_ACTIVE),
     src(src_), dst(dst_),
-    sizeBytes(sizeBytes_),
-    signalIndex(-1) {
+    sizeBytes(sizeBytes_)
+{
 
 
-    signal.handle = 0;
     apiStartTick = Kalmar::ctx.getSystemTicks();
 }
 
