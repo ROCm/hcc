@@ -1339,7 +1339,7 @@ public:
                 hsa_signal_t signal = * (static_cast<hsa_signal_t*> (op->getNativeHandle()));
                 hsa_signal_value_t v = 0;
                 if (signal.handle) {
-                    v = hsa_signal_load_acquire(signal);
+                    v = hsa_signal_load_scacquire(signal);
                 }
                 s  << " " << getHcCommandKindString(op->getCommandKind());
                 // TODO - replace with virtual function
@@ -1470,7 +1470,7 @@ public:
             if (asyncOp != nullptr) {
                 hsa_signal_t signal = *(static_cast <hsa_signal_t*> (asyncOp->getNativeHandle()));
                 if (signal.handle) {
-                    hsa_signal_value_t v = hsa_signal_load_acquire(signal);
+                    hsa_signal_value_t v = hsa_signal_load_scacquire(signal);
                     if (v != 0) {
                         ++count;
                     }
@@ -1496,7 +1496,7 @@ public:
         if (oldest != asyncOps.crend()) {
             hsa_signal_t signal = *(static_cast <hsa_signal_t*> ((*oldest)->getNativeHandle()));
             if (signal.handle) {
-                hsa_signal_value_t v = hsa_signal_load_acquire(signal);
+                hsa_signal_value_t v = hsa_signal_load_scacquire(signal);
                 if (v != 0) {
                     isEmpty=false;
                 }
@@ -2156,7 +2156,7 @@ public:
                     // v<0 : no signal, v==0 signal and done, v>0 : signal and not done:
                     hsa_signal_value_t v = -1;
                     if (signal.handle)
-                        v = hsa_signal_load_acquire(signal);
+                        v = hsa_signal_load_scacquire(signal);
                     assert (v <=0);
         #endif
 
@@ -4844,7 +4844,7 @@ static std::string fenceToString(int fenceBits)
 
 
 bool HSABarrier::isReady() override {
-    bool ready = (hsa_signal_load_acquire(_signal) == 0);
+    bool ready = (hsa_signal_load_scacquire(_signal) == 0);
     if (ready) {
         hsaQueue()->removeAsyncOp(this);
     }
@@ -4853,7 +4853,7 @@ bool HSABarrier::isReady() override {
 }
 
 bool HSACopy::isReady() override {
-    bool ready = (hsa_signal_load_acquire(_signal) == 0);
+    bool ready = (hsa_signal_load_scacquire(_signal) == 0);
     if (ready) {
         hsaQueue()->removeAsyncOp(this);
     }
@@ -4862,7 +4862,7 @@ bool HSACopy::isReady() override {
 }
 
 bool HSADispatch::isReady() override {
-    bool ready = (hsa_signal_load_acquire(_signal) == 0);
+    bool ready = (hsa_signal_load_scacquire(_signal) == 0);
     if (ready) {
         hsaQueue()->removeAsyncOp(this);
     }
@@ -4970,7 +4970,7 @@ HSACopy::waitComplete() {
     if (DBFLAG(DB_WAIT)) {
         hsa_signal_value_t v = -1000;
         if (_signal.handle) {
-            hsa_signal_load_acquire(_signal);
+            hsa_signal_load_scacquire(_signal);
         }
         DBOUT(DB_WAIT, "  wait for copy op#" << getSeqNum() << " completion with wait flag: " << waitMode << "signal="<< std::hex  << _signal.handle << std::dec <<" currentVal=" << v << "...\n");
     }
@@ -5209,7 +5209,7 @@ HSACopy::enqueueAsyncCopyCommand(const Kalmar::HSADevice *copyDevice, const hc::
 
 
         if (DBFLAG(DB_CMD)) {
-            hsa_signal_value_t v = hsa_signal_load_acquire(_signal);
+            hsa_signal_value_t v = hsa_signal_load_scacquire(_signal);
             DBOUT(DB_CMD,  "  hsa_amd_memory_async_copy launched " << " completionSignal="<< std::hex  << _signal.handle
                       << "  InitSignalValue=" << v << " depSignalCnt=" << depSignalCnt
                       << "  copyAgent=" << copyDevice
