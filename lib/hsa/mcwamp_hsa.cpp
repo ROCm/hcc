@@ -71,12 +71,10 @@
 #define KERNARG_BUFFER_SIZE (512)
 
 // number of pre-allocated kernarg buffers in HSAContext
-// Should be greater than SIGNAL_POOL_SIZE (some kernels don't allocate signals but nearly all need kernargs)
+// Not required but typically should be greater than HCC_SIGNAL_POOL_SIZE 
+// (some kernels don't allocate signals but nearly all need kernargs)
 #define KERNARG_POOL_SIZE (1024)
 
-// number of pre-allocated HSA signals in HSAContext
-// Signals are precious resource so manage carefully
-#define SIGNAL_POOL_SIZE (512) //
 
 // Maximum number of inflight commands sent to a single queue.
 // If limit is exceeded, HCC will force a queue wait to reclaim
@@ -91,6 +89,8 @@
 //---
 // Environment variables:
 int HCC_PRINT_ENV=0;
+
+int HCC_SIGNAL_POOL_SIZE=512;
 
 int HCC_UNPINNED_COPY_MODE = UnpinnedCopyEngine::ChooseBest;
 
@@ -2170,9 +2170,6 @@ public:
                 }
             }
         }
-        if (nullifiedCount > 1000) {
-            DBOUTL(DB_RESOURCE, "removeAsyncOps nullified " << nullifiedCount << " ops.");
-        }
 
 
         // GC for finished kernels
@@ -3399,12 +3396,11 @@ public:
             Devices.push_back(Dev);
         }
 
-#if SIGNAL_POOL_SIZE > 0
         signalPoolMutex.lock();
 
         // pre-allocate signals
-        DBOUT(DB_SIG,  " pre-allocate " << SIGNAL_POOL_SIZE << " signals\n");
-        for (int i = 0; i < SIGNAL_POOL_SIZE; ++i) {
+        DBOUT(DB_SIG,  " pre-allocate " << HCC_SIGNAL_POOL_SIZE << " signals\n");
+        for (int i = 0; i < HCC_SIGNAL_POOL_SIZE; ++i) {
           hsa_signal_t signal;
           status = hsa_signal_create(1, 0, NULL, &signal);
           STATUS_CHECK(status, __LINE__);
@@ -3413,7 +3409,6 @@ public:
         }
 
         signalPoolMutex.unlock();
-#endif
 
         initPrintfBuffer();
 
@@ -3426,7 +3421,6 @@ public:
 
             DBOUT(DB_SIG, "  releaseSignal: 0x" << std::hex << signal.handle << std::dec << " and restored value to 1\n");
             hsa_status_t status = HSA_STATUS_SUCCESS;
-#if SIGNAL_POOL_SIZE > 0
             signalPoolMutex.lock();
 
             // restore signal to the initial value 1
@@ -3436,17 +3430,12 @@ public:
             signalPoolFlag[signalIndex] = false;
 
             signalPoolMutex.unlock();
-#else
-            status = hsa_signal_destroy(signal);
-            STATUS_CHECK(status, __LINE__);
-#endif
         }
     }
 
     std::pair<hsa_signal_t, int> getSignal() {
         hsa_signal_t ret;
 
-#if SIGNAL_POOL_SIZE > 0
         signalPoolMutex.lock();
         int cursor = signalCursor;
 
@@ -3488,17 +3477,17 @@ public:
             if (found == false) {
                 hsa_status_t status = HSA_STATUS_SUCCESS;
 
-                // increase signal pool on demand by SIGNAL_POOL_SIZE
+                // increase signal pool on demand by HCC_SIGNAL_POOL_SIZE
 
                 // keep track of the size of signal pool before increasing it
                 int oldSignalPoolSize = signalPool.size();
                 int oldSignalPoolFlagSize = signalPoolFlag.size();
                 assert(oldSignalPoolSize == oldSignalPoolFlagSize);
 
-                DBOUTL(DB_RESOURCE, "Growing signal pool from " << signalPool.size() << " to " << signalPool.size() + SIGNAL_POOL_SIZE);
+                DBOUTL(DB_RESOURCE, "Growing signal pool from " << signalPool.size() << " to " << signalPool.size() + HCC_SIGNAL_POOL_SIZE);
 
-                // increase signal pool on demand for another SIGNAL_POOL_SIZE
-                for (int i = 0; i < SIGNAL_POOL_SIZE; ++i) {
+                // increase signal pool on demand for another HCC_SIGNAL_POOL_SIZE
+                for (int i = 0; i < HCC_SIGNAL_POOL_SIZE; ++i) {
                     hsa_signal_t signal;
                     status = hsa_signal_create(1, 0, NULL, &signal);
                     STATUS_CHECK(status, __LINE__);
@@ -3508,8 +3497,8 @@ public:
 
                 DBOUT(DB_SIG,  "grew signal pool to size=" << signalPool.size() << "\n");
 
-                assert(signalPool.size() == oldSignalPoolSize + SIGNAL_POOL_SIZE);
-                assert(signalPoolFlag.size() == oldSignalPoolFlagSize + SIGNAL_POOL_SIZE);
+                assert(signalPool.size() == oldSignalPoolSize + HCC_SIGNAL_POOL_SIZE);
+                assert(signalPoolFlag.size() == oldSignalPoolFlagSize + HCC_SIGNAL_POOL_SIZE);
 
                 // set return values, after the pool has been increased
 
@@ -3531,12 +3520,6 @@ public:
         }
 
         signalPoolMutex.unlock();
-#else
-        hsa_signal_t signal;
-        hsa_status_t status = hsa_signal_create(1, 0, NULL, &signal);
-        STATUS_CHECK(status, __LINE__);
-        int cursor = 0;
-#endif
         return std::make_pair(ret, cursor);
     }
 
@@ -3564,7 +3547,6 @@ public:
         Devices.clear();
         def = nullptr;
 
-#if SIGNAL_POOL_SIZE > 0
         signalPoolMutex.lock();
 
         // deallocate signals in the pool
@@ -3578,7 +3560,6 @@ public:
         signalPoolFlag.clear();
 
         signalPoolMutex.unlock();
-#endif
 
         // shutdown HSA runtime
 #if KALMAR_DEBUG
@@ -3673,6 +3654,7 @@ void HSAContext::ReadHccEnv()
     GET_ENV_INT(HCC_FORCE_CROSS_QUEUE_FLUSH, "create_blocking_marker will force need for sys acquire (0x1) and release (0x2) queue where the marker is created. 0x3 sets need for both flags.");
     GET_ENV_INT(HCC_MAX_QUEUES, "Set max number of HSA queues this process will use.  accelerator_views will share the allotted queues and steal from each other as necessary");
 
+    GET_ENV_INT(HCC_SIGNAL_POOL_SIZE, "Number of pre-allocated HSA signals.  Signals are precious resource so manage carefully");
 
     GET_ENV_INT(HCC_UNPINNED_COPY_MODE, "Select algorithm for unpinned copies. 0=ChooseBest(see thresholds), 1=PinInPlace, 2=StagingBuffer, 3=Memcpy");
 
