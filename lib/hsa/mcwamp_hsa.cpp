@@ -736,7 +736,7 @@ private:
 public:
     Kalmar::HSAQueue * hsaQueue() const;
     std::shared_future<void>* getFuture() override { return future; }
-    const Kalmar::HSADevice* getCopyDevice() { return copyDevice; } ;  // Which device did the copy.
+    const Kalmar::HSADevice* getCopyDevice() const { return copyDevice; } ;  // Which device did the copy.
 
 
     void setWaitMode(Kalmar::hcWaitMode mode) override {
@@ -1261,6 +1261,7 @@ private:
 
     // Kind of the youngest command in the queue.
     // Used to detect and enforce dependencies between commands.
+    // Persists even after the youngest command has been removed.
     hcCommandKind youngestCommandKind;
 
     // Store current CU mask, if any.
@@ -1410,16 +1411,26 @@ public:
     //
     // Also different modes and optimizations can control when dependencies are added.
     // TODO - return reference if possible to avoid shared ptr overhead.
-    std::shared_ptr<KalmarAsyncOp> detectStreamDeps(hcCommandKind newCommandKind, KalmarAsyncOp *copyOp) {
+    std::shared_ptr<KalmarAsyncOp> detectStreamDeps(hcCommandKind newCommandKind, KalmarAsyncOp *kNewOp) {
+
+        const auto newOp = static_cast<const HSAOp*> (kNewOp);
 
         assert (newCommandKind != hcCommandInvalid);
 
         if (!asyncOps.empty()) {
             assert (youngestCommandKind != hcCommandInvalid);
 
+            // Ensure we have not already added the op we are checking into asyncOps,
+            // that must be done after we check for deps.
+            if (newOp && (newOp == asyncOps.back().get())) {
+                throw Kalmar::runtime_exception("enqueued op before checking dependencies!", 0);
+            }
 
             bool needDep = false;
             if  (newCommandKind != youngestCommandKind) {
+                DBOUT(DB_CMD2, "Set NeedDep (command type changed) " 
+                        << getHcCommandKindString(youngestCommandKind) 
+                        << "  ->  " << getHcCommandKindString(newCommandKind) << "\n") ;
                 needDep = true;
             };
 
@@ -1430,16 +1441,18 @@ public:
                 // No dependency required since Marker and Kernel share same queue and are ordered by AQL barrier bit.
                 needDep = false;
             } else if (isCopyCommand(newCommandKind) && isCopyCommand(youngestCommandKind)) {
-                assert (copyOp);
-                HSACopy *hsaCopyOp = static_cast<HSACopy*> (copyOp);
-                HSACopy *youngestCopyOp = static_cast<HSACopy*> (asyncOps.back().get());
+                assert (newOp);
+                auto hsaCopyOp = static_cast<const HSACopy*> (newOp);
+                auto youngestCopyOp = static_cast<const HSACopy*> (asyncOps.back().get());
                 if (hsaCopyOp->getCopyDevice() != youngestCopyOp->getCopyDevice()) {
                     // This covers cases where two copies are back-to-back in the queue but use different copy engines.
                     // In this case there is no implicit dependency between the ops so we need to add one
                     // here.
                     needDep = true;
+                    DBOUT(DB_CMD2, "Set NeedDep for " << newOp << "(different copy engines) " );
                 }
                 if (FORCE_SIGNAL_DEP_BETWEEN_COPIES) {
+                    DBOUT(DB_CMD2, "Set NeedDep for " << newOp << "(FORCE_SIGNAL_DEP_BETWEEN_COPIES) " );
                     needDep = true;
                 }
             }
@@ -4148,17 +4161,18 @@ HSAQueue::dispatch_hsa_kernel(const hsa_kernel_dispatch_packet_t *aql,
 
 
     Kalmar::HSADevice* device = static_cast<Kalmar::HSADevice*>(this->getDev());
-    //HSADispatch *dispatch = new HSADispatch(device, nullptr, aql);
+
     std::shared_ptr<HSADispatch> sp_dispatch = std::make_shared<HSADispatch>(device, this/*queue*/, nullptr, aql);
     if (HCC_OPT_FLUSH) {
         sp_dispatch->overrideAcquireFenceIfNeeded();
     }
 
-    pushAsyncOp(sp_dispatch);
     HSADispatch *dispatch = sp_dispatch.get();
+    waitForStreamDeps(dispatch);
+
+    pushAsyncOp(sp_dispatch);
     dispatch->setKernelName(kernelName);
 
-    waitForStreamDeps(dispatch);
 
     // May be faster to create signals for each dispatch than to use markers.
     // Perhaps could check HSA queue pointers.
