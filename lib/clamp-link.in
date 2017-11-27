@@ -44,6 +44,7 @@ KMDUMPBUNDLE="${KMDUMPBUNDLE:=0}"
 BINDIR=$(dirname $0)
 LINK=$BINDIR/llvm-link
 LTO=$BINDIR/llvm-lto
+SPLIT=$BINDIR/llvm-split
 OPT=$BINDIR/opt
 CLAMP_DEVICE=$BINDIR/clamp-device
 LLD=$BINDIR/ld.lld
@@ -241,14 +242,24 @@ _thinlto_path() {
     exit 1
   fi
 
+  LinkKernels=()
   # create module summaries for each kernel
   for KERNEL in ${LinkKernelArgs[@]} ; do
-    $OPT -thinlto-bc -disable-opt -module-summary $KERNEL -o $KERNEL
+    NUM_KERNELS=`$SPLIT $KERNEL -o $KERNEL -split-hcc-kernels`
+    if [ $NUM_KERNELS -eq 1 ]; then
+      $OPT -thinlto-bc -disable-opt -module-summary $KERNEL -o $KERNEL
+      LinkKernels+=( "$KERNEL" )
+    else
+      for ((SUBKERNEL=0; SUBKERNEL < NUM_KERNELS; SUBKERNEL++)) ; do
+        $OPT -thinlto-bc -disable-opt -module-summary $KERNEL$SUBKERNEL -o $KERNEL$SUBKERNEL.bc
+        LinkKernels+=( "$KERNEL$SUBKERNEL.bc" )
+      done
+    fi
   done
 
   # perform ThinLTO indexing and cross-module importing
-  $LTO -thinlto -thinlto-action=thinlink "${LinkKernelArgs[@]}" -o $TEMP_DIR/kernel.thinlto.index
-  $LTO -thinlto -thinlto-action=import "${LinkKernelArgs[@]}" -thinlto-index=$TEMP_DIR/kernel.thinlto.index -import-instr-limit=1048576 -force-import-weak
+  $LTO -thinlto -thinlto-action=thinlink "${LinkKernels[@]}" -o $TEMP_DIR/kernel.thinlto.index
+  $LTO -thinlto -thinlto-action=import "${LinkKernels[@]}" -thinlto-index=$TEMP_DIR/kernel.thinlto.index -import-instr-limit=1048576 -force-import-weak
 
   declare -a pids
   # for each GPU target, lower LLVM IR kernels into GCN ISA
@@ -257,7 +268,7 @@ _thinlto_path() {
     { _thinlto_target_helper $AMDGPU_TARGET $TEMP_DIR/kernel-$AMDGPU_TARGET.hsaco; } &
 
     # error handling
-    pids+=("${pids[@]}" "$!")
+    pids=("${pids[@]}" "$!")
 
     # augment arguments to clang-offload-bundler
     CLANG_OFFLOAD_BUNDLER_INPUTS_ARGS+=",$TEMP_DIR/kernel-$AMDGPU_TARGET.hsaco"
@@ -292,7 +303,7 @@ _default_path() {
     { $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel-$AMDGPU_TARGET.hsaco --amdgpu-target=$AMDGPU_TARGET; } &
 
     # error handling
-    pids+=("${pids[@]}" "$!")
+    pids=("${pids[@]}" "$!")
 
     # augment arguments to clang-offload-bundler
     CLANG_OFFLOAD_BUNDLER_INPUTS_ARGS+=",$TEMP_DIR/kernel-$AMDGPU_TARGET.hsaco"
