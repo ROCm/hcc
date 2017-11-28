@@ -693,6 +693,9 @@ public:
 
     void* getNativeHandle() override { return &_signal; }
 
+    virtual bool barrierNextSyncNeedsSysRelease() const { return 0; };
+    virtual bool barrierNextKernelNeedsSysAcquire() const { return 0; };
+
 protected:
     uint64_t     apiStartTick;
     HSAOpCoord   _opCoord;
@@ -860,7 +863,7 @@ public:
 
     // array of all operations that this op depends on.
     // This array keeps a reference which prevents those ops from being deleted until this op is deleted.
-    std::shared_ptr<HSABarrier> depAsyncOps [HSA_BARRIER_DEP_SIGNAL_CNT];
+    std::shared_ptr<HSAOp> depAsyncOps [HSA_BARRIER_DEP_SIGNAL_CNT];
 
 public:
     std::shared_future<void>* getFuture() override { return future; }
@@ -902,7 +905,7 @@ public:
         if (dependent_op != nullptr) {
             assert (dependent_op->getCommandKind() == Kalmar::hcCommandMarker);
 
-            depAsyncOps[0] = std::static_pointer_cast<HSABarrier> (dependent_op);
+            depAsyncOps[0] = std::static_pointer_cast<HSAOp> (dependent_op);
             depCount = 1;
         } else {
             depCount = 0;
@@ -924,8 +927,7 @@ public:
             for (int i = 0; i < count; ++i) {
                 if (dependent_op_array[i]) {
                     // squish null ops
-                    assert (dependent_op_array[i]->getCommandKind() == Kalmar::hcCommandMarker);
-                    depAsyncOps[depCount] = std::static_pointer_cast<HSABarrier> (dependent_op_array[i]);
+                    depAsyncOps[depCount] = std::static_pointer_cast<HSAOp> (dependent_op_array[i]);
                     depCount++;
                 }
             }
