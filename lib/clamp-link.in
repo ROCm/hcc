@@ -243,14 +243,18 @@ _thinlto_path() {
   fi
 
   LinkKernels=()
+  NUM_SPLIT=10
+  NUM_KERNS_THRESHOLD=100
   # create module summaries for each kernel
   for KERNEL in ${LinkKernelArgs[@]} ; do
-    NUM_KERNELS=`$SPLIT $KERNEL -o $KERNEL -split-hcc-kernels`
-    if [ $NUM_KERNELS -le 1 ]; then
+    NUM_KERNELS=`$SPLIT $KERNEL -o $KERNEL -split-hcc-kernels -split-hcc-threshold $NUM_KERNS_THRESHOLD -j $NUM_SPLIT`
+    echo "Num Kerns: $NUM_KERNELS Num Kerns Threshold: $NUM_KERNS_THRESHOLD"
+    if [ $NUM_KERNELS -le $NUM_KERNS_THRESHOLD ]; then
       $OPT -thinlto-bc -disable-opt -module-summary $KERNEL -o $KERNEL
       LinkKernels+=( "$KERNEL" )
     else
-      for ((SUBKERNEL=0; SUBKERNEL < NUM_KERNELS; SUBKERNEL++)) ; do
+      echo "  Splitted Number of Files: $NUM_SPLIT"
+      for ((SUBKERNEL=0; SUBKERNEL < NUM_SPLIT; SUBKERNEL++)) ; do
         $OPT -thinlto-bc -disable-opt -module-summary $KERNEL$SUBKERNEL -o $KERNEL$SUBKERNEL.bc
         LinkKernels+=( "$KERNEL$SUBKERNEL.bc" )
       done
