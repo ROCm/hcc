@@ -164,7 +164,7 @@ _thinlto_target_helper() {
 
   # prepare all kernels for opt and llc passes by linking with rocdl lib
   declare -a LINK_IMPORTED_KERNEL_ARGS
-  for KERNEL in ${LinkKernelArgs[@]}
+  for KERNEL in ${LinkKernels[@]}
   do
     LINK_IMPORTED_KERNEL_ARGS+=( $KERNEL-$AMDGPU_TARGET.imported.bc )
     $LINK -suppress-warnings -o $KERNEL-$AMDGPU_TARGET.imported.bc $KERNEL.thinlto.imported.bc $HCC_BC_LIBS
@@ -246,7 +246,7 @@ _thinlto_path() {
   # create module summaries for each kernel
   for KERNEL in ${LinkKernelArgs[@]} ; do
     NUM_KERNELS=`$SPLIT $KERNEL -o $KERNEL -split-hcc-kernels`
-    if [ $NUM_KERNELS -eq 1 ]; then
+    if [ $NUM_KERNELS -le 1 ]; then
       $OPT -thinlto-bc -disable-opt -module-summary $KERNEL -o $KERNEL
       LinkKernels+=( "$KERNEL" )
     else
@@ -256,6 +256,11 @@ _thinlto_path() {
       done
     fi
   done
+
+  if [ $VERBOSE != 0 ]; then
+    echo "Splitted Kernels: ${LinkKernels[@]}"
+    echo ""
+  fi
 
   # perform ThinLTO indexing and cross-module importing
   $LTO -thinlto -thinlto-action=thinlink "${LinkKernels[@]}" -o $TEMP_DIR/kernel.thinlto.index
