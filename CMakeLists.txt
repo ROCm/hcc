@@ -560,8 +560,14 @@ set(CPACK_RPM_PRE_UNINSTALL_SCRIPT_FILE "${PROJECT_BINARY_DIR}/packaging/debian/
 # disable automatic shared libraries dependency detection
 set(CPACK_RPM_PACKAGE_AUTOREQ 0)
 
-set(HCC_GENERAL_RPM_DEP "findutils, elfutils-libelf, pciutils-libs, file, pth, libunwind, libunwind-devel, libcxx, libcxxabi")
-set(CPACK_RPM_PACKAGE_REQUIRES "${HCC_GENERAL_RPM_DEP} ${HCC_ROCR_DEP}" )
+set(HCC_GENERAL_RPM_DEP "findutils, elfutils-libelf, pciutils-libs, file, pth, libunwind, libunwind-devel")
+if ( USE_LIBCXX )
+  set(HCC_LIBCXX_RPM_DEP ", libcxx, libcxxabi")
+else ( USE_LIBCXX )
+  set(HCC_LIBCXX_RPM_DEP "")
+endif( USE_LIBCXX )
+
+set(CPACK_RPM_PACKAGE_REQUIRES "${HCC_GENERAL_RPM_DEP} ${HCC_ROCR_DEP} ${HCC_LIBCXX_RPM_DEP}" )
 
 set(CPACK_COMPONENTS_ALL compiler)
 
