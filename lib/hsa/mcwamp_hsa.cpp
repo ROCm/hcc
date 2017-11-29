@@ -869,8 +869,8 @@ public:
     std::shared_future<void>* getFuture() override { return future; }
     void acquire_scope(hc::memory_scope acquireScope) { _acquire_scope = acquireScope;};
 
-    bool barrierNextSyncNeedsSysRelease() const { return _barrierNextSyncNeedsSysRelease; };
-    bool barrierNextKernelNeedsSysAcquire() const { return _barrierNextKernelNeedsSysAcquire; };
+    bool barrierNextSyncNeedsSysRelease() const override { return _barrierNextSyncNeedsSysRelease; };
+    bool barrierNextKernelNeedsSysAcquire() const override { return _barrierNextKernelNeedsSysAcquire; };
 
 
     void setWaitMode(Kalmar::hcWaitMode mode) override {
