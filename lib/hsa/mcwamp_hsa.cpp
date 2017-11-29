@@ -4610,15 +4610,6 @@ HSADispatch::setLaunchConfiguration(int dims, size_t *globalDims, size_t *localD
     std::cerr << "dynamic group segment size: " << dynamicGroupSize << "\n";
 #endif
 
-	if (dims < 3)
-	{
-		globalDims[2] = 1;
-	}
-	if (dims < 2)
-	{
-		globalDims[1] = 1;
-	}
-
     // Set global dims:
     aql.grid_size_x = globalDims[0];
     aql.grid_size_y = (dims > 1 ) ? globalDims[1] : 1;
@@ -4630,7 +4621,7 @@ HSADispatch::setLaunchConfiguration(int dims, size_t *globalDims, size_t *localD
     int workgroup_size[3];
 
 	std::cout << "workgroup_max_dim = " << workgroup_max_dim[0] << " " << workgroup_max_dim[1] << " " << workgroup_max_dim[2] << "\n";
-	std::cout << "globalDims = " << globalDims[0] << " " << globalDims[1] << " " << globalDims[2] << "\n";
+	std::cout << "globalDims = " << aql.grid_size_x << " " << aql.grid_size_y << " " << aql.grid_size_z << "\n";
 
     workgroup_size[0] = computeLaunchAttr(globalDims[0], localDims[0], workgroup_max_dim[0]);
     workgroup_size[1] = (dims > 1) ? computeLaunchAttr(globalDims[1], localDims[1], workgroup_max_dim[1]) : 1;
