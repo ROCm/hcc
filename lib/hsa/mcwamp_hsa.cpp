@@ -4610,11 +4610,19 @@ HSADispatch::setLaunchConfiguration(int dims, size_t *globalDims, size_t *localD
     std::cerr << "dynamic group segment size: " << dynamicGroupSize << "\n";
 #endif
 
+	if (dims < 3)
+	{
+		globalDims[2] = 1;
+	}
+	if (dims < 2)
+	{
+		globalDims[1] = 1;
+	}
+
     // Set global dims:
     aql.grid_size_x = globalDims[0];
     aql.grid_size_y = (dims > 1 ) ? globalDims[1] : 1;
     aql.grid_size_z = (dims > 2 ) ? globalDims[2] : 1;
-
 
     // Set group dims
     // for each workgroup dimension, make sure it does not exceed the maximum allowable limit
@@ -4653,7 +4661,7 @@ HSADispatch::setLaunchConfiguration(int dims, size_t *globalDims, size_t *localD
     size_t max_num_work_items_per_cu = (max_num_vgprs_per_work_item / workitem_vgpr_count) * num_work_items_per_simd * num_simds_per_cu;
 
 	std::cout << "num VGPRs = " << workitem_vgpr_count << std::endl;
-	std::cout << "workgroup_total_size = " << workgroup_total_size << std::endl;
+	std::cout << "workgroup_size = " << workgroup_size[0] << " " << workgroup_size[1] << " " << workgroup_size[2] << std::endl;
 
 	if (max_num_vgprs_per_work_item < workitem_vgpr_count)
 	{
@@ -4673,7 +4681,7 @@ HSADispatch::setLaunchConfiguration(int dims, size_t *globalDims, size_t *localD
 		}
 		workgroup_total_size = workgroup_size[0] * workgroup_size[1] * workgroup_size[2];
 	}
-	std::cout << "fixed workgroup_total_size = " << workgroup_total_size << std::endl;
+	std::cout << "fixed workgroup_size = " << workgroup_size[0] <<" " <<workgroup_size[1] <<" "<< workgroup_size[2] << std::endl;
 
 
     aql.workgroup_size_x = workgroup_size[0];
