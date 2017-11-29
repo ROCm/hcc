@@ -4681,7 +4681,7 @@ HSADispatch::setLaunchConfiguration(int dims, size_t *globalDims, size_t *localD
 		}
 		workgroup_total_size = workgroup_size[0] * workgroup_size[1] * workgroup_size[2];
 	}
-	std::cout << "fixed workgroup_size = " << workgroup_size[0] << " " << workgroup_size[1] <<" " << workgroup_size[2] << std::endl;
+	std::cout << "cfixed workgroup_size = " << workgroup_size[0] << " " << workgroup_size[1] <<" " << workgroup_size[2] << std::endl;
 
 
     aql.workgroup_size_x = workgroup_size[0];
