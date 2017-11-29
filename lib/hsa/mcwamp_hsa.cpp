@@ -4615,13 +4615,22 @@ HSADispatch::setLaunchConfiguration(int dims, size_t *globalDims, size_t *localD
     aql.grid_size_y = (dims > 1 ) ? globalDims[1] : 1;
     aql.grid_size_z = (dims > 2 ) ? globalDims[2] : 1;
 
+
     // Set group dims
     // for each workgroup dimension, make sure it does not exceed the maximum allowable limit
     const uint16_t* workgroup_max_dim = device->getWorkgroupMaxDim();
     int workgroup_size[3];
 
+	size_t gdimt[3] = { 1,1,1 };
+	size_t wkmaxdim[3] = { -1,-1,-1 };
+	for (int i = 0; i < dims; i++)
+	{
+		gdimt[i] = globalDims[i];
+		wkmaxdim[i] = workgroup_max_dim[i];
+	}
+
 	std::cout << "workgroup_max_dim = " << workgroup_max_dim[0] << " " << workgroup_max_dim[1] << " " << workgroup_max_dim[2] << "\n";
-	std::cout << "globalDims = " << aql.grid_size_x << " " << aql.grid_size_y << " " << aql.grid_size_z << "\n";
+	std::cout << "globalDims = " << gdimt[0] << " " << gdimt[1] << " " << gdimt[2] << "\n";
 
     workgroup_size[0] = computeLaunchAttr(globalDims[0], localDims[0], workgroup_max_dim[0]);
     workgroup_size[1] = (dims > 1) ? computeLaunchAttr(globalDims[1], localDims[1], workgroup_max_dim[1]) : 1;
@@ -4672,7 +4681,7 @@ HSADispatch::setLaunchConfiguration(int dims, size_t *globalDims, size_t *localD
 		}
 		workgroup_total_size = workgroup_size[0] * workgroup_size[1] * workgroup_size[2];
 	}
-	std::cout << "fixed workgroup_size = " << workgroup_size[0] <<" " <<workgroup_size[1] <<" "<< workgroup_size[2] << std::endl;
+	std::cout << "fixed workgroup_size = " << workgroup_size[0] << " " << workgroup_size[1] <<" " << workgroup_size[2] << std::endl;
 
 
     aql.workgroup_size_x = workgroup_size[0];
