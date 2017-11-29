@@ -4620,6 +4620,10 @@ HSADispatch::setLaunchConfiguration(int dims, size_t *globalDims, size_t *localD
     // for each workgroup dimension, make sure it does not exceed the maximum allowable limit
     const uint16_t* workgroup_max_dim = device->getWorkgroupMaxDim();
     int workgroup_size[3];
+
+	std::cout << "workgroup_max_dim = " << workgroup_max_dim[0] << " " << workgroup_max_dim[1] << " " << workgroup_max_dim[2] << "\n";
+	std::cout << "globalDims = " << globalDims[0] << " " << globalDims[1] << " " << globalDims[2] << "\n";
+
     workgroup_size[0] = computeLaunchAttr(globalDims[0], localDims[0], workgroup_max_dim[0]);
     workgroup_size[1] = (dims > 1) ? computeLaunchAttr(globalDims[1], localDims[1], workgroup_max_dim[1]) : 1;
     workgroup_size[2] = (dims > 2) ? computeLaunchAttr(globalDims[2], localDims[2], workgroup_max_dim[2]) : 1;
@@ -4647,13 +4651,30 @@ HSADispatch::setLaunchConfiguration(int dims, size_t *globalDims, size_t *localD
     if (workitem_vgpr_count == 0)
       workitem_vgpr_count = 1;
     size_t max_num_work_items_per_cu = (max_num_vgprs_per_work_item / workitem_vgpr_count) * num_work_items_per_simd * num_simds_per_cu;
-    if (max_num_work_items_per_cu < workgroup_total_size) {
-        std::string msg;
-        msg = "The number of VGPRs (" + std::to_string(kernel->workitem_vgpr_count) + ") needed by this launch (" +
-              (kernel->getKernelName()) + ") exceeds HW limit due to big work group size (" +
-              std::to_string(workgroup_total_size) + ") workitems!";
-        throw Kalmar::runtime_exception(msg.c_str(), 0);
-    }
+
+	std::cout << "num VGPRs = " << workitem_vgpr_count << std::endl;
+	std::cout << "workgroup_total_size = " << workgroup_total_size << std::endl;
+
+	if (max_num_vgprs_per_work_item < workitem_vgpr_count)
+	{
+		msg = "The number of VGPRs (" + std::to_string(kernel->workitem_vgpr_count) + ") needed by this launch (" +
+			(kernel->getKernelName()) + ") exceeds HW (" +
+			max_num_vgprs_per_work_item + ")";
+		throw Kalmar::runtime_exception(msg.c_str(), 0);
+	}
+
+	while (max_num_work_items_per_cu < workgroup_total_size)
+	{
+		if (workgroup_size[dim_iterator] >= 2) {
+			workgroup_size[dim_iterator] >>= 1;
+		}
+		if (--dim_iterator < 0) {
+			dim_iterator = 2;
+		}
+		workgroup_total_size = workgroup_size[0] * workgroup_size[1] * workgroup_size[2];
+	}
+	std::cout << "fixed workgroup_total_size = " << workgroup_total_size << std::endl;
+
 
     aql.workgroup_size_x = workgroup_size[0];
     aql.workgroup_size_y = workgroup_size[1];
