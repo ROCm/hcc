@@ -4621,8 +4621,8 @@ HSADispatch::setLaunchConfiguration(int dims, size_t *globalDims, size_t *localD
     const uint16_t* workgroup_max_dim = device->getWorkgroupMaxDim();
     int workgroup_size[3];
 
-	size_t gdimt[3] = { 1,1,1 };
-	size_t wkmaxdim[3] = { -1,-1,-1 };
+	int64_t gdimt[3] = { 1,1,1 };
+	int64_t wkmaxdim[3] = { -1,-1,-1 };
 	for (int i = 0; i < dims; i++)
 	{
 		gdimt[i] = globalDims[i];
