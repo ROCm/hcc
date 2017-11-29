@@ -4658,7 +4658,7 @@ HSADispatch::setLaunchConfiguration(int dims, size_t *globalDims, size_t *localD
 	if (max_num_vgprs_per_work_item < workitem_vgpr_count)
 	{
 		std::string msg = "The number of VGPRs (" + std::to_string(kernel->workitem_vgpr_count) + ") needed by this launch (" +
-			std::to_string(kernel->getKernelName()) + ") exceeds HW (" +
+			kernel->getKernelName() + ") exceeds HW (" +
 			std::to_string(max_num_vgprs_per_work_item) + ")";
 		throw Kalmar::runtime_exception(msg.c_str(), 0);
 	}
