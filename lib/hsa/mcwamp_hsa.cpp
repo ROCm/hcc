@@ -4621,16 +4621,6 @@ HSADispatch::setLaunchConfiguration(int dims, size_t *globalDims, size_t *localD
     const uint16_t* workgroup_max_dim = device->getWorkgroupMaxDim();
     int workgroup_size[3];
 
-	int64_t gdimt[3] = { 1,1,1 };
-	int64_t wkmaxdim[3] = { -1,-1,-1 };
-	for (int i = 0; i < dims; i++)
-	{
-		gdimt[i] = globalDims[i];
-		wkmaxdim[i] = workgroup_max_dim[i];
-	}
-
-	std::cout << "workgroup_max_dim = " << workgroup_max_dim[0] << " " << workgroup_max_dim[1] << " " << workgroup_max_dim[2] << "\n";
-	std::cout << "globalDims = " << gdimt[0] << " " << gdimt[1] << " " << gdimt[2] << "\n";
 
     workgroup_size[0] = computeLaunchAttr(globalDims[0], localDims[0], workgroup_max_dim[0]);
     workgroup_size[1] = (dims > 1) ? computeLaunchAttr(globalDims[1], localDims[1], workgroup_max_dim[1]) : 1;
@@ -4660,8 +4650,6 @@ HSADispatch::setLaunchConfiguration(int dims, size_t *globalDims, size_t *localD
       workitem_vgpr_count = 1;
     size_t max_num_work_items_per_cu = (max_num_vgprs_per_work_item / workitem_vgpr_count) * num_work_items_per_simd * num_simds_per_cu;
 
-	std::cout << "num VGPRs = " << workitem_vgpr_count << std::endl;
-	std::cout << "workgroup_size = " << workgroup_size[0] << " " << workgroup_size[1] << " " << workgroup_size[2] << std::endl;
 
 	if (max_num_vgprs_per_work_item < workitem_vgpr_count)
 	{
@@ -4681,7 +4669,6 @@ HSADispatch::setLaunchConfiguration(int dims, size_t *globalDims, size_t *localD
 		}
 		workgroup_total_size = workgroup_size[0] * workgroup_size[1] * workgroup_size[2];
 	}
-	std::cout << "cfixed workgroup_size = " << workgroup_size[0] << " " << workgroup_size[1] <<" " << workgroup_size[2] << std::endl;
 
 
     aql.workgroup_size_x = workgroup_size[0];
