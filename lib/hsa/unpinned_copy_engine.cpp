@@ -218,7 +218,7 @@ void UnpinnedCopyEngine::CopyHostToDevice(UnpinnedCopyEngine::CopyMode copyMode,
 {
     bool isLocked = false;
     if((copyMode == ChooseBest) || (copyMode == UsePinInPlace)) {
-        isLocked = GetPointerInfo(src);
+        isLocked = IsLockedPointer(src);
     }
     if (copyMode == ChooseBest) {
         if (_isLargeBar && (sizeBytes < _hipH2DTransferThresholdDirectOrStaging)) {
@@ -352,7 +352,7 @@ void UnpinnedCopyEngine::CopyDeviceToHost(CopyMode copyMode ,void* dst, const vo
 {
     bool isLocked = false;
     if((copyMode == ChooseBest) || (copyMode == UsePinInPlace)) {
-        isLocked = GetPointerInfo(dst);
+        isLocked = IsLockedPointer(dst);
     }
 
     if (copyMode == ChooseBest) {
@@ -364,7 +364,7 @@ void UnpinnedCopyEngine::CopyDeviceToHost(CopyMode copyMode ,void* dst, const vo
     }
 
 
-	if (copyMode == UsePinInPlace && !isLocked) {
+	  if (copyMode == UsePinInPlace && !isLocked) {
         CopyDeviceToHostPinInPlace(dst, src, sizeBytes, waitFor);
     } else if (copyMode == UseStaging) { 
         CopyDeviceToHostStaging(dst, src, sizeBytes, waitFor);
@@ -524,7 +524,7 @@ void UnpinnedCopyEngine::CopyPeerToPeer(void* dst, hsa_agent_t dstAgent, const v
 }
 
 
-bool UnpinnedCopyEngine::GetPointerInfo(const void *ptr)
+bool UnpinnedCopyEngine::IsLockedPointer(const void *ptr)
 {
     hsa_amd_pointer_info_t info;
     bool isLocked = false;
