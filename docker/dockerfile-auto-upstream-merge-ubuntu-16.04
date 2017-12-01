@@ -49,3 +49,8 @@ RUN wget https://github.com/github/hub/releases/download/v2.3.0-pre10/hub-linux-
 RUN tar -xf hub-linux-386-2.3.0-pre10.tgz
 RUN hub-linux-386-2.3.0-pre10/install
 
+RUN useradd -ms /bin/bash jenkins && echo "jenkins:jenkins" | chpasswd && adduser jenkins sudo
+RUN echo "jenkins ALL=(root) NOPASSWD:ALL" > /etc/sudoers.d/jenkins &&     chmod 0440 /etc/sudoers.d/jenkins
+RUN su - jenkins
+RUN mkdir -p /home/jenkins && chown -R jenkins:jenkins /home/jenkins
+USER jenkins
