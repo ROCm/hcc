@@ -242,9 +242,10 @@ _thinlto_path() {
     exit 1
   fi
 
+  unset LinkKernels
   LinkKernels=()
-  NUM_SPLIT=10
-  NUM_KERNS_THRESHOLD=100
+  NUM_SPLIT=5
+  NUM_KERNS_THRESHOLD=1000
   # create module summaries for each kernel
   for KERNEL in ${LinkKernelArgs[@]} ; do
     NUM_KERNELS=`$SPLIT $KERNEL -o $KERNEL -split-hcc-kernels -split-hcc-threshold $NUM_KERNS_THRESHOLD -j $NUM_SPLIT`
@@ -289,6 +290,7 @@ _thinlto_path() {
   for pid in ${pids[*]}; do
     wait $pid || ret=$((ret+$?))
   done
+  unset pids
   if [ $ret != 0 ]; then
     exit $ret
   fi
@@ -324,6 +326,7 @@ _default_path() {
   for pid in ${pids[*]}; do
     wait $pid || ret=$((ret+$?))
   done
+  unset pids
   if [ $ret != 0 ]; then
     exit $ret
   fi
