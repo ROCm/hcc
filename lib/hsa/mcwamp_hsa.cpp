@@ -144,7 +144,7 @@ char * HCC_PROFILE_FILE=nullptr;
             sstream << "\t" << start << ";\t" << end << ";";\
     }\
     if (HCC_PROFILE_VERBOSE & (HCC_PROFILE_VERBOSE_OPSEQNUM)) {\
-            sstream << "\t#" << op->hsaQueue()->getHSADev()->get_seqnum() << "." <<  op->hsaQueue()->getSeqNum() << "." << op->getSeqNum() <<";";\
+            sstream << "\t" << *op << ";";\
     }\
    sstream <<  msg << "\n";\
    Kalmar::ctx.getHccProfileStream() << sstream.str();\
@@ -696,6 +696,8 @@ public:
     virtual bool barrierNextSyncNeedsSysRelease() const { return 0; };
     virtual bool barrierNextKernelNeedsSysAcquire() const { return 0; };
 
+    Kalmar::HSAQueue *hsaQueue() const;
+    bool isReady() override;
 protected:
     uint64_t     apiStartTick;
     HSAOpCoord   _opCoord;
@@ -703,6 +705,8 @@ protected:
 
     hsa_signal_t _signal;
     int          _signalIndex;
+
+    hsa_agent_t  _agent;
 };
 std::ostream& operator<<(std::ostream& os, const HSAOp & op);
 
@@ -737,7 +741,6 @@ private:
 
 
 public:
-    Kalmar::HSAQueue * hsaQueue() const;
     std::shared_future<void>* getFuture() override { return future; }
     const Kalmar::HSADevice* getCopyDevice() const { return copyDevice; } ;  // Which device did the copy.
 
@@ -753,7 +756,6 @@ public:
         }
     }
 
-    bool isReady() override ;
 
     std::string getCopyCommandString()
     {
@@ -884,10 +886,8 @@ public:
         }
     }
 
-    bool isReady() override;
 
 
-    Kalmar::HSAQueue * hsaQueue() const;
 
 
 
@@ -970,7 +970,6 @@ public:
 class HSADispatch : public HSAOp {
 private:
     Kalmar::HSADevice* device;
-    hsa_agent_t agent;
 
     const char *kernel_name;
     const HSAKernel* kernel;
@@ -990,7 +989,6 @@ private:
     std::shared_future<void>* future;
 
 public:
-    Kalmar::HSAQueue * hsaQueue() const;
     std::shared_future<void>* getFuture() override { return future; }
 
     void setKernelName(const char *x_kernel_name) { kernel_name = x_kernel_name;};
@@ -1009,7 +1007,6 @@ public:
         }
     }
 
-    bool isReady() override;
 
     ~HSADispatch() {
 
@@ -4202,7 +4199,6 @@ HSADispatch::HSADispatch(Kalmar::HSADevice* _device, Kalmar::KalmarQueue *queue,
                          const hsa_kernel_dispatch_packet_t *aql) :
     HSAOp(queue, Kalmar::hcCommandKernel),
     device(_device),
-    agent(_device->getAgent()),
     kernel_name(nullptr),
     kernel(_kernel),
     isDispatched(false),
@@ -4568,17 +4564,15 @@ HSADispatch::dispose() {
 
 inline uint64_t
 HSADispatch::getBeginTimestamp() override {
-    Kalmar::HSADevice* device = static_cast<Kalmar::HSADevice*>(hsaQueue()->getDev());
     hsa_amd_profiling_dispatch_time_t time;
-    hsa_amd_profiling_get_dispatch_time(device->getAgent(), _signal, &time);
+    hsa_amd_profiling_get_dispatch_time(_agent, _signal, &time);
     return time.start;
 }
 
 inline uint64_t
 HSADispatch::getEndTimestamp() override {
-    Kalmar::HSADevice* device = static_cast<Kalmar::HSADevice*>(hsaQueue()->getDev());
     hsa_amd_profiling_dispatch_time_t time;
-    hsa_amd_profiling_get_dispatch_time(device->getAgent(), _signal, &time);
+    hsa_amd_profiling_get_dispatch_time(_agent, _signal, &time);
     return time.end;
 }
 
@@ -4681,10 +4675,6 @@ HSADispatch::setLaunchConfiguration(int dims, size_t *globalDims, size_t *localD
 // ----------------------------------------------------------------------
 // member function implementation of HSABarrier
 // ----------------------------------------------------------------------
-
-Kalmar::HSAQueue *HSABarrier::hsaQueue() const { return static_cast<Kalmar::HSAQueue *> (this->getQueue()); };
-Kalmar::HSAQueue *HSACopy::hsaQueue() const { return static_cast<Kalmar::HSAQueue *> (this->getQueue()); };
-Kalmar::HSAQueue *HSADispatch::hsaQueue() const { return static_cast<Kalmar::HSAQueue *> (this->getQueue()); };
 
 // wait for the barrier to complete
 inline hsa_status_t
@@ -4841,35 +4831,6 @@ static std::string fenceToString(int fenceBits)
 }
 
 
-bool HSABarrier::isReady() override {
-    bool ready = (hsa_signal_load_scacquire(_signal) == 0);
-    if (ready) {
-        hsaQueue()->removeAsyncOp(this);
-    }
-
-    return ready;
-}
-
-bool HSACopy::isReady() override {
-    bool ready = (hsa_signal_load_scacquire(_signal) == 0);
-    if (ready) {
-        hsaQueue()->removeAsyncOp(this);
-    }
-
-    return ready;
-}
-
-bool HSADispatch::isReady() override {
-    bool ready = (hsa_signal_load_scacquire(_signal) == 0);
-    if (ready) {
-        hsaQueue()->removeAsyncOp(this);
-    }
-
-    return ready;
-}
-
-
-
 inline void
 HSABarrier::dispose() {
     if ((HCC_PROFILE & HCC_PROFILE_TRACE) && (HCC_PROFILE_VERBOSE & HCC_PROFILE_VERBOSE_BARRIER)) {
@@ -4904,17 +4865,15 @@ HSABarrier::dispose() {
 
 inline uint64_t
 HSABarrier::getBeginTimestamp() override {
-    Kalmar::HSADevice* device = static_cast<Kalmar::HSADevice*>(hsaQueue()->getDev());
     hsa_amd_profiling_dispatch_time_t time;
-    hsa_amd_profiling_get_dispatch_time(device->getAgent(), _signal, &time);
+    hsa_amd_profiling_get_dispatch_time(_agent, _signal, &time);
     return time.start;
 }
 
 inline uint64_t
 HSABarrier::getEndTimestamp() override {
-    Kalmar::HSADevice* device = static_cast<Kalmar::HSADevice*>(hsaQueue()->getDev());
     hsa_amd_profiling_dispatch_time_t time;
-    hsa_amd_profiling_get_dispatch_time(device->getAgent(), _signal, &time);
+    hsa_amd_profiling_get_dispatch_time(_agent, _signal, &time);
     return time.end;
 }
 
@@ -4932,11 +4891,27 @@ HSAOp::HSAOp(Kalmar::KalmarQueue *queue, hc::hcCommandKind commandKind) :
     _opCoord(static_cast<Kalmar::HSAQueue*> (queue)),
     _asyncOpsIndex(-1),
 
-    _signalIndex(-1)
+    _signalIndex(-1),
+    _agent(static_cast<Kalmar::HSADevice*>(hsaQueue()->getDev())->getAgent())
 {
     _signal.handle=0;
     apiStartTick = Kalmar::ctx.getSystemTicks();
 };
+
+Kalmar::HSAQueue *HSAOp::hsaQueue() const 
+{ 
+    return static_cast<Kalmar::HSAQueue *> (this->getQueue()); 
+};
+
+bool HSAOp::isReady() override {
+    bool ready = (hsa_signal_load_scacquire(_signal) == 0);
+    if (ready && hsaQueue()) {
+        hsaQueue()->removeAsyncOp(this);
+    }
+
+    return ready;
+}
+
 
 // ----------------------------------------------------------------------
 // member function implementation of HSACopy
@@ -5274,7 +5249,6 @@ HSACopy::dispose() {
 
 inline uint64_t
 HSACopy::getBeginTimestamp() override {
-    Kalmar::HSADevice* device = static_cast<Kalmar::HSADevice*>(hsaQueue()->getDev());
     hsa_amd_profiling_async_copy_time_t time;
     hsa_amd_profiling_get_async_copy_time(_signal, &time);
     return time.start;
@@ -5282,7 +5256,6 @@ HSACopy::getBeginTimestamp() override {
 
 inline uint64_t
 HSACopy::getEndTimestamp() override {
-    Kalmar::HSADevice* device = static_cast<Kalmar::HSADevice*>(hsaQueue()->getDev());
     hsa_amd_profiling_async_copy_time_t time;
     hsa_amd_profiling_get_async_copy_time(_signal, &time);
     return time.end;
