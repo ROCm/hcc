@@ -749,8 +749,8 @@ public:
     static std::vector<accelerator> get_all() {
         auto Devices = Kalmar::getContext()->getDevices();
         std::vector<accelerator> ret(Devices.size());
-        for (int i = 0; i < ret.size(); ++i)
-            ret[i] = Devices[i];
+        for(auto&& i : Devices)
+          ret.push_back(i);
         return ret;
     }
 
@@ -3096,7 +3096,7 @@ inline float __shfl_up(float var, const unsigned int delta, const int width=__HS
 inline int __shfl_down(int var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
   int self = __lane_id();
   int index = self + delta;
-  index = ((self&(width-1))+delta) >= width?self:index;
+  index = (int)((self&(width-1))+delta) >= width?self:index;
   return __amdgcn_ds_bpermute(index<<2, var);
 }
 
