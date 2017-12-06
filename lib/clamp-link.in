@@ -178,9 +178,13 @@ _thinlto_target_helper() {
   # perform parallel opt and llc in-program
   $LTO -thinlto -thinlto-action=optllc "${LINK_IMPORTED_KERNEL_ARGS[@]}" -select-accelerator-code -dce -globaldce -always-inline -mtriple amdgcn--amdhsa-amdgiz -mcpu=$AMDGPU_TARGET -infer-address-spaces -amdgpu-internalize-symbols -lto-freestanding -enable-si-insert-waitcnts=0 $KMOPTOPT -codegen-opt-level=$KMOPTLLC -thinlto-save-temps="$TEMP_DIR/"
 
+  if [ $KMDUMPLLVM == "1" ]; then
+    for f in $TEMP_DIR/*.1.opt.bc; do bn="${f##*/}"; cp "$f" "${KMDUMPDIR}/dump-$AMDGPU_TARGET.${bn%%.*}.opt.bc"; done
+  fi
+
   if [ $KMDUMPISA == "1" ]; then
     $LTO -thinlto -thinlto-action=optllc "${LINK_IMPORTED_KERNEL_ARGS[@]}" -select-accelerator-code -dce -globaldce -always-inline -mtriple amdgcn--amdhsa-amdgiz -mcpu=$AMDGPU_TARGET -infer-address-spaces -amdgpu-internalize-symbols -lto-freestanding -dump-isa -enable-si-insert-waitcnts=0 $KMOPTOPT -codegen-opt-level=$KMOPTLLC
-    for f in $TEMP_DIR/*.thinlto.isa; do bn="${f##*/}"; cp "$f" "${KMDUMPDIR}/dump-${bn%%.*}.isa"; done
+    for f in $TEMP_DIR/*.thinlto.isa; do bn="${f##*/}"; cp "$f" "${KMDUMPDIR}/dump-$AMDGPU_TARGET.${bn%%.*}.isa"; done
   fi
 
   declare -a ISABIN_FILES
@@ -248,7 +252,8 @@ _thinlto_path() {
   NUM_KERNS_THRESHOLD=1000
   # create module summaries for each kernel
   for KERNEL in ${LinkKernelArgs[@]} ; do
-    NUM_KERNELS=`$SPLIT $KERNEL -o $KERNEL -split-hcc-kernels -split-hcc-threshold $NUM_KERNS_THRESHOLD -j $NUM_SPLIT`
+    echo "Splitting Kernel: ${KERNEL}"
+    NUM_KERNELS=`$SPLIT "${KERNEL}" -o "${KERNEL}" -split-hcc-kernels -split-hcc-threshold $NUM_KERNS_THRESHOLD -j $NUM_SPLIT`
     echo "Num Kerns: $NUM_KERNELS Num Kerns Threshold: $NUM_KERNS_THRESHOLD"
     if [ $NUM_KERNELS -le $NUM_KERNS_THRESHOLD ]; then
       $OPT -thinlto-bc -disable-opt -module-summary $KERNEL -o $KERNEL

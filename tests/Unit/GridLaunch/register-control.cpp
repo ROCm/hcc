@@ -1,4 +1,5 @@
 // RUN: %hc -lhc_am %s -o %t.out -Xlinker -dump-llvm -Xlinker -dump-dir=%T %target_all_gpus
+// RUN: %llvm-link -suppress-warnings -o %T/dump-gfx803.opt.bc %T/dump-gfx803.1.opt.bc
 // RUN: %llvm-dis %T/dump-gfx803.opt.bc -f -o - | %FileCheck %s
 // RUN: %t.out
 
