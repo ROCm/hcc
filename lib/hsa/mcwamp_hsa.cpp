@@ -1038,8 +1038,8 @@ public:
 
 
     void overrideAcquireFenceIfNeeded();
-    hsa_status_t setLaunchConfiguration(int dims, size_t *globalDims, size_t *localDims,
-                                     int dynamicGroupSize);
+    hsa_status_t setLaunchConfiguration(const int dims, size_t *globalDims, size_t *localDims,
+                                        const int dynamicGroupSize);
 
     hsa_status_t dispatchKernelWaitComplete();
 
@@ -1094,16 +1094,6 @@ private:
 #endif
         arg_count++;
         return HSA_STATUS_SUCCESS;
-    }
-
-    int computeLaunchAttr(int globalSize, int localSize, int recommendedSize) {
-        // localSize of 0 means pick best
-        if (localSize == 0) localSize = recommendedSize;
-        localSize = std::min(localSize, recommendedSize);
-        localSize = std::min(localSize, globalSize); // workgroup size shall not exceed grid size
-
-        return localSize;
-
     }
 
 }; // end of HSADispatch
@@ -4587,9 +4577,123 @@ void HSADispatch::overrideAcquireFenceIfNeeded()
 }
 
 inline hsa_status_t
-HSADispatch::setLaunchConfiguration(int dims, size_t *globalDims, size_t *localDims,
-                                 int dynamicGroupSize) {
+HSADispatch::setLaunchConfiguration(const int dims, size_t *globalDims, size_t *localDims,
+                                    const int dynamicGroupSize) {
     assert((0 < dims) && (dims <= 3));
+
+#if KALMAR_DEBUG && HCC_DEBUG_KARG
+    std::cerr << "static group segment size: " << kernel->static_group_segment_size << "\n";
+    std::cerr << "dynamic group segment size: " << dynamicGroupSize << "\n";
+#endif
+    // Set group dims
+    // for each workgroup dimension, make sure it does not exceed the maximum allowable limit
+    const uint16_t* workgroup_max_dim = device->getWorkgroupMaxDim();
+
+    int workgroup_size[3] = { 1, 1, 1};
+
+    // Check whether the user specified a workgroup size
+    if (localDims[0] != 0) {
+      for (int i = 0; i < dims; i++) {
+        // If user specify a group size that exceeds the device limit
+        // throw an error
+        if (localDims[i] > workgroup_max_dim[i]) {
+          std::stringstream msg;
+          msg << "The extent of the tile (" << localDims[i] 
+              << ") exceeds the device limit (" << workgroup_max_dim[i] << ").";
+          throw Kalmar::runtime_exception(msg.str().c_str(), -1);
+        }
+        workgroup_size[i] = localDims[i];
+      }
+    }
+    else {
+
+      constexpr unsigned int recommended_flat_workgroup_size = 64;
+
+      // user didn't specify a workgroup size
+      if (dims == 1) {
+        workgroup_size[0] = recommended_flat_workgroup_size;
+      }
+      else if (dims == 2) {
+
+        // compute the group size for the 1st dimension
+        for (unsigned int i = 1; ; i<<=1) {
+          if (i == recommended_flat_workgroup_size
+              || i >= globalDims[0]) {
+            workgroup_size[0] = i;
+            break;
+          }
+        }
+
+        // compute the group size for the 2nd dimension
+        for (unsigned int j = 1; ; j<<=1) {
+          unsigned int flat_group_size = workgroup_size[0] * j;
+          if (flat_group_size == recommended_flat_workgroup_size
+              || j >= globalDims[1]) {
+            workgroup_size[1] = j;
+            break;
+          }
+        }
+      }
+      else if (dims == 3) {
+
+        // compute the group size for the 1st dimension
+        for (unsigned int i = 1; ; i<<=1) {
+          if (i == recommended_flat_workgroup_size
+              || i >= globalDims[0]) {
+            workgroup_size[0] = i;
+            break;
+          }
+        }
+
+        // compute the group size for the 2nd dimension
+        for (unsigned int j = 1; ; j<<=1) {
+          unsigned int flat_group_size = workgroup_size[0] * j;
+          if (flat_group_size == recommended_flat_workgroup_size
+              || j >= globalDims[1]) {
+            workgroup_size[1] = j;
+            break;
+          }
+        }
+
+        // compute the group size for the 3rd dimension
+        for (unsigned int k = 1; ; k<<=1) {
+          unsigned int flat_group_size = workgroup_size[0] * workgroup_size[1] * k;
+          if (flat_group_size == recommended_flat_workgroup_size
+              || k >= globalDims[2]) {
+            workgroup_size[2] = k;
+            break;
+          }
+        }
+      }
+    }
+
+    auto kernel = this->kernel;
+
+    auto calculate_kernel_max_flat_workgroup_size = [&] {
+      constexpr unsigned int max_num_vgprs_per_work_item = 256;
+      constexpr unsigned int num_work_items_per_simd = 64;
+      constexpr unsigned int num_simds_per_cu = 4;
+      const unsigned int workitem_vgpr_count = std::max((unsigned int)kernel->workitem_vgpr_count, 1u);
+      unsigned int max_flat_group_size = (max_num_vgprs_per_work_item / workitem_vgpr_count) 
+                                           * num_work_items_per_simd * num_simds_per_cu;
+      // round it to the closest wave size
+      max_flat_group_size -= max_flat_group_size%num_work_items_per_simd;
+      
+      return max_flat_group_size;
+    };
+
+    auto validate_kernel_flat_group_size = [&] {
+      const unsigned int actual_flat_group_size = workgroup_size[0] * workgroup_size[1] * workgroup_size[2];
+      const unsigned int max_num_work_items_per_cu = calculate_kernel_max_flat_workgroup_size();
+      if (actual_flat_group_size > max_num_work_items_per_cu) {
+        std::stringstream msg;
+        msg << "The number of work items (" << actual_flat_group_size 
+            << ") per work group exceeds the limit (" << max_num_work_items_per_cu << ") of kernel "
+            << kernel->kernelName << " .";
+        throw Kalmar::runtime_exception(msg.str().c_str(), -1);
+      }
+    };
+    validate_kernel_flat_group_size();
 
     memset(&aql, 0, sizeof(aql));
 
@@ -4600,56 +4704,10 @@ HSADispatch::setLaunchConfiguration(int dims, size_t *globalDims, size_t *localD
     aql.group_segment_size   = kernel->static_group_segment_size + dynamicGroupSize;;
     aql.private_segment_size = kernel->private_segment_size;
 
-
-#if KALMAR_DEBUG && HCC_DEBUG_KARG
-    std::cerr << "static group segment size: " << kernel->static_group_segment_size << "\n";
-    std::cerr << "dynamic group segment size: " << dynamicGroupSize << "\n";
-#endif
-
     // Set global dims:
     aql.grid_size_x = globalDims[0];
     aql.grid_size_y = (dims > 1 ) ? globalDims[1] : 1;
     aql.grid_size_z = (dims > 2 ) ? globalDims[2] : 1;
-
-
-    // Set group dims
-    // for each workgroup dimension, make sure it does not exceed the maximum allowable limit
-    const uint16_t* workgroup_max_dim = device->getWorkgroupMaxDim();
-    int workgroup_size[3];
-    workgroup_size[0] = computeLaunchAttr(globalDims[0], localDims[0], workgroup_max_dim[0]);
-    workgroup_size[1] = (dims > 1) ? computeLaunchAttr(globalDims[1], localDims[1], workgroup_max_dim[1]) : 1;
-    workgroup_size[2] = (dims > 2) ? computeLaunchAttr(globalDims[2], localDims[2], workgroup_max_dim[2]) : 1;
-
-    // reduce each dimension in case the overall workgroup limit is exceeded
-    uint32_t workgroup_max_size = device->getWorkgroupMaxSize();
-    int dim_iterator = 2;
-    size_t workgroup_total_size = workgroup_size[0] * workgroup_size[1] * workgroup_size[2];
-    while(workgroup_total_size > workgroup_max_size) {
-      // repeatedly cut each dimension into half until we are within the limit
-      if (workgroup_size[dim_iterator] >= 2) {
-        workgroup_size[dim_iterator] >>= 1;
-      }
-      if (--dim_iterator < 0) {
-        dim_iterator = 2;
-      }
-      workgroup_total_size = workgroup_size[0] * workgroup_size[1] * workgroup_size[2];
-    }
-
-    // Every work-item has access to some number of VGPRs, up to a maximum of 256.
-    static const size_t max_num_vgprs_per_work_item = 256;
-    static const size_t num_work_items_per_simd = 64;
-    static const size_t num_simds_per_cu = 4;
-    unsigned workitem_vgpr_count = kernel->workitem_vgpr_count;
-    if (workitem_vgpr_count == 0)
-      workitem_vgpr_count = 1;
-    size_t max_num_work_items_per_cu = (max_num_vgprs_per_work_item / workitem_vgpr_count) * num_work_items_per_simd * num_simds_per_cu;
-    if (max_num_work_items_per_cu < workgroup_total_size) {
-        std::string msg;
-        msg = "The number of VGPRs (" + std::to_string(kernel->workitem_vgpr_count) + ") needed by this launch (" +
-              (kernel->getKernelName()) + ") exceeds HW limit due to big work group size (" +
-              std::to_string(workgroup_total_size) + ") workitems!";
-        throw Kalmar::runtime_exception(msg.c_str(), 0);
-    }
 
     aql.workgroup_size_x = workgroup_size[0];
     aql.workgroup_size_y = workgroup_size[1];
@@ -4666,7 +4724,6 @@ HSADispatch::setLaunchConfiguration(int dims, size_t *globalDims, size_t *localD
         aql.header = ((HSA_FENCE_SCOPE_SYSTEM) << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
                      ((HSA_FENCE_SCOPE_SYSTEM) << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
     }
-
 
     return HSA_STATUS_SUCCESS;
 }
