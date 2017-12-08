@@ -748,7 +748,7 @@ public:
      */
     static std::vector<accelerator> get_all() {
         auto Devices = Kalmar::getContext()->getDevices();
-        std::vector<accelerator> ret(Devices.size());
+        std::vector<accelerator> ret;
         for(auto&& i : Devices)
           ret.push_back(i);
         return ret;
