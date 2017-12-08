@@ -43,7 +43,7 @@ macro(amp_target name )
   # Enable debug line info only if it's a release build and HCC_RUNTIME_DEBUG is OFF
   # Otherwise, -gline-tables-only would override other existing debug flags
   if ((NOT HCC_RUNTIME_DEBUG) AND ("${CMAKE_BUILD_TYPE}" STREQUAL "Release"))
-	  target_compile_options(${name} PUBLIC -gline-tables-only)
+	  target_compile_options(${name} PRIVATE -gline-tables-only)
   endif ((NOT HCC_RUNTIME_DEBUG) AND ("${CMAKE_BUILD_TYPE}" STREQUAL "Release"))
 endmacro(amp_target name )
 
