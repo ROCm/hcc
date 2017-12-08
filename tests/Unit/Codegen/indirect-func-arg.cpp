@@ -1,8 +1,8 @@
 // Make a unique directory to save the dumped IR.
 // RUN: mkdir -p %T/indirect-func-arg
 // RUN: %hc %s -o %t.out -Xlinker -dump-llvm -Xlinker -dump-dir=%T/indirect-func-arg %target_all_gpus
-// RUN: %llvm-link -suppress-warnings -o %T/indirect-func-arg/dump-gfx803.opt.bc %T/indirect-func-arg/dump-gfx803.*.opt.bc
-// RUN: %llvm-dis %T/indirect-func-arg/dump-gfx803.opt.bc -f -o - | %FileCheck %s
+// RUN: %llvm-link -suppress-warnings -o %T/indirect-func-arg/dump-gfx803.all.opt.bc %T/indirect-func-arg/dump-gfx803*.opt.bc
+// RUN: %llvm-dis %T/indirect-func-arg/dump-gfx803.all.opt.bc -f -o - | %FileCheck %s
 // RUN: %t.out
 
 #include <hc.hpp>
