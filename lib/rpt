@@ -173,12 +173,19 @@ class ProfileLogRecord:
             self.name = fields[1]
             self.time = (float)(fields[2].split(" ")[0])
 
-            self.enqTime   =  (int)(fields[3])
-            self.startTime =  (int)(fields[4])
-            self.stopTime  =  (int)(fields[5])
-            fi = 6
-            if (self.enqTime > self.startTime):
-                raise ValueError
+            try:
+                self.enqTime   =  (int)(fields[3])
+                self.startTime =  (int)(fields[4])
+                self.stopTime  =  (int)(fields[5])
+                fi = 6
+                if (self.enqTime > self.startTime):
+                    raise ValueError
+            except:
+                # older traces did not have enq time, so set to start time here.
+                self.startTime =  (int)(fields[3])
+                self.stopTime  =  (int)(fields[4])
+                self.enqTime   = self.startTime-10
+                fi = 5
 
             try:
                 (self.device, self.queue, self.cmdNum) = [int(f) for f in fields[fi].lstrip("#").split(".")]
