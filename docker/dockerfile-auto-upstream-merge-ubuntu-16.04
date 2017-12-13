@@ -2,11 +2,6 @@
 FROM ubuntu:16.04
 MAINTAINER David Salinas <david.salinas@amd.com>
 
-# Parameters related to building hcc-lc
-ARG rocm_install_path=/opt/rocm
-ARG rocm_build_path=/usr/local/src/hcc-lc
-ARG build_type=Release
-
 # Download and install an up to date version of cmake, because compiling
 # LLVM has implemented a requirement of cmake v3.4.4 or greater
 ARG cmake_prefix=/opt/cmake
@@ -21,6 +16,12 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
     apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     sudo \
     rocm-utils \
+    hcc hip_base hip_hcc \
+    gfortran gfortran-5 libgfortran-5-dev libgfortran3 \
+    libboost-program-options-dev \
+    libyaml-0-2 \
+    python2.7 python-yaml \
+    cmake-qt-gui cmake-curses-gui \
     file \
     build-essential \
     git \
@@ -49,3 +50,8 @@ RUN wget https://github.com/github/hub/releases/download/v2.3.0-pre10/hub-linux-
 RUN tar -xf hub-linux-386-2.3.0-pre10.tgz
 RUN hub-linux-386-2.3.0-pre10/install
 
+RUN useradd -ms /bin/bash jenkins && echo "jenkins:jenkins" | chpasswd && adduser jenkins sudo
+RUN echo "jenkins ALL=(root) NOPASSWD:ALL" > /etc/sudoers.d/jenkins &&     chmod 0440 /etc/sudoers.d/jenkins
+RUN su - jenkins
+RUN mkdir -p /home/jenkins && chown -R jenkins:jenkins /home/jenkins
+USER jenkins

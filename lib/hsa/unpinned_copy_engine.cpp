@@ -155,6 +155,7 @@ UnpinnedCopyEngine::~UnpinnedCopyEngine()
 void UnpinnedCopyEngine::CopyHostToDevicePinInPlace(void* dst, const void* src, size_t sizeBytes, hsa_signal_t *waitFor)
 {
     std::lock_guard<std::mutex> l (_copyLock);
+    DBOUTL (DB_COPY2, __func__ << DBPARM(dst) << "," << DBPARM(src) << "," << DBPARM(sizeBytes))
 
     const char *srcp = static_cast<const char*> (src);
     char *dstp = static_cast<char*> (dst);
@@ -202,6 +203,7 @@ void UnpinnedCopyEngine::CopyHostToDevicePinInPlace(void* dst, const void* src, 
 // Copy using simple memcpy.  Only works on large-bar systems.
 void UnpinnedCopyEngine::CopyHostToDeviceMemcpy(void* dst, const void* src, size_t sizeBytes, hsa_signal_t *waitFor)
 {
+    DBOUTL (DB_COPY2, __func__ << DBPARM(dst) << "," << DBPARM(src) << "," << DBPARM(sizeBytes))
     if (!_isLargeBar) {
         THROW_ERROR (hipErrorInvalidValue, HSA_STATUS_ERROR_INVALID_ARGUMENT);
     }
@@ -214,20 +216,9 @@ void UnpinnedCopyEngine::CopyHostToDeviceMemcpy(void* dst, const void* src, size
 
 void UnpinnedCopyEngine::CopyHostToDevice(UnpinnedCopyEngine::CopyMode copyMode, void* dst, const void* src, size_t sizeBytes, hsa_signal_t *waitFor)
 {
-    hsa_amd_pointer_info_t info;
-    hsa_status_t hsa_status;
     bool isLocked = false;
-    const char *srcp = static_cast<const char*> (src);
-    info.size = sizeof(info);
     if((copyMode == ChooseBest) || (copyMode == UsePinInPlace)) {
-        hsa_status = hsa_amd_pointer_info(const_cast<char*> (srcp), &info, nullptr, nullptr, nullptr);
-        if(hsa_status != HSA_STATUS_SUCCESS) {
-            THROW_ERROR(hipErrorInvalidValue, HSA_STATUS_ERROR_INVALID_ARGUMENT);
-        }
-        DBOUTL (DB_COPY2, "Unpinned H2D: pointer type =" << info.type);
-        if((info.type == HSA_EXT_POINTER_TYPE_HSA) || (info.type == HSA_EXT_POINTER_TYPE_LOCKED)) {
-            isLocked = true;
-        }
+        isLocked = IsLockedPointer(src);
     }
     if (copyMode == ChooseBest) {
         if (_isLargeBar && (sizeBytes < _hipH2DTransferThresholdDirectOrStaging)) {
@@ -264,6 +255,7 @@ void UnpinnedCopyEngine::CopyHostToDeviceStaging(void* dst, const void* src, siz
 {
 	{
         std::lock_guard<std::mutex> l (_copyLock);
+        DBOUTL (DB_COPY2, __func__ << DBPARM(dst) << "," << DBPARM(src) << "," << DBPARM(sizeBytes))
 
         const char *srcp = static_cast<const char*> (src);
         char *dstp = static_cast<char*> (dst);
@@ -358,8 +350,13 @@ void UnpinnedCopyEngine::CopyDeviceToHostPinInPlace(void* dst, const void* src, 
 
 void UnpinnedCopyEngine::CopyDeviceToHost(CopyMode copyMode ,void* dst, const void* src, size_t sizeBytes, hsa_signal_t *waitFor)
 {
+    bool isLocked = false;
+    if((copyMode == ChooseBest) || (copyMode == UsePinInPlace)) {
+        isLocked = IsLockedPointer(dst);
+    }
+
     if (copyMode == ChooseBest) {
-        if (sizeBytes > _hipD2HTransferThreshold) {
+        if (sizeBytes > _hipD2HTransferThreshold && !isLocked) {
             copyMode = UsePinInPlace;
         } else {
             copyMode = UseStaging;
@@ -367,7 +364,7 @@ void UnpinnedCopyEngine::CopyDeviceToHost(CopyMode copyMode ,void* dst, const vo
     }
 
 
-	if (copyMode == UsePinInPlace) {
+	  if (copyMode == UsePinInPlace && !isLocked) {
         CopyDeviceToHostPinInPlace(dst, src, sizeBytes, waitFor);
     } else if (copyMode == UseStaging) { 
         CopyDeviceToHostStaging(dst, src, sizeBytes, waitFor);
@@ -524,4 +521,24 @@ void UnpinnedCopyEngine::CopyPeerToPeer(void* dst, hsa_agent_t dstAgent, const v
     for (int i=0; i<_numBuffers; i++) {
         hsa_signal_wait_acquire(_completionSignal2[i], HSA_SIGNAL_CONDITION_LT, 1, UINT64_MAX, HSA_WAIT_STATE_ACTIVE);
     }
+}
+
+
+bool UnpinnedCopyEngine::IsLockedPointer(const void *ptr)
+{
+    hsa_amd_pointer_info_t info;
+    bool isLocked = false;
+
+    info.size = sizeof(info);
+    hsa_status_t hsa_status = hsa_amd_pointer_info(const_cast<void*>(ptr), &info, nullptr, nullptr, nullptr);
+    if(hsa_status != HSA_STATUS_SUCCESS) {
+        THROW_ERROR(hipErrorInvalidValue, HSA_STATUS_ERROR_INVALID_ARGUMENT);
+    }
+
+    if((info.type == HSA_EXT_POINTER_TYPE_HSA) || (info.type == HSA_EXT_POINTER_TYPE_LOCKED)) {
+        isLocked = true;
+    }
+    DBOUTL (DB_COPY2, "Unpinned Copy: pointer type =" << info.type << " isLocked=" << isLocked);
+
+    return isLocked;
 }
