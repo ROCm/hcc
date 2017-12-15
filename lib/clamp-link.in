@@ -46,6 +46,7 @@ LINK=$BINDIR/llvm-link
 LTO=$BINDIR/llvm-lto
 SPLIT=$BINDIR/llvm-split
 OPT=$BINDIR/opt
+LOAD_PASS_LIB=$BINDIR/../lib
 CLAMP_DEVICE=$BINDIR/clamp-device
 LLD=$BINDIR/ld.lld
 CLAMP_EMBED=$BINDIR/clamp-embed
@@ -176,14 +177,14 @@ _thinlto_target_helper() {
   fi
 
   # perform parallel opt and llc in-program
-  $LTO -thinlto -thinlto-action=optllc "${LINK_IMPORTED_KERNEL_ARGS[@]}" -select-accelerator-code -dce -globaldce -always-inline -mtriple amdgcn--amdhsa-amdgiz -mcpu=$AMDGPU_TARGET -infer-address-spaces -amdgpu-internalize-symbols -lto-freestanding -enable-si-insert-waitcnts=0 $KMOPTOPT -codegen-opt-level=$KMOPTLLC -thinlto-save-temps="$TEMP_DIR/"
+  $LTO -thinlto -thinlto-action=optllc "${LINK_IMPORTED_KERNEL_ARGS[@]}" -load $LOAD_PASS_LIB/LLVMSelectAcceleratorCode@CMAKE_SHARED_LIBRARY_SUFFIX@ -select-accelerator-code -dce -globaldce -always-inline -mtriple amdgcn--amdhsa-amdgiz -mcpu=$AMDGPU_TARGET -infer-address-spaces -amdgpu-internalize-symbols -lto-freestanding -enable-si-insert-waitcnts=0 $KMOPTOPT -codegen-opt-level=$KMOPTLLC -thinlto-save-temps="$TEMP_DIR/"
 
   if [ $KMDUMPLLVM == "1" ]; then
     for f in $TEMP_DIR/*.1.opt.bc; do bn="${f##*/}"; cp "$f" "${KMDUMPDIR}/dump-$AMDGPU_TARGET.${bn%%.*}.opt.bc"; done
   fi
 
   if [ $KMDUMPISA == "1" ]; then
-    $LTO -thinlto -thinlto-action=optllc "${LINK_IMPORTED_KERNEL_ARGS[@]}" -select-accelerator-code -dce -globaldce -always-inline -mtriple amdgcn--amdhsa-amdgiz -mcpu=$AMDGPU_TARGET -infer-address-spaces -amdgpu-internalize-symbols -lto-freestanding -dump-isa -enable-si-insert-waitcnts=0 $KMOPTOPT -codegen-opt-level=$KMOPTLLC
+    $LTO -thinlto -thinlto-action=optllc "${LINK_IMPORTED_KERNEL_ARGS[@]}" -load $LOAD_PASS_LIB/LLVMSelectAcceleratorCode@CMAKE_SHARED_LIBRARY_SUFFIX@ -select-accelerator-code -dce -globaldce -always-inline -mtriple amdgcn--amdhsa-amdgiz -mcpu=$AMDGPU_TARGET -infer-address-spaces -amdgpu-internalize-symbols -lto-freestanding -dump-isa -enable-si-insert-waitcnts=0 $KMOPTOPT -codegen-opt-level=$KMOPTLLC
     for f in $TEMP_DIR/*.thinlto.isa; do bn="${f##*/}"; cp "$f" "${KMDUMPDIR}/dump-$AMDGPU_TARGET.${bn%%.*}.isa"; done
   fi
 
