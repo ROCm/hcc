@@ -8,6 +8,7 @@ ARG cmake_prefix=/opt/cmake
 ARG cmake_ver_major=3.7
 ARG cmake_ver_minor=3.7.2
 ARG REPO_RADEON=repo.radeon.com
+ARG ROCM_PATH=/opt/rocm
 
 # Install Packages
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends curl && \
@@ -16,18 +17,32 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
     apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     sudo \
     rocm-utils \
+    rocm-opencl rocm-opencl-dev \
     hcc hip_base hip_hcc \
     gfortran gfortran-5 libgfortran-5-dev libgfortran3 \
     libboost-program-options-dev \
+    libboost-dev \
+    libboost-system-dev \
+    libboost-filesystem-dev \
+    libssl-dev \
     libyaml-0-2 \
     python2.7 python-yaml \
     cmake-qt-gui cmake-curses-gui \
     file \
     build-essential \
     git \
+    zip unzip \
     software-properties-common \
     wget \
     python \
+    python-numpy \
+    python-dev \
+    python-wheel \
+    python-mock \
+    python-future \
+    python-pip \
+    python-yaml \
+    python-setuptools \
     pkg-config \
     gcc-multilib \
     g++-multilib \
@@ -43,6 +58,13 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
     hsa-rocr-dev && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
+
+ENV HCC_HOME=$ROCM_PATH/hcc
+ENV HIP_PATH=$ROCM_PATH/hip
+ENV OPENCL_ROOT=$ROCM_PATH/opencl
+ENV PATH="$HCC_HOME/bin:$HIP_PATH/bin:${PATH}"
+ENV PATH="$ROCM_PATH/bin:${PATH}"
+ENV PATH="$OPENCL_ROOT/bin:${PATH}"
 
 RUN chmod 777 $(find /opt/rocm -type d)
 
