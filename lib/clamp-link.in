@@ -132,10 +132,13 @@ fi
 #very verbose
 #VERBOSE=2
 
+# This ThinLTO helper function performs the ThinLTO Link Time for the specified AMDGPU target.
+# Using a helper function allows us to launch multiple helper functions in parallel for different gfx targets.
 _thinlto_target_helper() {
 
   local AMDGPU_TARGET=$1
 
+  # prepare the rocdl libraries to be linked
   HCC_BC_LIBS="$ROCM_LIB/hc.amdgcn.bc $ROCM_LIB/opencl.amdgcn.bc $ROCM_LIB/ocml.amdgcn.bc $ROCM_LIB/ockl.amdgcn.bc $ROCM_LIB/irif.amdgcn.bc $ROCM_LIB/oclc_finite_only_off.amdgcn.bc $ROCM_LIB/oclc_daz_opt_off.amdgcn.bc $ROCM_LIB/oclc_correctly_rounded_sqrt_on.amdgcn.bc $ROCM_LIB/oclc_unsafe_math_off.amdgcn.bc"
   HCC_EXTRA_ARCH_FILE=""
   # select appropriate ROCm-Device-Libs per AMDGPU_TARGET
@@ -163,7 +166,7 @@ _thinlto_target_helper() {
   fi
   HCC_BC_LIBS="$HCC_BC_LIBS $OCLC_ISA_VERSION_LIB $HCC_EXTRA_LIBRARIES $HCC_EXTRA_ARCH_FILE"
 
-  # prepare all kernels for opt and llc passes by linking with rocdl lib
+  # prepare all kernels for opt and llc passes by linking with rocdl library
   declare -a LINK_IMPORTED_KERNEL_ARGS
   for KERNEL in ${LinkKernels[@]}
   do
@@ -176,13 +179,16 @@ _thinlto_target_helper() {
     echo ""
   fi
 
-  # perform parallel opt and llc in-program
+  # perform parallel opt and llc in-program llvm-lto and
+  # specify the opt and codegen passes to be added
   $LTO -thinlto -thinlto-action=optllc "${LINK_IMPORTED_KERNEL_ARGS[@]}" -load $LOAD_PASS_LIB/LLVMSelectAcceleratorCode@CMAKE_SHARED_LIBRARY_SUFFIX@ -select-accelerator-code -dce -globaldce -always-inline -mtriple amdgcn--amdhsa-amdgiz -mcpu=$AMDGPU_TARGET -infer-address-spaces -amdgpu-internalize-symbols -lto-freestanding -enable-si-insert-waitcnts=0 $KMOPTOPT -codegen-opt-level=$KMOPTLLC -thinlto-save-temps="$TEMP_DIR/"
 
+  # since thinlto has multiple kernel files, we will dump all the optimized kernel files
   if [ $KMDUMPLLVM == "1" ]; then
     for f in $TEMP_DIR/*.1.opt.bc; do bn="${f##*/}"; cp "$f" "${KMDUMPDIR}/dump-$AMDGPU_TARGET.${bn%%.*}.opt.bc"; done
   fi
 
+  # there are multiple kernels that underwent codegen as well, we will dump all of their isa files
   if [ $KMDUMPISA == "1" ]; then
     $LTO -thinlto -thinlto-action=optllc "${LINK_IMPORTED_KERNEL_ARGS[@]}" -load $LOAD_PASS_LIB/LLVMSelectAcceleratorCode@CMAKE_SHARED_LIBRARY_SUFFIX@ -select-accelerator-code -dce -globaldce -always-inline -mtriple amdgcn--amdhsa-amdgiz -mcpu=$AMDGPU_TARGET -infer-address-spaces -amdgpu-internalize-symbols -lto-freestanding -dump-isa -enable-si-insert-waitcnts=0 $KMOPTOPT -codegen-opt-level=$KMOPTLLC
     for f in $TEMP_DIR/*.thinlto.isa; do bn="${f##*/}"; cp "$f" "${KMDUMPDIR}/dump-$AMDGPU_TARGET.${bn%%.*}.isa"; done
@@ -219,7 +225,7 @@ _thinlto_target_helper() {
   unset LINK_IMPORTED_KERNEL_ARGS
 }
 
-# Using ThinLTO for link-time independent kernels calling in-parallel clamp-device opt and llc
+# Using ThinLTO for performing opt and codegen on kernels in parallel
 _thinlto_path() {
 
   if [ $VERBOSE != 0 ]; then
@@ -249,16 +255,28 @@ _thinlto_path() {
   LinkKernels=()
   NUM_SPLIT=5
   NUM_KERNS_THRESHOLD=1000
-  # create module summaries for each kernel
+  # for each kernel, decide if we want to split the kernel file into multiple
   for KERNEL in ${LINK_KERNEL_ARGS[@]} ; do
-    echo "Splitting Kernel: ${KERNEL}"
+    if [ $VERBOSE != 0 ]; then
+      echo "Splitting Kernel: ${KERNEL}"
+    fi
+
+    # Using llvm-split, perform kernel splitting and return number of kernels in the file
     NUM_KERNELS=`$SPLIT "${KERNEL}" -o "${KERNEL}" -split-hcc-kernels -split-hcc-threshold $NUM_KERNS_THRESHOLD -j $NUM_SPLIT`
-    echo "Num Kerns: $NUM_KERNELS Num Kerns Threshold: $NUM_KERNS_THRESHOLD"
+
+    if [ $VERBOSE != 0 ]; then
+      echo "Num Kerns: $NUM_KERNELS Num Kerns Threshold: $NUM_KERNS_THRESHOLD"
+    fi
+
+    # If number of kernels in the file exceeds the threshold, we will need to add each sub file into the array for LTO later
+    # Otherwise we will generate the module summary for the original kernel file for ThinLTO indexing later
     if [ $NUM_KERNELS -le $NUM_KERNS_THRESHOLD ]; then
       $OPT -thinlto-bc -disable-opt -module-summary $KERNEL -o $KERNEL
       LinkKernels+=( "$KERNEL" )
     else
-      echo "  Splitted Number of Files: $NUM_SPLIT"
+      if [ $VERBOSE != 0 ]; then
+        echo "  Splitted Number of Files: $NUM_SPLIT"
+      fi
       for ((SUBKERNEL=0; SUBKERNEL < NUM_SPLIT; SUBKERNEL++)) ; do
         $OPT -thinlto-bc -disable-opt -module-summary $KERNEL$SUBKERNEL -o $KERNEL$SUBKERNEL.bc
         LinkKernels+=( "$KERNEL$SUBKERNEL.bc" )
@@ -276,7 +294,7 @@ _thinlto_path() {
   $LTO -thinlto -thinlto-action=import "${LinkKernels[@]}" -thinlto-index=$TEMP_DIR/kernel.thinlto.index -import-instr-limit=1048576 -force-import-weak
 
   declare -a pids
-  # for each GPU target, lower LLVM IR kernels into GCN ISA
+  # for each GPU target, lower LLVM IR kernels into GCN ISA in parallel
   for AMDGPU_TARGET in ${AMDGPU_TARGET_ARRAY[@]}
   do
     { _thinlto_target_helper $AMDGPU_TARGET $TEMP_DIR/kernel-$AMDGPU_TARGET.hsaco; } &
