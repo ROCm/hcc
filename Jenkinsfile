@@ -103,10 +103,20 @@ node( 'rocmtest' )
       {
         stage("unit testing")
         {
+          sh  """#!/usr/bin/env bash
+              cd ${build_dir_release_abs} && make test
+              """
+        }
+      }
+
+      // Cap the maximum amount of testing, in case of hangs
+      timeout(time: 1, unit: 'HOURS')
+      {
+        stage("cmake-test testing")
+        {
           // install from debian packages because pre/post scripts set up softlinks install targets don't
           sh  """#!/usr/bin/env bash
               cd ${build_dir_release_abs}
-              make test
               make install
               mkdir -p ${build_dir_cmake_tests_abs}
               cd ${build_dir_cmake_tests_abs}
