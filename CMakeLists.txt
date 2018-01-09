@@ -523,7 +523,10 @@ set(OFFICIAL_RELEASE_BUILD 1)
 # -D writes variables into the cmake cache, and setting CACHE variables won't overwrite variables already in the CACHE
 if( "${DISTRO_ID}" MATCHES "ubuntu" )
   set( CPACK_GENERATOR "DEB" CACHE STRING "cpack list: 7Z, DEB, IFW, NSIS, NSIS64, RPM, STGZ, TBZ2, TGZ, TXZ, TZ, ZIP" )
-elseif ("${DISTRO_ID}" MATCHES "fedora")
+elseif ("${DISTRO_ID}" MATCHES "fedora" OR
+        "${DISTRO_ID}" MATCHES "centos" OR
+        "${DISTRO_ID}" MATCHES "redhatenterpriseserver" OR
+        "${DISTRO_ID}" MATCHES "opensuse")
   set( CPACK_GENERATOR "RPM" CACHE STRING "cpack list: 7Z, DEB, IFW, NSIS, NSIS64, RPM, STGZ, TBZ2, TGZ, TXZ, TZ, ZIP" )
 else()
   # generate a tarball for unknown DISTRO_ID
