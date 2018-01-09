@@ -253,7 +253,7 @@ _thinlto_path() {
 
   unset LinkKernels
   LinkKernels=()
-  NUM_SPLIT=5
+  NUM_SPLIT=4
   NUM_KERNS_THRESHOLD=1000
   # for each kernel, decide if we want to split the kernel file into multiple
   for KERNEL in ${LINK_KERNEL_ARGS[@]} ; do
