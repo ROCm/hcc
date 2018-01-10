@@ -60,7 +60,8 @@
 
 // Used to mark pieces of HCC runtime which may be specific to AMD's HSA implementation.
 // Intended to help identify this code when porting to another HSA impl.
-#define AMD_HSA
+// FIXME - The AMD_HSA path is experimental and should not be enabled in production
+// #define AMD_HSA
 
 
 /////////////////////////////////////////////////
