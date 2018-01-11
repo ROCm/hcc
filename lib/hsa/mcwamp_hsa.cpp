@@ -4619,20 +4619,13 @@ HSADispatch::setLaunchConfiguration(const int dims, size_t *globalDims, size_t *
         for (unsigned int i = 1; ; i<<=1) {
           if (i == recommended_flat_workgroup_size
               || i >= globalDims[0]) {
-            workgroup_size[0] = i;
+            workgroup_size[0] = std::min(i, globalDims[0]);
             break;
           }
         }
 
         // compute the group size for the 2nd dimension
-        for (unsigned int j = 1; ; j<<=1) {
-          unsigned int flat_group_size = workgroup_size[0] * j;
-          if (flat_group_size == recommended_flat_workgroup_size
-              || j >= globalDims[1]) {
-            workgroup_size[1] = j;
-            break;
-          }
-        }
+        workgroup_size[1] = recommended_flat_workgroup_size / workgroup_size[0];
       }
       else if (dims == 3) {
 
@@ -4640,7 +4633,7 @@ HSADispatch::setLaunchConfiguration(const int dims, size_t *globalDims, size_t *
         for (unsigned int i = 1; ; i<<=1) {
           if (i == recommended_flat_workgroup_size
               || i >= globalDims[0]) {
-            workgroup_size[0] = i;
+            workgroup_size[0] = std::min(i, globalDims[0]);
             break;
           }
         }
@@ -4648,22 +4641,20 @@ HSADispatch::setLaunchConfiguration(const int dims, size_t *globalDims, size_t *
         // compute the group size for the 2nd dimension
         for (unsigned int j = 1; ; j<<=1) {
           unsigned int flat_group_size = workgroup_size[0] * j;
-          if (flat_group_size == recommended_flat_workgroup_size
+          if (flat_group_size > recommended_flat_workgroup_size) {
+            workgroup_size[1] = j >> 1;
+            break;
+          }
+          else if (flat_group_size == recommended_flat_workgroup_size
               || j >= globalDims[1]) {
-            workgroup_size[1] = j;
+            workgroup_size[1] = std::min(j, globalDims[1]);
             break;
           }
         }
 
         // compute the group size for the 3rd dimension
-        for (unsigned int k = 1; ; k<<=1) {
-          unsigned int flat_group_size = workgroup_size[0] * workgroup_size[1] * k;
-          if (flat_group_size == recommended_flat_workgroup_size
-              || k >= globalDims[2]) {
-            workgroup_size[2] = k;
-            break;
-          }
-        }
+        workgroup_size[2] = recommended_flat_workgroup_size / 
+                              (workgroup_size[0] * workgroup_size[1]);
       }
     }
 
