@@ -4667,9 +4667,6 @@ HSADispatch::setLaunchConfiguration(const int dims, size_t *globalDims, size_t *
       const unsigned int workitem_vgpr_count = std::max((unsigned int)kernel->workitem_vgpr_count, 1u);
       unsigned int max_flat_group_size = (max_num_vgprs_per_work_item / workitem_vgpr_count) 
                                            * num_work_items_per_simd * num_simds_per_cu;
-      // round it to the closest wave size
-      max_flat_group_size -= max_flat_group_size%num_work_items_per_simd;
-      
       return max_flat_group_size;
     };
 
