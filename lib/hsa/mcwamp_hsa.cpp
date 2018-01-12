@@ -4589,7 +4589,7 @@ HSADispatch::setLaunchConfiguration(const int dims, size_t *globalDims, size_t *
     // for each workgroup dimension, make sure it does not exceed the maximum allowable limit
     const uint16_t* workgroup_max_dim = device->getWorkgroupMaxDim();
 
-    int workgroup_size[3] = { 1, 1, 1};
+    unsigned int workgroup_size[3] = { 1, 1, 1};
 
     // Check whether the user specified a workgroup size
     if (localDims[0] != 0) {
@@ -4619,7 +4619,8 @@ HSADispatch::setLaunchConfiguration(const int dims, size_t *globalDims, size_t *
         for (unsigned int i = 1; ; i<<=1) {
           if (i == recommended_flat_workgroup_size
               || i >= globalDims[0]) {
-            workgroup_size[0] = std::min(i, globalDims[0]);
+            workgroup_size[0] = 
+              std::min(i, static_cast<unsigned int>(globalDims[0]));
             break;
           }
         }
@@ -4633,7 +4634,8 @@ HSADispatch::setLaunchConfiguration(const int dims, size_t *globalDims, size_t *
         for (unsigned int i = 1; ; i<<=1) {
           if (i == recommended_flat_workgroup_size
               || i >= globalDims[0]) {
-            workgroup_size[0] = std::min(i, globalDims[0]);
+            workgroup_size[0] = 
+              std::min(i, static_cast<unsigned int>(globalDims[0]));
             break;
           }
         }
@@ -4647,7 +4649,8 @@ HSADispatch::setLaunchConfiguration(const int dims, size_t *globalDims, size_t *
           }
           else if (flat_group_size == recommended_flat_workgroup_size
               || j >= globalDims[1]) {
-            workgroup_size[1] = std::min(j, globalDims[1]);
+            workgroup_size[1] = 
+              std::min(j, static_cast<unsigned int>(globalDims[1]));
             break;
           }
         }
