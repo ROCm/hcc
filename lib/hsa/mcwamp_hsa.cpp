@@ -4692,7 +4692,7 @@ HSADispatch::setLaunchConfiguration(const int dims, size_t *globalDims, size_t *
     // bind kernel code
     aql.kernel_object = kernel->kernelCodeHandle;
 
-    aql.group_segment_size   = kernel->static_group_segment_size + dynamicGroupSize;;
+    aql.group_segment_size   = kernel->static_group_segment_size + dynamicGroupSize;
     aql.private_segment_size = kernel->private_segment_size;
 
     // Set global dims:
