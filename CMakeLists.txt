@@ -349,7 +349,8 @@ else()
   set(RT_BUILTIN_SUFFIX ${CMAKE_SYSTEM_PROCESSOR})
 endif()
 add_custom_command(TARGET clang_links POST_BUILD
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ${CLANG_BIN_DIR}/lib/clang/6.0.0/lib/linux/libclang_rt.builtins-${RT_BUILTIN_SUFFIX}.a ${PROJECT_BINARY_DIR}/lib/libclang_rt.builtins-${RT_BUILTIN_SUFFIX}.a
+#  COMMAND ${CMAKE_COMMAND} -E create_symlink ${CLANG_BIN_DIR}/lib/clang/6.0.0/lib/linux/libclang_rt.builtins-${RT_BUILTIN_SUFFIX}.a ${PROJECT_BINARY_DIR}/lib/libclang_rt.builtins-${RT_BUILTIN_SUFFIX}.a
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ${CLANG_BIN_DIR}/lib/clang/7.0.0/lib/linux/libclang_rt.builtins-${RT_BUILTIN_SUFFIX}.a ${PROJECT_BINARY_DIR}/lib/libclang_rt.builtins-${RT_BUILTIN_SUFFIX}.a
   COMMAND ${CMAKE_COMMAND} -E create_symlink ${CLANG_BIN_DIR}/bin/clang ${PROJECT_BINARY_DIR}/bin/clang
   COMMAND ${CMAKE_COMMAND} -E create_symlink ${CLANG_BIN_DIR}/bin/clang++ ${PROJECT_BINARY_DIR}/bin/clang++
   COMMAND ${CMAKE_COMMAND} -E create_symlink ${CLANG_BIN_DIR}/bin/hcc ${PROJECT_BINARY_DIR}/bin/hcc
@@ -374,7 +375,8 @@ install(PROGRAMS $<TARGET_FILE:LLVMAMDGPUDesc>
 # force library install path to lib
 set(CMAKE_INSTALL_LIBDIR "lib" CACHE INTERNAL "Installation directory for libraries" FORCE)
 
-install(FILES ${CLANG_BIN_DIR}/lib/clang/6.0.0/lib/linux/libclang_rt.builtins-${RT_BUILTIN_SUFFIX}.a
+#install(FILES ${CLANG_BIN_DIR}/lib/clang/6.0.0/lib/linux/libclang_rt.builtins-${RT_BUILTIN_SUFFIX}.a
+install(FILES ${CLANG_BIN_DIR}/lib/clang/7.0.0/lib/linux/libclang_rt.builtins-${RT_BUILTIN_SUFFIX}.a
         DESTINATION  ${CMAKE_INSTALL_LIBDIR}
         COMPONENT compiler)
 
