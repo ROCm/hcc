@@ -203,7 +203,7 @@ endif( )
 
 # define HCC version information
 SET(HCC_VERSION_MAJOR "1")
-SET(HCC_VERSION_MINOR "1")
+SET(HCC_VERSION_MINOR "2")
 
 include(GenerateVersionFromGit)
 
@@ -218,7 +218,7 @@ add_version_info_from_git(HCC_VERSION_STRING
   HCC_VERSION_PATCH KALMAR_SDK_COMMIT KALMAR_FRONTEND_COMMIT KALMAR_BACKEND_COMMIT)
 
 # set default installation path
-set(INSTALL_DIR_NAME "hcc-${HCC_VERSION_MAJOR}.${HCC_VERSION_MINOR}")
+set(INSTALL_DIR_NAME "hcc")
 if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT AND CMAKE_INSTALL_PREFIX MATCHES "/usr/local")
   set(CMAKE_INSTALL_PREFIX "/opt/rocm/${INSTALL_DIR_NAME}" CACHE PATH "Default installation path of hcc" FORCE)
 endif ()
@@ -334,6 +334,7 @@ add_subdirectory(${CLANG_SRC_DIR})
 install(PROGRAMS $<TARGET_FILE:llvm-as>
                  $<TARGET_FILE:llvm-dis>
                  $<TARGET_FILE:llvm-link>
+                 $<TARGET_FILE:llvm-lto>
                  $<TARGET_FILE:llvm-objdump>
                  $<TARGET_FILE:llvm-mc>
                  $<TARGET_FILE:opt>
@@ -522,7 +523,10 @@ set(OFFICIAL_RELEASE_BUILD 1)
 # -D writes variables into the cmake cache, and setting CACHE variables won't overwrite variables already in the CACHE
 if( "${DISTRO_ID}" MATCHES "ubuntu" )
   set( CPACK_GENERATOR "DEB" CACHE STRING "cpack list: 7Z, DEB, IFW, NSIS, NSIS64, RPM, STGZ, TBZ2, TGZ, TXZ, TZ, ZIP" )
-elseif ("${DISTRO_ID}" MATCHES "fedora")
+elseif ("${DISTRO_ID}" MATCHES "fedora" OR
+        "${DISTRO_ID}" MATCHES "centos" OR
+        "${DISTRO_ID}" MATCHES "redhatenterpriseserver" OR
+        "${DISTRO_ID}" MATCHES "opensuse")
   set( CPACK_GENERATOR "RPM" CACHE STRING "cpack list: 7Z, DEB, IFW, NSIS, NSIS64, RPM, STGZ, TBZ2, TGZ, TXZ, TZ, ZIP" )
 else()
   # generate a tarball for unknown DISTRO_ID

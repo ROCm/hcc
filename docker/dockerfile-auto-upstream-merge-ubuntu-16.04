@@ -1,0 +1,83 @@
+# FROM rocm/rocm-terminal:1.6.4
+FROM ubuntu:16.04
+MAINTAINER David Salinas <david.salinas@amd.com>
+
+# Download and install an up to date version of cmake, because compiling
+# LLVM has implemented a requirement of cmake v3.4.4 or greater
+ARG cmake_prefix=/opt/cmake
+ARG cmake_ver_major=3.7
+ARG cmake_ver_minor=3.7.2
+ARG REPO_RADEON=repo.radeon.com
+ARG ROCM_PATH=/opt/rocm
+
+# Install Packages
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends curl && \
+    curl -sL http://${REPO_RADEON}/rocm/apt/debian/rocm.gpg.key | apt-key add - && \
+    echo deb [arch=amd64] http://${REPO_RADEON}/rocm/apt/debian/ xenial main | tee /etc/apt/sources.list.d/rocm.list && \
+    apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    sudo \
+    vim \
+    libnuma-dev \
+    rocm-utils \
+    rocm-opencl rocm-opencl-dev \
+    hcc hip_base hip_hcc \
+    gfortran gfortran-5 libgfortran-5-dev libgfortran3 \
+    libboost-program-options-dev \
+    libboost-dev \
+    libboost-system-dev \
+    libboost-filesystem-dev \
+    libssl-dev \
+    libyaml-0-2 \
+    python2.7 python-yaml \
+    cmake-qt-gui cmake-curses-gui \
+    file \
+    build-essential \
+    git \
+    zip unzip \
+    software-properties-common \
+    wget \
+    python \
+    python-numpy \
+    python-dev \
+    python-wheel \
+    python-mock \
+    python-future \
+    python-pip \
+    python-yaml \
+    python-setuptools \
+    pkg-config \
+    gcc-multilib \
+    g++-multilib \
+    gcc-multilib \
+    findutils \
+    libncurses5-dev \
+    libelf-dev \
+    findutils \
+    libpci3 \
+    debianutils \
+    cmake \
+    libunwind-dev \
+    libnuma-dev \
+    hsa-rocr-dev && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+ENV HCC_HOME=$ROCM_PATH/hcc
+ENV HIP_PATH=$ROCM_PATH/hip
+ENV OPENCL_ROOT=$ROCM_PATH/opencl
+ENV PATH="$HCC_HOME/bin:$HIP_PATH/bin:${PATH}"
+ENV PATH="$ROCM_PATH/bin:${PATH}"
+ENV PATH="$OPENCL_ROOT/bin:${PATH}"
+
+RUN chmod 777 $(find /opt/rocm -type d)
+
+RUN wget https://github.com/github/hub/releases/download/v2.3.0-pre10/hub-linux-386-2.3.0-pre10.tgz
+RUN tar -xf hub-linux-386-2.3.0-pre10.tgz
+RUN hub-linux-386-2.3.0-pre10/install
+
+RUN useradd -ms /bin/bash jenkins && echo "jenkins:jenkins" | chpasswd && adduser jenkins sudo
+RUN echo "jenkins ALL=(root) NOPASSWD:ALL" > /etc/sudoers.d/jenkins &&     chmod 0440 /etc/sudoers.d/jenkins
+RUN su - jenkins
+RUN mkdir -p /home/jenkins && chown -R jenkins:jenkins /home/jenkins
+RUN usermod -a -G video jenkins
+USER jenkins

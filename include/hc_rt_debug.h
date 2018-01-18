@@ -34,6 +34,8 @@
 
 extern unsigned HCC_DB;
 
+#define DBPARM(x) #x << "=" << x
+
 
 // Keep close to debug defs above since these have to be kept in-sync
 static std::vector<std::string> g_DbStr = {"api", "cmd", "wait", "aql", "queue", "sig", "lock", "kernarg", "copy", "copy2", "resource", "init", "misc", "aql2", "code", "cmd2"};

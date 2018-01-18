@@ -32,8 +32,8 @@ int main() {
   hc::array_view<const int, 1> av1(GRID_SIZE, table1);
   hc::array_view<const int, 1> av2(GRID_SIZE, table2);
   hc::array_view<int, 1> av3(GRID_SIZE, table3);
-  hc::array_view<int, 1> av4(GRID_SIZE, table3);
-  hc::array_view<int, 1> av5(GRID_SIZE, table3);
+  hc::array_view<int, 1> av4(GRID_SIZE, table4);
+  hc::array_view<int, 1> av5(GRID_SIZE, table5);
 
   hc::accelerator_view accelerator_view = hc::accelerator().get_default_view();
 

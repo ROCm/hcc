@@ -64,8 +64,10 @@ struct UnpinnedCopyEngine {
 
 
     // P2P Copy implementation:
-    void CopyPeerToPeer( void* dst, hsa_agent_t dstAgent, const void* src, hsa_agent_t srcAgent, size_t sizeBytes, hsa_signal_t *waitFor);
+    void CopyPeerToPeer(void* dst, hsa_agent_t dstAgent, const void* src, hsa_agent_t srcAgent, size_t sizeBytes, hsa_signal_t *waitFor);
 
+private:
+    bool IsLockedPointer(const void *ptr);
 
 private:
     hsa_agent_t     _hsaAgent;

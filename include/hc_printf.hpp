@@ -134,8 +134,8 @@ static inline unsigned int string_length(const char* str) [[hc,cpu]]{
   return size;
 }
 
-static inline void copy_n(char* dest, const char* src, unsigned int len) [[hc,cpu]] {
-  for(int i=0; i < len; i++){
+static inline void copy_n(char* dest, const char* src, const unsigned int len) [[hc,cpu]] {
+  for(unsigned int i=0; i < len; i++){
     dest[i] = src[i];
   }
 }

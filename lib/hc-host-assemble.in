@@ -14,7 +14,7 @@ then
 fi
 
 BINDIR=$(dirname "$0")
-CLANG=$BINDIR/clang
+CLANG=$BINDIR/hcc
 OPT=$BINDIR/opt
 LLVM_AS=$BINDIR/llvm-as
 LLVM_DIS=$BINDIR/llvm-dis
