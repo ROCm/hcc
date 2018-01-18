@@ -36,7 +36,7 @@ def get_num_change_sets( )
   return currentBuild.changeSets.size( );
 }
 
-node( 'rocmtest' )
+node( 'hcctest' )
 {
   // Convenience variables for common paths used in building
   def workspace_dir_abs = pwd()
