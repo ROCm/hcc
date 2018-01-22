@@ -73,7 +73,7 @@ node( 'hcctest' )
   }
 
 // JENKINS-33510: the jenkinsfile dir() command is not workin well with docker.inside()
-  hcc_build_image.inside( '--device=/dev/kfd' )
+  hcc_build_image.inside( '--device=/dev/kfd --group-add video' )
   {
     stage('hcc-lc release')
     {
