@@ -69,7 +69,7 @@ namespace hc2
                     std::copy_n(it, sizeof(y.cbuf), y.cbuf);
                     it += sizeof(y.cbuf);
 
-                    y.triple.insert(y.triple.cend(), it, it + y.triple_sz);
+                    y.triple.assign(it, it + y.triple_sz);
 
                     std::copy_n(
                         f + y.offset, y.bundle_sz, std::back_inserter(y.blob));
