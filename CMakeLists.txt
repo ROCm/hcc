@@ -330,7 +330,7 @@ if(EXISTS ${PROJECT_SOURCE_DIR}/clang-tools-extra/CMakeLists.txt)
 endif()
 
 add_subdirectory(${CLANG_SRC_DIR})
-get_directory_property(CLANG_VERSION DIRECTORY clang DEFINITION CLANG_VERSION)
+get_directory_property(CLANG_VERSION DIRECTORY ${CLANG_SRC_DIR} DEFINITION CLANG_VERSION)
 
 install(PROGRAMS $<TARGET_FILE:llvm-as>
                  $<TARGET_FILE:llvm-dis>
