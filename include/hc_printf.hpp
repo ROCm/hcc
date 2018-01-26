@@ -281,12 +281,13 @@ static inline PrintfError printf(const char* format_string, All... all) [[hc,cpu
 #endif
 
 // regex for finding format string specifiers
-static std::regex specifierPattern("(%){1}[-+#0]*[0-9]*((.)[0-9]+){0,1}([diuoxXfFeEgGaAcsp]){1}");
-static std::regex signedIntegerPattern("(%){1}[-+#0]*[0-9]*((.)[0-9]+){0,1}([cdi]){1}");
-static std::regex unsignedIntegerPattern("(%){1}[-+#0]*[0-9]*((.)[0-9]+){0,1}([uoxX]){1}");
-static std::regex floatPattern("(%){1}[-+#0]*[0-9]*((.)[0-9]+){0,1}([fFeEgGaA]){1}");
-static std::regex pointerPattern("(%){1}[ps]");
-static std::regex doubleAmpersandPattern("(%){2}");
+static const std::regex specifierPattern("(%){1}[-+#0]*[0-9]*((.)[0-9]+){0,1}([diuoxXfFeEgGaAcsp]){1}");
+static const std::regex signedIntegerPattern("(%){1}[-+#0]*[0-9]*((.)[0-9]+){0,1}([cdi]){1}");
+static const std::regex unsignedIntegerPattern("(%){1}[-+#0]*[0-9]*((.)[0-9]+){0,1}([uoxX]){1}");
+static const std::regex floatPattern("(%){1}[-+#0]*[0-9]*((.)[0-9]+){0,1}([fFeEgGaA]){1}");
+static const std::regex pointerPattern("(%){1}[ps]");
+static const std::regex doubleAmpersandPattern("(%){2}");
+static const std::string ampersand("%");
 
 static inline void processPrintfPackets(PrintfPacket* packets, const unsigned int numPackets) {
 
@@ -323,7 +324,7 @@ static inline void processPrintfPackets(PrintfPacket* packets, const unsigned in
       // print the substring before the specifier
       // clean up all the double ampersands
       std::string prefix = specifierMatches.prefix();
-      prefix = std::regex_replace(prefix,doubleAmpersandPattern,"%");
+      prefix = std::regex_replace(prefix,doubleAmpersandPattern,ampersand);
       std::printf("%s",prefix.c_str());
 
       std::smatch specifierTypeMatch;
@@ -346,7 +347,7 @@ static inline void processPrintfPackets(PrintfPacket* packets, const unsigned in
     }
     // print the substring after the last specifier
     // clean up all the double ampersands before printing
-    formatString = std::regex_replace(formatString,doubleAmpersandPattern,"%");
+    formatString = std::regex_replace(formatString,doubleAmpersandPattern,ampersand);
     std::printf("%s",formatString.c_str());
   }
   std::flush(std::cout);
