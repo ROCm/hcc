@@ -3302,32 +3302,31 @@ private:
     std::vector<bool> signalPoolFlag;
     int signalCursor;
     std::mutex signalPoolMutex;
-    /* TODO: Modify properly when supporing multi-gpu.
-    When using memory pool api, each agent will only report memory pool
-    which is attached with the agent itself physically, eg, GPU won't
-    report system memory pool anymore. In order to change as little
-    as possbile, will choose the first CPU as default host and hack the
-    HSADevice class to assign it the host memory pool to GPU agent.
-    */
+
     hsa_agent_t host;
 
     // GPU devices
     std::vector<hsa_agent_t> agents;
 
+    // CPU devices
+    std::vector<hsa_agent_t> cpu_agents;
+
     std::ofstream hccProfileFile; // if using a file open it here
     std::ostream *hccProfileStream = nullptr; // point at file or default stream
 
-    /// Determines if the given agent is of type HSA_DEVICE_TYPE_GPU
-    /// If so, cache to input data
-    static hsa_status_t find_gpu(hsa_agent_t agent, void *data) {
+    /// Find all the CPU and GPU agents
+    static hsa_status_t find_agents(hsa_agent_t agent, void *data) {
         hsa_status_t status;
         hsa_device_type_t device_type;
         std::vector<hsa_agent_t>* pAgents = nullptr;
+        std::vector<hsa_agent_t>* pCPUAgents = nullptr;
 
         if (data == nullptr) {
             return HSA_STATUS_ERROR_INVALID_ARGUMENT;
         } else {
-            pAgents = static_cast<std::vector<hsa_agent_t>*>(data);
+            std::vector<hsa_agent_t>** agent_vectors = static_cast<std::vector<hsa_agent_t>**>(data);
+            pAgents = *agent_vectors;
+            pCPUAgents = *(agent_vectors + 1);
         }
 
         hsa_status_t stat = hsa_agent_get_info(agent, HSA_AGENT_INFO_DEVICE, &device_type);
@@ -3354,26 +3353,12 @@ private:
         if (device_type == HSA_DEVICE_TYPE_GPU)  {
             pAgents->push_back(agent);
         }
-
-        return HSA_STATUS_SUCCESS;
-    }
-
-
-    static hsa_status_t find_host(hsa_agent_t agent, void* data) {
-        hsa_status_t status;
-        hsa_device_type_t device_type;
-        if(data == nullptr)
-            return HSA_STATUS_ERROR_INVALID_ARGUMENT;
-        status = hsa_agent_get_info(agent, HSA_AGENT_INFO_DEVICE, &device_type);
-        STATUS_CHECK(status, __LINE__);
-
-        if(HSA_DEVICE_TYPE_CPU == device_type) {
-            *(hsa_agent_t*)data = agent;
-            return HSA_STATUS_INFO_BREAK;
+        else if (device_type == HSA_DEVICE_TYPE_CPU) {
+            pCPUAgents->push_back(agent);
         }
+
         return HSA_STATUS_SUCCESS;
     }
-
 
 public:
     void ReadHccEnv() ;
@@ -3396,11 +3381,8 @@ public:
         STATUS_CHECK(status, __LINE__);
 
         // Iterate over the agents to find out gpu device
-        status = hsa_iterate_agents(&HSAContext::find_gpu, &agents);
-        STATUS_CHECK(status, __LINE__);
-
-        // Iterate over agents to find out the first cpu device as host
-        status = hsa_iterate_agents(&HSAContext::find_host, &host);
+        std::vector<hsa_agent_t>* agent_vectors[] = {&agents, &cpu_agents};
+        status = hsa_iterate_agents(&HSAContext::find_agents, &agent_vectors);
         STATUS_CHECK(status, __LINE__);
 
         // The Devices vector is not empty here since CPU devices have
