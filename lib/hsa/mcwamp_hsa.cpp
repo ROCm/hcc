@@ -3405,7 +3405,8 @@ public:
         DBOUT(DB_SIG,  " pre-allocate " << HCC_SIGNAL_POOL_SIZE << " signals\n");
         for (int i = 0; i < HCC_SIGNAL_POOL_SIZE; ++i) {
           hsa_signal_t signal;
-          status = hsa_signal_create(1, 0, NULL, &signal);
+          status = hsa_amd_signal_create(
+              1, 0, nullptr, HSA_AMD_SIGNAL_IPC, &signal);
           STATUS_CHECK(status, __LINE__);
           signalPool.push_back(signal);
           signalPoolFlag.push_back(false);
@@ -3492,7 +3493,8 @@ public:
                 // increase signal pool on demand for another HCC_SIGNAL_POOL_SIZE
                 for (int i = 0; i < HCC_SIGNAL_POOL_SIZE; ++i) {
                     hsa_signal_t signal;
-                    status = hsa_signal_create(1, 0, NULL, &signal);
+                    status = hsa_amd_signal_create(
+                        1, 0, nullptr, HSA_AMD_SIGNAL_IPC, &signal);
                     STATUS_CHECK(status, __LINE__);
                     signalPool.push_back(signal);
                     signalPoolFlag.push_back(false);
@@ -3919,7 +3921,8 @@ HSAQueue::HSAQueue(KalmarDevice* pDev, hsa_agent_t agent, execute_order order) :
 
     youngestCommandKind = hcCommandInvalid;
 
-    hsa_status_t status= hsa_signal_create(1, 1, &agent, &sync_copy_signal);
+    hsa_status_t status = hsa_amd_signal_create(
+        1, 1, &agent, HSA_AMD_SIGNAL_IPC, &sync_copy_signal);
     STATUS_CHECK(status, __LINE__);
 }
 
