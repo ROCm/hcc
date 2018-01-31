@@ -2267,64 +2267,74 @@ public:
     class UnpinnedCopyEngine      *copy_engine[2]; // one for each direction.
     UnpinnedCopyEngine::CopyMode  copy_mode;
 
-
     // Creates or steals a rocrQueue and returns it in theif->rocrQueue
     void createOrstealRocrQueue(Kalmar::HSAQueue *thief) {
+        RocrQueue *foundRQ = nullptr;
 
-        std::lock_guard<std::mutex> (this->rocrQueuesMutex);
+        this->rocrQueuesMutex.lock();
 
+        // Allocate a new queue when we are below the HCC_MAX_QUEUES limit
         if (rocrQueues.size() < HCC_MAX_QUEUES) {
+            foundRQ = new RocrQueue(agent, this->queue_size, thief);
+            rocrQueues.push_back(foundRQ);
+            DBOUT(DB_QUEUE, "Create new rocrQueue=" << foundRQ << " for thief=" << thief << "\n")
+        }
 
-            // Allocate a new queue, we are belowthe HCC_MAX_QUEUES limit :
-            //
+        this->rocrQueuesMutex.unlock();
 
-            auto rq = new RocrQueue(agent, this->queue_size, thief);
-            rocrQueues.push_back(rq);
+        if (foundRQ != nullptr)
+            return;
 
-            DBOUT(DB_QUEUE, "Create new rocrQueue=" << rq << " for thief=" << thief << "\n")
+        // Steal an unused queue when we reaches the limit
+        while (!foundRQ) {
 
-        } else {
-            RocrQueue *foundRQ = nullptr;
-            while (!foundRQ) {
-                // First make a pass to see if we can find an unused queue:
-                for (auto rq : rocrQueues) {
-                    if (rq->_hccQueue == nullptr) {
-                        DBOUT(DB_QUEUE, "Found unused rocrQueue=" << rq << " for thief=" << thief << ".  hwQueue=" << rq->_hwQueue << "\n")
-                        foundRQ = rq;
-                        break;
-                    }
-                }
-                if (!foundRQ) {
-                    for (auto rq : rocrQueues) {
-                        if (rq->_hccQueue != thief)  {
-                            auto victimHccQueue = rq->_hccQueue;
-                            // victimHccQueue==nullptr should be detected by above loop.
-                            std::lock_guard<std::mutex> (victimHccQueue->qmutex);
-                            if (victimHccQueue->isEmpty()) {
-                                DBOUT(DB_LOCK, " ptr:" << this << " lock_guard...\n");
+            this->rocrQueuesMutex.lock();
 
-                                assert (victimHccQueue->rocrQueue == rq);  // ensure the link is consistent.
-                                victimHccQueue->rocrQueue = nullptr;
-                                foundRQ = rq;
-                                DBOUT(DB_QUEUE, "Stole existing rocrQueue=" << rq << " from victimHccQueue=" << victimHccQueue << " to hccQueue=" << thief << "\n")
-                                break;
-                            }
-                        }
-                    }
-                }
-                if (foundRQ) {
-
-                    // update the queue pointers to indicate the theft:
+            // First make a pass to see if we can find an unused queue
+            for (auto rq : rocrQueues) {
+                if (rq->_hccQueue == nullptr) {
+                    DBOUT(DB_QUEUE, "Found unused rocrQueue=" << rq << " for thief=" << thief << ".  hwQueue=" << rq->_hwQueue << "\n")
+                    foundRQ = rq;
+                    // update the queue pointers to indicate the theft
                     foundRQ->assignHccQueue(thief);
-
-                    break; // while !foundVictim
-                };
-
-                // Allow other threads a small window to release threads to make progress:
-                this->rocrQueuesMutex.unlock();
-                this->rocrQueuesMutex.lock();
+                    break;
+                }
             }
 
+            this->rocrQueuesMutex.unlock();
+
+            if (foundRQ != nullptr) {
+                break; // while !foundRQ
+            }
+
+            this->rocrQueuesMutex.lock();
+
+            // Second pass, try steal from a ROCR queue associated with an HCC queue, but with no active tasks
+
+            for (auto rq : rocrQueues) {
+                if (rq->_hccQueue != thief)  {
+                    auto victimHccQueue = rq->_hccQueue;
+                    // victimHccQueue==nullptr should be detected by above loop.
+                    std::lock_guard<std::mutex> (victimHccQueue->qmutex);
+                    if (victimHccQueue->isEmpty()) {
+                        DBOUT(DB_LOCK, " ptr:" << this << " lock_guard...\n");
+
+                        assert (victimHccQueue->rocrQueue == rq);  // ensure the link is consistent.
+                        victimHccQueue->rocrQueue = nullptr;
+                        foundRQ = rq;
+                        // update the queue pointers to indicate the theft:
+                        foundRQ->assignHccQueue(thief);
+                        DBOUT(DB_QUEUE, "Stole existing rocrQueue=" << rq << " from victimHccQueue=" << victimHccQueue << " to hccQueue=" << thief << "\n")
+                        break; // for
+                    }
+                }
+            }
+
+            this->rocrQueuesMutex.unlock();
+
+            if (foundRQ != nullptr) {
+                break; // while !foundRQ
+            }
         }
     };
 
