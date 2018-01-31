@@ -2288,6 +2288,8 @@ public:
                 if (rq->_hccQueue == nullptr) {
                     DBOUT(DB_QUEUE, "Found unused rocrQueue=" << rq << " for thief=" << thief << ".  hwQueue=" << rq->_hwQueue << "\n")
                     foundRQ = rq;
+                    // update the queue pointers to indicate the theft
+                    foundRQ->assignHccQueue(thief);
                     break;
                 }
             }
@@ -2295,8 +2297,6 @@ public:
             this->rocrQueuesMutex.unlock();
 
             if (foundRQ != nullptr) {
-                // update the queue pointers to indicate the theft
-                foundRQ->assignHccQueue(thief);
                 break; // while !foundRQ
             }
 
@@ -2315,6 +2315,8 @@ public:
                         assert (victimHccQueue->rocrQueue == rq);  // ensure the link is consistent.
                         victimHccQueue->rocrQueue = nullptr;
                         foundRQ = rq;
+                        // update the queue pointers to indicate the theft:
+                        foundRQ->assignHccQueue(thief);
                         DBOUT(DB_QUEUE, "Stole existing rocrQueue=" << rq << " from victimHccQueue=" << victimHccQueue << " to hccQueue=" << thief << "\n")
                         break; // for
                     }
@@ -2324,8 +2326,6 @@ public:
             this->rocrQueuesMutex.unlock();
 
             if (foundRQ != nullptr) {
-                // update the queue pointers to indicate the theft:
-                foundRQ->assignHccQueue(thief);
                 break; // while !foundRQ
             }
         }
