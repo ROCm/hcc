@@ -3393,7 +3393,11 @@ public:
         status = hsa_iterate_agents(&HSAContext::find_host, &host);
         STATUS_CHECK(status, __LINE__);
 
+        // The Devices vector is not empty here since CPU devices have
+        // been added to this vector already.  This provides the index
+        // to first GPU device that will be added to Devices vector
         int first_gpu_index = Devices.size();
+
         Devices.resize(Devices.size() + agents.size());
         for (int i = 0; i < agents.size(); ++i) {
             hsa_agent_t agent = agents[i];
