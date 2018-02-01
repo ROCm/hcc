@@ -3401,10 +3401,10 @@ public:
         }
 
         DBOUT(DB_INIT, "Setting GPU " << HCC_DEFAULT_GPU << " as the default accelerator\n");
-        if (HCC_DEFAULT_GPU >= Devices.size()) {
-          hc::print_backtrace();
-          std::cerr << "GPU device " << HCC_DEFAULT_GPU << " doesn't not exist\n" << std::endl;
-          abort();
+        if (first_gpu_index + HCC_DEFAULT_GPU >= Devices.size()) {
+            hc::print_backtrace();
+            std::cerr << "GPU device " << HCC_DEFAULT_GPU << " doesn't not exist\n" << std::endl;
+            abort();
         }
         def = Devices[first_gpu_index + HCC_DEFAULT_GPU];
 
