@@ -102,6 +102,9 @@ long int HCC_H2D_STAGING_THRESHOLD    = 64;
 long int HCC_H2D_PININPLACE_THRESHOLD = 4096;
 long int HCC_D2H_PININPLACE_THRESHOLD = 1024;
 
+// Default GPU device
+unsigned int HCC_DEFAULT_GPU = 0;
+
 // Chicken bits:
 int HCC_SERIALIZE_KERNEL = 0;
 int HCC_SERIALIZE_COPY = 0;
@@ -3408,14 +3411,24 @@ public:
         status = hsa_iterate_agents(&HSAContext::find_host, &host);
         STATUS_CHECK(status, __LINE__);
 
+        // The Devices vector is not empty here since CPU devices have
+        // been added to this vector already.  This provides the index
+        // to first GPU device that will be added to Devices vector
+        int first_gpu_index = Devices.size();
+
+        Devices.resize(Devices.size() + agents.size());
         for (int i = 0; i < agents.size(); ++i) {
             hsa_agent_t agent = agents[i];
-            auto Dev = new HSADevice(agent, host, i);
-            // choose the first GPU device as the default device
-            if (i == 0)
-                def = Dev;
-            Devices.push_back(Dev);
+            Devices[first_gpu_index + i] = new HSADevice(agent, host, i);
         }
+
+        DBOUT(DB_INIT, "Setting GPU " << HCC_DEFAULT_GPU << " as the default accelerator\n");
+        if (first_gpu_index + HCC_DEFAULT_GPU >= Devices.size()) {
+            hc::print_backtrace();
+            std::cerr << "GPU device " << HCC_DEFAULT_GPU << " doesn't not exist\n" << std::endl;
+            abort();
+        }
+        def = Devices[first_gpu_index + HCC_DEFAULT_GPU];
 
         signalPoolMutex.lock();
 
@@ -3687,6 +3700,8 @@ void HSAContext::ReadHccEnv()
     GET_ENV_INT (HCC_H2D_PININPLACE_THRESHOLD, "Min size (in KB) to use pin-in-place algorithm for H2D copy if ChooseBest algorithm selected");
     GET_ENV_INT (HCC_D2H_PININPLACE_THRESHOLD, "Min size (in KB) to use pin-in-place for D2H copy if ChooseBest algorithm selected");
 
+    // Change the default GPU
+    GET_ENV_INT (HCC_DEFAULT_GPU, "Change the default GPU (Default is device 0)");
 
     GET_ENV_INT    (HCC_PROFILE,         "Enable HCC kernel and data profiling.  1=summary, 2=trace");
     GET_ENV_INT    (HCC_PROFILE_VERBOSE, "Bitmark to control profile verbosity and format. 0x1=default, 0x2=show begin/end, 0x4=show barrier");
