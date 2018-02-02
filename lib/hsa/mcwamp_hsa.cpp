@@ -3876,7 +3876,11 @@ HSADevice::HSADevice(hsa_agent_t a, hsa_agent_t host, int x_accSeqNum) : KalmarD
     HCC_D2H_PININPLACE_THRESHOLD *= 1024;
 
     static const size_t stagingSize = 64*1024;
-    this->cpu_accessible_am = hasAccess(hostAgent, ri._am_memory_pool);
+
+    // FIXME: Disable optimizated data copies on large bar system for now due to stability issues
+    //this->cpu_accessible_am = hasAccess(hostAgent, ri._am_memory_pool);
+    this->cpu_accessible_am = false;
+
     hsa_amd_memory_pool_t hostPool = (getHSAAMHostRegion());
     copy_engine[0] = new UnpinnedCopyEngine(agent, hostAgent, stagingSize, 2/*staging buffers*/,
                                             this->cpu_accessible_am,
