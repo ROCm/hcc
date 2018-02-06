@@ -36,7 +36,7 @@ def get_num_change_sets( )
   return currentBuild.changeSets.size( );
 }
 
-node( 'rocmtest' )
+node( 'hcctest' )
 {
   // Convenience variables for common paths used in building
   def workspace_dir_abs = pwd()
@@ -73,7 +73,7 @@ node( 'rocmtest' )
   }
 
 // JENKINS-33510: the jenkinsfile dir() command is not workin well with docker.inside()
-  hcc_build_image.inside( '--device=/dev/kfd' )
+  hcc_build_image.inside( '--privileged --device=/dev/kfd --group-add video' )
   {
     stage('hcc-lc release')
     {

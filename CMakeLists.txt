@@ -218,7 +218,7 @@ add_version_info_from_git(HCC_VERSION_STRING
   HCC_VERSION_PATCH KALMAR_SDK_COMMIT KALMAR_FRONTEND_COMMIT KALMAR_BACKEND_COMMIT)
 
 # set default installation path
-set(INSTALL_DIR_NAME "hcc-${HCC_VERSION_MAJOR}.${HCC_VERSION_MINOR}")
+set(INSTALL_DIR_NAME "hcc")
 if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT AND CMAKE_INSTALL_PREFIX MATCHES "/usr/local")
   set(CMAKE_INSTALL_PREFIX "/opt/rocm/${INSTALL_DIR_NAME}" CACHE PATH "Default installation path of hcc" FORCE)
 endif ()
@@ -330,6 +330,7 @@ if(EXISTS ${PROJECT_SOURCE_DIR}/clang-tools-extra/CMakeLists.txt)
 endif()
 
 add_subdirectory(${CLANG_SRC_DIR})
+get_directory_property(CLANG_VERSION DIRECTORY clang DEFINITION CLANG_VERSION)
 
 install(PROGRAMS $<TARGET_FILE:llvm-as>
                  $<TARGET_FILE:llvm-dis>
@@ -350,7 +351,7 @@ else()
   set(RT_BUILTIN_SUFFIX ${CMAKE_SYSTEM_PROCESSOR})
 endif()
 add_custom_command(TARGET clang_links POST_BUILD
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ${CLANG_BIN_DIR}/lib/clang/6.0.0/lib/linux/libclang_rt.builtins-${RT_BUILTIN_SUFFIX}.a ${PROJECT_BINARY_DIR}/lib/libclang_rt.builtins-${RT_BUILTIN_SUFFIX}.a
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ${CLANG_BIN_DIR}/lib/clang/${CLANG_VERSION}/lib/linux/libclang_rt.builtins-${RT_BUILTIN_SUFFIX}.a ${PROJECT_BINARY_DIR}/lib/libclang_rt.builtins-${RT_BUILTIN_SUFFIX}.a
   COMMAND ${CMAKE_COMMAND} -E create_symlink ${CLANG_BIN_DIR}/bin/clang ${PROJECT_BINARY_DIR}/bin/clang
   COMMAND ${CMAKE_COMMAND} -E create_symlink ${CLANG_BIN_DIR}/bin/clang++ ${PROJECT_BINARY_DIR}/bin/clang++
   COMMAND ${CMAKE_COMMAND} -E create_symlink ${CLANG_BIN_DIR}/bin/hcc ${PROJECT_BINARY_DIR}/bin/hcc
@@ -375,7 +376,7 @@ install(PROGRAMS $<TARGET_FILE:LLVMAMDGPUDesc>
 # force library install path to lib
 set(CMAKE_INSTALL_LIBDIR "lib" CACHE INTERNAL "Installation directory for libraries" FORCE)
 
-install(FILES ${CLANG_BIN_DIR}/lib/clang/6.0.0/lib/linux/libclang_rt.builtins-${RT_BUILTIN_SUFFIX}.a
+install(FILES ${CLANG_BIN_DIR}/lib/clang/${CLANG_VERSION}/lib/linux/libclang_rt.builtins-${RT_BUILTIN_SUFFIX}.a
         DESTINATION  ${CMAKE_INSTALL_LIBDIR}
         COMPONENT compiler)
 
@@ -524,7 +525,10 @@ set(OFFICIAL_RELEASE_BUILD 1)
 # -D writes variables into the cmake cache, and setting CACHE variables won't overwrite variables already in the CACHE
 if( "${DISTRO_ID}" MATCHES "ubuntu" )
   set( CPACK_GENERATOR "DEB" CACHE STRING "cpack list: 7Z, DEB, IFW, NSIS, NSIS64, RPM, STGZ, TBZ2, TGZ, TXZ, TZ, ZIP" )
-elseif ("${DISTRO_ID}" MATCHES "fedora")
+elseif ("${DISTRO_ID}" MATCHES "fedora" OR
+        "${DISTRO_ID}" MATCHES "centos" OR
+        "${DISTRO_ID}" MATCHES "redhatenterpriseserver" OR
+        "${DISTRO_ID}" MATCHES "opensuse")
   set( CPACK_GENERATOR "RPM" CACHE STRING "cpack list: 7Z, DEB, IFW, NSIS, NSIS64, RPM, STGZ, TBZ2, TGZ, TXZ, TZ, ZIP" )
 else()
   # generate a tarball for unknown DISTRO_ID
