@@ -105,6 +105,8 @@ long int HCC_D2H_PININPLACE_THRESHOLD = 1024;
 // Default GPU device
 unsigned int HCC_DEFAULT_GPU = 0;
 
+unsigned int HCC_ENABLE_PRINTF = 0;
+
 // Chicken bits:
 int HCC_SERIALIZE_KERNEL = 0;
 int HCC_SERIALIZE_COPY = 0;
@@ -3214,9 +3216,10 @@ private:
             STATUS_CHECK(status, __LINE__);
 
             // Define the global symbol hc::printf_buffer with the actual address
-            status = hsa_executable_agent_global_variable_define(hsaExecutable, agent
-                                                            , "_ZN2hc13printf_bufferE"
-                                                            , hc::printf_buffer_locked_va);
+            if (HCC_ENABLE_PRINTF)
+                status = hsa_executable_agent_global_variable_define(hsaExecutable, agent
+                                                                , "_ZN2hc13printf_bufferE"
+                                                               , hc::printf_buffer_locked_va);
             STATUS_CHECK(status, __LINE__);
 
             elfio reader;
@@ -3567,7 +3570,8 @@ public:
           return;
 
         // deallocate the printf buffer
-        if (hc::printf_buffer != nullptr) {
+        if (HCC_ENABLE_PRINTF &&
+            hc::printf_buffer != nullptr) {
            // do a final flush
            flushPrintfBuffer();
 
@@ -3622,6 +3626,8 @@ public:
 
     void initPrintfBuffer() override {
 
+        if (!HCC_ENABLE_PRINTF)  return;
+
         if (hc::printf_buffer != nullptr) {
           // Check whether the printf buffer is still valid
           // because it may have been annihilated by HIP's hipDeviceReset().
@@ -3648,6 +3654,9 @@ public:
     }
 
     void flushPrintfBuffer() override {
+
+      if (!HCC_ENABLE_PRINTF)  return;
+
       hc::processPrintfBuffer(hc::printf_buffer);
     }
 
@@ -3704,6 +3713,9 @@ void HSAContext::ReadHccEnv()
 
     // Change the default GPU
     GET_ENV_INT (HCC_DEFAULT_GPU, "Change the default GPU (Default is device 0)");
+
+    // Enable printf support
+    GET_ENV_INT (HCC_ENABLE_PRINTF, "Enable hc::printf");
 
     GET_ENV_INT    (HCC_PROFILE,         "Enable HCC kernel and data profiling.  1=summary, 2=trace");
     GET_ENV_INT    (HCC_PROFILE_VERBOSE, "Bitmark to control profile verbosity and format. 0x1=default, 0x2=show begin/end, 0x4=show barrier");
