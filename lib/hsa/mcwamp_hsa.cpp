@@ -3575,10 +3575,10 @@ public:
            flushPrintfBuffer();
 
            hc::deletePrintfBuffer(hc::printf_buffer);
-           status = hsa_amd_memory_unlock(&hc::printf_buffer);
-           STATUS_CHECK(status, __LINE__);
-           hc::printf_buffer_locked_va = nullptr;
         }
+        status = hsa_amd_memory_unlock(&hc::printf_buffer);
+        STATUS_CHECK(status, __LINE__);
+        hc::printf_buffer_locked_va = nullptr;
 
         // destroy all KalmarDevices associated with this context
         for (auto dev : Devices)
@@ -3625,21 +3625,20 @@ public:
 
     void initPrintfBuffer() override {
 
-        if (!HCC_ENABLE_PRINTF)  return;
-
-        if (hc::printf_buffer != nullptr) {
-          // Check whether the printf buffer is still valid
-          // because it may have been annihilated by HIP's hipDeviceReset().
-          // Re-allocate the printf buffer if that happens.
-          hc::AmPointerInfo info;
-          am_status_t status = am_memtracker_getinfo(&info, hc::printf_buffer);
-          if (status != AM_SUCCESS) {
-            hc::printf_buffer = nullptr;
+        if (HCC_ENABLE_PRINTF) { 
+          if (hc::printf_buffer != nullptr) {
+            // Check whether the printf buffer is still valid
+            // because it may have been annihilated by HIP's hipDeviceReset().
+            // Re-allocate the printf buffer if that happens.
+            hc::AmPointerInfo info;
+            am_status_t status = am_memtracker_getinfo(&info, hc::printf_buffer);
+            if (status != AM_SUCCESS) {
+              hc::printf_buffer = nullptr;
+            }
           }
-        }
-
-        if (hc::printf_buffer == nullptr) {
-          hc::printf_buffer = hc::createPrintfBuffer(hc::default_printf_buffer_size);
+          if (hc::printf_buffer == nullptr) {
+            hc::printf_buffer = hc::createPrintfBuffer(hc::default_printf_buffer_size);
+          }
         }
 
         // pinned hc::printf_buffer so that the GPUs could access it
