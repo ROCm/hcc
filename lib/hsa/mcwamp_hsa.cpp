@@ -1219,6 +1219,16 @@ private:
     // ROCR queue associated with this HSAQueue instance.
     RocrQueue    *rocrQueue;
 
+
+    // NOTE: Changed to recursive mutex since recursive locking may occur
+    // within the same thread. In HSAQueue dtor, the call to dispose() will
+    // lock the queue and then it will call wait().  In wait(), if it occurs
+    // that a system scope release is needed, it would enqueue a system scope
+    // marker, which will eventually turning it into enqueuing an HSABarrier
+    // into the current queue. The recursive locking happens when HSABarrier
+    // tries to lock the queue to insert a new packet.
+    // Step through the runtime code with the unit test HC/execute_order.cpp
+    // for details
     std::recursive_mutex   qmutex;  // Protect structures for this KalmarQueue.  Currently just the hsaQueue.
 
 
