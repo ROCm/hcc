@@ -1219,7 +1219,7 @@ private:
     // ROCR queue associated with this HSAQueue instance.
     RocrQueue    *rocrQueue;
 
-    std::mutex   qmutex;  // Protect structures for this KalmarQueue.  Currently just the hsaQueue.
+    std::recursive_mutex   qmutex;  // Protect structures for this KalmarQueue.  Currently just the hsaQueue.
 
 
     bool         drainingQueue_;  // mode that we are draining queue, used to allow barrier ops to be enqueued.
@@ -1971,7 +1971,7 @@ public:
 
 
         {
-            std::lock_guard<std::mutex> l(this->qmutex);
+            std::lock_guard<std::recursive_mutex> l(this->qmutex);
 
 
             this->cu_arrays.clear();
@@ -2311,7 +2311,7 @@ public:
                 if (rq->_hccQueue != thief)  {
                     auto victimHccQueue = rq->_hccQueue;
                     // victimHccQueue==nullptr should be detected by above loop.
-                    std::lock_guard<std::mutex> l(victimHccQueue->qmutex);
+                    std::lock_guard<std::recursive_mutex> l(victimHccQueue->qmutex);
                     if (victimHccQueue->isEmpty()) {
                         DBOUT(DB_LOCK, " ptr:" << this << " lock_guard...\n");
 
@@ -3939,7 +3939,7 @@ HSAQueue::HSAQueue(KalmarDevice* pDev, hsa_agent_t agent, execute_order order) :
         // Protect the HSA queue we can steal it.
         DBOUT(DB_LOCK, " ptr:" << this << " create lock_guard...\n");
 
-        std::lock_guard<std::mutex> l(this->qmutex);
+        std::lock_guard<std::recursive_mutex> l(this->qmutex);
 
         auto device = static_cast<Kalmar::HSADevice*>(this->getDev());
         device->createOrstealRocrQueue(this);
@@ -3960,7 +3960,7 @@ void HSAQueue::dispose() override {
     {
         DBOUT(DB_LOCK, " ptr:" << this << " dispose lock_guard...\n");
 
-        std::lock_guard<std::mutex> l(this->qmutex);
+        std::lock_guard<std::recursive_mutex> l(this->qmutex);
 
         // wait on all existing kernel dispatches and barriers to complete
         wait();
