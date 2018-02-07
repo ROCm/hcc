@@ -3216,10 +3216,9 @@ private:
             STATUS_CHECK(status, __LINE__);
 
             // Define the global symbol hc::printf_buffer with the actual address
-            if (HCC_ENABLE_PRINTF)
-                status = hsa_executable_agent_global_variable_define(hsaExecutable, agent
-                                                                , "_ZN2hc13printf_bufferE"
-                                                               , hc::printf_buffer_locked_va);
+            status = hsa_executable_agent_global_variable_define(hsaExecutable, agent
+                                                              , "_ZN2hc13printf_bufferE"
+                                                              , hc::printf_buffer_locked_va);
             STATUS_CHECK(status, __LINE__);
 
             elfio reader;
