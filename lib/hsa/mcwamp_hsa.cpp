@@ -1219,7 +1219,17 @@ private:
     // ROCR queue associated with this HSAQueue instance.
     RocrQueue    *rocrQueue;
 
-    std::mutex   qmutex;  // Protect structures for this KalmarQueue.  Currently just the hsaQueue.
+
+    // NOTE: Changed to recursive mutex since recursive locking may occur
+    // within the same thread. In HSAQueue dtor, the call to dispose() will
+    // lock the queue and then it will call wait().  In wait(), if it occurs
+    // that a system scope release is needed, it would enqueue a system scope
+    // marker, which will eventually turning it into enqueuing an HSABarrier
+    // into the current queue. The recursive locking happens when HSABarrier
+    // tries to lock the queue to insert a new packet.
+    // Step through the runtime code with the unit test HC/execute_order.cpp
+    // for details
+    std::recursive_mutex   qmutex;  // Protect structures for this KalmarQueue.  Currently just the hsaQueue.
 
 
     bool         drainingQueue_;  // mode that we are draining queue, used to allow barrier ops to be enqueued.
@@ -1971,7 +1981,7 @@ public:
 
 
         {
-            std::lock_guard<std::mutex> (this->qmutex);
+            std::lock_guard<std::recursive_mutex> l(this->qmutex);
 
 
             this->cu_arrays.clear();
@@ -2311,7 +2321,7 @@ public:
                 if (rq->_hccQueue != thief)  {
                     auto victimHccQueue = rq->_hccQueue;
                     // victimHccQueue==nullptr should be detected by above loop.
-                    std::lock_guard<std::mutex> (victimHccQueue->qmutex);
+                    std::lock_guard<std::recursive_mutex> l(victimHccQueue->qmutex);
                     if (victimHccQueue->isEmpty()) {
                         DBOUT(DB_LOCK, " ptr:" << this << " lock_guard...\n");
 
@@ -2340,7 +2350,7 @@ public:
         size_t hccSize = queues.size();
 
         {
-            std::lock_guard<std::mutex> (this->rocrQueuesMutex);
+            std::lock_guard<std::mutex> l(this->rocrQueuesMutex);
 
             // a perf optimization to keep the HSA queue if we have more HCC queues that might want it.
             // This defers expensive queue deallocation if an hccQueue that holds an hwQueue is destroyed -
@@ -3939,7 +3949,7 @@ HSAQueue::HSAQueue(KalmarDevice* pDev, hsa_agent_t agent, execute_order order) :
         // Protect the HSA queue we can steal it.
         DBOUT(DB_LOCK, " ptr:" << this << " create lock_guard...\n");
 
-        std::lock_guard<std::mutex> (this->qmutex);
+        std::lock_guard<std::recursive_mutex> l(this->qmutex);
 
         auto device = static_cast<Kalmar::HSADevice*>(this->getDev());
         device->createOrstealRocrQueue(this);
@@ -3960,7 +3970,7 @@ void HSAQueue::dispose() override {
     {
         DBOUT(DB_LOCK, " ptr:" << this << " dispose lock_guard...\n");
 
-        std::lock_guard<std::mutex> (this->qmutex);
+        std::lock_guard<std::recursive_mutex> l(this->qmutex);
 
         // wait on all existing kernel dispatches and barriers to complete
         wait();
