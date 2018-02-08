@@ -92,6 +92,7 @@ enum PrintfError {
   ,PRINTF_BUFFER_OVERFLOW = 1
   ,PRINTF_STRING_BUFFER_OVERFLOW = 2
   ,PRINTF_UNKNOWN_ERROR = 3
+  ,PRINTF_BUFFER_NULLPTR = 4
 };
 
 static inline PrintfPacket* createPrintfBuffer(const unsigned int numElements) {
@@ -224,7 +225,10 @@ static inline PrintfError printf(PrintfPacket* queue, All... all) [[hc,cpu]] {
   PrintfError error = PRINTF_SUCCESS;
   PrintfPacketData old_off, try_off;
 
-  if (!queue || count_arg + 1 + queue[PRINTF_OFFSETS].data.uia[0] > queue[PRINTF_BUFFER_SIZE].data.ui) {
+  if (!queue) {
+    error = PRINTF_BUFFER_NULLPTR;
+  }
+  else if (count_arg + 1 + queue[PRINTF_OFFSETS].data.uia[0] > queue[PRINTF_BUFFER_SIZE].data.ui) {
     error = PRINTF_BUFFER_OVERFLOW;
   }
   else if (!queue[PRINTF_STRING_BUFFER].data.ptr || count_char + queue[PRINTF_OFFSETS].data.uia[1] > queue[PRINTF_STRING_BUFFER_SIZE].data.ui){
