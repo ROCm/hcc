@@ -195,8 +195,6 @@ void UnpinnedCopyEngine::CopyHostToDevicePinInPlace(void* dst, const void* src, 
     DBOUTL (DB_COPY2, "H2D: waiting... on completion signal handle=" << _completionSignal[bufferIndex].handle);
     hsa_signal_wait_acquire(_completionSignal[bufferIndex], HSA_SIGNAL_CONDITION_LT, 1, UINT64_MAX, HSA_WAIT_STATE_ACTIVE);
     hsa_amd_memory_unlock(const_cast<char*> (srcp));
-    // Assume subsequent commands are dependent on previous and don't need dependency after first copy submitted, HIP_ONESHOT_COPY_DEP=1
-    waitFor = NULL;
 }
 
 
@@ -208,6 +206,8 @@ void UnpinnedCopyEngine::CopyHostToDeviceMemcpy(void* dst, const void* src, size
         THROW_ERROR (hipErrorInvalidValue, HSA_STATUS_ERROR_INVALID_ARGUMENT);
     }
 
+    if (waitFor)
+      hsa_signal_wait_scacquire(*waitFor, HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX, HSA_WAIT_STATE_BLOCKED);
     memcpy(dst,src,sizeBytes);
     std::atomic_thread_fence(std::memory_order_release);
 };
@@ -267,6 +267,10 @@ void UnpinnedCopyEngine::CopyHostToDeviceStaging(void* dst, const void* src, siz
         if (sizeBytes >= UINT64_MAX/2) {
             THROW_ERROR (hipErrorInvalidValue, HSA_STATUS_ERROR_INVALID_ARGUMENT);
         }
+
+        if (waitFor)
+          hsa_signal_wait_scacquire(*waitFor, HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX, HSA_WAIT_STATE_BLOCKED);
+
         int bufferIndex = 0;
         for (int64_t bytesRemaining=sizeBytes; bytesRemaining>0 ;  bytesRemaining -= _bufferSize) {
 
@@ -282,7 +286,7 @@ void UnpinnedCopyEngine::CopyHostToDeviceStaging(void* dst, const void* src, siz
 
 
             hsa_signal_store_relaxed(_completionSignal[bufferIndex], 1);
-            hsa_status_t hsa_status = hsa_amd_memory_async_copy(dstp, _hsaAgent, _pinnedStagingBuffer[bufferIndex], _hsaAgent, theseBytes, waitFor ? 1:0, waitFor, _completionSignal[bufferIndex]);
+            hsa_status_t hsa_status = hsa_amd_memory_async_copy(dstp, _hsaAgent, _pinnedStagingBuffer[bufferIndex], _hsaAgent, theseBytes, 0, nullptr, _completionSignal[bufferIndex]);
             DBOUTL (DB_COPY2, "H2D: bytesRemaining=" << bytesRemaining << ": async_copy " << theseBytes << " bytes " 
                     << static_cast<void*>(_pinnedStagingBuffer[bufferIndex]) << " to " << static_cast<void*>(dstp) << " status=" << hsa_status);
             if (hsa_status != HSA_STATUS_SUCCESS) {
@@ -294,9 +298,6 @@ void UnpinnedCopyEngine::CopyHostToDeviceStaging(void* dst, const void* src, siz
             if (++bufferIndex >= _numBuffers) {
                 bufferIndex = 0;
             }
-
-            // Assume subsequent commands are dependent on previous and don't need dependency after first copy submitted, HIP_ONESHOT_COPY_DEP=1
-            waitFor = NULL;
         }
 
 
@@ -342,9 +343,6 @@ void UnpinnedCopyEngine::CopyDeviceToHostPinInPlace(void* dst, const void* src, 
     DBOUTL (DB_COPY2, "D2H: waiting... on completion signal handle=\n" << _completionSignal[bufferIndex].handle);
     hsa_signal_wait_acquire(_completionSignal[bufferIndex], HSA_SIGNAL_CONDITION_LT, 1, UINT64_MAX, HSA_WAIT_STATE_ACTIVE);
     hsa_amd_memory_unlock(const_cast<char*> (dstp));
-
-    // Assume subsequent commands are dependent on previous and don't need dependency after first copy submitted, HIP_ONESHOT_COPY_DEP=1
-    waitFor = NULL;
 }
 
 
@@ -398,6 +396,9 @@ void UnpinnedCopyEngine::CopyDeviceToHostStaging(void* dst, const void* src, siz
         int64_t bytesRemaining0 = sizeBytes; // bytes to copy from dest into staging buffer.
         int64_t bytesRemaining1 = sizeBytes; // bytes to copy from staging buffer into final dest
 
+        if (waitFor)
+          hsa_signal_wait_scacquire(*waitFor, HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX, HSA_WAIT_STATE_BLOCKED);
+
         while (bytesRemaining1 > 0)
         {
             // First launch the async copies to copy from dest to host
@@ -408,16 +409,12 @@ void UnpinnedCopyEngine::CopyDeviceToHostStaging(void* dst, const void* src, siz
                 DBOUTL (DB_COPY2, "D2H: bytesRemaining0=" << bytesRemaining0 << ": copy " << theseBytes << " bytes " 
                         << static_cast<const void*>(srcp0) << " to stagingBuf[" << bufferIndex << "]:" << static_cast<void*>(_pinnedStagingBuffer[bufferIndex])); 
                 hsa_signal_store_relaxed(_completionSignal[bufferIndex], 1);
-                hsa_status_t hsa_status = hsa_amd_memory_async_copy(_pinnedStagingBuffer[bufferIndex], _hsaAgent, srcp0, _hsaAgent, theseBytes, waitFor ? 1:0, waitFor, _completionSignal[bufferIndex]);
+                hsa_status_t hsa_status = hsa_amd_memory_async_copy(_pinnedStagingBuffer[bufferIndex], _hsaAgent, srcp0, _hsaAgent, theseBytes, 0, nullptr, _completionSignal[bufferIndex]);
                 if (hsa_status != HSA_STATUS_SUCCESS) {
                     THROW_ERROR (hipErrorRuntimeMemory, hsa_status);
                 }
 
                 srcp0 += theseBytes;
-
-
-                // Assume subsequent commands are dependent on previous and don't need dependency after first copy submitted, HIP_ONESHOT_COPY_DEP=1
-                waitFor = NULL;
             }
 
             // Now unload the staging buffers:
@@ -434,7 +431,7 @@ void UnpinnedCopyEngine::CopyDeviceToHostStaging(void* dst, const void* src, siz
 
                 dstp1 += theseBytes;
             }
-		}
+		    }
     }
 }
 
@@ -463,6 +460,9 @@ void UnpinnedCopyEngine::CopyPeerToPeer(void* dst, hsa_agent_t dstAgent, const v
     int64_t bytesRemaining0 = sizeBytes; // bytes to copy from dest into staging buffer.
     int64_t bytesRemaining1 = sizeBytes; // bytes to copy from staging buffer into final dest
 
+    if (waitFor)
+      hsa_signal_wait_scacquire(*waitFor, HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX, HSA_WAIT_STATE_BLOCKED);
+
     // TODO - can we run this all on the GPU, without host sync?
 
     while (bytesRemaining1 > 0) {
@@ -478,16 +478,12 @@ void UnpinnedCopyEngine::CopyPeerToPeer(void* dst, hsa_agent_t dstAgent, const v
                     << static_cast<const void*>(srcp0) << " to stagingBuf[" << bufferIndex << "]:" << static_cast<void*>(_pinnedStagingBuffer[bufferIndex])); 
             hsa_signal_store_relaxed(_completionSignal[bufferIndex], 1);
             // Select CPU-agent here to ensure Runtime picks the H2D blit kernel.  Makes a 5X-10X difference in performance.
-            hsa_status_t hsa_status = hsa_amd_memory_async_copy(_pinnedStagingBuffer[bufferIndex], _cpuAgent, srcp0, srcAgent, theseBytes, waitFor ? 1:0, waitFor, _completionSignal[bufferIndex]);
+            hsa_status_t hsa_status = hsa_amd_memory_async_copy(_pinnedStagingBuffer[bufferIndex], _cpuAgent, srcp0, srcAgent, theseBytes, 0, nullptr, _completionSignal[bufferIndex]);
             if (hsa_status != HSA_STATUS_SUCCESS) {
                 THROW_ERROR (hipErrorRuntimeMemory, hsa_status);
             }
 
             srcp0 += theseBytes;
-
-
-            // Assume subsequent commands are dependent on previous and don't need dependency after first copy submitted, HIP_ONESHOT_COPY_DEP=1
-            waitFor = NULL;
         }
 
         // Now unload the staging buffers:
