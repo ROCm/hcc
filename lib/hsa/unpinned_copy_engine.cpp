@@ -152,7 +152,7 @@ UnpinnedCopyEngine::~UnpinnedCopyEngine()
 //IN: dst - dest pointer - must be accessible from host CPU.
 //IN: src - src pointer for copy.  Must be accessible from agent this buffer is associated with (via _hsaAgent)
 //IN: waitFor - hsaSignal to wait for - the copy will begin only when the specified dependency is resolved.  May be NULL indicating no dependency.
-void UnpinnedCopyEngine::CopyHostToDevicePinInPlace(void* dst, const void* src, size_t sizeBytes, hsa_signal_t *waitFor)
+void UnpinnedCopyEngine::CopyHostToDevicePinInPlace(void* dst, const void* src, size_t sizeBytes, const hsa_signal_t *waitFor)
 {
     std::lock_guard<std::mutex> l (_copyLock);
     DBOUTL (DB_COPY2, __func__ << DBPARM(dst) << "," << DBPARM(src) << "," << DBPARM(sizeBytes))
@@ -199,7 +199,7 @@ void UnpinnedCopyEngine::CopyHostToDevicePinInPlace(void* dst, const void* src, 
 
 
 // Copy using simple memcpy.  Only works on large-bar systems.
-void UnpinnedCopyEngine::CopyHostToDeviceMemcpy(void* dst, const void* src, size_t sizeBytes, hsa_signal_t *waitFor)
+void UnpinnedCopyEngine::CopyHostToDeviceMemcpy(void* dst, const void* src, size_t sizeBytes, const hsa_signal_t *waitFor)
 {
     DBOUTL (DB_COPY2, __func__ << DBPARM(dst) << "," << DBPARM(src) << "," << DBPARM(sizeBytes))
     if (!_isLargeBar) {
@@ -214,7 +214,7 @@ void UnpinnedCopyEngine::CopyHostToDeviceMemcpy(void* dst, const void* src, size
 
 
 
-void UnpinnedCopyEngine::CopyHostToDevice(UnpinnedCopyEngine::CopyMode copyMode, void* dst, const void* src, size_t sizeBytes, hsa_signal_t *waitFor)
+void UnpinnedCopyEngine::CopyHostToDevice(UnpinnedCopyEngine::CopyMode copyMode, void* dst, const void* src, size_t sizeBytes, const hsa_signal_t *waitFor)
 {
     bool isLocked = false;
     if((copyMode == ChooseBest) || (copyMode == UsePinInPlace)) {
@@ -251,7 +251,7 @@ void UnpinnedCopyEngine::CopyHostToDevice(UnpinnedCopyEngine::CopyMode copyMode,
 //IN: dst - dest pointer - must be accessible from host CPU.
 //IN: src - src pointer for copy.  Must be accessible from agent this buffer is associated with (via _hsaAgent)
 //IN: waitFor - hsaSignal to wait for - the copy will begin only when the specified dependency is resolved.  May be NULL indicating no dependency.
-void UnpinnedCopyEngine::CopyHostToDeviceStaging(void* dst, const void* src, size_t sizeBytes, hsa_signal_t *waitFor)
+void UnpinnedCopyEngine::CopyHostToDeviceStaging(void* dst, const void* src, size_t sizeBytes, const hsa_signal_t *waitFor)
 {
 	{
         std::lock_guard<std::mutex> l (_copyLock);
@@ -308,7 +308,7 @@ void UnpinnedCopyEngine::CopyHostToDeviceStaging(void* dst, const void* src, siz
 }
 
 
-void UnpinnedCopyEngine::CopyDeviceToHostPinInPlace(void* dst, const void* src, size_t sizeBytes, hsa_signal_t *waitFor)
+void UnpinnedCopyEngine::CopyDeviceToHostPinInPlace(void* dst, const void* src, size_t sizeBytes, const hsa_signal_t *waitFor)
 {
     std::lock_guard<std::mutex> l (_copyLock);
 
@@ -346,7 +346,7 @@ void UnpinnedCopyEngine::CopyDeviceToHostPinInPlace(void* dst, const void* src, 
 }
 
 
-void UnpinnedCopyEngine::CopyDeviceToHost(CopyMode copyMode ,void* dst, const void* src, size_t sizeBytes, hsa_signal_t *waitFor)
+void UnpinnedCopyEngine::CopyDeviceToHost(CopyMode copyMode ,void* dst, const void* src, size_t sizeBytes, const hsa_signal_t *waitFor)
 {
     bool isLocked = false;
     if((copyMode == ChooseBest) || (copyMode == UsePinInPlace)) {
@@ -377,7 +377,7 @@ void UnpinnedCopyEngine::CopyDeviceToHost(CopyMode copyMode ,void* dst, const vo
 //IN: dst - dest pointer - must be accessible from agent this buffer is associated with (via _hsaAgent).
 //IN: src - src pointer for copy.  Must be accessible from host CPU.
 //IN: waitFor - hsaSignal to wait for - the copy will begin only when the specified dependency is resolved.  May be NULL indicating no dependency.
-void UnpinnedCopyEngine::CopyDeviceToHostStaging(void* dst, const void* src, size_t sizeBytes, hsa_signal_t *waitFor)
+void UnpinnedCopyEngine::CopyDeviceToHostStaging(void* dst, const void* src, size_t sizeBytes, const hsa_signal_t *waitFor)
 {
     {
         std::lock_guard<std::mutex> l (_copyLock);
@@ -441,7 +441,7 @@ void UnpinnedCopyEngine::CopyDeviceToHostStaging(void* dst, const void* src, siz
 //IN: dst - dest pointer - must be accessible from agent this buffer is associated with (via _hsaAgent).
 //IN: src - src pointer for copy.  Must be accessible from host CPU.
 //IN: waitFor - hsaSignal to wait for - the copy will begin only when the specified dependency is resolved.  May be NULL indicating no dependency.
-void UnpinnedCopyEngine::CopyPeerToPeer(void* dst, hsa_agent_t dstAgent, const void* src, hsa_agent_t srcAgent, size_t sizeBytes, hsa_signal_t *waitFor)
+void UnpinnedCopyEngine::CopyPeerToPeer(void* dst, hsa_agent_t dstAgent, const void* src, hsa_agent_t srcAgent, size_t sizeBytes, const hsa_signal_t *waitFor)
 {
     std::lock_guard<std::mutex> l (_copyLock);
 
