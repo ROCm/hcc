@@ -253,7 +253,6 @@ void UnpinnedCopyEngine::CopyHostToDevice(UnpinnedCopyEngine::CopyMode copyMode,
 //IN: waitFor - hsaSignal to wait for - the copy will begin only when the specified dependency is resolved.  May be NULL indicating no dependency.
 void UnpinnedCopyEngine::CopyHostToDeviceStaging(void* dst, const void* src, size_t sizeBytes, const hsa_signal_t *waitFor)
 {
-	{
         std::lock_guard<std::mutex> l (_copyLock);
         DBOUTL (DB_COPY2, __func__ << DBPARM(dst) << "," << DBPARM(src) << "," << DBPARM(sizeBytes))
 
@@ -304,7 +303,6 @@ void UnpinnedCopyEngine::CopyHostToDeviceStaging(void* dst, const void* src, siz
         for (int i=0; i<_numBuffers; i++) {
             hsa_signal_wait_acquire(_completionSignal[i], HSA_SIGNAL_CONDITION_LT, 1, UINT64_MAX, HSA_WAIT_STATE_ACTIVE);
         }
-	}
 }
 
 
@@ -379,7 +377,6 @@ void UnpinnedCopyEngine::CopyDeviceToHost(CopyMode copyMode ,void* dst, const vo
 //IN: waitFor - hsaSignal to wait for - the copy will begin only when the specified dependency is resolved.  May be NULL indicating no dependency.
 void UnpinnedCopyEngine::CopyDeviceToHostStaging(void* dst, const void* src, size_t sizeBytes, const hsa_signal_t *waitFor)
 {
-    {
         std::lock_guard<std::mutex> l (_copyLock);
 
         const char *srcp0 = static_cast<const char*> (src);
@@ -431,8 +428,7 @@ void UnpinnedCopyEngine::CopyDeviceToHostStaging(void* dst, const void* src, siz
 
                 dstp1 += theseBytes;
             }
-		    }
-    }
+        }
 }
 
 
