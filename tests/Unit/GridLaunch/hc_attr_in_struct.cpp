@@ -1,4 +1,4 @@
-
+// XFAIL: *
 // RUN: %hc -lhc_am %s -o %t.out && %t.out
 
 #include "hc.hpp"

@@ -1,3 +1,4 @@
+// XFAIL: *
 // RUN: %hc -lhc_am %s -o %t.out && %t.out
 // RUN: %t.out
 
