@@ -1,3 +1,4 @@
+// XFAIL: *
 // RUN: %cxxamp %s -emit-llvm -S -o -|%FileCheck %s
 
 // dummy grid_launch_parm type used to satisfy hc_grid_launch requirement

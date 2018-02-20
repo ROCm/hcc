@@ -1,4 +1,4 @@
-
+// XFAIL: *
 // RUN: %hc -lhc_am %s -o %t.out && %t.out
 
 // FIXME: GridLaunch tests would hang HSA dGPU if executed in multi-thread

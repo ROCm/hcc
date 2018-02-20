@@ -1,3 +1,4 @@
+// XFAIL: *
 // RUN: %hc -lhc_am %s -c -o %t.out 2>&1 | %FileCheck %s
 
 #include "hc.hpp"
