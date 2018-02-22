@@ -549,7 +549,7 @@ public:
   template <typename T = __scalartype_N ,class = typename std::enable_if<T::size>=MIN_V_SIZE,value_type>::type > \
   value_type get_s ##N() const __CPU_GPU__ { return this->data.s ##N; } \
   template <typename T = __scalartype_N ,class = typename std::enable_if<T::size>=MIN_V_SIZE,value_type>::type > \
-  void set_s ##N(value_type v) const __CPU_GPU__ { this->data.s ##N = v; }
+  void set_s ##N(value_type v) __CPU_GPU__ { this->data.s ##N = v; }
 
   DECLARE_VECTOR_ONE_COMPONENT_GET_SET(0,1)
   DECLARE_VECTOR_ONE_COMPONENT_GET_SET(1,2)
