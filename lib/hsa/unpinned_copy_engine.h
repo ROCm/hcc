@@ -48,23 +48,23 @@ struct UnpinnedCopyEngine {
     ~UnpinnedCopyEngine();
 
     // Use hueristic to choose best copy algorithm 
-    void CopyHostToDevice(CopyMode copyMode, void* dst, const void* src, size_t sizeBytes, hsa_signal_t *waitFor);
-    void CopyDeviceToHost(CopyMode copyMode, void* dst, const void* src, size_t sizeBytes, hsa_signal_t *waitFor);
+    void CopyHostToDevice(CopyMode copyMode, void* dst, const void* src, size_t sizeBytes, const hsa_signal_t *waitFor);
+    void CopyDeviceToHost(CopyMode copyMode, void* dst, const void* src, size_t sizeBytes, const hsa_signal_t *waitFor);
 
 
     // Specific H2D copy algorithm implementations:
-    void CopyHostToDeviceStaging(void* dst, const void* src, size_t sizeBytes, hsa_signal_t *waitFor);
-    void CopyHostToDevicePinInPlace(void* dst, const void* src, size_t sizeBytes, hsa_signal_t *waitFor);
-    void CopyHostToDeviceMemcpy(void* dst, const void* src, size_t sizeBytes, hsa_signal_t *waitFor);
+    void CopyHostToDeviceStaging(void* dst, const void* src, size_t sizeBytes, const hsa_signal_t *waitFor);
+    void CopyHostToDevicePinInPlace(void* dst, const void* src, size_t sizeBytes, const hsa_signal_t *waitFor);
+    void CopyHostToDeviceMemcpy(void* dst, const void* src, size_t sizeBytes, const hsa_signal_t *waitFor);
 
 
     // Specific D2H copy algorithm implementations:
-    void CopyDeviceToHostStaging(void* dst, const void* src, size_t sizeBytes, hsa_signal_t *waitFor);
-    void CopyDeviceToHostPinInPlace(void* dst, const void* src, size_t sizeBytes, hsa_signal_t *waitFor);
+    void CopyDeviceToHostStaging(void* dst, const void* src, size_t sizeBytes, const hsa_signal_t *waitFor);
+    void CopyDeviceToHostPinInPlace(void* dst, const void* src, size_t sizeBytes, const hsa_signal_t *waitFor);
 
 
     // P2P Copy implementation:
-    void CopyPeerToPeer(void* dst, hsa_agent_t dstAgent, const void* src, hsa_agent_t srcAgent, size_t sizeBytes, hsa_signal_t *waitFor);
+    void CopyPeerToPeer(void* dst, hsa_agent_t dstAgent, const void* src, hsa_agent_t srcAgent, size_t sizeBytes, const hsa_signal_t *waitFor);
 
 private:
     bool IsLockedPointer(const void *ptr);
