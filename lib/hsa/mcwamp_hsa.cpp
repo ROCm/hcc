@@ -3314,32 +3314,31 @@ private:
     std::vector<bool> signalPoolFlag;
     int signalCursor;
     std::mutex signalPoolMutex;
-    /* TODO: Modify properly when supporing multi-gpu.
-    When using memory pool api, each agent will only report memory pool
-    which is attached with the agent itself physically, eg, GPU won't
-    report system memory pool anymore. In order to change as little
-    as possbile, will choose the first CPU as default host and hack the
-    HSADevice class to assign it the host memory pool to GPU agent.
-    */
+
     hsa_agent_t host;
 
     // GPU devices
-    std::vector<hsa_agent_t> agents;
+    std::vector<hsa_agent_t> gpu_agents;
+
+    // CPU devices
+    std::vector<hsa_agent_t> cpu_agents;
 
     std::ofstream hccProfileFile; // if using a file open it here
     std::ostream *hccProfileStream = nullptr; // point at file or default stream
 
-    /// Determines if the given agent is of type HSA_DEVICE_TYPE_GPU
-    /// If so, cache to input data
-    static hsa_status_t find_gpu(hsa_agent_t agent, void *data) {
+    /// Find all the CPU and GPU agents
+    static hsa_status_t find_agents(hsa_agent_t agent, void *data) {
         hsa_status_t status;
         hsa_device_type_t device_type;
         std::vector<hsa_agent_t>* pAgents = nullptr;
+        std::vector<hsa_agent_t>* pCPUAgents = nullptr;
 
         if (data == nullptr) {
             return HSA_STATUS_ERROR_INVALID_ARGUMENT;
         } else {
-            pAgents = static_cast<std::vector<hsa_agent_t>*>(data);
+            std::vector<hsa_agent_t>** agent_vectors = static_cast<std::vector<hsa_agent_t>**>(data);
+            pAgents = *agent_vectors;
+            pCPUAgents = *(agent_vectors + 1);
         }
 
         hsa_status_t stat = hsa_agent_get_info(agent, HSA_AGENT_INFO_DEVICE, &device_type);
@@ -3366,26 +3365,12 @@ private:
         if (device_type == HSA_DEVICE_TYPE_GPU)  {
             pAgents->push_back(agent);
         }
-
-        return HSA_STATUS_SUCCESS;
-    }
-
-
-    static hsa_status_t find_host(hsa_agent_t agent, void* data) {
-        hsa_status_t status;
-        hsa_device_type_t device_type;
-        if(data == nullptr)
-            return HSA_STATUS_ERROR_INVALID_ARGUMENT;
-        status = hsa_agent_get_info(agent, HSA_AGENT_INFO_DEVICE, &device_type);
-        STATUS_CHECK(status, __LINE__);
-
-        if(HSA_DEVICE_TYPE_CPU == device_type) {
-            *(hsa_agent_t*)data = agent;
-            return HSA_STATUS_INFO_BREAK;
+        else if (device_type == HSA_DEVICE_TYPE_CPU) {
+            pCPUAgents->push_back(agent);
         }
+
         return HSA_STATUS_SUCCESS;
     }
-
 
 public:
     void ReadHccEnv() ;
@@ -3407,23 +3392,67 @@ public:
 
         STATUS_CHECK(status, __LINE__);
 
-        // Iterate over the agents to find out gpu device
-        status = hsa_iterate_agents(&HSAContext::find_gpu, &agents);
+        // Iterate over the agents to find all the GPU and CPU agents
+        std::vector<hsa_agent_t>* agent_vectors[] = {&gpu_agents, &cpu_agents};
+        status = hsa_iterate_agents(&HSAContext::find_agents, &agent_vectors);
         STATUS_CHECK(status, __LINE__);
 
-        // Iterate over agents to find out the first cpu device as host
-        status = hsa_iterate_agents(&HSAContext::find_host, &host);
-        STATUS_CHECK(status, __LINE__);
+        // Get a global memory pool from each CPU agent
+        // for the purpose of evaluating the NUMA distance
+        // to a GPU agent
+        std::vector<hsa_amd_memory_pool_t> cpu_mem_pools(cpu_agents.size());
+        auto find_global_mem_pool = [](hsa_amd_memory_pool_t pool, void* data) {
+            hsa_status_t status;
+
+            hsa_amd_memory_pool_global_flag_t flags;
+            status = hsa_amd_memory_pool_get_info(pool, 
+                                                  HSA_AMD_MEMORY_POOL_INFO_GLOBAL_FLAGS, 
+                                                  &flags);
+            STATUS_CHECK(status, __LINE__);
+
+            if ((flags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_FINE_GRAINED)
+                || (flags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_COARSE_GRAINED)) {
+                hsa_amd_memory_pool_t* global_mem_pool = static_cast< hsa_amd_memory_pool_t*>(data);
+                *global_mem_pool = pool;
+                return HSA_STATUS_INFO_BREAK;
+            }
+
+            return HSA_STATUS_SUCCESS;
+        };
+        for (int i = 0; i < cpu_agents.size(); ++i) {
+            hsa_amd_memory_pool_t global_mem_pool = {0};
+            status = hsa_amd_agent_iterate_memory_pools(cpu_agents[i],
+                                                        find_global_mem_pool,
+                                                        &global_mem_pool);
+            STATUS_CHECK(status, __LINE__);
+            cpu_mem_pools[i] = global_mem_pool;
+        }
 
         // The Devices vector is not empty here since CPU devices have
         // been added to this vector already.  This provides the index
         // to first GPU device that will be added to Devices vector
         int first_gpu_index = Devices.size();
+        Devices.resize(Devices.size() + gpu_agents.size());
+        for (int i = 0; i < gpu_agents.size(); ++i) {
+            hsa_agent_t gpu_agent = gpu_agents[i];
 
-        Devices.resize(Devices.size() + agents.size());
-        for (int i = 0; i < agents.size(); ++i) {
-            hsa_agent_t agent = agents[i];
-            Devices[first_gpu_index + i] = new HSADevice(agent, host, i);
+            // pick a CPU agent with the smallest NUMA distance
+            hsa_agent_t cpu_agent = {0};
+            uint32_t cpu_numa_distance = UINT32_MAX;
+            for (int j = 0; j < cpu_agents.size(); ++j) {
+
+              hsa_amd_memory_pool_link_info_t link_info = {0};
+              status = hsa_amd_agent_memory_pool_get_info(gpu_agent, 
+                                                          cpu_mem_pools[j],
+                                                          HSA_AMD_AGENT_MEMORY_POOL_INFO_LINK_INFO,
+                                                          &link_info);
+              STATUS_CHECK(status, __LINE__);
+              if (link_info.numa_distance < cpu_numa_distance) {
+                cpu_agent = cpu_agents[j];
+                cpu_numa_distance = link_info.numa_distance;
+              }
+            }
+            Devices[first_gpu_index + i] = new HSADevice(gpu_agent, cpu_agent, i);
         }
 
         DBOUT(DB_INIT, "Setting GPU " << HCC_DEFAULT_GPU << " as the default accelerator\n");
@@ -3644,9 +3673,9 @@ public:
         // pinned hc::printf_buffer so that the GPUs could access it
         if (hc::printf_buffer_locked_va == nullptr) {
           hsa_status_t status = HSA_STATUS_SUCCESS;
-          hsa_agent_t* hsa_agents = agents.data();
+          hsa_agent_t* hsa_agents = gpu_agents.data();
           status = hsa_amd_memory_lock(&hc::printf_buffer, sizeof(hc::printf_buffer),
-                                       hsa_agents, agents.size(), (void**)&hc::printf_buffer_locked_va);
+                                       hsa_agents, gpu_agents.size(), (void**)&hc::printf_buffer_locked_va);
           STATUS_CHECK(status, __LINE__);
         }
     }
