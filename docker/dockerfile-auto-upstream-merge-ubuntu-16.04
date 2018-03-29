@@ -1,5 +1,6 @@
 # FROM rocm/rocm-terminal:1.6.4
 FROM ubuntu:16.04
+FROM hcc_build_image:hcc_build_image
 MAINTAINER David Salinas <david.salinas@amd.com>
 
 # Download and install an up to date version of cmake, because compiling
@@ -17,50 +18,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
     apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     sudo \
     vim \
-    libnuma-dev \
-    rocm-utils \
-    rocm-opencl rocm-opencl-dev \
-    hcc hip_base hip_hcc \
-    gfortran gfortran-5 libgfortran-5-dev libgfortran3 \
-    libboost-program-options-dev \
-    libboost-dev \
-    libboost-system-dev \
-    libboost-filesystem-dev \
-    libssl-dev \
-    libyaml-0-2 \
-    python2.7 python-yaml \
-    cmake-qt-gui cmake-curses-gui \
-    file \
-    build-essential \
-    git \
-    zip unzip \
-    software-properties-common \
-    wget \
-    python \
-    python-numpy \
-    python-dev \
-    python-wheel \
-    python-mock \
-    python-future \
-    python-pip \
-    python-yaml \
-    python-setuptools \
-    pkg-config \
-    gcc-multilib \
-    g++-multilib \
-    gcc-multilib \
-    findutils \
-    libncurses5-dev \
-    libelf-dev \
-    findutils \
-    libpci3 \
-    debianutils \
-    cmake \
-    libunwind-dev \
-    libnuma-dev \
-    hsa-rocr-dev && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+    zip unzip 
 
 ENV HCC_HOME=$ROCM_PATH/hcc
 ENV HIP_PATH=$ROCM_PATH/hip
