@@ -4651,6 +4651,11 @@ HSADispatch::setLaunchConfiguration(const int dims, size_t *globalDims, size_t *
           msg << "The extent of the tile (" << localDims[i] 
               << ") exceeds the device limit (" << workgroup_max_dim[i] << ").";
           throw Kalmar::runtime_exception(msg.str().c_str(), -1);
+        } else if (localDims[i] > globalDims[i]) {
+          std::stringstream msg;
+          msg << "The extent of the tile (" << localDims[i] 
+              << ") exceeds the compute grid extent (" << globalDims[i] << ").";
+          throw Kalmar::runtime_exception(msg.str().c_str(), -1);
         }
         workgroup_size[i] = localDims[i];
       }
