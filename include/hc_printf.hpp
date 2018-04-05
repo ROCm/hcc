@@ -44,10 +44,6 @@ namespace hc {
 */
 
 union PrintfPacketData {
-  uint8_t         uc;
-  int8_t          c;
-  uint16_t        us;
-  int16_t         s;
   uint32_t        ui;
   int32_t         i;
   uint64_t        uli;
@@ -68,9 +64,6 @@ union PrintfPacketData {
   // use of ull will also run faster.
   std::atomic<uint64_t> ali;
   uint32_t        uia[2];
-
-  unsigned long long ull;
-  long long       ll;
 };
 
 enum PrintfPacketDataType {
@@ -84,16 +77,10 @@ enum PrintfPacketDataType {
 
   // Packet Data types
   ,PRINTF_UNUSED
-  ,PRINTF_UINT8_T
-  ,PRINTF_INT8_T
-  ,PRINTF_UINT16_T
-  ,PRINTF_INT16_T
   ,PRINTF_UINT32_T
   ,PRINTF_INT32_T
   ,PRINTF_UINT64_T
   ,PRINTF_INT64_T
-  ,PRINTF_UNSIGNED_LONG_LONG
-  ,PRINTF_LONG_LONG
   ,PRINTF_HALF
   ,PRINTF_FLOAT
   ,PRINTF_DOUBLE
@@ -106,16 +93,12 @@ enum PrintfPacketDataType {
 class PrintfPacket {
 public:
   void clear()             [[hc,cpu]] { type = PRINTF_UNUSED; }
-  void set(uint8_t d)      [[hc,cpu]] { type = PRINTF_UINT8_T;        data.uc = d; }
-  void set(int8_t d)       [[hc,cpu]] { type = PRINTF_INT8_T;         data.c = d; }
-  void set(uint16_t d)     [[hc,cpu]] { type = PRINTF_UINT16_T;       data.us = d; }
-  void set(int16_t d)      [[hc,cpu]] { type = PRINTF_INT16_T;        data.s = d; }
   void set(uint32_t d)     [[hc,cpu]] { type = PRINTF_UINT32_T;       data.ui = d; }
   void set(int32_t d)      [[hc,cpu]] { type = PRINTF_INT32_T;        data.i = d; }
   void set(uint64_t d)     [[hc,cpu]] { type = PRINTF_UINT64_T;       data.uli = d; }
   void set(int64_t d)      [[hc,cpu]] { type = PRINTF_INT64_T;        data.li = d; }
-  void set(unsigned long long d) [[hc,cpu]] { type = PRINTF_UNSIGNED_LONG_LONG; data.ull = d; }
-  void set(long long d)    [[hc,cpu]] { type = PRINTF_LONG_LONG;      data.ll = d; }
+  void set(unsigned long long d) [[hc,cpu]] { type = PRINTF_UINT64_T; data.uli = d; }
+  void set(long long d)    [[hc,cpu]] { type = PRINTF_INT64_T;        data.li = d; }
   void set(hc::half d)     [[hc,cpu]] { type = PRINTF_HALF;           data.h = d; }
   void set(float d)        [[hc,cpu]] { type = PRINTF_FLOAT;          data.f = d; }
   void set(double d)       [[hc,cpu]] { type = PRINTF_DOUBLE;         data.d = d; }
@@ -330,14 +313,8 @@ static inline PrintfError printf(const char* format_string, All... all) [[hc,cpu
 
 // regex for finding format string specifiers
 static const std::regex specifierPattern("(%){1}[-+#0]*[0-9]*((.)[0-9]+){0,1}([hl]*)([diuoxXfFeEgGaAcsp]){1}");
-static const std::regex signedInt16Pattern("(%){1}[-+#0]*[0-9]*((.)[0-9]+){0,1}(h)([di]){1}");
-static const std::regex unsignedInt16Pattern("(%){1}[-+#0]*[0-9]*((.)[0-9]+){0,1}(h)([uoxX]){1}");
-static const std::regex signedInt32Pattern("(%){1}[-+#0]*[0-9]*((.)[0-9]+){0,1}(l)([di]){1}");
-static const std::regex unsignedInt32Pattern("(%){1}[-+#0]*[0-9]*((.)[0-9]+){0,1}(l)([uoxX]){1}");
-static const std::regex signedInt64Pattern("(%){1}[-+#0]*[0-9]*((.)[0-9]+){0,1}(ll)([di]){1}");
-static const std::regex unsignedInt64Pattern("(%){1}[-+#0]*[0-9]*((.)[0-9]+){0,1}(ll)([uoxX]){1}");
-static const std::regex signedIntegerPattern("(%){1}[-+#0]*[0-9]*((.)[0-9]+){0,1}([cdi]){1}");
-static const std::regex unsignedIntegerPattern("(%){1}[-+#0]*[0-9]*((.)[0-9]+){0,1}([uoxX]){1}");
+static const std::regex signedIntegerPattern("(%){1}[-+#0]*[0-9]*((.)[0-9]+){0,1}([hl]*)([cdi]){1}");
+static const std::regex unsignedIntegerPattern("(%){1}[-+#0]*[0-9]*((.)[0-9]+){0,1}([hl]*)([uoxX]){1}");
 static const std::regex floatPattern("(%){1}[-+#0]*[0-9]*((.)[0-9]+){0,1}([fFeEgGaA]){1}");
 static const std::regex pointerPattern("(%){1}[ps]");
 static const std::regex doubleAmpersandPattern("(%){2}");
@@ -382,19 +359,7 @@ static inline void processPrintfPackets(PrintfPacket* packets, const unsigned in
       std::printf("%s",prefix.c_str());
 
       std::smatch specifierTypeMatch;
-      if (std::regex_search(specifier, specifierTypeMatch, unsignedInt16Pattern)) {
-        std::printf(specifier.c_str(), packets[i].data.us);
-      } else if (std::regex_search(specifier, specifierTypeMatch, signedInt16Pattern)) {
-        std::printf(specifier.c_str(), packets[i].data.s);
-      } else if (std::regex_search(specifier, specifierTypeMatch, unsignedInt32Pattern)) {
-        std::printf(specifier.c_str(), packets[i].data.ui);
-      } else if (std::regex_search(specifier, specifierTypeMatch, signedInt32Pattern)) {
-        std::printf(specifier.c_str(), packets[i].data.i);
-      } else if (std::regex_search(specifier, specifierTypeMatch, unsignedInt64Pattern)) {
-        std::printf(specifier.c_str(), packets[i].data.uli);
-      } else if (std::regex_search(specifier, specifierTypeMatch, signedInt64Pattern)) {
-        std::printf(specifier.c_str(), packets[i].data.li);
-      } else if (std::regex_search(specifier, specifierTypeMatch, unsignedIntegerPattern)) {
+      if (std::regex_search(specifier, specifierTypeMatch, unsignedIntegerPattern)) {
         std::printf(specifier.c_str(), packets[i].data.ui);
       } else if (std::regex_search(specifier, specifierTypeMatch, signedIntegerPattern)) {
         std::printf(specifier.c_str(), packets[i].data.i);
