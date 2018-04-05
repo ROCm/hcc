@@ -14,7 +14,7 @@
 #include "hsa_atomic.h"
 
 // The printf on the accelerator is only enabled when
-// The HCC_ENABLE_ACCELERATOR_PRINTF is defined 
+// The HCC_ENABLE_ACCELERATOR_PRINTF is defined
 //
 //#define HCC_ENABLE_ACCELERATOR_PRINTF (1)
 
@@ -26,25 +26,51 @@
 
 namespace hc {
 
+/*
+* Supported Types
+* Pointer Types
+* void*
+* const void*
+* Integer Types
+* uint8_t, int8_t - unsigned char, char
+* uint16_t, int16_t - unsigned short, short, uchar16_t, char16_t
+* uint32_t, int32_t - unsigned int, int, unsigned long, long, uchar32_t, char32_t
+* uint64_t, int64_t - 64 bit uint/ints
+* unsigned long long, long long - at least 64 bits
+* Floating Point Types
+* half - 16 bit fp
+* float - 32 bit fp
+* double - 64 bit fp
+*/
+
 union PrintfPacketData {
-  unsigned int    ui;
-  int             i;
+  uint8_t         uc;
+  int8_t          c;
+  uint16_t        us;
+  int16_t         s;
+  uint32_t        ui;
+  int32_t         i;
+  uint64_t        uli;
+  int64_t         li;
+  hc::half        h;
   float           f;
+  double          d;
   void*           ptr;
   const void*     cptr;
-  double          d;
-  
+
   // Header offset members (union uses same memory)
   // uia[0] - PrintfPacket buffer offset
-  // uia[1] - Prtinf String buffer offset
-  // al - Using a single atomic offset of 8B, update
+  // uia[1] - Printf String buffer offset
+  // ali - Using a single atomic offset of 8B, update
   // both uias of 4B using single atomic operation.
   // ull - used to load offsets non-atomically, and
   // required to update atomic_ullong. Non-atomic
   // use of ull will also run faster.
-  std::atomic_ullong al;
-  unsigned int    uia[2];
+  std::atomic<uint64_t> ali;
+  uint32_t        uia[2];
+
   unsigned long long ull;
+  long long       ll;
 };
 
 enum PrintfPacketDataType {
@@ -58,8 +84,17 @@ enum PrintfPacketDataType {
 
   // Packet Data types
   ,PRINTF_UNUSED
-  ,PRINTF_UNSIGNED_INT
-  ,PRINTF_SIGNED_INT
+  ,PRINTF_UINT8_T
+  ,PRINTF_INT8_T
+  ,PRINTF_UINT16_T
+  ,PRINTF_INT16_T
+  ,PRINTF_UINT32_T
+  ,PRINTF_INT32_T
+  ,PRINTF_UINT64_T
+  ,PRINTF_INT64_T
+  ,PRINTF_UNSIGNED_LONG_LONG
+  ,PRINTF_LONG_LONG
+  ,PRINTF_HALF
   ,PRINTF_FLOAT
   ,PRINTF_DOUBLE
   ,PRINTF_VOID_PTR
@@ -71,8 +106,17 @@ enum PrintfPacketDataType {
 class PrintfPacket {
 public:
   void clear()             [[hc,cpu]] { type = PRINTF_UNUSED; }
-  void set(unsigned int d) [[hc,cpu]] { type = PRINTF_UNSIGNED_INT;   data.ui = d; }
-  void set(int d)          [[hc,cpu]] { type = PRINTF_SIGNED_INT;     data.i = d; }
+  void set(uint8_t d)      [[hc,cpu]] { type = PRINTF_UINT8_T;        data.uc = d; }
+  void set(int8_t d)       [[hc,cpu]] { type = PRINTF_INT8_T;         data.c = d; }
+  void set(uint16_t d)     [[hc,cpu]] { type = PRINTF_UINT16_T;       data.us = d; }
+  void set(int16_t d)      [[hc,cpu]] { type = PRINTF_INT16_T;        data.s = d; }
+  void set(uint32_t d)     [[hc,cpu]] { type = PRINTF_UINT32_T;       data.ui = d; }
+  void set(int32_t d)      [[hc,cpu]] { type = PRINTF_INT32_T;        data.i = d; }
+  void set(uint64_t d)     [[hc,cpu]] { type = PRINTF_UINT64_T;       data.uli = d; }
+  void set(int64_t d)      [[hc,cpu]] { type = PRINTF_INT64_T;        data.li = d; }
+  void set(unsigned long long d) [[hc,cpu]] { type = PRINTF_UNSIGNED_LONG_LONG; data.ull = d; }
+  void set(long long d)    [[hc,cpu]] { type = PRINTF_LONG_LONG;      data.ll = d; }
+  void set(hc::half d)     [[hc,cpu]] { type = PRINTF_HALF;           data.h = d; }
   void set(float d)        [[hc,cpu]] { type = PRINTF_FLOAT;          data.f = d; }
   void set(double d)       [[hc,cpu]] { type = PRINTF_DOUBLE;         data.d = d; }
   void set(void* d)        [[hc,cpu]] { type = PRINTF_VOID_PTR;       data.ptr = d; }
@@ -143,13 +187,13 @@ static inline void copy_n(char* dest, const char* src, const unsigned int len) [
 
 // return the memory size (including '/0') if it's a C-string
 template <typename T>
-std::size_t mem_size_if_string(typename std::enable_if< std::is_same<T,const char*>::value 
+std::size_t mem_size_if_string(typename std::enable_if< std::is_same<T,const char*>::value
                                                         || std::is_same<T,char*>::value, T>::type  s) [[hc,cpu]] {
   return string_length(s) + 1;
 }
 
 template <typename T>
-std::size_t mem_size_if_string(typename std::enable_if< !std::is_same<T,const char*>::value 
+std::size_t mem_size_if_string(typename std::enable_if< !std::is_same<T,const char*>::value
                                                          && !std::is_same<T,char*>::value, T>::type  s) [[hc,cpu]] {
   return 0;
 }
@@ -240,10 +284,10 @@ static inline PrintfError printf(PrintfPacket* queue, All... all) [[hc,cpu]] {
       // One kernel will make it through at a time. Attempt
       // to win a portion of printf buffer and printf string buffer.
       // Otherwise, update to latest offset values, and try again.
-      old_off.ull = queue[PRINTF_OFFSETS].data.al.load();
+      old_off.uli = queue[PRINTF_OFFSETS].data.ali.load();
       try_off.uia[0] = old_off.uia[0] + count_arg + 1;
       try_off.uia[1] = old_off.uia[1] + count_char;
-    } while(!(queue[PRINTF_OFFSETS].data.al.compare_exchange_weak(old_off.ull, try_off.ull)));
+    } while(!(queue[PRINTF_OFFSETS].data.ali.compare_exchange_weak(old_off.uli, try_off.uli)));
 
     unsigned int poffset = (unsigned int)old_off.uia[0];
     unsigned int soffset = (unsigned int)old_off.uia[1];
@@ -265,8 +309,8 @@ static inline PrintfError printf(PrintfPacket* queue, All... all) [[hc,cpu]] {
 
 
 // The presence of hc::printf may impact performance even when it's not being called.
-// Currently hcc's printf on accelerator is an opt-in feature.  This means that users 
-// have to define HCC_ENABLE_ACCELERATOR_PRINTF to enable it.   
+// Currently hcc's printf on accelerator is an opt-in feature.  This means that users
+// have to define HCC_ENABLE_ACCELERATOR_PRINTF to enable it.
 #ifdef HCC_ENABLE_ACCELERATOR_PRINTF
 
 template <typename... All>
@@ -285,7 +329,13 @@ static inline PrintfError printf(const char* format_string, All... all) [[hc,cpu
 #endif
 
 // regex for finding format string specifiers
-static const std::regex specifierPattern("(%){1}[-+#0]*[0-9]*((.)[0-9]+){0,1}([diuoxXfFeEgGaAcsp]){1}");
+static const std::regex specifierPattern("(%){1}[-+#0]*[0-9]*((.)[0-9]+){0,1}([hl]*)([diuoxXfFeEgGaAcsp]){1}");
+static const std::regex signedInt16Pattern("(%){1}[-+#0]*[0-9]*((.)[0-9]+){0,1}(h)([di]){1}");
+static const std::regex unsignedInt16Pattern("(%){1}[-+#0]*[0-9]*((.)[0-9]+){0,1}(h)([uoxX]){1}");
+static const std::regex signedInt32Pattern("(%){1}[-+#0]*[0-9]*((.)[0-9]+){0,1}(l)([di]){1}");
+static const std::regex unsignedInt32Pattern("(%){1}[-+#0]*[0-9]*((.)[0-9]+){0,1}(l)([uoxX]){1}");
+static const std::regex signedInt64Pattern("(%){1}[-+#0]*[0-9]*((.)[0-9]+){0,1}(ll)([di]){1}");
+static const std::regex unsignedInt64Pattern("(%){1}[-+#0]*[0-9]*((.)[0-9]+){0,1}(ll)([uoxX]){1}");
 static const std::regex signedIntegerPattern("(%){1}[-+#0]*[0-9]*((.)[0-9]+){0,1}([cdi]){1}");
 static const std::regex unsignedIntegerPattern("(%){1}[-+#0]*[0-9]*((.)[0-9]+){0,1}([uoxX]){1}");
 static const std::regex floatPattern("(%){1}[-+#0]*[0-9]*((.)[0-9]+){0,1}([fFeEgGaA]){1}");
@@ -332,12 +382,26 @@ static inline void processPrintfPackets(PrintfPacket* packets, const unsigned in
       std::printf("%s",prefix.c_str());
 
       std::smatch specifierTypeMatch;
-      if (std::regex_search(specifier, specifierTypeMatch, unsignedIntegerPattern)) {
+      if (std::regex_search(specifier, specifierTypeMatch, unsignedInt16Pattern)) {
+        std::printf(specifier.c_str(), packets[i].data.us);
+      } else if (std::regex_search(specifier, specifierTypeMatch, signedInt16Pattern)) {
+        std::printf(specifier.c_str(), packets[i].data.s);
+      } else if (std::regex_search(specifier, specifierTypeMatch, unsignedInt32Pattern)) {
+        std::printf(specifier.c_str(), packets[i].data.ui);
+      } else if (std::regex_search(specifier, specifierTypeMatch, signedInt32Pattern)) {
+        std::printf(specifier.c_str(), packets[i].data.i);
+      } else if (std::regex_search(specifier, specifierTypeMatch, unsignedInt64Pattern)) {
+        std::printf(specifier.c_str(), packets[i].data.uli);
+      } else if (std::regex_search(specifier, specifierTypeMatch, signedInt64Pattern)) {
+        std::printf(specifier.c_str(), packets[i].data.li);
+      } else if (std::regex_search(specifier, specifierTypeMatch, unsignedIntegerPattern)) {
         std::printf(specifier.c_str(), packets[i].data.ui);
       } else if (std::regex_search(specifier, specifierTypeMatch, signedIntegerPattern)) {
         std::printf(specifier.c_str(), packets[i].data.i);
       } else if (std::regex_search(specifier, specifierTypeMatch, floatPattern)) {
-        if (packets[i].type == PRINTF_FLOAT)
+        if (packets[i].type == PRINTF_HALF)
+          std::cout << static_cast<float>(packets[i].data.h);
+        else if (packets[i].type == PRINTF_FLOAT)
           std::printf(specifier.c_str(), packets[i].data.f);
         else
           std::printf(specifier.c_str(), packets[i].data.d);
