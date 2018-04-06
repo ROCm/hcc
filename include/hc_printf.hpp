@@ -317,6 +317,7 @@ static inline void processPrintfPackets(PrintfPacket* packets, const unsigned in
       if (!std::regex_search(formatString, specifierMatches, specifierPattern)) {
         // More printf argument than format specifier??
         // Just skip to the next printf request
+        i+=(numPrintfArgs - j);
         break;
       }
 
