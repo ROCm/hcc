@@ -121,9 +121,22 @@ _thinlto_path() {
   # create module summaries for each kernel and perform cross-module importing
   for KERNEL in ${LINK_KERNEL_ARGS[@]} ; do
     $OPT -thinlto-bc -disable-opt -module-summary $KERNEL -o $KERNEL
+    ret=$?
+    if [ $ret != 0 ]; then
+      exit $ret
+    fi
   done
   $LTO -thinlto -thinlto-action=thinlink "${LINK_KERNEL_ARGS[@]}" -o $TEMP_DIR/kernel.thinlto.index
+  ret=$?
+  if [ $ret != 0 ]; then
+    exit $ret
+  fi
+
   $LTO -thinlto -thinlto-action=import "${LINK_KERNEL_ARGS[@]}" -thinlto-index=$TEMP_DIR/kernel.thinlto.index -import-instr-limit=1048576 -force-import-weak
+  ret=$?
+  if [ $ret != 0 ]; then
+    exit $ret
+  fi
 
   declare -a pids
   declare -a ISABIN_FILES
@@ -181,6 +194,10 @@ _thinlto_path() {
     fi
     if [ $KMDUMPISA == "1" ]; then
       cp $KERNEL-$AMDGPU_TARGET.hsaco ${KMDUMPDIR}/dump-$AMDGPU_TARGET.hsaco
+      ret=$?
+      if [ $ret != 0 ]; then
+        exit $ret
+      fi
     fi
 
     if [ $VERBOSE != 0 ]; then
@@ -198,8 +215,18 @@ _thinlto_path() {
 _default_path() {
 
   # combine kernel sections together
-  $LINK "${LINK_KERNEL_ARGS[@]}" | $OPT -always-inline - -o $TEMP_DIR/kernel.bc
+  $LINK "${LINK_KERNEL_ARGS[@]}"  -o $TEMP_DIR/combined.bc
+  ret=$?
+  if [ $ret != 0 ]; then
+    exit $ret
+  fi
 
+  $OPT -always-inline $TEMP_DIR/combined.bc -o $TEMP_DIR/kernel.bc
+  ret=$?
+  if [ $ret != 0 ]; then
+    exit $ret
+  fi
+  
   if [ $VERBOSE == 1 ]; then
     echo "Generating AMD GCN kernel"
   fi
@@ -305,6 +332,11 @@ do
   if [[ "$ARG" =~ [^[:space:]]+\.cpu$ ]]; then
 
     cp "$ARG" $TEMP_DIR/kernel_cpu.o
+    ret=$?
+    if [ $ret != 0 ]; then
+      exit $ret
+    fi
+
     LINK_CPU_ARG+=( "$TEMP_DIR/kernel_cpu.o" )
 
   elif [[ "$ARG" =~ [^[:space:]]+\.o$ ]]; then
@@ -406,9 +438,18 @@ do
         fi
 
         mkdir -p "$AR_TEMP_DIR"
+        ret=$?
+        if [ $ret != 0 ]; then
+          exit $ret
+        fi
+
         TEMP_AR_DIRS+=( "$AR_TEMP_DIR" )
         cd "$AR_TEMP_DIR"
         `ar x "$DETECTED_STATIC_LIBRARY"`
+        ret=$?
+        if [ $ret != 0 ]; then
+          exit $ret
+        fi
 
         cd "$CURRENT_DIR"
 
@@ -455,18 +496,31 @@ do
 
       # extract kernel section
       objcopy -O binary -j .kernel "$OBJ" "$KERNEL_FILE"
+      ret=$?
+      if [ $ret != 0 ]; then
+        exit $ret
+      fi
 
       # extract host section
       objcopy -R .kernel "$OBJ" "$HOST_FILE"
+      ret=$?
+      if [ $ret != 0 ]; then
+        exit $ret
+      fi
 
       # strip all symbols specified in symbol.txt from $HOST_FILE
       objcopy @$CXXAMP_SERIALIZE_SYMBOL_FILE "$HOST_FILE" "$HOST_FILE.new" 2> /dev/null
+
       if [ -f "$HOST_FILE.new" ]; then
         mv "$HOST_FILE.new" "$HOST_FILE"
       fi
 
       # find cxxamp_serialize symbols and save them into symbol.txt
       objdump -t "$HOST_FILE" -j .text 2> /dev/null | grep "g.*__cxxamp_serialize" | awk '{print "-L"$6}' >> $CXXAMP_SERIALIZE_SYMBOL_FILE
+      ret=$?
+      if [ $ret != 0 ]; then
+        exit $ret
+      fi
 
       # if the kernel file is empty, just throw it away
       KERNEL_FILE_SIZE=$(wc -c < "$KERNEL_FILE")
@@ -584,6 +638,10 @@ if [ -e $TEMP_DIR/kernel.bundle ]; then
 fi
 
 rm -f $TEMP_DIR/kernel-*.hsaco
+
+if [ -e $TEMP_DIR/combined.bc ]; then
+  rm $TEMP_DIR/combined.bc
+fi
 
 if [ -e $TEMP_DIR/kernel.bc ]; then
   rm $TEMP_DIR/kernel.bc
