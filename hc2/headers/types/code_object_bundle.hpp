@@ -133,7 +133,7 @@ namespace hc2
     inline
     hsa_isa_t triple_to_hsa_isa(const std::string& triple)
     {
-        static constexpr const char gfxip[] = "hcc-amdgcn--amdhsa-gfx";
+        static constexpr const char gfxip[] = "amdgcn-amd-amdhsa--gfx";
 
         hsa_isa_t r = {};
 
@@ -142,9 +142,8 @@ namespace hc2
             triple.cend(),
             [](char x) { return std::isdigit(x); });
         if (std::equal(triple.cbegin(), it, gfxip)) {
-            std::string tmp = "AMD:AMDGPU";
+            std::string tmp = "amdgcn-amd-amdhsa--gfx";
             while (it != triple.cend()) {
-                tmp.push_back(':');
                 tmp.push_back(*it++);
             }
 
