@@ -133,27 +133,28 @@ namespace hc2
     inline
     hsa_isa_t triple_to_hsa_isa(const std::string& triple)
     {
-        static constexpr const char gfxip[] = "amdgcn-amd-amdhsa--gfx";
+      static constexpr const char OffloadKind[] = "hcc-";
+      hsa_isa_t Isa = {0};
 
-        hsa_isa_t r = {};
+      // Check that Triple larger than hcc- and the prefix is hcc-
+      if ((triple.size() < sizeof(OffloadKind) - 1) || !std::equal(triple.c_str(),  triple.c_str() + sizeof(OffloadKind) - 1, OffloadKind)) {
+        return Isa;
+      }
 
-        auto it = std::find_if(
-            triple.cbegin(),
-            triple.cend(),
-            [](char x) { return std::isdigit(x); });
-        if (std::equal(triple.cbegin(), it, gfxip)) {
-            std::string tmp = "amdgcn-amd-amdhsa--gfx";
-            while (it != triple.cend()) {
-                tmp.push_back(*it++);
-            }
+      std::string validatedTriple = triple.substr(sizeof(OffloadKind) - 1);
+      static constexpr const char oldPrefix[] = "amdgcn--amdhsa-gfx";
+      static constexpr const char newPrefix[] = "amdgcn-amd-amdhsa--gfx";
 
-            throwing_hsa_result_check(
-                hsa_isa_from_name(tmp.c_str(), &r),
-                __FILE__,
-                __func__,
-                __LINE__);
-        }
+      // Check triple size and if the triple matches the old prefix
+      if ((validatedTriple.size() >= sizeof(oldPrefix) - 1) && std::equal(validatedTriple.c_str(), validatedTriple.c_str() + sizeof(oldPrefix) - 1, oldPrefix)) {
+        // Support backwards compatibility with old naming.
+        validatedTriple = newPrefix + validatedTriple.substr(sizeof(oldPrefix) - 1);
+      }
 
-        return r;
+      if (HSA_STATUS_SUCCESS != hsa_isa_from_name(validatedTriple.c_str(), &Isa)) {
+        Isa.handle = 0;
+      }
+
+      return Isa;
     }
 }
