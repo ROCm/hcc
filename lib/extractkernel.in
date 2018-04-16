@@ -100,8 +100,8 @@ else {
     }
 
     # Only process GPU targets, skip host targets
-    if ($Triple =~ /^hcc-amdgcn--amdhsa-/) {
-      my $asic_target = substr($Triple, 19); # hcc-amdgcn--amdhsa-
+    if ($Triple =~ /^hcc-amdgcn-amd-amdhsa--/) {
+      my $asic_target = substr($Triple, 23); # hcc-amdgcn-amd-amdhsa--
       #print("GPU target: " . $asic_target . "\n");
 
       # augment arguments for clang-offload-bundler

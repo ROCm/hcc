@@ -189,7 +189,7 @@ _thinlto_path() {
 
     # augment arguments to clang-offload-bundler
     CLANG_OFFLOAD_BUNDLER_INPUTS_ARGS+=",$KERNEL-$AMDGPU_TARGET.hsaco"
-    CLANG_OFFLOAD_BUNDLER_TARGETS_ARGS+=",hcc-amdgcn--amdhsa-$AMDGPU_TARGET"
+    CLANG_OFFLOAD_BUNDLER_TARGETS_ARGS+=",hcc-amdgcn-amd-amdhsa--$AMDGPU_TARGET"
     i+=1
   done
 }
@@ -214,7 +214,7 @@ _default_path() {
 
     # augment arguments to clang-offload-bundler
     CLANG_OFFLOAD_BUNDLER_INPUTS_ARGS+=",$TEMP_DIR/kernel-$AMDGPU_TARGET.hsaco"
-    CLANG_OFFLOAD_BUNDLER_TARGETS_ARGS+=",hcc-amdgcn--amdhsa-$AMDGPU_TARGET"
+    CLANG_OFFLOAD_BUNDLER_TARGETS_ARGS+=",hcc-amdgcn-amd-amdhsa--$AMDGPU_TARGET"
   done
 
   # collect all the error codes from forked processes
