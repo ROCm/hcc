@@ -147,6 +147,7 @@ namespace hc2
     std::string isa_name(std::string triple)
     {
         static constexpr const char offload_prefix[]{"hcc-"};
+        const char* unsupported_gfx[] = {"801", "902"};
 
         triple = transmogrify_triple(triple);
         if (triple.empty()) return {};
@@ -154,6 +155,14 @@ namespace hc2
         triple.erase(0, sizeof(offload_prefix) - 1);
 
         static hsa_isa_t tmp{};
+
+        const char** gfx = unsupported_gfx;
+        for (int i = 0; i < sizeof(unsupported_gfx)/sizeof(char*); ++i) {
+            if (triple.find(*gfx) != std::string::npos)
+                return {};
+            ++gfx;
+        }
+
         static const bool is_old_rocr{
             hsa_isa_from_name(triple.c_str(), &tmp) != HSA_STATUS_SUCCESS};
 
