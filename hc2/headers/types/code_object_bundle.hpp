@@ -175,9 +175,9 @@ namespace hc2
     {
         const auto isa{isa_name(std::move(triple))};
 
-        if (isa.empty()) return hsa_isa_t({});
-
         hsa_isa_t r{};
+        if (isa.empty()) return r;
+
         if(HSA_STATUS_SUCCESS != hsa_isa_from_name(isa.c_str(), &r)) {
             r.handle = 0;
         }
