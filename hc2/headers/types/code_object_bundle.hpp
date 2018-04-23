@@ -178,8 +178,9 @@ namespace hc2
         if (isa.empty()) return hsa_isa_t({});
 
         hsa_isa_t r{};
-        throwing_hsa_result_check(
-            hsa_isa_from_name(isa.c_str(), &r), __FILE__, __func__, __LINE__);
+        if(HSA_STATUS_SUCCESS != hsa_isa_from_name(isa.c_str(), &r)) {
+            r.handle = 0;
+        }
 
         return r;
     }
