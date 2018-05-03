@@ -104,11 +104,11 @@ bool test() {
   hsa_signal_value_t signal_value4;
   hsa_signal_value_t signal_value5;
 
-  signal_value0 = hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(nativeHandle0));
-  signal_value1 = hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(nativeHandle1));
-  signal_value2 = hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(nativeHandle2));
-  signal_value3 = hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(nativeHandle3));
-  signal_value4 = hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(nativeHandle4));
+  signal_value0 = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(nativeHandle0));
+  signal_value1 = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(nativeHandle1));
+  signal_value2 = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(nativeHandle2));
+  signal_value3 = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(nativeHandle3));
+  signal_value4 = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(nativeHandle4));
 #if TEST_DEBUG
   std::cout << "kernel signal value: " << signal_value0 << "\n";
   std::cout << "kernel signal value: " << signal_value1 << "\n";
@@ -117,7 +117,7 @@ bool test() {
   std::cout << "kernel signal value: " << signal_value4 << "\n";
 #endif
 
-  signal_value5 = hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(nativeHandle5));
+  signal_value5 = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(nativeHandle5));
 #if TEST_DEBUG
   std::cout << "blocking barrier signal value: " << signal_value5 << "\n";
 #endif
@@ -127,11 +127,11 @@ bool test() {
 
   // the barrier packet would ensure all previous packets were processed
 
-  signal_value0 = hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(nativeHandle0));
-  signal_value1 = hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(nativeHandle1));
-  signal_value2 = hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(nativeHandle2));
-  signal_value3 = hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(nativeHandle3));
-  signal_value4 = hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(nativeHandle4));
+  signal_value0 = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(nativeHandle0));
+  signal_value1 = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(nativeHandle1));
+  signal_value2 = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(nativeHandle2));
+  signal_value3 = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(nativeHandle3));
+  signal_value4 = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(nativeHandle4));
 #if TEST_DEBUG
   std::cout << "kernel signal value: " << signal_value0 << "\n";
   std::cout << "kernel signal value: " << signal_value1 << "\n";
@@ -145,7 +145,7 @@ bool test() {
   ret &= (signal_value3 == 0);
   ret &= (signal_value4 == 0);
 
-  signal_value5 = hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(nativeHandle5));
+  signal_value5 = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(nativeHandle5));
 #if TEST_DEBUG
   std::cout << "barrier signal value: " << signal_value5 << "\n";
 #endif

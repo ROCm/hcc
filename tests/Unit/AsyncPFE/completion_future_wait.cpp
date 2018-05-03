@@ -70,7 +70,7 @@ int main() {
 
   // retrieve HSA signal value
   hsa_signal_value_t signal_value;
-  signal_value = hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(handle));
+  signal_value = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(handle));
 #if TEST_DEBUG
   std::cout << "signal value: " << signal_value << "\n";
 #endif
@@ -80,7 +80,7 @@ int main() {
 
   // after completion_future::wait(), the signal shall become 0 because the
   // kernel is completed
-  signal_value = hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(handle));
+  signal_value = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(handle));
 #if TEST_DEBUG
   std::cout << "signal value: " << signal_value << "\n";
 #endif
@@ -91,7 +91,7 @@ int main() {
   // the signal values should still be 0
   fut.wait();
 
-  signal_value = hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(handle));
+  signal_value = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(handle));
 #if TEST_DEBUG
   std::cout << "signal value: " << signal_value << "\n";
 #endif

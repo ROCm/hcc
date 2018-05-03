@@ -64,7 +64,7 @@ bool test1D() {
 
   void* handle1 = fut1.get_native_handle();
   hsa_signal_value_t signal_value1;
-  signal_value1 = hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(handle1));
+  signal_value1 = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(handle1));
 #if TEST_DEBUG
   std::cout << "signal value #1: " << signal_value1 << "\n";
 #endif
@@ -87,8 +87,8 @@ bool test1D() {
 
   void* handle2 = fut2.get_native_handle();
   hsa_signal_value_t signal_value2;
-  signal_value1 = hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(handle1));
-  signal_value2 = hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(handle2));
+  signal_value1 = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(handle1));
+  signal_value2 = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(handle2));
 #if TEST_DEBUG
   std::cout << "signal value #1: " << signal_value1 << "\n";
   std::cout << "signal value #2: " << signal_value2 << "\n";
@@ -112,9 +112,9 @@ bool test1D() {
 
   void* handle3 = fut3.get_native_handle();
   hsa_signal_value_t signal_value3;
-  signal_value1 = hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(handle1));
-  signal_value2 = hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(handle2));
-  signal_value3 = hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(handle3));
+  signal_value1 = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(handle1));
+  signal_value2 = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(handle2));
+  signal_value3 = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(handle3));
 #if TEST_DEBUG
   std::cout << "signal value #1: " << signal_value1 << "\n";
   std::cout << "signal value #2: " << signal_value2 << "\n";
@@ -128,9 +128,9 @@ bool test1D() {
   // wait on all kernels to be finished
   hc::accelerator().get_default_view().wait();
 
-  signal_value1 = hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(handle1));
-  signal_value2 = hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(handle2));
-  signal_value3 = hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(handle3));
+  signal_value1 = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(handle1));
+  signal_value2 = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(handle2));
+  signal_value3 = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(handle3));
 #if TEST_DEBUG
   std::cout << "signal value #1: " << signal_value1 << "\n";
   std::cout << "signal value #2: " << signal_value2 << "\n";
