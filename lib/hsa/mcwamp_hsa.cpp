@@ -1711,7 +1711,7 @@ public:
                                           src, src_agent,
                                           size, 0, nullptr, sync_copy_signal);
       STATUS_CHECK(status, __LINE__);
-      hsa_signal_wait_acquire(sync_copy_signal, HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX, HSA_WAIT_STATE_BLOCKED);
+      hsa_signal_wait_scacquire(sync_copy_signal, HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX, HSA_WAIT_STATE_BLOCKED);
       return;
     }
 
@@ -4469,7 +4469,7 @@ HSADispatch::waitComplete() {
         DBOUT(DB_MISC, "wait for kernel dispatch op#" << *this  << " completion with wait flag: " << waitMode << "  signal="<< std::hex  << _signal.handle << std::dec << "\n");
 
         // wait for completion
-        if (hsa_signal_wait_acquire(_signal, HSA_SIGNAL_CONDITION_LT, 1, uint64_t(-1), waitMode)!=0) {
+        if (hsa_signal_wait_scacquire(_signal, HSA_SIGNAL_CONDITION_LT, 1, uint64_t(-1), waitMode)!=0) {
             throw Kalmar::runtime_exception("Signal wait returned unexpected value\n", 0);
         }
 
@@ -4790,7 +4790,7 @@ HSABarrier::waitComplete() {
     DBOUT(DB_WAIT,  "  wait for barrier " << *this << " completion with wait flag: " << waitMode << "  signal="<< std::hex  << _signal.handle << std::dec <<"...\n");
 
     // Wait on completion signal until the barrier is finished
-    hsa_signal_wait_acquire(_signal, HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX, waitMode);
+    hsa_signal_wait_scacquire(_signal, HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX, waitMode);
 
 
     // unregister this async operation from HSAQueue
@@ -5052,7 +5052,7 @@ HSACopy::waitComplete() {
     }
 
     // Wait on completion signal until the async copy is finished
-    hsa_signal_wait_acquire(_signal, HSA_SIGNAL_CONDITION_LT, 1, UINT64_MAX, waitMode);
+    hsa_signal_wait_scacquire(_signal, HSA_SIGNAL_CONDITION_LT, 1, UINT64_MAX, waitMode);
 
 
     // unregister this async operation from HSAQueue
@@ -5191,7 +5191,7 @@ hsa_status_t HSACopy::hcc_memory_async_copy(Kalmar::hcCommandKind copyKind, cons
 
 
     if (HCC_CHECK_COPY) {
-        hsa_signal_wait_acquire(completion_signal, HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX, HSA_WAIT_STATE_BLOCKED);
+        hsa_signal_wait_scacquire(completion_signal, HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX, HSA_WAIT_STATE_BLOCKED);
         checkCopy(dstPtr, srcPtr, sizeBytes);
     }
 
