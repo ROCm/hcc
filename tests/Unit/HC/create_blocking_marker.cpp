@@ -62,12 +62,12 @@ bool test() {
   hsa_signal_value_t signal_value;
   hsa_signal_value_t signal_value2;
 
-  signal_value = hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(nativeHandle));
+  signal_value = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(nativeHandle));
 #if TEST_DEBUG
   std::cout << "kernel signal value: " << signal_value << "\n";
 #endif
 
-  signal_value2 = hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(nativeHandle2));
+  signal_value2 = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(nativeHandle2));
 #if TEST_DEBUG
   std::cout << "blocking barrier signal value: " << signal_value << "\n";
 #endif
@@ -77,13 +77,13 @@ bool test() {
 
   // the barrier packet would ensure all previous packets were processed
 
-  signal_value = hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(nativeHandle));
+  signal_value = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(nativeHandle));
 #if TEST_DEBUG
   std::cout << "kernel signal value: " << signal_value << "\n";
 #endif
   ret &= (signal_value == 0);
 
-  signal_value2 = hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(nativeHandle2));
+  signal_value2 = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(nativeHandle2));
 #if TEST_DEBUG
   std::cout << "barrier signal value: " << signal_value << "\n";
 #endif
@@ -134,8 +134,8 @@ bool test() {
       cfA = av2.create_blocking_marker({nullcf[0], cf_pfe});
       cfA.wait();
 
-      hsa_signal_value_t signal_value_pfe = hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(cf_pfe.get_native_handle()));
-      hsa_signal_value_t signal_value_cbm = hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(cfA.get_native_handle()));
+      hsa_signal_value_t signal_value_pfe = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(cf_pfe.get_native_handle()));
+      hsa_signal_value_t signal_value_cbm = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(cfA.get_native_handle()));
 
       std::cout << "create_blocking_marker on single PFE verify OK\n";
       
@@ -165,9 +165,9 @@ bool test() {
       cfA = av2.create_blocking_marker({nullcf[0], cf_pfe, nullcf[1], cf_pfe2});
       cfA.wait();
 
-      assert (hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(cf_pfe.get_native_handle())) == 0);
-      assert (hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(cf_pfe2.get_native_handle())) == 0);
-      assert (hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(cfA.get_native_handle())) == 0);
+      assert (hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(cf_pfe.get_native_handle())) == 0);
+      assert (hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(cf_pfe2.get_native_handle())) == 0);
+      assert (hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(cfA.get_native_handle())) == 0);
       std::cout << "create_blocking_marker on dual PFE verify OK\n";
   }
 

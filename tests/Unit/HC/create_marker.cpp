@@ -61,12 +61,12 @@ bool test() {
   hsa_signal_value_t signal_value;
   hsa_signal_value_t signal_value2;
 
-  signal_value = hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(nativeHandle));
+  signal_value = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(nativeHandle));
 #if TEST_DEBUG
   std::cout << "kernel signal value: " << signal_value << "\n";
 #endif
 
-  signal_value2 = hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(nativeHandle2));
+  signal_value2 = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(nativeHandle2));
 #if TEST_DEBUG
   std::cout << "barrier signal value: " << signal_value << "\n";
 #endif
@@ -76,13 +76,13 @@ bool test() {
 
   // the barrier packet would ensure all previous packets were processed
 
-  signal_value = hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(nativeHandle));
+  signal_value = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(nativeHandle));
 #if TEST_DEBUG
   std::cout << "kernel signal value: " << signal_value << "\n";
 #endif
   ret &= (signal_value == 0);
 
-  signal_value2 = hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(nativeHandle2));
+  signal_value2 = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(nativeHandle2));
 #if TEST_DEBUG
   std::cout << "barrier signal value: " << signal_value << "\n";
 #endif
