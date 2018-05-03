@@ -3462,7 +3462,7 @@ public:
             signalPoolMutex.lock();
 
             // restore signal to the initial value 1
-            hsa_signal_store_release(signal, 1);
+            hsa_signal_store_screlease(signal, 1);
 
             // mark the signal pointed by signalIndex as available
             signalPoolFlag[signalIndex] = false;
