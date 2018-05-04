@@ -39,7 +39,7 @@ Kernel load_hsaco(hc::accelerator_view *av, const char * fileName, const char *k
         assert(status == HSA_STATUS_SUCCESS);
 
         hsa_executable_t hsaExecutable;
-        status = hsa_executable_create(HSA_PROFILE_FULL, HSA_EXECUTABLE_STATE_UNFROZEN,
+        status = hsa_executable_create_alt(HSA_PROFILE_FULL, HSA_DEFAULT_FLOAT_ROUNDING_MODE_DEFAULT,
                                        NULL, &hsaExecutable);
         assert(status == HSA_STATUS_SUCCESS);
 
