@@ -4408,7 +4408,7 @@ HSADispatch::dispatchKernel(hsa_queue_t* lockedHsaQueue, const void *hostKernarg
     // TODO: Need to check if package write is correct.
     uint64_t index = hsa_queue_load_write_index_relaxed(lockedHsaQueue);
     uint64_t nextIndex = index + 1;
-    if (nextIndex - hsa_queue_load_read_index_acquire(lockedHsaQueue) >= lockedHsaQueue->size) {
+    if (nextIndex - hsa_queue_load_read_index_scacquire(lockedHsaQueue) >= lockedHsaQueue->size) {
       checkHCCRuntimeStatus(Kalmar::HCCRuntimeStatus::HCCRT_STATUS_ERROR_COMMAND_QUEUE_OVERFLOW, __LINE__, lockedHsaQueue);
     }
 
@@ -4874,7 +4874,7 @@ HSABarrier::enqueueAsync(hc::memory_scope fenceScope) {
         uint64_t index = hsa_queue_load_write_index_relaxed(rocrQueue);
         const uint32_t queueMask = rocrQueue->size - 1;
         uint64_t nextIndex = index + 1;
-        if (nextIndex - hsa_queue_load_read_index_acquire(rocrQueue) >= rocrQueue->size) {
+        if (nextIndex - hsa_queue_load_read_index_scacquire(rocrQueue) >= rocrQueue->size) {
           checkHCCRuntimeStatus(Kalmar::HCCRuntimeStatus::HCCRT_STATUS_ERROR_COMMAND_QUEUE_OVERFLOW, __LINE__, rocrQueue);
         }
 
