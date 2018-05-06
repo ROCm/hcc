@@ -4,7 +4,6 @@
 
 # enable bash debugging
 KMDBSCRIPT="${KMDBSCRIPT:=0}"
-KMDBGRIDLAUNCH="${KMDBGRIDLAUNCH:=0}"
 
 # dump the LLVM bitcode
 KMDUMPLLVM="${KMDUMPLLVM:=0}"
@@ -39,9 +38,6 @@ fi
 # Set additional CXXFLAGS based on CMAKE_BUILD_TYPE
 shopt -s nocasematch
 CMAKE_BUILD_TYPE="@CMAKE_BUILD_TYPE@"
-if [ $KMDBGRIDLAUNCH == "1" ]; then
-    CMAKE_BUILD_TYPE="debug";
-fi
 case $CMAKE_BUILD_TYPE in
   release)
     CXXFLAGS=$CXXFLAGS" -O3"
@@ -97,20 +93,9 @@ $OPT -load $LIBPATH/LLVMDirectFuncCall.so -redirect < "$TEMP_NAME.bc" 2>"$TEMP_N
 if [ $KMDUMPLLVM == "1" ]; then
   cp "$TEMP_NAME.kernel_redirect.bc" ./dump.kernel_redirect.bc
 fi
-if [[ -s "$TEMP_NAME.kernel_redirect.bc" ]]; then
-  $OPT -load $LIBPATH/LLVMWrapperGen.so -gensrc < "$TEMP_NAME.bc" 2>"$TEMP_NAME.camp.cpp" >/dev/null
-  if [ $KMDUMPLLVM == "1" ]; then
-    cp "$TEMP_NAME.camp.cpp" ./dump.kernel_camp.cpp
-  fi
-  $CLANG $CXXFLAGS "$TEMP_NAME.camp.cpp" $CO "$TEMP_NAME.camp.s" -emit-llvm
-  $CLANG $CXXFLAGS "$TEMP_NAME.camp.cpp" $CO "$TEMP_NAME.camp.o"
-  objcopy -R .kernel "$TEMP_NAME.camp.o"
-  $LLVM_LINK "$TEMP_NAME.kernel_redirect.bc" "$TEMP_NAME.camp.s" -o "$TEMP_NAME.link.bc"
-  $CLAMP_ASM "$TEMP_NAME.link.bc" "$TEMP_NAME.camp.o"
-else
-  ln -s "$KERNEL_INPUT" "$1.bc"
-  $CLAMP_ASM "$1.bc" "$TEMP_NAME.camp.o"
-fi
+
+ln -s "$KERNEL_INPUT" "$1.bc"
+$CLAMP_ASM "$1.bc" "$TEMP_NAME.camp.o"
 
 if [ -f "$TEMP_DIR/$BASENAME.tmp.o" ]; then
   ld -r --allow-multiple-definition "$TEMP_DIR/$BASENAME.tmp.o" "$TEMP_NAME.camp.o" -o "$2"
@@ -118,8 +103,4 @@ else
   mv "$TEMP_NAME.camp.o" "$2"
 fi
 
-if [ $KMDBGRIDLAUNCH == "1" ]; then
-  echo "db: KMDBGRIDLAUNCH=1 and temps saved in $TEMP_DIR"
-else
-   rm -rf "$TEMP_DIR"
-fi
+rm -rf "$TEMP_DIR"
