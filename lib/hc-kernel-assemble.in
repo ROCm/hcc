@@ -89,10 +89,6 @@ if [ $KMDUMPLLVM == "1" ]; then
   $LLVM_DIS "$TEMP_NAME.bc" -o "$TEMP_NAME.ll"
   cp "$TEMP_NAME.ll" ./dump.kernel_input.ll
 fi
-$OPT -load $LIBPATH/LLVMDirectFuncCall.so -redirect < "$TEMP_NAME.bc" 2>"$TEMP_NAME.kernel_redirect.bc" >/dev/null
-if [ $KMDUMPLLVM == "1" ]; then
-  cp "$TEMP_NAME.kernel_redirect.bc" ./dump.kernel_redirect.bc
-fi
 
 ln -s "$KERNEL_INPUT" "$1.bc"
 $CLAMP_ASM "$1.bc" "$TEMP_NAME.camp.o"

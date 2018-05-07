@@ -44,24 +44,5 @@ fi
 
 CO="-c -o"
 
-TEMP_DIR=`mktemp -d`
-BASENAME=`basename "$2"`
-TEMP_NAME="$TEMP_DIR/$BASENAME"
-
-$LLVM_DIS "$1" -o "$TEMP_NAME.ll"
-if [ $KMDUMPLLVM == "1" ]; then
-  cp "$TEMP_NAME.ll" ./dump.host_input.ll
-fi
-$OPT -load $LIBPATH/LLVMDirectFuncCall.so -redirect -host < "$TEMP_NAME.ll" 2>"$TEMP_NAME.host_redirect.ll" >/dev/null
-if [ $KMDUMPLLVM == "1" ]; then
-  cp "$TEMP_NAME.host_redirect.ll" ./dump.host_redirect.ll
-fi
-if [[ -s "$TEMP_NAME.host_redirect.ll" ]]; then
-  $LLVM_AS "$TEMP_NAME.host_redirect.ll" -o "$TEMP_NAME.host_redirect.bc"
-  eval "$CLANG $CXXFLAGS \"$TEMP_NAME.host_redirect.bc\" $CO \"$2\" "
-else
-  ln -s "$1" "$1.bc"
-  eval "$CLANG $CXXFLAGS \"$1.bc\" $CO \"$2\" "
-fi
-
-rm -rf "$TEMP_DIR"
+ln -s "$1" "$1.bc"
+eval "$CLANG $CXXFLAGS \"$1.bc\" $CO \"$2\" "
