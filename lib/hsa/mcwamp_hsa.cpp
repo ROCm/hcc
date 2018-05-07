@@ -593,7 +593,7 @@ public:
         // get symbol
         hsa_executable_symbol_t symbol;
         hsa_agent_t agent;
-        status = hsa_executable_get_symbol(hsaExecutable, NULL, symbolName, agent, 0, &symbol);
+        status = hsa_executable_get_symbol_by_name(hsaExecutable, symbolName, const_cast<hsa_agent_t*>(&agent), &symbol);
         STATUS_CHECK_SYMBOL(status, symbolName, __LINE__);
 
         // get address of symbol
@@ -2800,7 +2800,7 @@ public:
                     // Get symbol handle.
                     hsa_status_t status;
                     hsa_executable_symbol_t kernelSymbol;
-                    status = hsa_executable_get_symbol(executable->hsaExecutable, NULL, fun, agent, 0, &kernelSymbol);
+                    status = hsa_executable_get_symbol_by_name(executable->hsaExecutable, fun, const_cast<hsa_agent_t*>(&agent), &kernelSymbol);
                     if (status == HSA_STATUS_SUCCESS) {
                         // Get code handle.
                         uint64_t kernelCodeHandle;
@@ -3129,7 +3129,7 @@ public:
 
                 // get symbol
                 hsa_executable_symbol_t symbol;
-                status = hsa_executable_get_symbol(executable->hsaExecutable, NULL, symbolName, agent, 0, &symbol);
+                status = hsa_executable_get_symbol_by_name(executable->hsaExecutable, symbolName, const_cast<hsa_agent_t*>(&agent), &symbol);
                 //STATUS_CHECK_SYMBOL(status, symbolName, __LINE__);
 
                 if (status == HSA_STATUS_SUCCESS) {

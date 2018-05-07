@@ -38,7 +38,7 @@ Kernel load_hsaco(hc::accelerator_view *av, const char * fileName, const char *k
         assert(status == HSA_STATUS_SUCCESS);
 
         hsa_executable_t hsaExecutable;
-        status = hsa_executable_create(HSA_PROFILE_FULL, HSA_EXECUTABLE_STATE_UNFROZEN,
+        status = hsa_executable_create_alt(HSA_PROFILE_FULL, HSA_DEFAULT_FLOAT_ROUNDING_MODE_DEFAULT,
                                        NULL, &hsaExecutable);
         assert(status == HSA_STATUS_SUCCESS);
 
@@ -53,7 +53,7 @@ Kernel load_hsaco(hc::accelerator_view *av, const char * fileName, const char *k
 
         // Get symbol handle.
         hsa_executable_symbol_t kernelSymbol;
-        status = hsa_executable_get_symbol(hsaExecutable, NULL, kernelName, hsaAgent, 0, &kernelSymbol);
+        status = hsa_executable_get_symbol_by_name(hsaExecutable, kernelName, const_cast<hsa_agent_t*>(&hsaAgent), &kernelSymbol);
         assert(status == HSA_STATUS_SUCCESS);
 
         Kernel k;

@@ -82,10 +82,10 @@ namespace hc2
     std::string to_string(const hsa_isa_t& x)
     {
         std::size_t sz = 0u;
-        hsa_isa_get_info(x, HSA_ISA_INFO_NAME_LENGTH, 0u, &sz);
+        hsa_isa_get_info_alt(x, HSA_ISA_INFO_NAME_LENGTH, &sz);
 
         std::string r(sz, '\0');
-        hsa_isa_get_info(x, HSA_ISA_INFO_NAME, 0u, &r.front());
+        hsa_isa_get_info_alt(x, HSA_ISA_INFO_NAME, &r.front());
 
         return r;
     }
