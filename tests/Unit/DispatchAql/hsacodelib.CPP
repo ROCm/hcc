@@ -12,7 +12,7 @@
 
 
 
-// Load HSACO 
+// Load HSACO
 Kernel load_hsaco(hc::accelerator_view *av, const char * fileName, const char *kernelName)
 {
     hsa_region_t systemRegion = *(hsa_region_t*)av->get_hsa_am_system_region();
@@ -33,8 +33,8 @@ Kernel load_hsaco(hc::accelerator_view *av, const char * fileName, const char *k
 
         hsa_status_t status;
 
-        hsa_code_object_t code_object = {0};
-        status = hsa_code_object_deserialize(&buffer[0], fsize, NULL, &code_object);
+        hsa_code_object_reader_t co_reader = {};
+        status = hsa_code_object_reader_create_from_memory(&buffer[0], fsize, &co_reader);
         assert(status == HSA_STATUS_SUCCESS);
 
         hsa_executable_t hsaExecutable;
@@ -42,8 +42,8 @@ Kernel load_hsaco(hc::accelerator_view *av, const char * fileName, const char *k
                                        NULL, &hsaExecutable);
         assert(status == HSA_STATUS_SUCCESS);
 
-        // Load the code object.
-        status = hsa_executable_load_code_object(hsaExecutable, hsaAgent, code_object, NULL);
+        // Load the agent code object.
+        status = hsa_executable_load_agent_code_object(hsaExecutable, hsaAgent, co_reader, NULL, NULL);
         assert(status == HSA_STATUS_SUCCESS);
 
         // Freeze the executable.
@@ -81,7 +81,7 @@ Kernel load_hsaco(hc::accelerator_view *av, const char * fileName, const char *k
 }
 
 
-// Dispatch a GL packet - 
+// Dispatch a GL packet -
 // Convert to AQL and call dispatch_hsa_kernel
 void dispatch_glp_kernel(const grid_launch_parm *lp, const Kernel &k, void *args, int argSize)
 {
