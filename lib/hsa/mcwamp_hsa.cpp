@@ -2707,12 +2707,12 @@ public:
 
         // Get ISA from ELF header
         std::string triple = "amdgcn-amd-amdhsa--gfx";
-        unsigned MACH = reader.get_flags() & 0x000000ff;
+        unsigned MACH = reader.get_flags() & hc::EF_AMDGPU_MACH;
 
         switch(MACH) {
-            case 0x023 : triple.append("701"); break;
-            case 0x02a : triple.append("803"); break;
-            case 0x02c : triple.append("900"); break;
+            case hc::EF_AMDGPU_MACH_AMDGCN_GFX701 : triple.append("701"); break;
+            case hc::EF_AMDGPU_MACH_AMDGCN_GFX803 : triple.append("803"); break;
+            case hc::EF_AMDGPU_MACH_AMDGCN_GFX900 : triple.append("900"); break;
         }
 
         const auto isa{get_isa_name_from_triple(std::move(triple))};
