@@ -2346,32 +2346,37 @@ public:
         }
     };
 
+
+private:
+
+    // NOTE: removeRocrQueue should only be called from HSAQueue::dispose
+    // since there's an assumption on a specific locking sequence
+    friend void HSAQueue::dispose();
     void removeRocrQueue(RocrQueue *rocrQueue) {
 
         // queues already locked:
         size_t hccSize = queues.size();
 
-        {
-            std::lock_guard<std::mutex> l(this->rocrQueuesMutex);
+        // rocrQueuesMutex has already been acquired in HSAQueue::dispose
 
-            // a perf optimization to keep the HSA queue if we have more HCC queues that might want it.
-            // This defers expensive queue deallocation if an hccQueue that holds an hwQueue is destroyed -
-            // keep the hwqueue around until the number of hccQueues drops below the number of hwQueues
-            // we have already allocated.
-            auto rqSize = rocrQueues.size();
-            if (hccSize < rqSize)  {
-                auto iter = std::find(rocrQueues.begin(), rocrQueues.end(), rocrQueue);
-                assert (iter != rocrQueues.end());
-                // Remove the pointer from the list:
-                rocrQueues.erase(iter);
-                DBOUT(DB_QUEUE, "removeRocrQueue-hard: rocrQueue=" << rocrQueue << " hccQueues/rocrQueues=" << hccSize << "/" << rqSize << "\n")
-                delete rocrQueue; // this will delete the HSA HW queue.
-            } else {
-                DBOUT(DB_QUEUE, "removeRocrQueue-soft: rocrQueue=" << rocrQueue << " keep hwQUeue, set _hccQueue link to nullptr" << " hccQueues/rocrQueues=" << hccSize << "/" << rqSize << "\n");
-                rocrQueue->_hccQueue = nullptr; // mark it as available.
-            }
+        // a perf optimization to keep the HSA queue if we have more HCC queues that might want it.
+        // This defers expensive queue deallocation if an hccQueue that holds an hwQueue is destroyed -
+        // keep the hwqueue around until the number of hccQueues drops below the number of hwQueues
+        // we have already allocated.
+        auto rqSize = rocrQueues.size();
+        if (hccSize < rqSize) {
+            auto iter = std::find(rocrQueues.begin(), rocrQueues.end(), rocrQueue);
+            assert(iter != rocrQueues.end());
+            // Remove the pointer from the list:
+            rocrQueues.erase(iter);
+            DBOUT(DB_QUEUE, "removeRocrQueue-hard: rocrQueue=" << rocrQueue << " hccQueues/rocrQueues=" << hccSize << "/" << rqSize << "\n")
+            delete rocrQueue; // this will delete the HSA HW queue.
         }
-
+        else {
+            DBOUT(DB_QUEUE, "removeRocrQueue-soft: rocrQueue=" << rocrQueue << " keep hwQUeue, set _hccQueue link to nullptr"
+                                                               << " hccQueues/rocrQueues=" << hccSize << "/" << rqSize << "\n");
+            rocrQueue->_hccQueue = nullptr; // mark it as available.
+        }
     };
 
 
@@ -3980,6 +3985,12 @@ void HSAQueue::dispose() override {
     {
         DBOUT(DB_LOCK, " ptr:" << this << " dispose lock_guard...\n");
 
+        Kalmar::HSADevice* device = static_cast<Kalmar::HSADevice*>(getDev());
+
+        // NOTE: needs to acquire rocrQueuesMutex and then the qumtex in this
+        // sequence in order to avoid potential deadlock with other threads
+        // executing createOrstealRocrQueue at the same time
+        std::lock_guard<std::mutex> rl(device->rocrQueuesMutex);
         std::lock_guard<std::recursive_mutex> l(this->qmutex);
 
         // wait on all existing kernel dispatches and barriers to complete
@@ -3999,10 +4010,7 @@ void HSAQueue::dispose() override {
         }
         kernelBufferMap.clear();
 
-
-        Kalmar::HSADevice* device = static_cast<Kalmar::HSADevice*>(getDev());
         if (this->rocrQueue != nullptr) {
-
             device->removeRocrQueue(rocrQueue);
             rocrQueue = nullptr;
         }
