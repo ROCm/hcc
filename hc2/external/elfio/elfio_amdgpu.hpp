@@ -10,6 +10,8 @@
 
 namespace hc {
 
+// AMDGPU e_flags mirroring from llvm/include/llvm/BinaryFormat/ELF.h
+
 // AMDGPU specific e_flags.
 enum : unsigned {
   // Processor selection mask for EF_AMDGPU_MACH_* values.
