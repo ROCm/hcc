@@ -2671,7 +2671,30 @@ public:
         }
     }
 
+    inline
+    std::string get_isa_name_from_triple(std::string triple)
+    {
+        static hsa_isa_t tmp{};
+        static const bool is_old_rocr{
+            hsa_isa_from_name(triple.c_str(), &tmp) != HSA_STATUS_SUCCESS};
+
+        if (is_old_rocr) {
+            auto tmp {triple.substr(triple.rfind('x') + 1)};
+            triple.replace(0, std::string::npos, "AMD:AMDGPU");
+
+            for (auto&& x : tmp) {
+                triple.push_back(':');
+                triple.push_back(x);
+            }
+        }
+
+        return triple;
+    }
+
     bool IsCompatibleKernel(void* size, void* source) override {
+        using namespace ELFIO;
+        using namespace std;
+
         hsa_status_t status;
 
         // Allocate memory for kernel source
@@ -2680,24 +2703,33 @@ public:
         memcpy(kernel_source, source, kernel_size);
         kernel_source[kernel_size] = '\0';
 
-        // Deserialize code object.
-        hsa_code_object_t code_object = {0};
-        status = hsa_code_object_deserialize(kernel_source, kernel_size, NULL, &code_object);
-        STATUS_CHECK(status, __LINE__);
-        assert(0 != code_object.handle);
+        // Set up ELF header reader
+        elfio reader;
+        istringstream kern_stream{string{
+            kernel_source,
+            kernel_source + kernel_size}};
+        reader.load(kern_stream);
 
-        // Get ISA of the code object
-        hsa_isa_t code_object_isa;
-        status = hsa_code_object_get_info(code_object, HSA_CODE_OBJECT_INFO_ISA, &code_object_isa);
+        // Get ISA from ELF header
+        std::string triple = "amdgcn-amd-amdhsa--gfx";
+        unsigned MACH = reader.get_flags() & hc::EF_AMDGPU_MACH;
+
+        switch(MACH) {
+            case hc::EF_AMDGPU_MACH_AMDGCN_GFX701 : triple.append("701"); break;
+            case hc::EF_AMDGPU_MACH_AMDGCN_GFX803 : triple.append("803"); break;
+            case hc::EF_AMDGPU_MACH_AMDGCN_GFX900 : triple.append("900"); break;
+            case hc::EF_AMDGPU_MACH_AMDGCN_GFX906 : triple.append("906"); break;
+        }
+
+        const auto isa{get_isa_name_from_triple(std::move(triple))};
+
+        hsa_isa_t co_isa{};
+        status = hsa_isa_from_name(isa.c_str(), &co_isa);
         STATUS_CHECK(status, __LINE__);
 
         // Check if the code object is compatible with ISA of the agent
         bool isCompatible = false;
-        status = hsa_isa_compatible(code_object_isa, agentISA, &isCompatible);
-        STATUS_CHECK(status, __LINE__);
-
-        // Destroy code object
-        status = hsa_code_object_destroy(code_object);
+        status = hsa_isa_compatible(co_isa, agentISA, &isCompatible);
         STATUS_CHECK(status, __LINE__);
 
         // release allocated memory
