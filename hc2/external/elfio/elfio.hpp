@@ -45,6 +45,7 @@ THE SOFTWARE.
 #include "elfio_section.hpp"
 #include "elfio_segment.hpp"
 #include "elfio_strings.hpp"
+#include "elfio_amdgpu.hpp"
 
 #define ELFIO_HEADER_ACCESS_GET( TYPE, FNAME ) \
 TYPE                                           \
