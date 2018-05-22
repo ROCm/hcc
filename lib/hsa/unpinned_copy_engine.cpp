@@ -125,8 +125,10 @@ UnpinnedCopyEngine::UnpinnedCopyEngine(hsa_agent_t hsaAgent, hsa_agent_t cpuAgen
         err = hsa_amd_agents_allow_access(agents.size(), agentBlock, NULL, _pinnedStagingBuffer[i]);
         ErrorCheck(err);
 
-        hsa_signal_create(0, 0, NULL, &_completionSignal[i]);
-        hsa_signal_create(0, 0, NULL, &_completionSignal2[i]);
+        hsa_amd_signal_create(
+            0, 0, nullptr, HSA_AMD_SIGNAL_IPC, &_completionSignal[i]);
+        hsa_amd_signal_create(
+            0, 0, nullptr, HSA_AMD_SIGNAL_IPC, &_completionSignal2[i]);
     }
 
 };
