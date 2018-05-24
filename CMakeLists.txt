@@ -364,6 +364,7 @@ install(PROGRAMS $<TARGET_FILE:LLVMAMDGPUDesc>
                  $<TARGET_FILE:LLVMSupport>
                  $<TARGET_FILE:LLVMCpuRename>
                  $<TARGET_FILE:LLVMSelectAcceleratorCode>
+                 $<TARGET_FILE:LLVMPromotePointerKernArgsToGlobal>
                  $<TARGET_FILE:LLVMHello>
                  $<TARGET_FILE:LLVMTileUniform>
         DESTINATION lib

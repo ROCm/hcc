@@ -177,11 +177,17 @@ fi
 
 # Invoke HCC-specific opt passes
 if [ "$HCC_TILECHECK" == "ON" ]; then
-    $OPT -load $LIB/LLVMSelectAcceleratorCode@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-        -select-accelerator-code -dce -globaldce -always-inline -tile_uniform < $2.linked.bc -o $2.selected.bc
+  $OPT -load $LIB/LLVMSelectAcceleratorCode@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+    -load $LIB/LLVMPromotePointerKernArgsToGlobal@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+    -select-accelerator-code -promote-pointer-kernargs-to-global \
+    -dce -globaldce -always-inline -infer-address-spaces -tile_uniform \
+    < $2.linked.bc -o $2.selected.bc
 else
-    $OPT -load $LIB/LLVMSelectAcceleratorCode@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-        -select-accelerator-code -dce -globaldce -always-inline < $2.linked.bc -o $2.selected.bc
+  $OPT -load $LIB/LLVMSelectAcceleratorCode@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+    -load $LIB/LLVMPromotePointerKernArgsToGlobal@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+    -select-accelerator-code -promote-pointer-kernargs-to-global \
+    -dce -globaldce -always-inline -infer-address-spaces \
+    < $2.linked.bc -o $2.selected.bc
 fi
 
 # error handling for HCC-specific opt passes
@@ -197,7 +203,7 @@ fi
 
 # Optimization notes:
 #  -disable-simplify-libcalls:  prevents transforming loops into library calls such as memset, memcopy on GPU
-$OPT -mtriple amdgcn--amdhsa-amdgiz -mcpu=$AMDGPU_TARGET -infer-address-spaces -amdgpu-internalize-symbols -disable-simplify-libcalls $KMOPTOPT -verify $2.selected.bc -o $2.opt.bc
+$OPT -mtriple amdgcn--amdhsa-amdgiz -mcpu=$AMDGPU_TARGET -amdgpu-internalize-symbols -disable-simplify-libcalls $KMOPTOPT -verify $2.selected.bc -o $2.opt.bc
 
 # error handling for opt
 RETVAL=$?
