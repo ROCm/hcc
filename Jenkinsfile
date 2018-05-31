@@ -36,6 +36,21 @@ def get_num_change_sets( )
   return currentBuild.changeSets.size( );
 }
 
+}
+
+
+  // The client workspace is shared with the docker container
+  node('master')
+  {
+    checkout([
+      $class: 'GitSCM',
+      branches: scm.branches,
+      doGenerateSubmoduleConfigurations: scm.doGenerateSubmoduleConfigurations,
+      extensions: scm.extensions + [[$class: 'CloneOption', reference: '/var/jenkins_home/gitcache/hcc.git']], [[$class: 'CleanCheckout'], [$class: 'SubmoduleOption', disableSubmodules: false, parentCredentials: false, recursiveSubmodules: true, reference: '/var/jenkins_home/gitcache/hcc.git', timeout: 100, trackingSubmodules: false]],
+      userRemoteConfigs: scm.userRemoteConfigs
+    ])
+  }
+
 node( 'hcctest' )
 {
   // Convenience variables for common paths used in building
@@ -46,18 +61,6 @@ node( 'hcctest' )
   def build_dir_debug_abs = "${workspace_dir_abs}/${build_dir_debug_rel}"
   def build_dir_release_abs = "${workspace_dir_abs}/${build_dir_release_rel}"
   def build_dir_cmake_tests_abs = "${workspace_dir_abs}/${build_dir_cmake_tests_rel}"
-
-  // The client workspace is shared with the docker container
-  stage('HCC Checkout')
-  {
-    checkout([
-      $class: 'GitSCM',
-      branches: scm.branches,
-      doGenerateSubmoduleConfigurations: scm.doGenerateSubmoduleConfigurations,
-      extensions: scm.extensions + [[$class: 'CleanCheckout'], [$class: 'SubmoduleOption', disableSubmodules: false, parentCredentials: false, recursiveSubmodules: true, reference: '', timeout: 100, trackingSubmodules: false]],
-      userRemoteConfigs: scm.userRemoteConfigs
-    ])
-  }
 
   def hcc_build_image = null
   stage('ubuntu-16.04 image')
