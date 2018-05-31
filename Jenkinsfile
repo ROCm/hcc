@@ -46,7 +46,7 @@ def get_num_change_sets( )
       $class: 'GitSCM',
       branches: scm.branches,
       doGenerateSubmoduleConfigurations: scm.doGenerateSubmoduleConfigurations,
-      extensions: scm.extensions + [[$class: 'CloneOption', reference: '/var/jenkins_home/gitcache/hcc.git']], [[$class: 'CleanCheckout'], [$class: 'SubmoduleOption', disableSubmodules: false, parentCredentials: false, recursiveSubmodules: true, reference: '/var/jenkins_home/gitcache/hcc.git', timeout: 100, trackingSubmodules: false]],
+      extensions: scm.extensions + [[$class: 'CloneOption', reference: '/var/jenkins_home/gitcache/hcc.git'], [$class: 'CleanCheckout'], [$class: 'SubmoduleOption', disableSubmodules: false, parentCredentials: false, recursiveSubmodules: true, reference: '/var/jenkins_home/gitcache/hcc.git', timeout: 100, trackingSubmodules: false]],
       userRemoteConfigs: scm.userRemoteConfigs
     ])
   }
