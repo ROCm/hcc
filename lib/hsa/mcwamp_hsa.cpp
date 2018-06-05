@@ -26,6 +26,9 @@
 #include <utility>
 #include <vector>
 
+#include <unistd.h>
+#include <sys/syscall.h>
+
 #ifndef USE_LIBCXX
 #include <cxxabi.h>
 #endif
@@ -687,10 +690,60 @@ struct HSAOpCoord
     uint64_t    _queueId;
 };
 
+enum OpId {
+    OP_SYNC_ID = 0,
+    OP_DISPATCH_ID = 1,
+    OP_COPY_ID = 2,
+    OP_BARRIER_ID = 3,
+};
+
+// HCC activity record type
+struct hcc_record_t {
+  uint32_t domain;                                                    // activity domain id
+  uint32_t op_id;                                                     // operation id, dispatch/copy/barrier
+  uint32_t command_id;                                                // command kind
+  uint64_t correlation_id;                                            // activity correlation ID
+  uint64_t begin_ns;                                                  // host begin timestamp, nano-seconds
+  uint64_t end_ns;                                                    // host end timestamp, nano-seconds
+  int device_id;
+  uint64_t stream_id;
+  size_t bytes;
+};
+
+typedef uint64_t record_id_t;
+typedef std::map<uint32_t, record_id_t> records_dictionary_t;
+typedef void (*activity_callback_t)(uint32_t op_id, void* record, void* arg);
+
+class ActivityRecords {
+    public:
+    static void setRecord(const record_id_t& record_id) {
+        const uint32_t thread_id = syscall(__NR_gettid);
+        if (_records == NULL) _records = new records_dictionary_t;
+        if (record_id) (*_records)[thread_id] = record_id;
+        else _records->erase(thread_id);
+    }
+    static record_id_t getRecord() {
+        const uint32_t thread_id = syscall(__NR_gettid);
+        return (_records == NULL) ? record_id_t{0} : (*_records)[thread_id];
+    }
+    private:
+    static records_dictionary_t* _records;
+};
+
+class ActivityCallbacks {
+    public:
+    static void set(activity_callback_t fun, void* arg) { _fun = fun; _arg = arg; }
+    static activity_callback_t getFun() { return _fun; }
+    static void* getArg() { return _arg; }
+    private:
+    static activity_callback_t _fun;
+    static void* _arg;
+};
+
 // Base class for the other HSA ops:
 class HSAOp : public Kalmar::KalmarAsyncOp {
 public:
-    HSAOp(Kalmar::KalmarQueue *queue, hc::hcCommandKind commandKind) ;
+    HSAOp(OpId id, Kalmar::KalmarQueue *queue, hc::hcCommandKind commandKind) ;
 
     const HSAOpCoord opCoord() const { return _opCoord; };
     int asyncOpsIndex() const { return _asyncOpsIndex; };
@@ -713,6 +766,10 @@ protected:
     int          _signalIndex;
 
     hsa_agent_t  _agent;
+
+    activity_callback_t _activity_callback_fun;
+    void* _activity_callback_arg;
+    uint64_t _correlation_id;
 };
 std::ostream& operator<<(std::ostream& os, const HSAOp & op);
 
@@ -899,7 +956,7 @@ public:
 
     // constructor with 1 prior dependency
     HSABarrier(Kalmar::KalmarQueue *queue, std::shared_ptr <Kalmar::KalmarAsyncOp> dependent_op) :
-        HSAOp(queue, Kalmar::hcCommandMarker),
+        HSAOp(OP_BARRIER_ID, queue, Kalmar::hcCommandMarker),
         isDispatched(false),
         future(nullptr),
         _acquire_scope(hc::no_scope),
@@ -920,7 +977,7 @@ public:
 
     // constructor with at most 5 prior dependencies
     HSABarrier(Kalmar::KalmarQueue *queue, int count, std::shared_ptr <Kalmar::KalmarAsyncOp> *dependent_op_array) :
-        HSAOp(queue, Kalmar::hcCommandMarker),
+        HSAOp(OP_BARRIER_ID, queue, Kalmar::hcCommandMarker),
         isDispatched(false),
         future(nullptr),
         _acquire_scope(hc::no_scope),
@@ -4237,7 +4294,7 @@ HSAQueue::dispatch_hsa_kernel(const hsa_kernel_dispatch_packet_t *aql,
 
 HSADispatch::HSADispatch(Kalmar::HSADevice* _device, Kalmar::KalmarQueue *queue, HSAKernel* _kernel,
                          const hsa_kernel_dispatch_packet_t *aql) :
-    HSAOp(queue, Kalmar::hcCommandKernel),
+    HSAOp(OP_DISPATCH_ID, queue, Kalmar::hcCommandKernel),
     device(_device),
     kernel_name(nullptr),
     kernel(_kernel),
@@ -4593,6 +4650,20 @@ HSADispatch::dispose() {
         //std::string kname = kernel ? (kernel->kernelName + "+++" + kernel->shortKernelName) : "hmm";
         //LOG_PROFILE(this, start, end, "kernel", kname.c_str(), std::hex << "kernel="<< kernel << " " << (kernel? kernel->kernelCodeHandle:0x0) << " aql.kernel_object=" << aql.kernel_object << std::dec);
         LOG_PROFILE(this, start, end, "kernel", getKernelName(), "");
+    }
+    if (_activity_callback_fun != NULL) {
+        hcc_record_t record {
+            0,                          // domain id
+            OP_DISPATCH_ID,             // operation id
+            (uint32_t)getCommandKind(), // command kind
+            _correlation_id,            // activity correlation id
+            getBeginTimestamp(),        // begin timestamp, ns
+            getEndTimestamp(),          // end timestamp, ns
+            _opCoord._deviceId,         // device id
+            _opCoord._queueId,          // stream id
+            0
+        };
+        _activity_callback_fun(OP_DISPATCH_ID, &record, _activity_callback_arg);
     }
     Kalmar::ctx.releaseSignal(_signal, _signalIndex);
 
@@ -4953,6 +5024,20 @@ HSABarrier::dispose() {
         };
         LOG_PROFILE(this, start, end, "barrier", "depcnt=" + std::to_string(depCount) + ",acq=" + fenceToString(acqBits) + ",rel=" + fenceToString(relBits), depss.str())
     }
+    if (_activity_callback_fun != NULL) {
+        hcc_record_t record {
+            0,                          // domain id
+            OP_BARRIER_ID,              // operation id
+            (uint32_t)getCommandKind(), // command kind
+            _correlation_id,            // activity correlation id
+            getBeginTimestamp(),        // begin timestamp, ns
+            getEndTimestamp(),          // end timestamp, ns
+            _opCoord._deviceId,         // device id
+            _opCoord._queueId,          // stream id
+            0
+        };
+        _activity_callback_fun(OP_BARRIER_ID, &record, _activity_callback_arg);
+    }
     Kalmar::ctx.releaseSignal(_signal, _signalIndex);
 
     // Release referecne to our dependent ops:
@@ -4989,16 +5074,25 @@ HSAOpCoord::HSAOpCoord(Kalmar::HSAQueue *queue) :
         _queueId(queue->getSeqNum())
         {}
 
-HSAOp::HSAOp(Kalmar::KalmarQueue *queue, hc::hcCommandKind commandKind) :
+HSAOp::HSAOp(OpId id, Kalmar::KalmarQueue *queue, hc::hcCommandKind commandKind) :
     KalmarAsyncOp(queue, commandKind),
     _opCoord(static_cast<Kalmar::HSAQueue*> (queue)),
     _asyncOpsIndex(-1),
 
     _signalIndex(-1),
-    _agent(static_cast<Kalmar::HSADevice*>(hsaQueue()->getDev())->getAgent())
+    _agent(static_cast<Kalmar::HSADevice*>(hsaQueue()->getDev())->getAgent()),
+
+    _activity_callback_fun(NULL),
+    _activity_callback_arg(NULL)
 {
     _signal.handle=0;
     apiStartTick = Kalmar::ctx.getSystemTicks();
+
+    _correlation_id = ActivityRecords::getRecord();
+    if (_correlation_id) {
+        _activity_callback_fun = ActivityCallbacks::getFun();
+        _activity_callback_arg = ActivityCallbacks::getArg();
+    }
 };
 
 Kalmar::HSAQueue *HSAOp::hsaQueue() const 
@@ -5022,7 +5116,7 @@ bool HSAOp::isReady() override {
 //
 // Copy mode will be set later on.
 // HSA signals would be waited in HSA_WAIT_STATE_ACTIVE by default for HSACopy instances
-HSACopy::HSACopy(Kalmar::KalmarQueue *queue, const void* src_, void* dst_, size_t sizeBytes_) : HSAOp(queue, Kalmar::hcCommandInvalid),
+HSACopy::HSACopy(Kalmar::KalmarQueue *queue, const void* src_, void* dst_, size_t sizeBytes_) : HSAOp(OP_COPY_ID, queue, Kalmar::hcCommandInvalid),
     isSubmitted(false), isAsync(false), isSingleStepCopy(false), isPeerToPeer(false), future(nullptr), depAsyncOp(nullptr), copyDevice(nullptr), waitMode(HSA_WAIT_STATE_ACTIVE),
     src(src_), dst(dst_),
     sizeBytes(sizeBytes_)
@@ -5334,6 +5428,20 @@ HSACopy::dispose() {
 
             LOG_PROFILE(this, start, end, "copy", getCopyCommandString(),  "\t" << sizeBytes << " bytes;\t" << sizeBytes/1024.0/1024 << " MB;\t" << bw << " GB/s;");
         }
+        if (_activity_callback_fun != NULL) {
+            hcc_record_t record {
+                0,                          // domain id
+                OP_COPY_ID,                 // operation id
+                (uint32_t)getCommandKind(), // command kind
+                _correlation_id,            // activity correlation id
+                getBeginTimestamp(),        // begin timestamp, ns
+                getEndTimestamp(),          // end timestamp, ns
+                _opCoord._deviceId,         // device id
+                _opCoord._queueId,          // stream id
+                sizeBytes                   // size bytes
+            };
+            _activity_callback_fun(OP_COPY_ID, &record, _activity_callback_arg);
+        }
         Kalmar::ctx.releaseSignal(_signal, _signalIndex);
     } else {
         if (HCC_PROFILE & HCC_PROFILE_TRACE) {
@@ -5341,6 +5449,20 @@ HSACopy::dispose() {
             uint64_t end   = Kalmar::ctx.getSystemTicks();
             double bw = (double)(sizeBytes)/(end-start) * (1000.0/1024.0) * (1000.0/1024.0);
             LOG_PROFILE(this, start, end, "copyslo", getCopyCommandString(),  "\t" << sizeBytes << " bytes;\t" << sizeBytes/1024.0/1024 << " MB;\t" << bw << " GB/s;");
+        }
+        if (_activity_callback_fun != NULL) {
+            hcc_record_t record {
+                0,                          // domain id
+                OP_COPY_ID,                 // operation id
+                (uint32_t)getCommandKind(), // command kind
+                _correlation_id,            // activity correlation id
+                apiStartTick,               // begin timestamp, ns
+                Kalmar::ctx.getSystemTicks(), // end timestamp, ns
+                _opCoord._deviceId,         // device id
+                _opCoord._queueId,          // stream id
+                sizeBytes                   // size bytes
+            };
+            _activity_callback_fun(OP_COPY_ID, &record, _activity_callback_arg);
         }
     }
 
@@ -5595,3 +5717,17 @@ std::ostream& operator<<(std::ostream& os, const HSAOp & op)
 //   - store queue, completion signal, other common info.
 
 //   - remove hsaqueeu
+
+////////////////////////////////////////////////////////////////////////////////////////
+// Profiling primitives
+records_dictionary_t* ActivityRecords::_records = NULL;
+activity_callback_t ActivityCallbacks::_fun = NULL;
+void* ActivityCallbacks::_arg = NULL;
+extern "C" __attribute__((visibility("default")))
+size_t HSAOp_get_record_size() { return sizeof(hcc_record_t); }
+extern "C" __attribute__((visibility("default")))
+void HSAOp_set_activity_record(const record_id_t& record_id) { ActivityRecords::setRecord(record_id); }
+extern "C" __attribute__((visibility("default")))
+void HSAOp_set_activity_callback(activity_callback_t callback, void* arg) { ActivityCallbacks::set(callback, arg); }
+extern "C" __attribute__((visibility("default")))
+const char* HSAOp_get_name(const uint32_t& id) { return getHcCommandKindString(static_cast<Kalmar::hcCommandKind>(id)); }
