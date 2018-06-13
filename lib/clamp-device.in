@@ -179,14 +179,14 @@ fi
 if [ "$HCC_TILECHECK" == "ON" ]; then
   $OPT -load $LIB/LLVMSelectAcceleratorCode@CMAKE_SHARED_LIBRARY_SUFFIX@ \
     -load $LIB/LLVMPromotePointerKernArgsToGlobal@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-    -select-accelerator-code -promote-pointer-kernargs-to-global \
-    -dce -globaldce -always-inline -infer-address-spaces -tile_uniform \
+    -select-accelerator-code \
+    -dce -globaldce -always-inline -infer-address-spaces -promote-pointer-kernargs-to-global -tile_uniform \
     < $2.linked.bc -o $2.selected.bc
 else
   $OPT -load $LIB/LLVMSelectAcceleratorCode@CMAKE_SHARED_LIBRARY_SUFFIX@ \
     -load $LIB/LLVMPromotePointerKernArgsToGlobal@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-    -select-accelerator-code -promote-pointer-kernargs-to-global \
-    -dce -globaldce -always-inline -infer-address-spaces \
+    -select-accelerator-code \
+    -dce -globaldce -always-inline -infer-address-spaces -promote-pointer-kernargs-to-global \
     < $2.linked.bc -o $2.selected.bc
 fi
 
