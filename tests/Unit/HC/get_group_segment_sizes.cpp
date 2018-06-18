@@ -37,7 +37,7 @@ bool test() {
     e, 
     [=](hc::index<1> idx) __HC__ {
       // create a tile_static array
-      tile_static int group[groupSize];
+      tile_static volatile int group[groupSize];
       group[idx[0]] = 0;
 
       // av_a stores the size of group segment
