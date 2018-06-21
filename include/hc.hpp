@@ -2776,7 +2776,7 @@ extern "C" inline unsigned int __activelanecount_u32_b1(unsigned int input) __HC
 /**
  * Evaluate predicate for all active work-items in the
  * wavefront and return non-zero if and only if predicate evaluates to non-zero
- * for all of them.
+ * for any of them.
  */
 extern "C" inline int __any(int predicate) __HC__ {
     return __popcount_u32_b64(__activelanemask_v4_b64_b1(predicate));
@@ -2785,7 +2785,7 @@ extern "C" inline int __any(int predicate) __HC__ {
 /**
  * Evaluate predicate for all active work-items in the
  * wavefront and return non-zero if and only if predicate evaluates to non-zero
- * for any of them.
+ * for all of them.
  */
 extern "C" inline int __all(int predicate) __HC__ {
     return __popcount_u32_b64(__activelanemask_v4_b64_b1(predicate)) == __activelanecount_u32_b1(1);
