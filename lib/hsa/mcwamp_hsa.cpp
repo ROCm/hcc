@@ -138,6 +138,10 @@ int HCC_PROFILE_VERBOSE=0x1F;
 
 char * HCC_PROFILE_FILE=nullptr;
 
+int HCC_QUEUE_FLUSHING_RATIO=50;
+
+double QUEUE_FLUSHING_FRAC;
+
 // Profiler:
 // Use str::stream so output is atomic wrt other threads:
 #define LOG_PROFILE(op, start, end, type, tag, msg) \
@@ -1405,7 +1409,6 @@ public:
 
         youngestCommandKind = op->getCommandKind();
 
-        drainingQueue_ = false;
 
         if (DBFLAG(DB_QUEUE)) {
             printAsyncOps(std::cerr);
@@ -1562,8 +1565,13 @@ public:
 
 
         bool foundFirstValidOp = false;
+        int oldAysncOpsSize = asyncOps.size();
+        int lastWaitOp = oldAysncOpsSize - 1;
+        if (drainingQueue_) {
+            lastWaitOp = (oldAysncOpsSize * QUEUE_FLUSHING_FRAC) - 1;
+        }
 
-        for (int i = asyncOps.size()-1; i >= 0;  i--) {
+        for (int i = lastWaitOp; i >= 0;  i--) {
             if (asyncOps[i] != nullptr) {
                 auto asyncOp = asyncOps[i];
                 if (!foundFirstValidOp) {
@@ -1579,7 +1587,16 @@ public:
             }
         }
         // clear async operations table
-        asyncOps.clear();
+        if (drainingQueue_) {
+            if (oldAysncOpsSize == asyncOps.size()) {
+                asyncOps.erase(asyncOps.begin(), asyncOps.begin() + lastWaitOp);
+            }
+        }
+        else {
+            asyncOps.clear();
+        }
+
+        drainingQueue_ = false;
    }
 
     void LaunchKernel(void *ker, size_t nr_dim, size_t *global, size_t *local) override {
@@ -3757,6 +3774,15 @@ void HSAContext::ReadHccEnv()
 
     // Enable printf support
     GET_ENV_INT (HCC_ENABLE_PRINTF, "Enable hc::printf");
+
+    GET_ENV_INT (HCC_QUEUE_FLUSHING_RATIO, "Percentage of HCC's queue to be flushed when the space to dispatch a new kernel is not sufficient.  The percentage has to be greater than zero.  Any invalid value will be set to the default value.  Default=50");
+
+    if (HCC_QUEUE_FLUSHING_RATIO > 0 && HCC_QUEUE_FLUSHING_RATIO <= 100) {
+        QUEUE_FLUSHING_FRAC = HCC_QUEUE_FLUSHING_RATIO / 100.0;
+    }
+    else {
+        QUEUE_FLUSHING_FRAC = 0.5;
+    }
 
     GET_ENV_INT    (HCC_PROFILE,         "Enable HCC kernel and data profiling.  1=summary, 2=trace");
     GET_ENV_INT    (HCC_PROFILE_VERBOSE, "Bitmark to control profile verbosity and format. 0x1=default, 0x2=show begin/end, 0x4=show barrier");
