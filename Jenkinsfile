@@ -46,6 +46,7 @@ node( 'hcctest' )
   def build_dir_debug_abs = "${workspace_dir_abs}/${build_dir_debug_rel}"
   def build_dir_release_abs = "${workspace_dir_abs}/${build_dir_release_rel}"
   def build_dir_cmake_tests_abs = "${workspace_dir_abs}/${build_dir_cmake_tests_rel}"
+  def hcc_git_reference = "/var/gitcache/hcc.git"
 
   // The client workspace is shared with the docker container
   stage('HCC Checkout')
@@ -54,7 +55,7 @@ node( 'hcctest' )
       $class: 'GitSCM',
       branches: scm.branches,
       doGenerateSubmoduleConfigurations: scm.doGenerateSubmoduleConfigurations,
-      extensions: scm.extensions + [[$class: 'CloneOption', reference: '/var/gitcache/hcc.git'], [$class: 'CleanCheckout'], [$class: 'SubmoduleOption', disableSubmodules: false, parentCredentials: false, recursiveSubmodules: true, reference: '', timeout: 60, trackingSubmodules: false]],
+      extensions: scm.extensions + [[$class: 'CloneOption', reference: "${hcc_git_reference}"], [$class: 'CleanCheckout'], [$class: 'SubmoduleOption', disableSubmodules: false, parentCredentials: false, recursiveSubmodules: true, reference: "${hcc_git_reference}", timeout: 60, trackingSubmodules: false]],
       userRemoteConfigs: scm.userRemoteConfigs
     ])
   }
