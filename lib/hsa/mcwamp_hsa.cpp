@@ -5247,6 +5247,10 @@ hsa_status_t HSACopy::hcc_memory_async_copy(Kalmar::hcCommandKind copyKind, cons
     // HSA memory copy requires a system-scope acquire before the next kernel command - set flag here so we remember:
     hsaQueue()->setNextKernelNeedsSysAcquire(true);
 
+    // If it's a device to device, the next system sync will need a release
+    if (copyKind ==  Kalmar::hcMemcpyDeviceToDevice)
+      hsaQueue()->setNextSyncNeedsSysRelease(true);
+
     return status;
 }
 
