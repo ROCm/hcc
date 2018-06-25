@@ -1313,8 +1313,14 @@ public:
     bool nextKernelNeedsSysAcquire() const { return _nextKernelNeedsSysAcquire; };
     void setNextKernelNeedsSysAcquire(bool r) { _nextKernelNeedsSysAcquire = r; };
 
-    bool nextSyncNeedsSysRelease() const { return _nextSyncNeedsSysRelease; };
-    void setNextSyncNeedsSysRelease(bool r) { _nextSyncNeedsSysRelease = r; };
+    bool nextSyncNeedsSysRelease() const { 
+      DBOUT( DB_CMD2, "  HSAQueue::nextSyncNeedsSysRelease(): " <<  _nextSyncNeedsSysRelease << "\n");
+      return _nextSyncNeedsSysRelease; 
+    };
+    void setNextSyncNeedsSysRelease(bool r) {
+      DBOUT( DB_CMD2, "  HSAQueue::setNextSyncNeedsSysRelease(" <<  r << ")\n");
+      _nextSyncNeedsSysRelease = r; 
+    };
 
     uint64_t getSeqNum() const { return queueSeqNum; };
 
