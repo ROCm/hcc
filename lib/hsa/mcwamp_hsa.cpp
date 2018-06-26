@@ -5298,7 +5298,7 @@ HSACopy::enqueueAsyncCopyCommand(const Kalmar::HSADevice *copyDevice, const hc::
 
 
         int depSignalCnt = 0;
-        hsa_signal_t depSignal;
+        hsa_signal_t depSignal = { .handle = 0x0 };
         setCommandKind (resolveMemcpyDirection(srcPtrInfo._isInDeviceMem, dstPtrInfo._isInDeviceMem));
 
         if (!hsaQueue()->nextSyncNeedsSysRelease()) {
@@ -5306,13 +5306,16 @@ HSACopy::enqueueAsyncCopyCommand(const Kalmar::HSADevice *copyDevice, const hc::
         }
 
         auto fenceScope = (hsaQueue()->nextSyncNeedsSysRelease()) ? hc::system_scope : hc::no_scope;
+
         depAsyncOp = std::static_pointer_cast<HSAOp> (hsaQueue()->detectStreamDeps(this->getCommandKind(), this));
+        if (depAsyncOp) {
+            depSignal = * (static_cast <hsa_signal_t*> (depAsyncOp->getNativeHandle()));
+        }
 
         // We need to ensure the copy waits for preceding commands the HCC queue to complete, if those commands exist.
         // The copy has to be set so that it depends on the completion_signal of the youngest command in the queue.
-        if (depAsyncOp) {
-            depSignal = * (static_cast <hsa_signal_t*> (depAsyncOp->getNativeHandle()));
-
+        if (depAsyncOp || fenceScope != hc::no_scope) {
+        
             // Normally we can use the input signal to hsa_amd_memory_async_copy to ensure the copy waits for youngest op.
             // However, two cases require special handling:
             //    - the youngest op may not have a completion signal - this is optional for kernel launch commands.
@@ -5320,7 +5323,7 @@ HSACopy::enqueueAsyncCopyCommand(const Kalmar::HSADevice *copyDevice, const hc::
             //      in streams that we depend on.
             // For both of these cases, we create an additional barrier packet in the source, and attach the desired fence.
             // Then we make the copy depend on the signal written by this command.
-            if ((depSignal.handle == 0x0) || (fenceScope != hc::no_scope)) {
+            if ((depAsyncOp && depSignal.handle == 0x0) || (fenceScope != hc::no_scope)) {
                 DBOUT( DB_CMD2, "  asyncCopy adding marker for needed dependency or release\n");
 
                 // Set depAsyncOp for use by the async copy below:
