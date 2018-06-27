@@ -1,5 +1,6 @@
 // RUN: %amp_device -D__KALMAR_ACCELERATOR__=1 %s -c -o %t.device.o
 // RUN: %gtest_amp %s %t.device.o -o %t && %t
+// XFAIL: *
 
 #include <stdlib.h>
 #ifndef __KALMAR_ACCELERATOR__ //gtest requires rtti, but amp_device forbids rtti
