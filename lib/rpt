@@ -526,6 +526,7 @@ class FileParser:
 
         lineNum = 0
         text = None
+	p = None
 
         for line in file:
             lineNum = lineNum+1
@@ -546,6 +547,10 @@ class FileParser:
                 text = TextLogRecord(lineNum, line)
             else:
                 text.append(line)
+
+        if text and p:
+            p.text = text
+
 
 
         # Sort all records by start time:
