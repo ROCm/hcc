@@ -1,6 +1,7 @@
 // RUN: %cxxamp -DFILE_1 -c %s -o %t.1.o
 // RUN: %cxxamp -DFILE_2 -c %s -o %t.2.o
 // RUN: %cxxamp %t.1.o %t.2.o -o %t.out
+// XFAIL: *
 
 // this test try to link 2 files which use C++AMP short vectors API in one
 // executable.  so it tests if short vector APIs would violate ODR rule
