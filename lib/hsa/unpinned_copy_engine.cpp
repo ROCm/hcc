@@ -27,6 +27,8 @@ THE SOFTWARE.
 #include "unpinned_copy_engine.h"
 #include "hc_rt_debug.h"
 
+static std::mutex _copyLockFileScope;
+
 #define THROW_ERROR(err, hsaErr) { hc::print_backtrace(); throw (Kalmar::runtime_exception("HCC unpinned copy engine error", hsaErr)); }
 
 void errorCheck(hsa_status_t hsa_error_code, int line_num, std::string str) {
@@ -160,7 +162,7 @@ void UnpinnedCopyEngine::CopyHostToDevicePinInPlace(void* dst, const void* src, 
     // Make sure we wait for the dependent signal to complete before entering the critical section
     // to avoid potential dead lock
     {
-        std::lock_guard<std::mutex> l(_copyLock);
+        std::lock_guard<std::mutex> l(_copyLockFileScope);
         DBOUTL(DB_COPY2, __func__ << DBPARM(dst) << "," << DBPARM(src) << "," << DBPARM(sizeBytes))
 
         const char *srcp = static_cast<const char *>(src);
@@ -329,7 +331,7 @@ void UnpinnedCopyEngine::CopyDeviceToHostPinInPlace(void* dst, const void* src, 
     // Make sure we wait for the dependent signal to complete before entering the critical section
     // to avoid potential dead lock
     {
-        std::lock_guard<std::mutex> l(_copyLock);
+        std::lock_guard<std::mutex> l(_copyLockFileScope);
 
         const char *srcp = static_cast<const char *>(src);
         char *dstp = static_cast<char *>(dst);
