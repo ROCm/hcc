@@ -441,19 +441,21 @@ namespace
 
             if (globals.find(x) != globals.cend()) return;
 
-            void* p = nullptr;
+            void* host_ptr =
+                reinterpret_cast<void*>(it1->second.first);
+            void* agent_ptr = nullptr;
             hsa_amd_memory_lock(
-                reinterpret_cast<void*>(it1->second.first),
+                host_ptr,
                 it1->second.second,
                 // Awful cast because ROCr interface is misspecified.
                 const_cast<hsa_agent_t*>(all_agents().data()),
                 all_agents().size(),
-                &p);
+                &agent_ptr);
 
             hsa_executable_agent_global_variable_define(
-                executable, agent, x.c_str(), p);
+                executable, agent, x.c_str(), agent_ptr);
 
-            globals.emplace(x, RAII_global{p, hsa_amd_memory_unlock});
+            globals.emplace(x, RAII_global{host_ptr, hsa_amd_memory_unlock});
         }
     }
 
