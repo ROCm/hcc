@@ -229,12 +229,12 @@ void UnpinnedCopyEngine::CopyHostToDevice(UnpinnedCopyEngine::CopyMode copyMode,
 {
     bool isLocked = false;
     if((copyMode == ChooseBest) || (copyMode == UsePinInPlace)) {
-        isLocked = IsLockedPointer(src);
+        isLocked = TryLockPointer(src);
     }
     if (copyMode == ChooseBest) {
         if (_isLargeBar && (sizeBytes < _hipH2DTransferThresholdDirectOrStaging)) {
             copyMode = UseMemcpy;
-        } else if ((sizeBytes > _hipH2DTransferThresholdStagingOrPininplace) && (!isLocked)) {
+        } else if ((sizeBytes > _hipH2DTransferThresholdStagingOrPininplace) && isLocked) {
             copyMode = UsePinInPlace;
         } else {
             copyMode = UseStaging;
@@ -244,7 +244,7 @@ void UnpinnedCopyEngine::CopyHostToDevice(UnpinnedCopyEngine::CopyMode copyMode,
     if (copyMode == UseMemcpy) {
         CopyHostToDeviceMemcpy(dst, src, sizeBytes, waitFor);
 
-	} else if ((copyMode == UsePinInPlace) && (!isLocked)) {
+	} else if ((copyMode == UsePinInPlace) && isLocked) {
         CopyHostToDevicePinInPlace(dst, src, sizeBytes, waitFor);
 
 	} else if (copyMode == UseStaging) {
@@ -253,6 +253,10 @@ void UnpinnedCopyEngine::CopyHostToDevice(UnpinnedCopyEngine::CopyMode copyMode,
     } else {
         // Unknown copy mode.
         THROW_ERROR(hipErrorInvalidValue, HSA_STATUS_ERROR_INVALID_ARGUMENT);
+    }
+
+    if (isLocked) {
+        UnlockPointer(src);
     }
 }
 
@@ -374,11 +378,11 @@ void UnpinnedCopyEngine::CopyDeviceToHost(CopyMode copyMode ,void* dst, const vo
 {
     bool isLocked = false;
     if((copyMode == ChooseBest) || (copyMode == UsePinInPlace)) {
-        isLocked = IsLockedPointer(dst);
+        isLocked = TryLockPointer(dst);
     }
 
     if (copyMode == ChooseBest) {
-        if (sizeBytes > _hipD2HTransferThreshold && !isLocked) {
+        if (sizeBytes > _hipD2HTransferThreshold && isLocked) {
             copyMode = UsePinInPlace;
         } else {
             copyMode = UseStaging;
@@ -386,13 +390,17 @@ void UnpinnedCopyEngine::CopyDeviceToHost(CopyMode copyMode ,void* dst, const vo
     }
 
 
-	  if (copyMode == UsePinInPlace && !isLocked) {
+	  if (copyMode == UsePinInPlace && isLocked) {
         CopyDeviceToHostPinInPlace(dst, src, sizeBytes, waitFor);
     } else if (copyMode == UseStaging) { 
         CopyDeviceToHostStaging(dst, src, sizeBytes, waitFor);
     } else {
         // Unknown copy mode.
         THROW_ERROR(hipErrorInvalidValue, HSA_STATUS_ERROR_INVALID_ARGUMENT);
+    }
+
+    if (isLocked) {
+        UnlockPointer(dst);
     }
 }
 
@@ -563,21 +571,42 @@ void UnpinnedCopyEngine::CopyPeerToPeer(void* dst, hsa_agent_t dstAgent, const v
 }
 
 
-bool UnpinnedCopyEngine::IsLockedPointer(const void *ptr)
+bool UnpinnedCopyEngine::TryLockPointer(const void *ptr)
 {
-    hsa_amd_pointer_info_t info;
+    bool isInserted = false;
     bool isLocked = false;
 
-    info.size = sizeof(info);
-    hsa_status_t hsa_status = hsa_amd_pointer_info(const_cast<void*>(ptr), &info, nullptr, nullptr, nullptr);
-    if(hsa_status != HSA_STATUS_SUCCESS) {
-        THROW_ERROR(hipErrorInvalidValue, HSA_STATUS_ERROR_INVALID_ARGUMENT);
+    if (_pinnedMemory.count(ptr) == 0) {
+        std::lock_guard<std::mutex> l(_memoryLock);
+        isInserted = _pinnedMemory.insert(ptr).second;
     }
 
-    if((info.type == HSA_EXT_POINTER_TYPE_HSA) || (info.type == HSA_EXT_POINTER_TYPE_LOCKED)) {
-        isLocked = true;
+    if (isInserted) {
+        hsa_amd_pointer_info_t info;
+
+        info.size = sizeof(info);
+        hsa_status_t hsa_status = hsa_amd_pointer_info(const_cast<void*>(ptr), &info, nullptr, nullptr, nullptr);
+        if(hsa_status != HSA_STATUS_SUCCESS) {
+            THROW_ERROR(hipErrorInvalidValue, HSA_STATUS_ERROR_INVALID_ARGUMENT);
+        }
+
+        if((info.type == HSA_EXT_POINTER_TYPE_HSA) || (info.type == HSA_EXT_POINTER_TYPE_LOCKED)) {
+            isLocked = true;
+        }
     }
-    DBOUTL (DB_COPY2, "Unpinned Copy: pointer type =" << info.type << " isLocked=" << isLocked);
+
+    DBOUTL (DB_COPY2, "Unpinned Copy: pointer isLocked=" << isLocked);
 
     return isLocked;
 }
+
+
+void UnpinnedCopyEngine::UnlockPointer(const void *ptr)
+{
+    std::lock_guard<std::mutex> l(_memoryLock);
+    auto erase_count = _pinnedMemory.erase(ptr);
+    if (1 != erase_count) {
+        THROW_ERROR(hipErrorRuntimeMemory, HSA_STATUS_ERROR);
+    }
+}
+

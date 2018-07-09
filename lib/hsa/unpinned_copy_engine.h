@@ -21,6 +21,8 @@ THE SOFTWARE.
 #ifndef STAGING_BUFFER_H
 #define STAGING_BUFFER_H
 
+#include <unordered_set>
+
 #include "hsa/hsa.h"
 
 
@@ -67,7 +69,8 @@ struct UnpinnedCopyEngine {
     void CopyPeerToPeer(void* dst, hsa_agent_t dstAgent, const void* src, hsa_agent_t srcAgent, size_t sizeBytes, const hsa_signal_t *waitFor);
 
 private:
-    bool IsLockedPointer(const void *ptr);
+    bool TryLockPointer(const void *ptr);
+    void UnlockPointer(const void *ptr);
 
 private:
     hsa_agent_t     _hsaAgent;
@@ -82,6 +85,8 @@ private:
     hsa_signal_t     _completionSignal[_max_buffers];
     hsa_signal_t     _completionSignal2[_max_buffers]; // P2P needs another set of signals.
     std::mutex       _copyLock;    // provide thread-safe access
+    static std::mutex       _memoryLock;    // provide thread-safe access to pinned pointers
+    static std::unordered_set<const void*> _pinnedMemory;
     size_t              _hipH2DTransferThresholdDirectOrStaging;
     size_t              _hipH2DTransferThresholdStagingOrPininplace;
     size_t              _hipD2HTransferThreshold;
