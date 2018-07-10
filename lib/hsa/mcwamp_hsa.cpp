@@ -93,7 +93,7 @@ int HCC_PRINT_ENV=0;
 
 int HCC_SIGNAL_POOL_SIZE=512;
 
-int HCC_UNPINNED_COPY_MODE = UnpinnedCopyEngine::ChooseBest;
+int HCC_UNPINNED_COPY_MODE = UnpinnedCopyEngine::UseStaging;
 
 int HCC_CHECK_COPY=0;
 
@@ -101,6 +101,9 @@ int HCC_CHECK_COPY=0;
 long int HCC_H2D_STAGING_THRESHOLD    = 64;
 long int HCC_H2D_PININPLACE_THRESHOLD = 4096;
 long int HCC_D2H_PININPLACE_THRESHOLD = 1024;
+
+// Staging buffer size in KB for unpinned copy engines
+int HCC_STAGING_BUFFER_SIZE = 4*1024;
 
 // Default GPU device
 unsigned int HCC_DEFAULT_GPU = 0;
@@ -3746,6 +3749,8 @@ void HSAContext::ReadHccEnv()
     GET_ENV_INT (HCC_H2D_PININPLACE_THRESHOLD, "Min size (in KB) to use pin-in-place algorithm for H2D copy if ChooseBest algorithm selected");
     GET_ENV_INT (HCC_D2H_PININPLACE_THRESHOLD, "Min size (in KB) to use pin-in-place for D2H copy if ChooseBest algorithm selected");
 
+    GET_ENV_INT (HCC_STAGING_BUFFER_SIZE, "Unpinned copy engine staging buffer size in KB");
+  
     // Change the default GPU
     GET_ENV_INT (HCC_DEFAULT_GPU, "Change the default GPU (Default is device 0)");
 
@@ -3924,7 +3929,7 @@ HSADevice::HSADevice(hsa_agent_t a, hsa_agent_t host, int x_accSeqNum) : KalmarD
     HCC_H2D_PININPLACE_THRESHOLD *= 1024;
     HCC_D2H_PININPLACE_THRESHOLD *= 1024;
 
-    static const size_t stagingSize = 64*1024;
+    static const size_t stagingSize = HCC_STAGING_BUFFER_SIZE * 1024;
 
     // FIXME: Disable optimizated data copies on large bar system for now due to stability issues
     //this->cpu_accessible_am = hasAccess(hostAgent, ri._am_memory_pool);
