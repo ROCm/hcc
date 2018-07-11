@@ -17,7 +17,7 @@ namespace Kalmar {
 template <typename T>
 class _data {
 public:
-    _data() = delete;
+    _data(){}
     _data(int count) : p_(nullptr) {}
     _data(const _data& d) restrict(cpu, amp)
         : p_(d.p_) {}
@@ -68,6 +68,7 @@ public:
         : mm(std::make_shared<rw_info>(av, stage, count*sizeof(T), device_pointer, mode)), isArray(true) {}
 
     _data_host(const _data_host& other) : mm(other.mm), isArray(false) {}
+    _data_host() : isArray(false) {}
 
     template <typename U>
         _data_host(const _data_host<U>& other) : mm(other.mm), isArray(false) {}
