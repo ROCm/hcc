@@ -181,7 +181,6 @@ fi
     -select-accelerator-code -promote-pointer-kernargs-to-global \
     -dce -globaldce -always-inline -infer-address-spaces \
     < $2.linked.bc -o $2.selected.bc
-fi
 
 # error handling for HCC-specific opt passes
 RETVAL=$?
