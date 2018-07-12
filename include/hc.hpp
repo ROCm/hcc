@@ -2778,8 +2778,9 @@ extern "C" inline unsigned int __activelanecount_u32_b1(unsigned int input) __HC
  * wavefront and return non-zero if and only if predicate evaluates to non-zero
  * for any of them.
  */
+extern "C" __attribute__((const)) bool __ockl_wfany_i32(int) __HC__;
 extern "C" inline int __any(int predicate) __HC__ {
-    return __popcount_u32_b64(__activelanemask_v4_b64_b1(predicate));
+    return __ockl_wfany_i32(predicate);
 }
 
 /**
@@ -2787,8 +2788,9 @@ extern "C" inline int __any(int predicate) __HC__ {
  * wavefront and return non-zero if and only if predicate evaluates to non-zero
  * for all of them.
  */
+extern "C" __attribute__((const)) bool __ockl_wfall_i32(int) __HC__;
 extern "C" inline int __all(int predicate) __HC__ {
-    return __popcount_u32_b64(__activelanemask_v4_b64_b1(predicate)) == __activelanecount_u32_b1(1);
+    return __ockl_wfall_i32(predicate);
 }
 
 /**
@@ -2797,8 +2799,13 @@ extern "C" inline int __all(int predicate) __HC__ {
  * predicate evaluates to non-zero for the Nth work-item of the wavefront and
  * the Nth work-item is active.
  */
+
+// XXX from llvm/include/llvm/IR/InstrTypes.h
+#define ICMP_NE 33
+__attribute__((convergent))
+unsigned long long __llvm_amdgcn_icmp_i32(uint x, uint y, uint z) [[hc]] __asm("llvm.amdgcn.icmp.i32");
 extern "C" inline uint64_t __ballot(int predicate) __HC__ {
-    return __activelanemask_v4_b64_b1(predicate);
+    return __llvm_amdgcn_icmp_i32(predicate, 0, ICMP_NE);
 }
 
 // ------------------------------------------------------------------------
