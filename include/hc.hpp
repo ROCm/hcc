@@ -2778,7 +2778,7 @@ extern "C" inline unsigned int __activelanecount_u32_b1(unsigned int input) __HC
  * wavefront and return non-zero if and only if predicate evaluates to non-zero
  * for any of them.
  */
-extern "C" __attribute__((const)) bool __ockl_wfany_i32(int) __HC__;
+extern "C" bool __ockl_wfany_i32(int) __HC__;
 extern "C" inline int __any(int predicate) __HC__ {
     return __ockl_wfany_i32(predicate);
 }
@@ -2788,7 +2788,7 @@ extern "C" inline int __any(int predicate) __HC__ {
  * wavefront and return non-zero if and only if predicate evaluates to non-zero
  * for all of them.
  */
-extern "C" __attribute__((const)) bool __ockl_wfall_i32(int) __HC__;
+extern "C" bool __ockl_wfall_i32(int) __HC__;
 extern "C" inline int __all(int predicate) __HC__ {
     return __ockl_wfall_i32(predicate);
 }
