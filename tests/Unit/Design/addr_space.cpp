@@ -1,8 +1,8 @@
 // RUN: %cxxamp %s -o %t.out && %t.out
-#include <hc.hpp>
+#include <hc/hc.hpp>
 #include <stdlib.h>
 #include <iostream>
-#include <hc_math.hpp>
+#include <hc/hc_math.hpp.hpp>
 #include <random>
 
 using namespace hc;

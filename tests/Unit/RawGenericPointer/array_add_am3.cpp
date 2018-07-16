@@ -3,8 +3,8 @@
 
 #include <iostream>
 #include <random>
-#include <hc_am.hpp>
-#include <hc.hpp>
+#include <hc/hc_am.hpp>
+#include <hc/hc.hpp>
 
 [[hc]] void kfunc(int* a, int* b, int* c, int idx) {
   c[idx] = a[idx] + b[idx];

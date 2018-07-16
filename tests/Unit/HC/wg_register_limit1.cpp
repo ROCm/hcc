@@ -1,9 +1,9 @@
 // RUN: %hc %s -o %t.out && %t.out
 
-#include <hc.hpp>
+#include <hc/hc.hpp>
 #include <string>
 #include <cmath>
-#include <hc_math.hpp>
+#include <hc/hc_math.hpp.hpp>
 
 int main() {
   bool pass = false;

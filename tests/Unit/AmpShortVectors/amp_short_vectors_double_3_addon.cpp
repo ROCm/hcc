@@ -1,6 +1,6 @@
 // RUN: %cxxamp %s -o %t.out && %t.out
-#include <hc.hpp>
-#include <hc_short_vector.hpp>
+#include <hc/hc.hpp>
+#include <hc/hc_short_vector.hpp>
 
 using namespace hc;
 using namespace hc::short_vector;

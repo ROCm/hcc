@@ -5,7 +5,8 @@ if (HCC_RUNTIME_DEBUG)
   add_compile_options(-g -O0)
 endif (HCC_RUNTIME_DEBUG)
 
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
+include_directories(
+  ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_BINARY_DIR}/third_party)
 
 include(GNUInstallDirs)
 set( LIB_INSTALL_DIR ${CMAKE_INSTALL_LIBDIR} )
@@ -73,7 +74,6 @@ endif (USE_CODEXL_ACTIVITY_LOGGER EQUAL 1)
 # add subdirectories
 ####################
 add_subdirectory(hsa)
-add_subdirectory(cpu)
 
 ####################
 # install targets

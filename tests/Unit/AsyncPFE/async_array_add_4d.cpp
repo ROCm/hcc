@@ -4,7 +4,7 @@
 #include <iostream>
 #include <random>
 #include <future>
-#include <hc.hpp>
+#include <hc/hc.hpp>
 
 // FIXME: HSA runtime seems buggy in case LOOP_COUNT is very big
 // (ex: 1024 * 1024).

@@ -1,7 +1,7 @@
 // RUN: %gtest_amp %s -o %t.out
 // RUN: %t.out
 
-#include <hc.hpp>
+#include <hc/hc.hpp>
 
 #include <gtest/gtest.h>
 

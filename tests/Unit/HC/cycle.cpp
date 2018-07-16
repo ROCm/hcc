@@ -1,7 +1,7 @@
 
 // RUN: %hc %s -o %t.out && %t.out
 
-#include <hc.hpp>
+#include <hc/hc.hpp>
 
 #define GRID_SIZE (1024)
 

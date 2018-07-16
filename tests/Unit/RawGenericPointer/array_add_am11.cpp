@@ -3,8 +3,8 @@
 
 #include <iostream>
 #include <random>
-#include <hc_am.hpp>
-#include <hc.hpp>
+#include <hc/hc_am.hpp>
+#include <hc/hc.hpp>
 
 template<typename TTTT>
 [[hc]] void kfunc(TTTT* a, TTTT* b, TTTT* c, int idx) {

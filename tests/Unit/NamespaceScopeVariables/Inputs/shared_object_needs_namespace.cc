@@ -1,6 +1,6 @@
 #include "test_parameters.hpp"
 
-#include <hc.hpp>
+#include <hc/hc.hpp>
 
 #include <algorithm>
 

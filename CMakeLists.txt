@@ -1,30 +1,39 @@
-cmake_minimum_required( VERSION 3.0 )
-project (HCC)
+cmake_minimum_required(VERSION 3.0)
+project(HCC LANGUAGES CXX)
+
+set(CXX_EXTENSIONS OFF)
 
 include(GNUInstallDirs)
 
-SET(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/scripts/cmake")
-MESSAGE("Module path: ${CMAKE_MODULE_PATH}")
+set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/scripts/cmake")
+message("Module path: ${CMAKE_MODULE_PATH}")
 
 # set as release build by default
-IF (NOT CMAKE_BUILD_TYPE)
-  SET(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build, options are: Release Debug" FORCE)
-ENDIF(NOT CMAKE_BUILD_TYPE)
+if (NOT CMAKE_BUILD_TYPE)
+  set(
+    CMAKE_BUILD_TYPE Release
+    CACHE STRING "Choose the type of build, options are: Release Debug" FORCE)
+endif()
 
-# Use two different methods to determine host distribution: lsb_release and if that fails grep /etc/os-release
-find_program( lsb_executable lsb_release )
+# Use two different methods to determine host distribution: lsb_release and if
+# that fails grep /etc/os-release
+find_program(lsb_executable lsb_release)
 
-if( lsb_executable )
-  execute_process( COMMAND ${lsb_executable} -is OUTPUT_VARIABLE DISTRO_ID OUTPUT_STRIP_TRAILING_WHITESPACE )
-  execute_process( COMMAND ${lsb_executable} -rs OUTPUT_VARIABLE DISTRO_RELEASE OUTPUT_STRIP_TRAILING_WHITESPACE )
+if (lsb_executable)
+  execute_process(
+    COMMAND ${lsb_executable} -is
+    OUTPUT_VARIABLE DISTRO_ID OUTPUT_STRIP_TRAILING_WHITESPACE)
+  execute_process(
+    COMMAND ${lsb_executable} -rs
+    OUTPUT_VARIABLE DISTRO_RELEASE OUTPUT_STRIP_TRAILING_WHITESPACE)
 else()
-  if( EXISTS "/etc/os-release" )
-    file( STRINGS "/etc/os-release" DISTRO_ID REGEX "^ID=" )
-    file( STRINGS "/etc/os-release" DISTRO_RELEASE REGEX "^VERSION_ID=" )
-    string( REPLACE "ID=" "" DISTRO_ID "${DISTRO_ID}" )
-    string( REPLACE "VERSION_ID=" "" DISTRO_RELEASE "${DISTRO_RELEASE}" )
-  endif( )
-endif( )
+  if (EXISTS "/etc/os-release")
+    file(STRINGS "/etc/os-release" DISTRO_ID REGEX "^ID=")
+    file(STRINGS "/etc/os-release" DISTRO_RELEASE REGEX "^VERSION_ID=")
+    string(REPLACE "ID=" "" DISTRO_ID "${DISTRO_ID}")
+    string(REPLACE "VERSION_ID=" "" DISTRO_RELEASE "${DISTRO_RELEASE}")
+  endif()
+endif()
 
 # Accepted values for DISTRO_ID: trusty (Ubuntu 14.04), xenial (Ubuntu 16.06), fd23 (Fedora 23)
 string(TOLOWER "${DISTRO_ID}" DISTRO_ID )
@@ -383,6 +392,7 @@ add_custom_target(world DEPENDS clang_links)
 
 # move headers to build dir before building rocdl and hcc lib
 add_subdirectory(include)
+add_subdirectory(third_party)
 
 # build the integrated ROCm Device Library
 set(AMDHSACOD ${ROCM_ROOT}/bin/amdhsacod CACHE FILEPATH "Specify the amdhsacod tool")
@@ -472,6 +482,7 @@ endif(HCC_INTEGRATE_ROCDL)
 add_subdirectory(hcc_config)
 add_subdirectory(lib)
 add_subdirectory(utils)
+add_subdirectory(src)
 add_subdirectory(tests)
 add_subdirectory(stl-test)
 add_subdirectory(cmake-tests)

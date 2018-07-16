@@ -7,7 +7,7 @@
 #include <vector>
 #include <algorithm>
 #include <utility>
-#include <hc.hpp>
+#include <hc/hc.hpp>
 
 // FIXME: HSA runtime seems buggy in case LOOP_COUNT is very big
 // (ex: 1024 * 1024).

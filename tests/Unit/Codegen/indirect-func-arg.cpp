@@ -4,7 +4,7 @@
 // RUN: %llvm-dis %T/indirect-func-arg/dump-gfx803.opt.bc -f -o - | %FileCheck %s
 // RUN: %t.out
 
-#include <hc.hpp>
+#include <hc/hc.hpp>
 #include <vector>
 
 #define GRID_SIZE (1024)

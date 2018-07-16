@@ -1,5 +1,5 @@
 // RUN: %amp_device -D__HCC_ACCELERATOR__ -c -S -emit-llvm %s
-#include <hc.hpp>
+#include <hc/hc.hpp>
 
 using namespace hc;
 

@@ -2,8 +2,8 @@
 //
 // Test coherency and flushes.  Need to flush GPU caches before H2D copy
 
-#include <hc.hpp>
-#include <hc_am.hpp>
+#include <hc/hc.hpp>
+#include <hc/hc_am.hpp>
 
 
 void memsetIntKernel(hc::accelerator_view &av, int * ptr, int val, size_t numElements)

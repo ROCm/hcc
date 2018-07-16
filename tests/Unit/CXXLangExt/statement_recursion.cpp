@@ -2,7 +2,7 @@
 // RUN: %hc %s -o %t.out && %t.out
 
 #include <iostream>
-#include <hc.hpp>
+#include <hc/hc.hpp>
 
 int fib(int x) [[cpu, hc]] {
   if (x == 0) return 0;

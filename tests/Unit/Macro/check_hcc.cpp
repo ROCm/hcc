@@ -1,6 +1,6 @@
 // RUN: %cxxamp %s -o %t.out && %t.out
 
-#include <hc_defines.h>
+#include <hc/hc_defines.h>
 #include <iostream>
 
 #ifndef __HCC__

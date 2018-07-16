@@ -2,7 +2,7 @@
 #include <fstream>
 #include <assert.h>
 
-#include <hc.hpp>
+#include <hc/hc.hpp>
 #include <grid_launch.h>
 
 #include <hsa/hsa.h>

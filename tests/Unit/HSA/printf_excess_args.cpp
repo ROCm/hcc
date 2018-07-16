@@ -1,8 +1,8 @@
 // RUN: %hc %s -DHCC_ENABLE_ACCELERATOR_PRINTF -lhc_am -o %t.out && %t.out | %FileCheck %s
 
 #include <cassert>
-#include <hc.hpp>
-#include <hc_printf.hpp>
+#include <hc/hc.hpp>
+#include <hc/hc_printf.hpp>
 
 // create 2 tiles of 64 threads
 #define TILE (64)

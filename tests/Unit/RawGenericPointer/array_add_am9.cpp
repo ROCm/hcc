@@ -4,8 +4,8 @@
 #include <random>
 #include <type_traits>
 
-#include <hc_am.hpp>
-#include <hc.hpp>
+#include <hc/hc_am.hpp>
+#include <hc/hc.hpp>
 
 template<typename T>
 bool test() {

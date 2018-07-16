@@ -8,9 +8,10 @@
 #pragma once
 
 #include "hc_callable_attributes.hpp"
-#include "hc_runtime.h"
+#include "hc_index.hpp"
+#include "hc_runtime.hpp"
 
-#include "../hc2/external/elfio/elfio.hpp"
+#include <elfio/elfio.hpp>
 
 #include <link.h>
 

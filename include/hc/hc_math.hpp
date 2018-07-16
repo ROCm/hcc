@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include "hc_defines.h"
+#include "hc_defines.hpp"
 
 #include <cmath>
 #include <stdexcept>

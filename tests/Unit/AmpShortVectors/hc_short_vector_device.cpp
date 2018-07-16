@@ -1,6 +1,6 @@
 // RUN: %hc %s -o %t.out && %t.out
-#include <hc.hpp>
-#include <hc_short_vector.hpp>
+#include <hc/hc.hpp>
+#include <hc/hc_short_vector.hpp>
 
 #define GRID_SIZE (64)
 

@@ -3,7 +3,7 @@
 
 // a test to check FP16 type can be used in HCC
 
-#include <hc.hpp>
+#include <hc/hc.hpp>
 #include <cstdio>
 
 typedef __fp16 hcc_fp16;

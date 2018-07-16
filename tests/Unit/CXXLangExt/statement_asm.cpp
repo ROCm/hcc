@@ -2,7 +2,7 @@
 // RUN: %hc %s -o %t.out && %t.out
 
 #include <iostream>
-#include <hc.hpp>
+#include <hc/hc.hpp>
 
 void func () [[hc]]
 {

@@ -15,7 +15,7 @@
 
 #define NOMINMAX
 
-#include <hc.hpp>
+#include <hc/hc.hpp>
 
 #include <cassert>
 #include <climits>

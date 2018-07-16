@@ -1,6 +1,6 @@
 // RUN: %cxxamp %s -o %t.out && %t.out
 #include <iostream> 
-#include <hc.hpp> 
+#include <hc/hc.hpp> 
 using namespace hc; 
 int main() 
 {

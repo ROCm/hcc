@@ -4,8 +4,8 @@
 // D2H.
 // Test allows toggling explicit host-side syncs (via accelerator-view waits) vs
 // relying on efficient GPU hardware dependencies.
-#include <hc.hpp>
-#include <hc_am.hpp>
+#include <hc/hc.hpp>
+#include <hc/hc_am.hpp>
 
 #include <algorithm>
 #include <cassert>

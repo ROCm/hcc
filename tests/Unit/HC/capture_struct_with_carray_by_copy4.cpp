@@ -1,7 +1,7 @@
 // XFAIL: *
 // RUN: %hc -lhc_am %s -o %t.out && %t.out
-#include <hc.hpp>
-#include <hc_am.hpp>
+#include <hc/hc.hpp>
+#include <hc/hc_am.hpp>
 
 #include <iostream>
 #include <type_traits>

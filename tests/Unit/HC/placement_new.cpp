@@ -3,8 +3,8 @@
 
 #include <cstdlib>
 #include <cstdio>
-#include <hc.hpp>
-#include <hc_am.hpp>
+#include <hc/hc.hpp>
+#include <hc/hc_am.hpp>
 
 class Point {
 public:

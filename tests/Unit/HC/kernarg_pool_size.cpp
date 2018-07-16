@@ -1,6 +1,6 @@
 
 // RUN: %hc %s -o %t.out && %t.out
-#include <hc.hpp>                                                               
+#include <hc/hc.hpp>                                                               
                                                                                 
 // a test which deliberately dispatch multiple kernels in a number
 // which exceeds the size of builtin kernarg pool

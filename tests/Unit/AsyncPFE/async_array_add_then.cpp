@@ -4,7 +4,7 @@
 #include <iostream>
 #include <random>
 #include <future>
-#include <hc.hpp>
+#include <hc/hc.hpp>
 
 // test HC with fine-grained SVM
 // requires HSA Full Profile to operate successfully

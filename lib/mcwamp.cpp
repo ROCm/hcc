@@ -5,11 +5,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <hc.hpp>
 #include "hc_rt_debug.h"
 #include "mcwamp_impl.hpp"
-
-#include <hc.hpp>
 
 #include <iostream>
 #include <string>
@@ -17,22 +14,10 @@
 #include <cstddef>
 #include <tuple>
 
+#include <hc.hpp>
 #include <mutex>
 
 #include <dlfcn.h>
-
-namespace hc {
-
-const wchar_t accelerator::cpu_accelerator[];
-const wchar_t accelerator::default_accelerator[];
-
-// array_base
-const std::size_t array_base::max_array_cnt_;
-
-// array_view_base
-const std::size_t array_view_base::max_array_view_cnt_;
-
-} // namespace hc
 
 // weak symbols of kernel codes
 
@@ -45,6 +30,8 @@ struct RuntimeImpl {
   RuntimeImpl(const char* libraryName) :
     m_ImplName(libraryName),
     m_RuntimeHandle(nullptr),
+    m_PushArgImpl(nullptr),
+    m_PushArgPtrImpl(nullptr),
     m_GetContextImpl(nullptr),
     isCPU(false) {
     //std::cout << "dlopen(" << libraryName << ")\n";
@@ -64,6 +51,8 @@ struct RuntimeImpl {
 
   // load symbols from C++AMP runtime implementation
   void LoadSymbols() {
+    m_PushArgImpl = (PushArgImpl_t) dlsym(m_RuntimeHandle, "PushArgImpl");
+    m_PushArgPtrImpl = (PushArgPtrImpl_t) dlsym(m_RuntimeHandle, "PushArgPtrImpl");
     m_GetContextImpl= (GetContextImpl_t) dlsym(m_RuntimeHandle, "GetContextImpl");
   }
 
@@ -72,11 +61,13 @@ struct RuntimeImpl {
 
   std::string m_ImplName;
   void* m_RuntimeHandle;
+  PushArgImpl_t m_PushArgImpl;
+  PushArgPtrImpl_t m_PushArgPtrImpl;
   GetContextImpl_t m_GetContextImpl;
   bool isCPU;
 };
 
-namespace detail {
+namespace Kalmar {
 namespace CLAMP {
 
 ////////////////////////////////////////////////////////////
@@ -274,7 +265,7 @@ static inline uint64_t Read8byteIntegerFromBuffer(const char *data, size_t pos) 
 // Returns true if a compatible code object is found, and returns its size and
 // pointer to the code object. Returns false in case no compatible code object
 // is found.
-inline bool DetermineAndGetProgram(HCCQueue* pQueue, size_t* kernel_size, void** kernel_source) {
+inline bool DetermineAndGetProgram(KalmarQueue* pQueue, size_t* kernel_size, void** kernel_source) {
 
   bool FoundCompatibleKernel = false;
 
@@ -336,7 +327,7 @@ inline bool DetermineAndGetProgram(HCCQueue* pQueue, size_t* kernel_size, void**
 
     // only check bundles with HCC triple prefix string
     if (Triple.compare(0, HCC_TRIPLE_PREFIX_LENGTH, HCC_TRIPLE_PREFIX) == 0) {
-      // use HCCDevice::IsCompatibleKernel to check
+      // use KalmarDevice::IsCompatibleKernel to check
       size_t SizeST = (size_t)Size;
       void *Content = (unsigned char *)data + Offset;
       if (pQueue->getDev()->IsCompatibleKernel((void*)SizeST, Content)) {
@@ -351,7 +342,7 @@ inline bool DetermineAndGetProgram(HCCQueue* pQueue, size_t* kernel_size, void**
   return FoundCompatibleKernel;
 }
 
-void LoadInMemoryProgram(HCCQueue* pQueue) {
+void LoadInMemoryProgram(KalmarQueue* pQueue) {
   size_t kernel_size = 0;
   void* kernel_source = nullptr;
 
@@ -362,28 +353,30 @@ void LoadInMemoryProgram(HCCQueue* pQueue) {
 }
 
 // used in parallel_for_each.h
-void* CreateKernel(
-  const char* name,
-  HCCQueue* pQueue,
-  std::unique_ptr<void, void (*)(void*)> callable,
-  std::size_t callable_size)
-{
+void *CreateKernel(std::string s, KalmarQueue* pQueue) {
   // TODO - should create a HSAQueue:: CreateKernel member function that creates and returns a dispatch.
-  return pQueue->getDev()->CreateKernel(
-    name, pQueue, std::move(callable), callable_size);
+  return pQueue->getDev()->CreateKernel(s.c_str(), pQueue);
 }
+
+void PushArg(void *k_, int idx, size_t sz, const void *s) {
+  GetOrInitRuntime()->m_PushArgImpl(k_, idx, sz, s);
+}
+void PushArgPtr(void *k_, int idx, size_t sz, const void *s) {
+  GetOrInitRuntime()->m_PushArgPtrImpl(k_, idx, sz, s);
+}
+
 } // namespace CLAMP
 
-HCCContext *getContext() {
-  return static_cast<HCCContext*>(CLAMP::GetOrInitRuntime()->m_GetContextImpl());
+KalmarContext *getContext() {
+  return static_cast<KalmarContext*>(CLAMP::GetOrInitRuntime()->m_GetContextImpl());
 }
 
-// detail runtime bootstrap logic
-class HCCBootstrap {
+// Kalmar runtime bootstrap logic
+class KalmarBootstrap {
 private:
   RuntimeImpl* runtime;
 public:
-  HCCBootstrap() : runtime(nullptr) {
+  KalmarBootstrap() : runtime(nullptr) {
     bool to_init = true;
     char* lazyinit_env = getenv("HCC_LAZYINIT");
     if (lazyinit_env != nullptr) {
@@ -399,56 +392,29 @@ public:
       runtime = CLAMP::GetOrInitRuntime();
 
       // get context
-      HCCContext* context = static_cast<HCCContext*>(runtime->m_GetContextImpl());
+      KalmarContext* context = static_cast<KalmarContext*>(runtime->m_GetContextImpl());
+
+      const std::vector<KalmarDevice*> devices = context->getDevices();
 
       // load kernels on the default queue for each device
-      for (auto&& device : context->getDevices()) {
-        if (device->get_path() == L"cpu") continue;
+      for (auto dev = devices.begin(); dev != devices.end(); dev++) {
 
-        CLAMP::LoadInMemoryProgram(device->get_default_queue().get());
+        // get default queue on the device
+        std::shared_ptr<KalmarQueue> queue = (*dev)->get_default_queue();
+
+        // load kernels on the default queue for the device
+        CLAMP::LoadInMemoryProgram(queue.get());
       }
     }
   }
 };
 
-} // namespace detail
+} // namespace Kalmar
 
 extern "C" void __attribute__((constructor)) __hcc_shared_library_init() {
   // this would initialize kernels when the shared library get loaded
-  static detail::HCCBootstrap boot;
+  static Kalmar::KalmarBootstrap boot;
 }
 
 extern "C" void __attribute__((destructor)) __hcc_shared_library_fini() {
-}
-
-// conversion routines between float and half precision
-static inline std::uint32_t f32_as_u32(float f) { union { float f; std::uint32_t u; } v; v.f = f; return v.u; }
-static inline float u32_as_f32(std::uint32_t u) { union { float f; std::uint32_t u; } v; v.u = u; return v.f; }
-static inline int clamp_int(int i, int l, int h) { return std::min(std::max(i, l), h); }
-
-// half � float, the f16 is in the low 16 bits of the input argument �a�
-static inline float __convert_half_to_float(std::uint32_t a) noexcept {
-  std::uint32_t u = ((a << 13) + 0x70000000U) & 0x8fffe000U;
-  std::uint32_t v = f32_as_u32(u32_as_f32(u) * 0x1.0p+112f) + 0x38000000U;
-  u = (a & 0x7fff) != 0 ? v : u;
-  return u32_as_f32(u) * 0x1.0p-112f;
-}
-
-// float � half with nearest even rounding
-// The lower 16 bits of the result is the bit pattern for the f16
-static inline std::uint32_t __convert_float_to_half(float a) noexcept {
-  std::uint32_t u = f32_as_u32(a);
-  int e = static_cast<int>((u >> 23) & 0xff) - 127 + 15;
-  std::uint32_t m = ((u >> 11) & 0xffe) | ((u & 0xfff) != 0);
-  std::uint32_t i = 0x7c00 | (m != 0 ? 0x0200 : 0);
-  std::uint32_t n = ((std::uint32_t)e << 12) | m;
-  std::uint32_t s = (u >> 16) & 0x8000;
-  int b = clamp_int(1-e, 0, 13);
-  std::uint32_t d = (0x1000 | m) >> b;
-  d |= (d << b) != (0x1000 | m);
-  std::uint32_t v = e < 1 ? d : n;
-  v = (v >> 2) + (((v & 0x7) == 3) | ((v & 0x7) > 5));
-  v = e > 30 ? 0x7c00 : v;
-  v = e == 143 ? i : v;
-  return s | v;
 }

@@ -5,7 +5,7 @@
 // Implement C++ AMP version of matrix transpose
 //----------------------------------------------------------------------------
 
-#include <hc.hpp>
+#include <hc/hc.hpp>
 #include <cmath>
 #include <assert.h>
 #include <iostream>

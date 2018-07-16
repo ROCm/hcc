@@ -4,7 +4,7 @@
 // Do not delete or add any line; it is referred to by absolute line number in the
 // FileCheck lines below
 //////////////////////////////////////////////////////////////////////////////////
-#include <hc.hpp>
+#include <hc/hc.hpp>
 using namespace hc;
 
 void foo() [[hc]]

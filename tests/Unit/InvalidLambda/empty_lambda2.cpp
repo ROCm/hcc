@@ -1,5 +1,5 @@
 // RUN: %cxxamp %s -o %t.out && %t.out
-#include <hc.hpp>
+#include <hc/hc.hpp>
 int main()
 {
     // This test outlines a subtle issue with how we obtain mangled kernel names

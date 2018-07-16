@@ -1,7 +1,7 @@
 
 // RUN: %hc %s -o %t.out && %t.out
 
-#include <hc.hpp>
+#include <hc/hc.hpp>
 
 // test new enumeration in hc::accelerator_view : execute_order
 int main() {

@@ -2,8 +2,8 @@
 #include <stdlib.h>
 #include <iostream>
 
-#include <hc.hpp>
-#include <hc_am.hpp>
+#include <hc/hc.hpp>
+#include <hc/hc_am.hpp>
 
 
 // A few helper routines for writing tests:

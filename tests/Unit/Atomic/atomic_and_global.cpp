@@ -1,5 +1,5 @@
 // RUN: %cxxamp %s -o %t.out && %t.out
-#include <hc.hpp>
+#include <hc/hc.hpp>
 #include <stdlib.h>
 #include <iostream>
 #include <vector>

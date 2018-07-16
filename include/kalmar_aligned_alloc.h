@@ -7,18 +7,19 @@
 
 #pragma once
 
+#include <cassert>
 #include <memory>
 #include <stdlib.h>
 
 /** \cond HIDDEN_SYMBOLS */
-namespace detail {
+namespace Kalmar {
 
-constexpr inline bool hc_is_alignment(std::size_t value) noexcept {
+constexpr inline bool kalmar_is_alignment(std::size_t value) noexcept {
     return (value > 0) && ((value & (value - 1)) == 0);
 }
 
-inline void* hc_aligned_alloc(std::size_t alignment, std::size_t size) noexcept {
-    assert(hc_is_alignment(alignment));
+inline void* kalmar_aligned_alloc(std::size_t alignment, std::size_t size) noexcept {
+    assert(kalmar_is_alignment(alignment));
     enum {
         N = std::alignment_of<void*>::value
     };
@@ -33,11 +34,11 @@ inline void* hc_aligned_alloc(std::size_t alignment, std::size_t size) noexcept 
     return memptr;
 }
 
-inline void hc_aligned_free(void* ptr) noexcept {
+inline void kalmar_aligned_free(void* ptr) noexcept {
     if (ptr) {
         free(ptr);
     }
 }
 
-} // namespace detail
+} // namespace Kalmar
 /** \endcond */

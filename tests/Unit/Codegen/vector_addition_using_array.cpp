@@ -3,7 +3,7 @@
 #include <iostream>
 #include <functional>
 #include <vector>
-#include <hc.hpp>
+#include <hc/hc.hpp>
 using namespace hc;
 
 #define N 10

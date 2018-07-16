@@ -1,8 +1,8 @@
 
 // RUN: %hc %s -o %t.out && %t.out
 
-#include <hc.hpp>
-#include <hc_math.hpp>
+#include <hc/hc.hpp>
+#include <hc/hc_math.hpp.hpp>
 
 #include <algorithm>
 #include <iostream>
@@ -29,7 +29,7 @@ void report_delta(
     #endif
 }
 
-// a test case which uses hc_math, which overrides math functions in the global namespace
+// a test case which uses hc/hc_math.hpp, which overrides math functions in the global namespace
 template<typename T, std::size_t grid_sz, typename F, typename G>
 bool test_math_fn(const char* name, F f, G ref_f)
 {   // TODO: ideally this should be refactored to use proper approximate

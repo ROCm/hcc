@@ -8,7 +8,7 @@
 // RUN: %hc -DTYPE="signed short"  %s -o %t.out && %t.out
 // RUN: %hc -DTYPE="unsigned short"  %s -o %t.out && %t.out
 
-#include <hc.hpp>
+#include <hc/hc.hpp>
 #include <iostream>
 
 // A test which uses different types not allowed in C++AMP specification

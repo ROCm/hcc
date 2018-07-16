@@ -8,7 +8,7 @@
 #include <vector>
 #include <algorithm>
 
-#include <hc.hpp>
+#include <hc/hc.hpp>
 
 //#define DEBUG 2
 

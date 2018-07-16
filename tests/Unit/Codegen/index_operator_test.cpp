@@ -1,6 +1,6 @@
 // RUN: %cxxamp %s -o %t.out && %t.out
 
-#include <hc.hpp>
+#include <hc/hc.hpp>
 int main(void)
 {
     hc::index<1> a(1), b;

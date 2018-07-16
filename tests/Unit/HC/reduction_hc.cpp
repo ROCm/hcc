@@ -14,7 +14,7 @@
 //----------------------------------------------------------------------------
 
 #define NOMINMAX
-#include <hc.hpp>
+#include <hc/hc.hpp>
 #include <iostream>
 #include <numeric>
 #include <assert.h>

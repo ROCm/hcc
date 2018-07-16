@@ -1,7 +1,7 @@
 #pragma once
 
-#include "hc_aligned_alloc.h"
-#include "hc_defines.h"
+#include "hc_aligned_alloc.hpp"
+#include "hc_defines.hpp"
 
 #include <algorithm>
 #include <cstring>

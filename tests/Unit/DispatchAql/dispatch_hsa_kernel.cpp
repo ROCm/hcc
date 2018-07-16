@@ -1,6 +1,6 @@
 // RUN: %hc %s %S/hsacodelib.CPP -I/home/alexv/Programming/ROCR-Runtime/src/inc -L/home/alexv/Programming/ROCR-Runtime/src/build -lhsa-runtime64 -lhc_am -o %t.out && %t.out %S/vcpy_isa.hsaco
 
-#include <hc.hpp>
+#include <hc/hc.hpp>
 
 #include <iostream>
 #include <random>
@@ -9,7 +9,7 @@
 #include <hsa/hsa.h>
 
 #include "hsacodelib.h"
-#include <hc_am.hpp>
+#include <hc/hc_am.hpp>
 
 int p_db = 1;
 int p_wait = 1;

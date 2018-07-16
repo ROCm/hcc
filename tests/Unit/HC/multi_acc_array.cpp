@@ -7,7 +7,7 @@
 #include <cmath>
 
 // header file for the hc API
-#include <hc.hpp>
+#include <hc/hc.hpp>
 
 int main() {
 

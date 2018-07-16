@@ -4,8 +4,8 @@
 // with GPU buffers having offsets from the result of am_alloc
 // with CPU buffers un-locked, and have offsets
 
-#include <hc.hpp>
-#include <hc_am.hpp>
+#include <hc/hc.hpp>
+#include <hc/hc_am.hpp>
 
 void rocm_device_synchronize()
 {

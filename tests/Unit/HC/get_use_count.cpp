@@ -1,6 +1,6 @@
 // RUN: %hc %s -o %t.out && %t.out
 
-#include <hc.hpp>
+#include <hc/hc.hpp>
 #include <assert.h>
 
 void checkPassByValue (hc::completion_future cf, int expectedCount)

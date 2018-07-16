@@ -3,13 +3,13 @@
 #if !DISABLED_PENDING_REMOVAL
   // RUN: %hc %s -o %t.out && %t.out
 
-  #include <hc.hpp>
-  #include <hc_math.hpp>
+  #include <hc/hc.hpp>
+  #include <hc/hc_math.hpp.hpp>
 
   #include <algorithm>
   #include <random>
 
-  // a test case which uses hc_math, which overrides math functions in the global namespace
+  // a test case which uses hc/hc_math.hpp, which overrides math functions in the global namespace
   // in this test case we check min / max specically
   template<size_t GRID_SIZE, typename T>
   bool test() {

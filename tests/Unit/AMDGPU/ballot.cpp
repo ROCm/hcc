@@ -1,7 +1,7 @@
 
 // RUN: %hc %s -g3 -o %t.out && %t.out
 
-#include <hc.hpp>
+#include <hc/hc.hpp>
 
 #include <iostream>
 #include <cassert>

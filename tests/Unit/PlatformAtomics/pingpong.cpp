@@ -7,10 +7,10 @@
 #include <atomic>
 #include <thread>
 #include <chrono>
-#include <hc.hpp>
+#include <hc/hc.hpp>
 
 // added for checking HSA profile
-#include <hc.hpp>
+#include <hc/hc.hpp>
 
 // test C++AMP with platform atomics functions
 // requires HSA Full Profile to operate successfully

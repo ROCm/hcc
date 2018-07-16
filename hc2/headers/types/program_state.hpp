@@ -15,7 +15,7 @@
 
 #include <hsa/hsa.h>
 
-#include "../../external/elfio/elfio.hpp"
+#include <elfio/elfio.hpp>
 
 #include <link.h>
 

@@ -8,7 +8,7 @@
 
 #if SHARED_LIBRARY
 
-#include <hc.hpp>
+#include <hc/hc.hpp>
 
 extern "C" int foo(int grid_size) {
   using namespace hc;
@@ -48,7 +48,7 @@ extern "C" int bar(int grid_size) {
 
 #else
 
-#include <hc.hpp>
+#include <hc/hc.hpp>
 
 extern "C" int foo(int);
 extern "C" int bar(int);

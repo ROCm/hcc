@@ -1,6 +1,6 @@
 // RUN: %hc %s -o %t.out && %t.out
 
-#include <hc.hpp>
+#include <hc/hc.hpp>
 
 /**
  * So far, CPU accelerator is not peer of any other

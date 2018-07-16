@@ -1,10 +1,9 @@
 #pragma once
 
 #include "hc.hpp"
-
 #include <cstddef>
-#include <initializer_list>
 #include <mutex>
+#include <initializer_list>
 
 typedef int am_status_t;
 #define AM_SUCCESS                           0
@@ -17,6 +16,7 @@ typedef int am_status_t;
 #define amHostCoherent    0x2 ///< Allocate coherent pinned host memory accessible from all GPUs.
 
 namespace hc {
+
 // Info for each pointer in the memtry tracker:
 class AmPointerInfo {
 public:
@@ -144,7 +144,7 @@ am_status_t am_copy(void*  dst, const void*  src, std::size_t size) __attribute_
  * @returns AM_SUCCESS if pointer is tracked and writes info to @p info. if @ info is NULL,
  * no info is written but the returned status indicates if the pointer was tracked.
  *
- * @see AM_memtracker_add
+ * @see AM_memtracker_add 
  */
 am_status_t am_memtracker_getinfo(hc::AmPointerInfo *info, const void *ptr);
 
@@ -162,21 +162,21 @@ am_status_t am_memtracker_add(void* ptr, hc::AmPointerInfo &info);
 /*
  * Update info for an existing pointer in the memory tracker.
  *
- * @returns AM_ERROR_MISC if pointer is not found in tracker.
- * @returns AM_SUCCESS if pointer is not found in tracker.
+ * @returns AM_ERROR_MISC if pointer is not found in tracker.  
+ * @returns AM_SUCCESS if pointer is not found in tracker.  
  *
  * @see am_memtracker_getinfo, am_memtracker_add
  */
 am_status_t am_memtracker_update(const void* ptr, int appId, unsigned allocationFlags, void *appPtr=nullptr);
 
 
-/**
+/** 
  * Remove @ptr from the tracker structure.
  *
  * @p ptr may be anywhere in a tracked memory range.
  *
- * @returns AM_ERROR_MISC if pointer is not found in tracker.
- * @returns AM_SUCCESS if pointer is not found in tracker.
+ * @returns AM_ERROR_MISC if pointer is not found in tracker.  
+ * @returns AM_SUCCESS if pointer is not found in tracker.  
  *
  * @see am_memtracker_getinfo, am_memtracker_add
  */
@@ -211,7 +211,7 @@ void am_memtracker_update_peers(const hc::accelerator &acc, int peerCnt, hsa_age
 
 /*
  * Map device memory or hsa allocated host memory pointed to by @p ptr to the peers.
- *
+ * 
  * @p ptr pointer which points to device memory or host memory
  * @p num_peer number of peers to map
  * @p peers pointer to peer accelerator list.
@@ -221,11 +221,11 @@ void am_memtracker_update_peers(const hc::accelerator &acc, int peerCnt, hsa_age
  * @return AM_ERROR_MISC if @p ptr is not found in the pointer tracker.
  * @return AM_ERROR_MISC if @p peers incudes a non peer accelerator.
  */
-am_status_t am_map_to_peers(void* ptr, std::size_t num_peer, const hc::accelerator* peers);
+am_status_t am_map_to_peers(void* ptr, std::size_t num_peer, const hc::accelerator* peers); 
 
 /*
  * Locks a host pointer to a vector of agents
- *
+ * 
  * @p ac acclerator corresponding to current device
  * @p hostPtr pointer to host memory which should be page-locked
  * @p size size of hostPtr to be page-locked
@@ -238,9 +238,9 @@ am_status_t am_memory_host_lock(hc::accelerator &ac, void *hostPtr, std::size_t 
 
 /*
  * Unlock page locked host memory
- *
+ * 
  * @p ac current device accelerator
- * @p hostPtr host pointer
+ * @p hostPtr host pointer 
  * @return AM_SUCCESS if unlocked successfully.
  * @return AM_ERROR_MISC if @p hostPtr unlock is un-successful.
  */

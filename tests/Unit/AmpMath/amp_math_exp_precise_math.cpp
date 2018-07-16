@@ -5,8 +5,8 @@
 // random failure on fiji. Re-enable it after JIRA
 // ticket 136805 is fixed.
 
-#include <hc.hpp>
-#include <hc_math.hpp>
+#include <hc/hc.hpp>
+#include <hc/hc_math.hpp.hpp>
 
 #include <iostream>
 #include <random>

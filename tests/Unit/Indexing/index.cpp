@@ -1,7 +1,7 @@
 // RUN: %amp_device -c -S -D__HCC_ACCELERATOR__ -emit-llvm %s -O -o -|%cppfilt|%FileCheck %s
 // RUN: %gtest_amp %s -o %t && %t
 // Testing if an efficient (i.e. fully inlined version) of hc::index
-#include <hc.hpp>
+#include <hc/hc.hpp>
 #ifndef __HCC_ACCELERATOR__ //Device mode compilation cannot have RTTI
 #include <gtest/gtest.h>
 #endif

@@ -1,12 +1,12 @@
 
 // RUN: %hc %s -o %t.out && %t.out
 
-#include <hc.hpp>
+#include <hc/hc.hpp>
 
 #include <iostream>
 
 // added for checking HSA profile
-#include <hc.hpp>
+#include <hc/hc.hpp>
 
 // test C++AMP with fine-grained SVM
 // requires HSA Full Profile to operate successfully

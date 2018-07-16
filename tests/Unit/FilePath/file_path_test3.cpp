@@ -5,7 +5,7 @@
 // RUN: %hc %s -L"%T/foo bar/" -lfile_path_test3 -o %t.out && %t.out
 
 #include <cstdio>
-#include <hc.hpp>
+#include <hc/hc.hpp>
 
 extern "C" int sum(hc::array_view<int,1>& input);
 

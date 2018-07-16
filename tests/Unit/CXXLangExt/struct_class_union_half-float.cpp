@@ -2,7 +2,7 @@
 // RUN: %hc -DTYPE="half float" %s -o %t.out && %t.out
 
 #include <iostream>
-#include <hc.hpp>
+#include <hc/hc.hpp>
 
 struct S {
   TYPE var;

@@ -1,6 +1,6 @@
 // RUN: %cxxamp %s -o %t.out && %t.out
 #include <iostream> 
-#include <hc.hpp> 
+#include <hc/hc.hpp> 
 using namespace hc;
 int main() {
   int v[11] = {0,1,2,3,4,5,6,7,8,9,10};

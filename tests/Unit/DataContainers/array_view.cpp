@@ -3,7 +3,7 @@
 // What's in the comment above indicates it will build this file using
 // -std=c++amp and all other necessary flags to build. Then the system will 
 // run the built program and check its results with all google test cases.
-#include <hc.hpp>
+#include <hc/hc.hpp>
 
 #include <gtest/gtest.h>
 

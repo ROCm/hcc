@@ -7,7 +7,7 @@
 // this floating point type.
 #define HC_IMPLICIT_FLOAT_CONV double
 
-#ifdef __HCC_ACCELERATOR__
+#ifdef __KALMAR_ACCELERATOR__
 
 #define HC_MATH_WRAPPER_1(function, arg1) \
 template<typename T> \

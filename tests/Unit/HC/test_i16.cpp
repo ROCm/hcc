@@ -3,7 +3,7 @@
 
 // a test to check I16 type can be used in HCC
 
-#include <hc.hpp>
+#include <hc/hc.hpp>
 #include <cstdio>
 
 

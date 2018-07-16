@@ -1,8 +1,8 @@
 // RUN: %hc -lhc_am %s -o %t.out && %t.out
 
 #include <iostream>
-#include <hc.hpp>
-#include <hc_am.hpp>
+#include <hc/hc.hpp>
+#include <hc/hc_am.hpp>
 #include <pinned_vector.hpp>
 
 constexpr size_t small_size = 1024;

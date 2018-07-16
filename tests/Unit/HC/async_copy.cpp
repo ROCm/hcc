@@ -1,7 +1,7 @@
 // RUN: %hc %s -std=c++14 -o %t.out && %t.out
 
-#include <hc.hpp>
-#include <hc_am.hpp>
+#include <hc/hc.hpp>
+#include <hc/hc_am.hpp>
 #include <iostream>
 #include <cassert>
 #include <algorithm>

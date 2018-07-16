@@ -1,8 +1,8 @@
 
 // RUN: %hc %s -lhc_am -o %t.out && %t.out
 
-#include <hc_am.hpp>
-#include <hc.hpp>
+#include <hc/hc_am.hpp>
+#include <hc/hc.hpp>
 
 int main()
 {

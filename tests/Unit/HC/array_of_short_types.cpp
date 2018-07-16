@@ -2,7 +2,7 @@
 // RUN: %hc %s -o %t.out && %t.out
 
 #include <iostream>
-#include <hc.hpp>
+#include <hc/hc.hpp>
 
 #define NUM_ARRAY 512
 #define ARRAY_SIZE (1 * 1024)
