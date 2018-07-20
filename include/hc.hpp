@@ -2802,10 +2802,10 @@ extern "C" inline int __all(int predicate) __HC__ {
 
 // XXX from llvm/include/llvm/IR/InstrTypes.h
 #define ICMP_NE 33
-__attribute__((convergent))
-unsigned long long __llvm_amdgcn_icmp_i32(uint x, uint y, uint z) [[hc]] __asm("llvm.amdgcn.icmp.i32");
+__attribute__((const, convergent))
+uint64_t __llvm_amdgcn_icmp_i64_i32(uint x, uint y, uint z) [[hc]] __asm("llvm.amdgcn.icmp.i64.i32");
 extern "C" inline uint64_t __ballot(int predicate) __HC__ {
-    return __llvm_amdgcn_icmp_i32(predicate, 0, ICMP_NE);
+    return __llvm_amdgcn_icmp_i64_i32(predicate, 0, ICMP_NE);
 }
 
 // ------------------------------------------------------------------------
