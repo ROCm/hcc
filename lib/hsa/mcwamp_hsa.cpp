@@ -1433,7 +1433,7 @@ public:
 
         assert (newCommandKind != hcCommandInvalid);
 
-        if (!asyncOps.empty()) {
+        if (!asyncOps.empty() && asyncOps.back().get()!=nullptr) {
             assert (youngestCommandKind != hcCommandInvalid);
 
             // Ensure we have not already added the op we are checking into asyncOps,
