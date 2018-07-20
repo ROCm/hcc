@@ -1406,9 +1406,8 @@ public:
             wait();
         }
         op->asyncOpsIndex(asyncOps.size());
-        asyncOps.push_back(op);
-
         youngestCommandKind = op->getCommandKind();
+        asyncOps.push_back(std::move(op));
 
         drainingQueue_ = false;
 
@@ -2162,8 +2161,6 @@ public:
     void removeAsyncOp(HSAOp* asyncOp) {
         int targetIndex = asyncOp->asyncOpsIndex();
 
-
-        int nullifiedCount = 0;
         // Make sure the opindex is still valid.
         // If the queue is destroyed first it may not exist in asyncops anymore so no need to destroy.
         if (targetIndex < asyncOps.size() &&
@@ -2175,8 +2172,7 @@ public:
             for (int i = targetIndex; i>=0; i--) {
                 Kalmar::KalmarAsyncOp *op = asyncOps[i].get();
                 if (op) {
-                    nullifiedCount++;
-                    asyncOps[i] = nullptr;
+                    asyncOps[i].reset();
 
         #if CHECK_OLDER_COMPLETE
                     // opportunistically update status for any ops we encounter along the way:
