@@ -1410,9 +1410,8 @@ public:
             wait();
         }
         op->asyncOpsIndex(asyncOps.size());
-        asyncOps.push_back(op);
-
         youngestCommandKind = op->getCommandKind();
+        asyncOps.push_back(std::move(op));
 
 
         if (DBFLAG(DB_QUEUE)) {
@@ -1436,7 +1435,7 @@ public:
 
         assert (newCommandKind != hcCommandInvalid);
 
-        if (!asyncOps.empty()) {
+        if (!asyncOps.empty() && asyncOps.back().get()!=nullptr) {
             assert (youngestCommandKind != hcCommandInvalid);
 
             // Ensure we have not already added the op we are checking into asyncOps,
@@ -2179,8 +2178,6 @@ public:
     void removeAsyncOp(HSAOp* asyncOp) {
         int targetIndex = asyncOp->asyncOpsIndex();
 
-
-        int nullifiedCount = 0;
         // Make sure the opindex is still valid.
         // If the queue is destroyed first it may not exist in asyncops anymore so no need to destroy.
         if (targetIndex < asyncOps.size() &&
@@ -2192,8 +2189,7 @@ public:
             for (int i = targetIndex; i>=0; i--) {
                 Kalmar::KalmarAsyncOp *op = asyncOps[i].get();
                 if (op) {
-                    nullifiedCount++;
-                    asyncOps[i] = nullptr;
+                    asyncOps[i].reset();
 
         #if CHECK_OLDER_COMPLETE
                     // opportunistically update status for any ops we encounter along the way:
