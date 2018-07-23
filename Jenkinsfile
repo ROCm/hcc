@@ -195,17 +195,17 @@ node( 'hcctest' )
   //        integration testing paths/logic
 
   // I've implemented solution #2 above
-  stage('hip integration')
-  {
-    // If this a clang_tot_upgrade build, kick off downstream hip build so that the two projects are in sync
-    if( env.BRANCH_NAME.toLowerCase( ).startsWith( 'clang_tot_upgrade' ) )
-    {
-      build( job: 'ROCm-Developer-Tools/HIP/master', wait: true )
-    }
-    // If hip integration testing is requested by the user, launch a hip build job to use this transient compiler
-    else if( params.run_hip_integration_testing )
-    {
-      build( job: params.hip_integration_branch, parameters: [booleanParam( name: 'hcc_integration_test', value: true )] )
-    }
-  }
+  // stage('hip integration')
+  // {
+  //   // If this a clang_tot_upgrade build, kick off downstream hip build so that the two projects are in sync
+  //   if( env.BRANCH_NAME.toLowerCase( ).startsWith( 'clang_tot_upgrade' ) )
+  //   {
+  //     build( job: 'ROCm-Developer-Tools/HIP/master', wait: true )
+  //   }
+  //   // If hip integration testing is requested by the user, launch a hip build job to use this transient compiler
+  //   else if( params.run_hip_integration_testing )
+  //   {
+  //     build( job: params.hip_integration_branch, parameters: [booleanParam( name: 'hcc_integration_test', value: true )] )
+  //   }
+  // }
 }
