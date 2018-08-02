@@ -1,12 +1,13 @@
 #!/bin/bash
 
 # This is a script to generate the postinst and postrm scripts for the Debian package
-# Usage: process_package_script <script_template> <script output> <package name> <installation path> <library dir>
+# Usage: process_package_script <script_template> <script output> <package name> <installation path> <library dir> <processor>
 
 input=$1; shift
 output=$1; shift
 package_name=$1; shift
 install_path=$1; shift
 library_dir=$1; shift
+processor=$1; shift
 
-sed "s|@PACKAGE_NAME@|\"$package_name\"|g;s|@INSTALL_PATH@|\"$install_path\"|g;s|@LIBRARY_DIR@|\"$library_dir\"|g;" <$input >$output
+sed "s|@PACKAGE_NAME@|\"$package_name\"|g;s|@INSTALL_PATH@|\"$install_path\"|g;s|@LIBRARY_DIR@|\"$library_dir\"|g;s|@PROCESSOR@|\"$processor\"|g" <$input >$output
