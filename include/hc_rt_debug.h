@@ -43,25 +43,20 @@ static std::vector<std::string> g_DbStr = {"api", "cmd", "wait", "aql", "queue",
 // DBOUT(" Something happened" << myId() << " i= " << i << "\n");
 #define COMPILE_HCC_DB 1
 
-#define DBFLAG(db_flag) (HCC_DB & (1<<(db_flag)))
+#define DBFLAG(db_flag) (COMPILE_HCC_DB && (HCC_DB & (1<<(db_flag))))
 
 #define DBSTREAM std::cerr
 
 // Use str::stream so output is atomic wrt other threads:
 #define DBOUT(db_flag, msg) \
-if (COMPILE_HCC_DB && (HCC_DB & (1<<(db_flag)))) { \
+if (DBFLAG(db_flag)) { \
     std::stringstream sstream;\
     sstream << "   hcc-" << g_DbStr[db_flag] << " tid:" << hcc_tlsShortTid._shortTid << " " << msg ; \
     DBSTREAM << sstream.str();\
 };
 
 // Like DBOUT, but add newline:
-#define DBOUTL(db_flag, msg) \
-if (COMPILE_HCC_DB && (HCC_DB & (1<<(db_flag)))) { \
-    std::stringstream sstream;\
-    sstream << "   hcc-" << g_DbStr[db_flag] << " tid:" << hcc_tlsShortTid._shortTid << " " << msg << "\n"; \
-    DBSTREAM << sstream.str();\
-};
+#define DBOUTL(db_flag, msg) DBOUT(db_flag, msg << "\n")
 
 // get a the current filename without the path
 #define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/')+1 : __FILE__)
