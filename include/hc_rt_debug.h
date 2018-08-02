@@ -45,7 +45,8 @@ static std::vector<std::string> g_DbStr = {"api", "cmd", "wait", "aql", "queue",
 
 #define DBFLAG(db_flag) (COMPILE_HCC_DB && (HCC_DB & (1<<(db_flag))))
 
-#define DBSTREAM std::cerr
+#define DBSTREAM  std::cerr
+#define DBWSTREAM std::wcerr
 
 // Use str::stream so output is atomic wrt other threads:
 #define DBOUT(db_flag, msg) \

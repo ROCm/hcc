@@ -47,16 +47,7 @@
 #include <time.h>
 #include <iomanip>
 
-#ifndef KALMAR_DEBUG
-#define KALMAR_DEBUG (0)
-#endif
-
 #define CHECK_OLDER_COMPLETE 0
-
-// Detailed debug of kernarg serialization and pushing.
-// TODO - remove when new serialization logic comes online.
-#define HCC_DEBUG_KARG 0
-
 
 // Used to mark pieces of HCC runtime which may be specific to AMD's HSA implementation.
 // Intended to help identify this code when porting to another HSA impl.
@@ -275,7 +266,7 @@ static void dumpHSAAgentInfo(hsa_agent_t agent, const char* extra_string = (cons
 
   DBSTREAM << "Dump Agent Info (" << extra_string << ")" << std::endl;
   DBSTREAM << "\t Agent: ";
-  std::wcerr  << path_wchar << L"\n";
+  DBWSTREAM  << path_wchar << L"\n";
 
   return;
 }
@@ -1852,7 +1843,7 @@ public:
         // we explicitly allocate a host memory buffer in this case
         if (!getDev()->is_unified()) {
             if (DBFLAG(DB_COPY)) {
-                std::wcerr << getDev()->get_path();
+                DBWSTREAM << getDev()->get_path();
                 DBSTREAM << ": map( <device> " << device << ", <count> " << count << ", <offset> " << offset 
                          << ", <modify> " << modify << "): use HSA memory map\n";
             }
@@ -1876,7 +1867,7 @@ public:
             return data;
         } else {
             if (DBFLAG(DB_COPY)) {
-              std::wcerr << getDev()->get_path();
+              DBWSTREAM << getDev()->get_path();
               DBSTREAM << ": map( <device> " << device << ", <count> " << count << ", <offset> " << offset 
                        << ", <modify> " << modify << "): use host memory map\n";
             }
@@ -1892,7 +1883,7 @@ public:
         // we free the host memory buffer allocated in map()
         if (!getDev()->is_unified()) {
             if (DBFLAG(DB_COPY)) {
-                std::wcerr << getDev()->get_path();
+                DBWSTREAM << getDev()->get_path();
                 DBSTREAM << ": unmap( <device> " << device << ", <addr> " << addr << ", <count> " << count 
                          << ", <offset> " << offset << ", <modify> " << modify << "): use HSA memory unmap\n";
             }
@@ -1908,7 +1899,7 @@ public:
             hsa_amd_memory_pool_free(addr);
         } else {
             if (DBFLAG(DB_COPY)) {
-                std::wcerr << getDev()->get_path();
+                DBWSTREAM << getDev()->get_path();
                 DBSTREAM << ": unmap( <device> " << device << ", <addr> " << addr << ", <count> " << count 
                          << ", <offset> " << offset << ", <modify> " << modify <<"): use host memory unmap\n";
             }
@@ -3771,10 +3762,10 @@ HSADevice::HSADevice(hsa_agent_t a, hsa_agent_t host, int x_accSeqNum) : KalmarD
         path = std::wstring(path_wchar);
         description = std::wstring(description_wchar);
 
-#if KALMAR_DEBUG
-        std::wcerr << L"Path: " << path << L"\n";
-        std::wcerr << L"Description: " << description << L"\n";
-#endif
+        if (DBFLAG(DB_INIT)) {
+          DBWSTREAM << L"Path: " << path << L"\n";
+          DBWSTREAM << L"Description: " << description << L"\n";
+        }
 
         status = hsa_agent_get_info(agent, HSA_AGENT_INFO_VERSION_MAJOR, &versionMajor);
         STATUS_CHECK(status, __LINE__);
@@ -4636,11 +4627,9 @@ inline hsa_status_t
 HSADispatch::setLaunchConfiguration(const int dims, size_t *globalDims, size_t *localDims,
                                     const int dynamicGroupSize) {
     assert((0 < dims) && (dims <= 3));
+    DBOUT(DB_MISC, "static group segment size: " << kernel->static_group_segment_size
+                   << " dynamic group segment size: " << dynamicGroupSize << "\n");
 
-#if KALMAR_DEBUG && HCC_DEBUG_KARG
-    std::cerr << "static group segment size: " << kernel->static_group_segment_size << "\n";
-    std::cerr << "dynamic group segment size: " << dynamicGroupSize << "\n";
-#endif
     // Set group dims
     // for each workgroup dimension, make sure it does not exceed the maximum allowable limit
     const uint16_t* workgroup_max_dim = device->getWorkgroupMaxDim();
