@@ -11,7 +11,6 @@
 #include <algorithm>
 
 #include "hc_am_internal.hpp"
-#include "hsa_atomic.h"
 
 // The printf on the accelerator is only enabled when
 // The HCC_ENABLE_ACCELERATOR_PRINTF is defined

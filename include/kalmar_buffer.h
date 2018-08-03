@@ -24,10 +24,9 @@ public:
     _data(int count, void* d) restrict(cpu, amp)
         : p_(static_cast<T*>(d)) {}
     template <typename U>
-        _data(const _data<U>& d) restrict(cpu, amp)
+    _data(const _data<U>& d) restrict(cpu, amp)
         : p_(reinterpret_cast<T *>(d.get())) {}
-    __attribute__((annotate("user_deserialize")))
-        explicit _data(T* t) restrict(cpu, amp) { p_ = t; }
+    explicit _data(T* t) restrict(cpu, amp) { p_ = t; }
     T* get(void) const restrict(cpu, amp) { return p_; }
     T* get_device_pointer() const restrict(cpu, amp) { return p_; }
     std::shared_ptr<KalmarQueue> get_av() const { return nullptr; }
@@ -98,12 +97,7 @@ public:
     void unmap_ptr(const void* addr, bool modify, size_t count, size_t offset) const { return mm->unmap(const_cast<void*>(addr), count * sizeof(T), offset * sizeof(T), modify); }
     void sync_to(std::shared_ptr<KalmarQueue> pQueue) const { mm->sync(pQueue, false); }
 
-    __attribute__((annotate("serialize")))
-        void __cxxamp_serialize(Serialize& s) const {
-            s.visit_buffer(mm.get(), !std::is_const<T>::value, isArray);
-        }
-    __attribute__((annotate("user_deserialize")))
-        explicit _data_host(typename std::remove_const<T>::type* t) {}
+    explicit _data_host(typename std::remove_const<T>::type* t) {}
 };
 
 } // namespace Kalmar

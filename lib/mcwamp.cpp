@@ -37,8 +37,6 @@ struct RuntimeImpl {
   RuntimeImpl(const char* libraryName) :
     m_ImplName(libraryName),
     m_RuntimeHandle(nullptr),
-    m_PushArgImpl(nullptr),
-    m_PushArgPtrImpl(nullptr),
     m_GetContextImpl(nullptr),
     isCPU(false) {
     //std::cout << "dlopen(" << libraryName << ")\n";
@@ -58,8 +56,6 @@ struct RuntimeImpl {
 
   // load symbols from C++AMP runtime implementation
   void LoadSymbols() {
-    m_PushArgImpl = (PushArgImpl_t) dlsym(m_RuntimeHandle, "PushArgImpl");
-    m_PushArgPtrImpl = (PushArgPtrImpl_t) dlsym(m_RuntimeHandle, "PushArgPtrImpl");
     m_GetContextImpl= (GetContextImpl_t) dlsym(m_RuntimeHandle, "GetContextImpl");
   }
 
@@ -68,8 +64,6 @@ struct RuntimeImpl {
 
   std::string m_ImplName;
   void* m_RuntimeHandle;
-  PushArgImpl_t m_PushArgImpl;
-  PushArgPtrImpl_t m_PushArgPtrImpl;
   GetContextImpl_t m_GetContextImpl;
   bool isCPU;
 };
@@ -360,18 +354,15 @@ void LoadInMemoryProgram(KalmarQueue* pQueue) {
 }
 
 // used in parallel_for_each.h
-void *CreateKernel(std::string s, KalmarQueue* pQueue) {
+void* CreateKernel(
+  const char* name,
+  KalmarQueue* pQueue,
+  const void* callable,
+  std::size_t callable_size)
+{
   // TODO - should create a HSAQueue:: CreateKernel member function that creates and returns a dispatch.
-  return pQueue->getDev()->CreateKernel(s.c_str(), pQueue);
+  return pQueue->getDev()->CreateKernel(name, pQueue, callable, callable_size);
 }
-
-void PushArg(void *k_, int idx, size_t sz, const void *s) {
-  GetOrInitRuntime()->m_PushArgImpl(k_, idx, sz, s);
-}
-void PushArgPtr(void *k_, int idx, size_t sz, const void *s) {
-  GetOrInitRuntime()->m_PushArgPtrImpl(k_, idx, sz, s);
-}
-
 } // namespace CLAMP
 
 KalmarContext *getContext() {

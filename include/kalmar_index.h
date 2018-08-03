@@ -451,13 +451,11 @@ private:
 
 public:
     __attribute__((annotate("__cxxamp_opencl_index")))
-    void __cxxamp_opencl_index() restrict(amp,cpu)
+    void __cxxamp_opencl_index() restrict(amp, cpu)
 #if __KALMAR_ACCELERATOR__ == 1
     {
         index_helper<N, index<N>>::set(*this);
     }
-#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-    {}
 #else
     ;
 #endif

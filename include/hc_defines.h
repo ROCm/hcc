@@ -18,11 +18,6 @@
 #include <utility>
 #include <vector>
 
-// CPU execution path
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-#include <ucontext.h>
-#endif
-
 namespace hc {
   typedef __fp16 half;
 }

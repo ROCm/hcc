@@ -51,19 +51,21 @@ THE SOFTWARE.
 TYPE                                           \
 get_##FNAME() const                            \
 {                                              \
-    return header->get_##FNAME();              \
+  return header? header->get_##FNAME() : 0;    \
 }
 
 #define ELFIO_HEADER_ACCESS_GET_SET( TYPE, FNAME ) \
 TYPE                                               \
 get_##FNAME() const                                \
 {                                                  \
-    return header->get_##FNAME();                  \
+  return header? header->get_##FNAME() : 0;        \
 }                                                  \
 void                                               \
 set_##FNAME( TYPE val )                            \
-{                                                  \
-    header->set_##FNAME( val );                    \
+{ 						   \
+  if (header) { 			    	   \
+      header->set_##FNAME( val );                  \
+  } 						   \
 }                                                  \
 
 namespace ELFIO {
@@ -112,11 +114,9 @@ class elfio
     {
         clean();
 
-        unsigned char e_ident[EI_NIDENT];
-
-        // Read ELF file signature
-        stream.seekg( 0 );
-        stream.read( reinterpret_cast<char*>( &e_ident ), sizeof( e_ident ) );
+	unsigned char e_ident[EI_NIDENT];
+	// Read ELF file signature
+	stream.read( reinterpret_cast<char*>( &e_ident ), sizeof( e_ident ) );
 
         // Is it ELF file?
         if ( stream.gcount() != sizeof( e_ident ) ||
@@ -133,7 +133,6 @@ class elfio
         }
 
         convertor.setup( e_ident[EI_DATA] );
-
         header = create_header( e_ident[EI_CLASS], e_ident[EI_DATA] );
         if ( 0 == header ) {
             return false;
@@ -143,9 +142,8 @@ class elfio
         }
 
         load_sections( stream );
-        load_segments( stream );
-
-        return true;
+        bool is_still_good = load_segments( stream );
+        return is_still_good;
     }
 
 //------------------------------------------------------------------------------
@@ -153,12 +151,11 @@ class elfio
     {
         std::ofstream f( file_name.c_str(), std::ios::out | std::ios::binary );
 
-        if ( !f ) {
+        if ( !f || !header) {
             return false;
         }
 
         bool is_still_good = true;
-
         // Define layout specific header fields
         // The position of the segment table is fixed after the header.
         // The position of the section table is variable and needs to be fixed
@@ -171,6 +168,8 @@ class elfio
         // Layout the first section right after the segment table
         current_file_pos = header->get_header_size() +
                     header->get_segment_entry_size() * header->get_segments_num();
+
+        calc_segment_alignment();
 
         is_still_good = layout_segments_and_their_sections();
         is_still_good = is_still_good && layout_sections_without_segments();
@@ -247,6 +246,45 @@ class elfio
             return 0;
         }
     }
+
+//------------------------------------------------------------------------------
+  private:
+      bool is_offset_in_section( Elf64_Off offset, const section* sec ) const {
+          return offset >= sec->get_offset() && offset < sec->get_offset()+sec->get_size();
+      }
+
+//------------------------------------------------------------------------------
+  public:
+
+      //! returns an empty string if no problems are detected,
+      //! or a string containing an error message if problems are found
+      std::string validate() const {
+
+          // check for overlapping sections in the file
+          for ( int i = 0; i < sections.size(); ++i) {
+              for ( int j = i+1; j < sections.size(); ++j ) {
+                  const section* a = sections[i];
+                  const section* b = sections[j];
+                  if (   !(a->get_type() & SHT_NOBITS)
+                      && !(b->get_type() & SHT_NOBITS)
+                      && (a->get_size() > 0)
+                      && (b->get_size() > 0)
+                      && (a->get_offset() > 0)
+                      && (b->get_offset() > 0)) {
+                      if (   is_offset_in_section( a->get_offset(), b )
+                          || is_offset_in_section( a->get_offset()+a->get_size()-1, b )
+                          || is_offset_in_section( b->get_offset(), a )
+                          || is_offset_in_section( b->get_offset()+b->get_size()-1, a )) {
+                          return "Sections " + a->get_name() + " and " + b->get_name() + " overlap in file";
+                      }
+                  }
+              }
+          }
+
+          // more checks to be added here...
+
+          return "";
+      }
 
 //------------------------------------------------------------------------------
   private:
@@ -383,6 +421,18 @@ class elfio
     }
 
 //------------------------------------------------------------------------------
+    //! Checks whether the addresses of the section entirely fall within the given segment.
+    //! It doesn't matter if the addresses are memory addresses, or file offsets,
+    //!  they just need to be in the same address space
+    bool is_sect_in_seg ( Elf64_Off sect_begin, Elf_Xword sect_size, Elf64_Off seg_begin, Elf64_Off seg_end ) {
+        return seg_begin <= sect_begin
+                && sect_begin + sect_size <= seg_end
+                && sect_begin < seg_end;  // this is important criteria when sect_size == 0
+                                          // Example:  seg_begin=10, seg_end=12 (-> covering the bytes 10 and 11)
+                                          //           sect_begin=12, sect_size=0  -> shall return false!
+    }
+
+//------------------------------------------------------------------------------
     bool load_segments( std::istream& stream )
     {
         Elf_Half  entry_size = header->get_segment_entry_size();
@@ -417,14 +467,11 @@ class elfio
                 // SHF_ALLOC sections are matched based on the virtual address
                 // otherwise the file offset is matched
                 if( psec->get_flags() & SHF_ALLOC
-                      ? (segVBaseAddr <= psec->get_address()
-                          && psec->get_address() + psec->get_size()
-                           <= segVEndAddr)
-                      : (segBaseOffset <= psec->get_offset()
-                          && psec->get_offset() + psec->get_size()
-                           <= segEndOffset)) {
-                      seg->add_section_index( psec->get_index(),
-                                              psec->get_addr_align() );
+                      ? is_sect_in_seg( psec->get_address(), psec->get_size(), segVBaseAddr,  segVEndAddr )
+                      : is_sect_in_seg( psec->get_offset(),  psec->get_size(), segBaseOffset, segEndOffset )) {
+                      // Alignment of segment shall not be updated, to preserve original value
+                      // It will be re-calculated on saving.
+                      seg->add_section_index( psec->get_index(), 0 );
                 }
             }
 
@@ -517,6 +564,9 @@ class elfio
         for( size_t i = 0; i < worklist.size(); ++i ) {
             if( i != nextSlot && worklist[i]->is_offset_initialized()
                 && worklist[i]->get_offset() == 0 ) {
+                if (worklist[nextSlot]->get_offset() == 0) {
+                    ++nextSlot;
+                }
                 std::swap(worklist[i],worklist[nextSlot]);
                 ++nextSlot;
             }
@@ -571,6 +621,20 @@ class elfio
 
 
 //------------------------------------------------------------------------------
+    void calc_segment_alignment( )
+    {
+        for( std::vector<segment*>::iterator s = segments_.begin(); s != segments_.end(); ++s ) {
+            segment* seg = *s;
+            for ( int i = 0; i < seg->get_sections_num(); ++i ) {
+                section* sect = sections_[ seg->get_section_index_at(i) ];
+                if ( sect->get_addr_align() > seg->get_align() ) {
+                    seg->set_align( sect->get_addr_align() );
+                }
+            }
+        }
+    }
+
+//------------------------------------------------------------------------------
     bool layout_segments_and_their_sections( )
     {
         std::vector<segment*>  worklist;
@@ -606,11 +670,12 @@ class elfio
             // have to be aligned
             else if ( seg->get_sections_num()
                      && !section_generated[seg->get_section_index_at( 0 )] ) {
-                Elf64_Off cur_page_alignment = current_file_pos % seg->get_align();
-                Elf64_Off req_page_alignment = seg->get_virtual_address() % seg->get_align();
+                Elf_Xword align = seg->get_align() > 0 ? seg->get_align() : 1;
+                Elf64_Off cur_page_alignment = current_file_pos % align;
+                Elf64_Off req_page_alignment = seg->get_virtual_address() % align;
                 Elf64_Off error              = req_page_alignment - cur_page_alignment;
 
-                current_file_pos += ( seg->get_align() + error ) % seg->get_align();
+                current_file_pos += ( seg->get_align() + error ) % align;
                 seg_start_pos = current_file_pos;
             }
             else if ( seg->get_sections_num() ) {
@@ -633,14 +698,20 @@ class elfio
                 // Fix up the alignment
                 if ( !section_generated[index] && sec->is_address_initialized()
                     && SHT_NOBITS != sec->get_type()
-                    && SHT_NULL != sec->get_type() ) {
+                    && SHT_NULL != sec->get_type()
+                    && 0 != sec->get_size() ) {
                     // Align the sections based on the virtual addresses
                     // when possible (this is what matters for execution)
                     Elf64_Off req_offset = sec->get_address() - seg->get_virtual_address();
                     Elf64_Off cur_offset = current_file_pos - seg_start_pos;
+                    if ( req_offset < cur_offset) {
+                         // something has gone awfully wrong, abort!
+                         // secAlign would turn out negative, seeking backwards and overwriting previous data
+                         return false;
+                    }
                     secAlign             = req_offset - cur_offset;
                 }
-                else if (!section_generated[index]) {
+                else if (!section_generated[index] && !sec->is_address_initialized() ) {
                     // If no address has been specified then only the section
                     // alignment constraint has to be matched
 					Elf_Xword align = sec->get_addr_align();
@@ -650,7 +721,7 @@ class elfio
                     Elf64_Off error = current_file_pos % align;
                     secAlign = ( align - error ) % align;
                 }
-                else {
+                else if (section_generated[index] ) {
                     // Alignment for already generated sections
                     secAlign = sec->get_offset() - seg_start_pos - segment_filesize;
                 }
@@ -685,7 +756,15 @@ class elfio
             }
 
             seg->set_file_size( segment_filesize );
-            seg->set_memory_size( segment_memory );
+
+            // If we already have a memory size from loading an elf file (value > 0),
+            // it must not shrink!
+            // Memory size may be bigger than file size and it is the loader's job to do something
+            // with the surplus bytes in memory, like initializing them with a defined value.
+            if ( seg->get_memory_size() < segment_memory ) {
+                seg->set_memory_size( segment_memory );
+            }
+
             seg->set_offset(seg_start_pos);
         }
 
@@ -776,6 +855,16 @@ class elfio
         }
 
 //------------------------------------------------------------------------------
+        std::vector<section*>::const_iterator begin() const {
+            return parent->sections_.cbegin();
+        }
+
+//------------------------------------------------------------------------------
+        std::vector<section*>::const_iterator end() const {
+            return parent->sections_.cend();
+        }
+
+//------------------------------------------------------------------------------
       private:
         elfio* parent;
     } sections;
@@ -818,6 +907,16 @@ class elfio
 //------------------------------------------------------------------------------
         std::vector<segment*>::iterator end() {
             return parent->segments_.end();
+        }
+
+//------------------------------------------------------------------------------
+        std::vector<segment*>::const_iterator begin() const {
+            return parent->segments_.cbegin();
+        }
+
+//------------------------------------------------------------------------------
+        std::vector<segment*>::const_iterator end() const {
+            return parent->segments_.cend();
         }
 
 //------------------------------------------------------------------------------

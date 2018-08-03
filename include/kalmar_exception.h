@@ -16,9 +16,10 @@ namespace Kalmar {
 #define E_FAIL 0x80004005
 #endif
 
-static const char *__errorMsg_UnsupportedAccelerator = "concurrency::parallel_for_each is not supported on the selected accelerator \"CPU accelerator\".";
+static constexpr const char __errorMsg_UnsupportedAccelerator[]{
+  "concurrency::parallel_for_each is not supported on the selected accelerator \"CPU accelerator\"."};
 
-typedef int HRESULT;
+typedef decltype(E_FAIL) HRESULT;
 class runtime_exception : public std::exception
 {
 public:

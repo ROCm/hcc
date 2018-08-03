@@ -429,18 +429,22 @@ class dump
 //------------------------------------------------------------------------------
     static void
     header( std::ostream& out, const elfio& reader )
-    {
-        out << "ELF Header"     << std::endl                               << std::endl
-            << "  Class:      " << str_class( reader.get_class() )         << std::endl
-            << "  Encoding:   " << str_endian( reader.get_encoding() )     << std::endl
-            << "  ELFVersion: " << str_version( reader.get_elf_version() ) << std::endl
-            << "  Type:       " << str_type( reader.get_type() )           << std::endl
-            << "  Machine:    " << str_machine( reader.get_machine() )     << std::endl
-            << "  Version:    " << str_version( reader.get_version() )     << std::endl
-            << "  Entry:      " << "0x" << std::hex << reader.get_entry()  << std::endl
-            << "  Flags:      " << "0x" << std::hex << reader.get_flags()  << std::endl
-            << std::endl;
-    }
+     {
+	if (!reader.get_header_size()) 
+	 {
+	    return;
+	 }
+	out << "ELF Header"   << std::endl                               << std::endl
+	  << "  Class:      " << str_class( reader.get_class() )         << std::endl
+	  << "  Encoding:   " << str_endian( reader.get_encoding() )     << std::endl
+	  << "  ELFVersion: " << str_version( reader.get_elf_version() ) << std::endl
+	  << "  Type:       " << str_type( reader.get_type() )           << std::endl
+	  << "  Machine:    " << str_machine( reader.get_machine() )     << std::endl
+	  << "  Version:    " << str_version( reader.get_version() )     << std::endl
+	  << "  Entry:      " << "0x" << std::hex << reader.get_entry()  << std::endl
+	  << "  Flags:      " << "0x" << std::hex << reader.get_flags()  << std::endl
+	  << std::endl;
+     }
 
 //------------------------------------------------------------------------------
     static void
@@ -728,7 +732,7 @@ class dump
                 if ( dyn_no > 0 ) {
                     out << "Dynamic section (" << sec->get_name() << ")" << std::endl;
                     out << "[  Nr ] Tag              Name/Value" << std::endl;
-                    for ( int i = 0; i < dyn_no; ++i ) {
+                    for ( Elf_Xword i = 0; i < dyn_no; ++i ) {
                         Elf_Xword   tag   = 0;
                         Elf_Xword   value = 0;
                         std::string str;

@@ -12,6 +12,7 @@
 
 #pragma once
 
+#include "atomics.hpp"
 #include "hc_defines.h"
 #include "kalmar_exception.h"
 #include "kalmar_index.h"
@@ -21,9 +22,11 @@
 #include "kalmar_buffer.h"
 #include "kalmar_math.h"
 
-#include "hsa_atomic.h"
-#include "kalmar_cpu_launch.h"
 #include "hcc_features.hpp"
+
+#include <climits>
+#include <cstddef>
+#include <type_traits>
 
 #ifndef __HC__
 #   define __HC__ [[hc]]
@@ -47,6 +50,7 @@ namespace hc {
 
 class AmPointerInfo;
 
+using namespace atomics;
 using namespace Kalmar::enums;
 using namespace Kalmar::CLAMP;
 
@@ -630,57 +634,47 @@ private:
     friend class accelerator;
     template <typename Q, int K> friend class array;
     template <typename Q, int K> friend class array_view;
-  
-    template<typename Kernel> friend
-        void* Kalmar::mcw_cxxamp_get_kernel(const std::shared_ptr<Kalmar::KalmarQueue>&, const Kernel&);
-    template<typename Kernel, int dim_ext> friend
-        void Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory(const std::shared_ptr<Kalmar::KalmarQueue>&, size_t *, size_t *, const Kernel&, void*, size_t);
-    template<typename Kernel, int dim_ext> friend
-        std::shared_ptr<Kalmar::KalmarAsyncOp> Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async(const std::shared_ptr<Kalmar::KalmarQueue>&, size_t *, size_t *, const Kernel&, void*, size_t);
-    template<typename Kernel, int dim_ext> friend
-        void Kalmar::mcw_cxxamp_launch_kernel(const std::shared_ptr<Kalmar::KalmarQueue>&, size_t *, size_t *, const Kernel&);
-    template<typename Kernel, int dim_ext> friend
-        std::shared_ptr<Kalmar::KalmarAsyncOp> Kalmar::mcw_cxxamp_launch_kernel_async(const std::shared_ptr<Kalmar::KalmarQueue>&, size_t *, size_t *, const Kernel&);
-  
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-    template <typename Kernel, int N> friend
-        completion_future launch_cpu_task_async(const std::shared_ptr<Kalmar::KalmarQueue>&, Kernel const&, extent<N> const&);
-#endif
+
+    template<typename Domain, typename Kernel>
+    friend
+    void Kalmar::launch_kernel_with_dynamic_group_memory(
+        const std::shared_ptr<Kalmar::KalmarQueue>&,
+        const Domain&,
+        const Kernel&);
+    template<typename Domain, typename Kernel>
+    friend
+    std::shared_ptr<Kalmar::KalmarAsyncOp>
+        Kalmar::launch_kernel_with_dynamic_group_memory_async(
+        const std::shared_ptr<Kalmar::KalmarQueue>&,
+        const Domain&,
+        const Kernel&);
+    template<typename Domain, typename Kernel>
+    friend
+    void Kalmar::launch_kernel(
+        const std::shared_ptr<Kalmar::KalmarQueue>&,
+        const Domain&,
+        const Kernel&);
+    template<typename Domain, typename Kernel>
+    friend
+    std::shared_ptr<Kalmar::KalmarAsyncOp> Kalmar::launch_kernel_async(
+        const std::shared_ptr<Kalmar::KalmarQueue>&,
+        const Domain&,
+        const Kernel&);
 
     // non-tiled parallel_for_each
     // generic version
-    template <int N, typename Kernel> friend
-        completion_future parallel_for_each(const accelerator_view&, const extent<N>&, const Kernel&);
-  
-    // 1D specialization
-    template <typename Kernel> friend
-        completion_future parallel_for_each(const accelerator_view&, const extent<1>&, const Kernel&);
-  
-    // 2D specialization
-    template <typename Kernel> friend
-        completion_future parallel_for_each(const accelerator_view&, const extent<2>&, const Kernel&);
-  
-    // 3D specialization
-    template <typename Kernel> friend
-        completion_future parallel_for_each(const accelerator_view&, const extent<3>&, const Kernel&);
-  
-    // tiled parallel_for_each, 3D version
-    template <typename Kernel> friend
-        completion_future parallel_for_each(const accelerator_view&, const tiled_extent<3>&, const Kernel&);
-  
-    // tiled parallel_for_each, 2D version
-    template <typename Kernel> friend
-        completion_future parallel_for_each(const accelerator_view&, const tiled_extent<2>&, const Kernel&);
-  
-    // tiled parallel_for_each, 1D version
-    template <typename Kernel> friend
-        completion_future parallel_for_each(const accelerator_view&, const tiled_extent<1>&, const Kernel&);
+    template <typename Kernel, int n>
+    friend
+    completion_future parallel_for_each(
+        const accelerator_view&, const extent<n>&, const Kernel&);
 
+    // tiled parallel_for_each
+    // generic version
+    template <typename Kernel, int n>
+    friend
+    completion_future parallel_for_each(
+        const accelerator_view&, const tiled_extent<n>&, const Kernel&);
 
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-public:
-#endif
-    __attribute__((annotate("user_deserialize")))
     accelerator_view() __CPU__ __HC__ {
 #if __KALMAR_ACCELERATOR__ != 1
         throw runtime_exception("errorMsg_throw", 0);
@@ -1391,35 +1385,20 @@ private:
         : __amp_future(__future), __thread_then(nullptr), __asyncOp(nullptr) {}
 
     friend class Kalmar::HSAQueue;
-    
+
     // non-tiled parallel_for_each
     // generic version
-    template <int N, typename Kernel> friend
-        completion_future parallel_for_each(const accelerator_view&, const extent<N>&, const Kernel&);
+    template<typename Kernel, int n>
+    friend
+    completion_future parallel_for_each(
+        const accelerator_view&, const extent<n>&, const Kernel&);
 
-    // 1D specialization
-    template <typename Kernel> friend
-        completion_future parallel_for_each(const accelerator_view&, const extent<1>&, const Kernel&);
-
-    // 2D specialization
-    template <typename Kernel> friend
-        completion_future parallel_for_each(const accelerator_view&, const extent<2>&, const Kernel&);
-
-    // 3D specialization
-    template <typename Kernel> friend
-        completion_future parallel_for_each(const accelerator_view&, const extent<3>&, const Kernel&);
-
-    // tiled parallel_for_each, 3D version
-    template <typename Kernel> friend
-        completion_future parallel_for_each(const accelerator_view&, const tiled_extent<3>&, const Kernel&);
-
-    // tiled parallel_for_each, 2D version
-    template <typename Kernel> friend
-        completion_future parallel_for_each(const accelerator_view&, const tiled_extent<2>&, const Kernel&);
-
-    // tiled parallel_for_each, 1D version
-    template <typename Kernel> friend
-        completion_future parallel_for_each(const accelerator_view&, const tiled_extent<1>&, const Kernel&);
+    // tiled parallel_for_each
+    // generic version
+    template<typename Kernel, int n>
+    friend
+    completion_future parallel_for_each(
+        const accelerator_view&, const tiled_extent<n>&, const Kernel&);
 
     // copy_async
     template <typename T, int N> friend
@@ -3253,41 +3232,6 @@ extern "C" void* get_group_segment_base_pointer() __HC__;
 extern "C" void* get_dynamic_group_segment_base_pointer() __HC__;
 
 // ------------------------------------------------------------------------
-// utility class for tiled_barrier
-// ------------------------------------------------------------------------
-
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-template <typename Ker, typename Ti>
-void bar_wrapper(Ker *f, Ti *t)
-{
-    (*f)(*t);
-}
-
-struct barrier_t {
-    std::unique_ptr<ucontext_t[]> ctx;
-    int idx;
-    barrier_t (int a) :
-        ctx(new ucontext_t[a + 1]) {}
-    template <typename Ti, typename Ker>
-    void setctx(int x, char *stack, Ker& f, Ti* tidx, int S) {
-        getcontext(&ctx[x]);
-        ctx[x].uc_stack.ss_sp = stack;
-        ctx[x].uc_stack.ss_size = S;
-        ctx[x].uc_link = &ctx[x - 1];
-        makecontext(&ctx[x], (void (*)(void))bar_wrapper<Ker, Ti>, 2, &f, tidx);
-    }
-    void swap(int a, int b) {
-        swapcontext(&ctx[a], &ctx[b]);
-    }
-    void wait() __HC__ {
-        --idx;
-        swapcontext(&ctx[idx + 1], &ctx[idx]);
-    }
-};
-#endif
-
-
-// ------------------------------------------------------------------------
 // tiled_barrier
 // ------------------------------------------------------------------------
 
@@ -3300,20 +3244,6 @@ struct barrier_t {
  */
 class tile_barrier {
 public:
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-    using pb_t = std::shared_ptr<barrier_t>;
-    tile_barrier(pb_t pb) : pbar(pb) {}
-
-    /**
-     * Copy constructor. Constructs a new tile_barrier from the supplied
-     * argument "other".
-     *
-     * @param[in] other An object of type tile_barrier from which to initialize
-     *                  this.
-     */
-    tile_barrier(const tile_barrier& other) __CPU__ __HC__ : pbar(other.pbar) {}
-#else
-
     /**
      * Copy constructor. Constructs a new tile_barrier from the supplied
      * argument "other".
@@ -3322,7 +3252,6 @@ public:
      *                  this.
      */
     tile_barrier(const tile_barrier& other) __CPU__ __HC__ {}
-#endif
 
     /**
      * Blocks execution of all threads in the thread tile until all threads in
@@ -3335,11 +3264,7 @@ public:
      * wait_with_all_memory_fence().
      */
     void wait() const __HC__ {
-#if __KALMAR_ACCELERATOR__ == 1
         wait_with_all_memory_fence();
-#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-        pbar->wait();
-#endif
     }
 
     /**
@@ -3352,11 +3277,7 @@ public:
      * before hitting the barrier. This is identical to wait().
      */
     void wait_with_all_memory_fence() const __HC__ {
-#if __KALMAR_ACCELERATOR__ == 1
         amp_barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
-#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-        pbar->wait();
-#endif
     }
 
     /**
@@ -3369,11 +3290,7 @@ public:
      * after the barrier are executed before hitting the barrier.
      */
     void wait_with_global_memory_fence() const __HC__ {
-#if __KALMAR_ACCELERATOR__ == 1
         amp_barrier(CLK_GLOBAL_MEM_FENCE);
-#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-        pbar->wait();
-#endif
     }
 
     /**
@@ -3387,20 +3304,11 @@ public:
      * hitting the barrier.
      */
     void wait_with_tile_static_memory_fence() const __HC__ {
-#if __KALMAR_ACCELERATOR__ == 1
         amp_barrier(CLK_LOCAL_MEM_FENCE);
-#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-        pbar->wait();
-#endif
     }
 
 private:
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-    tile_barrier() __CPU__ __HC__ = default;
-    pb_t pbar;
-#else
-    tile_barrier() __HC__ {}
-#endif
+    tile_barrier() __HC__ = default;
 
     template <int N> friend
         class tiled_index;
@@ -3508,14 +3416,7 @@ public:
     tiled_index(const index<3>& g) __CPU__ __HC__ : global(g) {}
 
 private:
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-    __attribute__((always_inline)) tiled_index(int a0, int a1, int a2, int b0, int b1, int b2, int c0, int c1, int c2, tile_barrier& pb, int D0, int D1, int D2) __CPU__ __HC__
-        : global(a2, a1, a0), local(b2, b1, b0), tile(c2, c1, c0), tile_origin(a2 - b2, a1 - b1, a0 - b0), barrier(pb), tile_dim(D0, D1, D2) {}
-#endif
-
-    __attribute__((annotate("__cxxamp_opencl_index")))
-#if __KALMAR_ACCELERATOR__ == 1
-    __attribute__((always_inline)) tiled_index() __HC__
+    tiled_index() __HC__
         : global(index<3>(amp_get_global_id(2), amp_get_global_id(1), amp_get_global_id(0))),
           local(index<3>(amp_get_local_id(2), amp_get_local_id(1), amp_get_local_id(0))),
           tile(index<3>(amp_get_group_id(2), amp_get_group_id(1), amp_get_group_id(0))),
@@ -3523,20 +3424,12 @@ private:
                                amp_get_global_id(1) - amp_get_local_id(1),
                                amp_get_global_id(0) - amp_get_local_id(0))),
           tile_dim(index<3>(amp_get_local_size(2), amp_get_local_size(1), amp_get_local_size(0)))
-#elif __KALMAR__ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-    __attribute__((always_inline)) tiled_index() __CPU__ __HC__
-#else
-    __attribute__((always_inline)) tiled_index() __HC__
-#endif // __KALMAR_ACCELERATOR__
     {}
 
     template<typename Kernel> friend
         completion_future parallel_for_each(const accelerator_view&, const tiled_extent<N>&, const Kernel&);
-
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-    template<typename K> friend
-        void partitioned_task_tile_3D(K const&, tiled_extent<3> const&, int);
-#endif
+    friend
+    struct Kalmar::Indexer;
 };
 
 
@@ -3609,33 +3502,18 @@ public:
     tiled_index(const index<1>& g) __CPU__ __HC__ : global(g) {}
 
 private:
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-    __attribute__((always_inline)) tiled_index(int a, int b, int c, tile_barrier& pb, int D0) __CPU__ __HC__
-        : global(a), local(b), tile(c), tile_origin(a - b), barrier(pb), tile_dim(D0) {}
-#endif
-
-    __attribute__((annotate("__cxxamp_opencl_index")))
-#if __KALMAR_ACCELERATOR__ == 1
-    __attribute__((always_inline)) tiled_index() __HC__
+    tiled_index() __HC__
         : global(index<1>(amp_get_global_id(0))),
           local(index<1>(amp_get_local_id(0))),
           tile(index<1>(amp_get_group_id(0))),
           tile_origin(index<1>(amp_get_global_id(0) - amp_get_local_id(0))),
           tile_dim(index<1>(amp_get_local_size(0)))
-#elif __KALMAR__ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-    __attribute__((always_inline)) tiled_index() __CPU__ __HC__
-#else
-    __attribute__((always_inline)) tiled_index() __HC__
-#endif // __KALMAR_ACCELERATOR__
     {}
 
     template<typename Kernel> friend
         completion_future parallel_for_each(const accelerator_view&, const tiled_extent<1>&, const Kernel&);
-
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-    template<typename K> friend
-        void partitioned_task_tile_1D(K const&, tiled_extent<1> const&, int);
-#endif
+    friend
+    struct Kalmar::Indexer;
 };
 
 /**
@@ -3707,226 +3585,20 @@ public:
     tiled_index(const index<2>& g) __CPU__ __HC__ : global(g) {}
 
 private:
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-    __attribute__((always_inline)) tiled_index(int a0, int a1, int b0, int b1, int c0, int c1, tile_barrier& pb, int D0, int D1) __CPU__ __HC__
-        : global(a1, a0), local(b1, b0), tile(c1, c0), tile_origin(a1 - b1, a0 - b0), barrier(pb), tile_dim(D0, D1) {}
-#endif
-
-    __attribute__((annotate("__cxxamp_opencl_index")))
-#if __KALMAR_ACCELERATOR__ == 1
-    __attribute__((always_inline)) tiled_index() __HC__
+    tiled_index() __HC__
         : global(index<2>(amp_get_global_id(1), amp_get_global_id(0))),
           local(index<2>(amp_get_local_id(1), amp_get_local_id(0))),
           tile(index<2>(amp_get_group_id(1), amp_get_group_id(0))),
           tile_origin(index<2>(amp_get_global_id(1) - amp_get_local_id(1),
                                amp_get_global_id(0) - amp_get_local_id(0))),
           tile_dim(index<2>(amp_get_local_size(1), amp_get_local_size(0)))
-#elif __KALMAR__ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-    __attribute__((always_inline)) tiled_index() __CPU__ __HC__
-#else
-    __attribute__((always_inline)) tiled_index() __HC__
-#endif // __KALMAR_ACCELERATOR__
     {}
 
     template<typename Kernel> friend
         completion_future parallel_for_each(const accelerator_view&, const tiled_extent<2>&, const Kernel&);
-
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-    template<typename K> friend
-        void partitioned_task_tile_2D(K const&, tiled_extent<2> const&, int);
-#endif
+    friend
+    struct Kalmar::Indexer;
 };
-
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-#define SSIZE 1024 * 10
-template <int N, typename Kernel,  int K>
-struct cpu_helper
-{
-    static inline void call(const Kernel& k, index<K>& idx, const extent<K>& ext) __CPU__ __HC__ {
-        int i;
-        for (i = 0; i < ext[N]; ++i) {
-            idx[N] = i;
-            cpu_helper<N + 1, Kernel, K>::call(k, idx, ext);
-        }
-    }
-};
-template <typename Kernel, int K>
-struct cpu_helper<K, Kernel, K>
-{
-    static inline void call(const Kernel& k, const index<K>& idx, const extent<K>& ext) __CPU__ __HC__ {
-        (const_cast<Kernel&>(k))(idx);
-    }
-};
-
-template <typename Kernel, int N>
-void partitioned_task(const Kernel& ker, const extent<N>& ext, int part) {
-    index<N> idx;
-    int start = ext[0] * part / Kalmar::NTHREAD;
-    int end = ext[0] * (part + 1) / Kalmar::NTHREAD;
-    for (int i = start; i < end; i++) {
-        idx[0] = i;
-        cpu_helper<1, Kernel, N>::call(ker, idx, ext);
-    }
-}
-
-template <typename Kernel>
-void partitioned_task_tile_1D(Kernel const& f, tiled_extent<1> const& ext, int part) {
-    int D0 = ext.tile_dim[0];
-    int start = (ext[0] / D0) * part / Kalmar::NTHREAD;
-    int end = (ext[0] / D0) * (part + 1) / Kalmar::NTHREAD;
-    int stride = end - start;
-    if (stride == 0)
-        return;
-    char *stk = new char[D0 * SSIZE];
-    tiled_index<1> *tidx = new tiled_index<1>[D0];
-    tile_barrier::pb_t hc_bar = std::make_shared<barrier_t>(D0);
-    tile_barrier tbar(hc_bar);
-    for (int tx = start; tx < end; tx++) {
-        int id = 0;
-        char *sp = stk;
-        tiled_index<1> *tip = tidx;
-        for (int x = 0; x < D0; x++) {
-            new (tip) tiled_index<1>(tx * D0 + x, x, tx, tbar, D0);
-            hc_bar->setctx(++id, sp, f, tip, SSIZE);
-            sp += SSIZE;
-            ++tip;
-        }
-        hc_bar->idx = 0;
-        while (hc_bar->idx == 0) {
-            hc_bar->idx = id;
-            hc_bar->swap(0, id);
-        }
-    }
-    delete [] stk;
-    delete [] tidx;
-}
-
-template <typename Kernel>
-void partitioned_task_tile_2D(Kernel const& f, tiled_extent<2> const& ext, int part) {
-    int D0 = ext.tile_dim[0];
-    int D1 = ext.tile_dim[1];
-    int start = (ext[0] / D0) * part / Kalmar::NTHREAD;
-    int end = (ext[0] / D0) * (part + 1) / Kalmar::NTHREAD;
-    int stride = end - start;
-    if (stride == 0)
-        return;
-    char *stk = new char[D1 * D0 * SSIZE];
-    tiled_index<2> *tidx = new tiled_index<2>[D0 * D1];
-    tile_barrier::pb_t hc_bar = std::make_shared<barrier_t>(D0 * D1);
-    tile_barrier tbar(hc_bar);
-
-    for (int tx = 0; tx < ext[1] / D1; tx++)
-        for (int ty = start; ty < end; ty++) {
-            int id = 0;
-            char *sp = stk;
-            tiled_index<2> *tip = tidx;
-            for (int x = 0; x < D1; x++)
-                for (int y = 0; y < D0; y++) {
-                    new (tip) tiled_index<2>(D1 * tx + x, D0 * ty + y, x, y, tx, ty, tbar, D0, D1);
-                    hc_bar->setctx(++id, sp, f, tip, SSIZE);
-                    ++tip;
-                    sp += SSIZE;
-                }
-            hc_bar->idx = 0;
-            while (hc_bar->idx == 0) {
-                hc_bar->idx = id;
-                hc_bar->swap(0, id);
-            }
-        }
-    delete [] stk;
-    delete [] tidx;
-}
-
-template <typename Kernel>
-void partitioned_task_tile_3D(Kernel const& f, tiled_extent<3> const& ext, int part) {
-    int D0 = ext.tile_dim[0];
-    int D1 = ext.tile_dim[1];
-    int D2 = ext.tile_dim[2];
-    int start = (ext[0] / D0) * part / Kalmar::NTHREAD;
-    int end = (ext[0] / D0) * (part + 1) / Kalmar::NTHREAD;
-    int stride = end - start;
-    if (stride == 0)
-        return;
-    char *stk = new char[D2 * D1 * D0 * SSIZE];
-    tiled_index<3> *tidx = new tiled_index<3>[D0 * D1 * D2];
-    tile_barrier::pb_t hc_bar = std::make_shared<barrier_t>(D0 * D1 * D2);
-    tile_barrier tbar(hc_bar);
-
-    for (int i = 0; i < ext[2] / D2; i++)
-        for (int j = 0; j < ext[1] / D1; j++)
-            for(int k = start; k < end; k++) {
-                int id = 0;
-                char *sp = stk;
-                tiled_index<3> *tip = tidx;
-                for (int x = 0; x < D2; x++)
-                    for (int y = 0; y < D1; y++)
-                        for (int z = 0; z < D0; z++) {
-                            new (tip) tiled_index<3>(D2 * i + x,
-                                                              D1 * j + y,
-                                                              D0 * k + z,
-                                                              x, y, z, i, j, k, tbar, D0, D1, D2);
-                            hc_bar->setctx(++id, sp, f, tip, SSIZE);
-                            ++tip;
-                            sp += SSIZE;
-                        }
-                hc_bar->idx = 0;
-                while (hc_bar->idx == 0) {
-                    hc_bar->idx = id;
-                    hc_bar->swap(0, id);
-                }
-            }
-    delete [] stk;
-    delete [] tidx;
-}
-
-template <typename Kernel, int N>
-completion_future launch_cpu_task_async(const std::shared_ptr<Kalmar::KalmarQueue>& pQueue, Kernel const& f,
-                     extent<N> const& compute_domain)
-{
-    Kalmar::CPUKernelRAII<Kernel> obj(pQueue, f);
-    for (int i = 0; i < Kalmar::NTHREAD; ++i)
-        obj[i] = std::thread(partitioned_task<Kernel, N>, std::cref(f), std::cref(compute_domain), i);
-    // FIXME wrap the above operation into the completion_future object
-    return completion_future();
-}
-
-template <typename Kernel>
-completion_future launch_cpu_task_async(const std::shared_ptr<Kalmar::KalmarQueue>& pQueue, Kernel const& f,
-                     tiled_extent<1> const& compute_domain)
-{
-    Kalmar::CPUKernelRAII<Kernel> obj(pQueue, f);
-    for (int i = 0; i < Kalmar::NTHREAD; ++i)
-        obj[i] = std::thread(partitioned_task_tile_1D<Kernel>,
-                             std::cref(f), std::cref(compute_domain), i);
-    // FIXME wrap the above operation into the completion_future object
-    return completion_future();
-}
-
-template <typename Kernel>
-completion_future launch_cpu_task_async(const std::shared_ptr<Kalmar::KalmarQueue>& pQueue, Kernel const& f,
-                     tiled_extent<2> const& compute_domain)
-{
-    Kalmar::CPUKernelRAII<Kernel> obj(pQueue, f);
-    for (int i = 0; i < Kalmar::NTHREAD; ++i)
-        obj[i] = std::thread(partitioned_task_tile_2D<Kernel>,
-                             std::cref(f), std::cref(compute_domain), i);
-    // FIXME wrap the above operation into the completion_future object
-    return completion_future();
-}
-
-template <typename Kernel>
-completion_future launch_cpu_task_async(const std::shared_ptr<Kalmar::KalmarQueue>& pQueue, Kernel const& f,
-                     tiled_extent<3> const& compute_domain)
-{
-    Kalmar::CPUKernelRAII<Kernel> obj(pQueue, f);
-    for (int i = 0; i < Kalmar::NTHREAD; ++i)
-        obj[i] = std::thread(partitioned_task_tile_3D<Kernel>,
-                             std::cref(f), std::cref(compute_domain), i);
-    // FIXME wrap the above operation into the completion_future object
-    return completion_future();
-}
-
-#endif
 
 // ------------------------------------------------------------------------
 // utility helper classes for array_view
@@ -4268,7 +3940,7 @@ public:
      *
      * @param[in] ext The extent in each dimension of this array.
      */
-    explicit array(const extent<N>& ext)
+    explicit array(const hc::extent<N>& ext)
         : array(ext, accelerator(L"default").get_default_view()) {}
 
     /** @{ */
@@ -4302,10 +3974,10 @@ public:
      * @param[in] srcEnd An ending iterator into the source container.
      */
     template <typename InputIter>
-        array(const extent<N>& ext, InputIter srcBegin)
+        array(const hc::extent<N>& ext, InputIter srcBegin)
             : array(ext, srcBegin, accelerator(L"default").get_default_view()) {}
     template <typename InputIter>
-        array(const extent<N>& ext, InputIter srcBegin, InputIter srcEnd)
+        array(const hc::extent<N>& ext, InputIter srcBegin, InputIter srcEnd)
             : array(ext, srcBegin, srcEnd, accelerator(L"default").get_default_view()) {}
 
     /** @} */
@@ -4378,7 +4050,7 @@ public:
      *               this array.
      * @param[in] access_type The type of CPU access desired for this array.
      */
-    array(const extent<N>& ext, accelerator_view av, access_type cpu_access_type = access_type_auto)
+    array(const hc::extent<N>& ext, accelerator_view av, access_type cpu_access_type = access_type_auto)
 #if __KALMAR_ACCELERATOR__ == 1
         : m_device(ext.size()), extent(ext) {}
 #else
@@ -4396,7 +4068,7 @@ public:
     explicit array(int e0, int e1, int e2, void* accelerator_pointer)
         : array(hc::extent<N>(e0, e1, e2), accelerator(L"default").get_default_view(), accelerator_pointer) {}
 
-    explicit array(const extent<N>& ext, void* accelerator_pointer)
+    explicit array(const hc::extent<N>& ext, void* accelerator_pointer)
         : array(ext, accelerator(L"default").get_default_view(), accelerator_pointer) {}
     /** @} */
 
@@ -4464,11 +4136,11 @@ public:
      * @param[in] access_type The type of CPU access desired for this array.
      */
     template <typename InputIter>
-        array(const extent<N>& ext, InputIter srcBegin, accelerator_view av,
+        array(const hc::extent<N>& ext, InputIter srcBegin, accelerator_view av,
               access_type cpu_access_type = access_type_auto)
         : array(ext, av, cpu_access_type) { copy(srcBegin, *this); }
     template <typename InputIter>
-        array(const extent<N>& ext, InputIter srcBegin, InputIter srcEnd,
+        array(const hc::extent<N>& ext, InputIter srcBegin, InputIter srcEnd,
               accelerator_view av, access_type cpu_access_type = access_type_auto)
         : array(ext, av, cpu_access_type) {
             if (ext.size() < std::distance(srcBegin, srcEnd))
@@ -4522,10 +4194,10 @@ public:
      */
     template <typename InputIter>
         array(int e0, InputIter srcBegin, accelerator_view av, access_type cpu_access_type = access_type_auto)
-            : array(extent<N>(e0), srcBegin, av, cpu_access_type) {}
+            : array(hc::extent<N>(e0), srcBegin, av, cpu_access_type) {}
     template <typename InputIter>
         array(int e0, InputIter srcBegin, InputIter srcEnd, accelerator_view av, access_type cpu_access_type = access_type_auto)
-            : array(extent<N>(e0), srcBegin, srcEnd, av, cpu_access_type) {}
+            : array(hc::extent<N>(e0), srcBegin, srcEnd, av, cpu_access_type) {}
     template <typename InputIter>
         array(int e0, int e1, InputIter srcBegin, accelerator_view av, access_type cpu_access_type = access_type_auto)
             : array(hc::extent<N>(e0, e1), srcBegin, av, cpu_access_type) {}
@@ -4553,7 +4225,7 @@ public:
      * @param[in] associated_av An accelerator_view object which specifies a
      *                          target device accelerator.
      */
-    array(const extent<N>& ext, accelerator_view av, accelerator_view associated_av)
+    array(const hc::extent<N>& ext, accelerator_view av, accelerator_view associated_av)
 #if __KALMAR_ACCELERATOR__ == 1
         : m_device(ext.size()), extent(ext) {}
 #else
@@ -4597,10 +4269,10 @@ public:
      *                          target device accelerator.
      */
     template <typename InputIter>
-        array(const extent<N>& ext, InputIter srcBegin, accelerator_view av, accelerator_view associated_av)
+        array(const hc::extent<N>& ext, InputIter srcBegin, accelerator_view av, accelerator_view associated_av)
             : array(ext, av, associated_av) { copy(srcBegin, *this); }
     template <typename InputIter>
-        array(const extent<N>& ext, InputIter srcBegin, InputIter srcEnd, accelerator_view av, accelerator_view associated_av)
+        array(const hc::extent<N>& ext, InputIter srcBegin, InputIter srcEnd, accelerator_view av, accelerator_view associated_av)
             : array(ext, av, associated_av) {
             if (ext.size() < std::distance(srcBegin, srcEnd))
                 throw runtime_exception("errorMsg_throw", 0);
@@ -4645,10 +4317,10 @@ public:
      */
     template <typename InputIter>
         array(int e0, InputIter srcBegin, accelerator_view av, accelerator_view associated_av)
-            : array(extent<N>(e0), srcBegin, av, associated_av) {}
+            : array(hc::extent<N>(e0), srcBegin, av, associated_av) {}
     template <typename InputIter>
         array(int e0, InputIter srcBegin, InputIter srcEnd, accelerator_view av, accelerator_view associated_av)
-            : array(extent<N>(e0), srcBegin, srcEnd, av, associated_av) {}
+            : array(hc::extent<N>(e0), srcBegin, srcEnd, av, associated_av) {}
     template <typename InputIter>
         array(int e0, int e1, InputIter srcBegin, accelerator_view av, accelerator_view associated_av)
             : array(hc::extent<N>(e0, e1), srcBegin, av, associated_av) {}
@@ -4667,7 +4339,7 @@ public:
     /**
      * Access the extent that defines the shape of this array.
      */
-    extent<N> get_extent() const __CPU__ __HC__ { return extent; }
+    hc::extent<N> get_extent() const __CPU__ __HC__ { return extent; }
 
     /**
      * This property returns the accelerator_view representing the location
@@ -4792,7 +4464,7 @@ public:
      */
     operator std::vector<T>() const {
         std::vector<T> vec(extent.size());
-        copy(*this, vec.data());
+        hc::copy(*this, vec.data());
         return std::move(vec);
     }
 
@@ -4934,7 +4606,7 @@ public:
      * @return Returns a subsection of the source array at specified origin,
      *         and with the specified extent.
      */
-    array_view<T, N> section(const index<N>& origin, const extent<N>& ext) __CPU__ __HC__ {
+    array_view<T, N> section(const index<N>& origin, const hc::extent<N>& ext) __CPU__ __HC__ {
 #if __KALMAR_ACCELERATOR__ != 1
         if ( !Kalmar::amp_helper<N, index<N>, hc::extent<N>>::contains(origin,  ext ,this->extent) )
             throw runtime_exception("errorMsg_throw", 0);
@@ -4942,7 +4614,7 @@ public:
         array_view<T, N> av(*this);
         return av.section(origin, ext);
     }
-    array_view<const T, N> section(const index<N>& origin, const extent<N>& ext) const __CPU__ __HC__ {
+    array_view<const T, N> section(const index<N>& origin, const hc::extent<N>& ext) const __CPU__ __HC__ {
         array_view<const T, N> av(*this);
         return av.section(origin, ext);
     }
@@ -4972,11 +4644,11 @@ public:
     /**
      * Equivalent to "section(index<N>(), ext)".
      */
-    array_view<T,N> section(const extent<N>& ext) __CPU__ __HC__ {
+    array_view<T,N> section(const hc::extent<N>& ext) __CPU__ __HC__ {
         array_view<T, N> av(*this);
         return av.section(ext);
     }
-    array_view<const T,N> section(const extent<N>& ext) const __CPU__ __HC__ {
+    array_view<const T,N> section(const hc::extent<N>& ext) const __CPU__ __HC__ {
         array_view<const T, N> av(*this);
         return av.section(ext);
     }
@@ -5082,7 +4754,7 @@ public:
      *         to K from N.
      */
     template <int K> array_view<T, K>
-        view_as(const extent<K>& viewExtent) __CPU__ __HC__ {
+        view_as(const hc::extent<K>& viewExtent) __CPU__ __HC__ {
 #if __KALMAR_ACCELERATOR__ != 1
             if( viewExtent.size() > extent.size())
                 throw runtime_exception("errorMsg_throw", 0);
@@ -5091,7 +4763,7 @@ public:
             return av;
         }
     template <int K> array_view<const T, K>
-        view_as(const extent<K>& viewExtent) const __CPU__ __HC__ {
+        view_as(const hc::extent<K>& viewExtent) const __CPU__ __HC__ {
 #if __KALMAR_ACCELERATOR__ != 1
             if( viewExtent.size() > extent.size())
                 throw runtime_exception("errorMsg_throw", 0);
@@ -5102,7 +4774,7 @@ public:
 
     /** @} */
 
-    ~array() {}
+    ~array() = default;
 
     // FIXME: functions below may be considered to move to private
     const acc_buffer_t& internal() const __CPU__ __HC__ { return m_device; }
@@ -5164,7 +4836,7 @@ public:
      * @param[in] src An array which contains the data that this array_view is
      *                bound to.
      */
-    array_view(array<T, N>& src) __CPU__ __HC__
+    array_view(hc::array<T, N>& src) __CPU__ __HC__
         : cache(src.internal()), extent(src.get_extent()), extent_base(extent), index_base(), offset(0) {}
 
     // FIXME: following interfaces were not implemented yet
@@ -5184,7 +4856,7 @@ public:
      * @param[in] extent The extent of this array_view.
      */
     template <typename Container, class = typename std::enable_if<__is_container<Container>::value>::type>
-        array_view(const extent<N>& extent, Container& src)
+        array_view(const hc::extent<N>& extent, Container& src)
             : array_view(extent, src.data())
         { static_assert( std::is_same<decltype(src.data()), T*>::value, "container element type and array view element type must match"); }
 
@@ -5198,7 +4870,7 @@ public:
      *                size of extent, the behavior is undefined.
      * @param[in] ext The extent of this array_view.
      */
-    array_view(const extent<N>& ext, value_type* src) __CPU__ __HC__
+    array_view(const hc::extent<N>& ext, value_type* src) __CPU__ __HC__
 #if __KALMAR_ACCELERATOR__ == 1
         : cache((T *)(src)), extent(ext), extent_base(ext), offset(0) {}
 #else
@@ -5215,7 +4887,7 @@ public:
      *
      * @param[in] ext The extent of this array_view.
      */
-    explicit array_view(const extent<N>& ext)
+    explicit array_view(const hc::extent<N>& ext)
         : cache(ext.size()), extent(ext), extent_base(ext), offset(0) {}
 
     /**
@@ -5282,7 +4954,7 @@ public:
     /**
      * Access the extent that defines the shape of this array_view.
      */
-    extent<N> get_extent() const __CPU__ __HC__ { return extent; }
+    hc::extent<N> get_extent() const __CPU__ __HC__ { return extent; }
 
     /**
      * Access the accelerator_view where the data source of the array_view is
@@ -5607,7 +5279,7 @@ public:
      *         and with the specified extent.
      */
     array_view<T, N> section(const index<N>& idx,
-                             const extent<N>& ext) const __CPU__ __HC__ {
+                             const hc::extent<N>& ext) const __CPU__ __HC__ {
 #if __KALMAR_ACCELERATOR__ != 1
         if ( !Kalmar::amp_helper<N, index<N>, hc::extent<N>>::contains(idx, ext,this->extent ) )
             throw runtime_exception("errorMsg_throw", 0);
@@ -5628,7 +5300,7 @@ public:
     /**
      * Equivalent to "section(index<N>(), ext)".
      */
-    array_view<T, N> section(const extent<N>& ext) const __CPU__ __HC__ {
+    array_view<T, N> section(const hc::extent<N>& ext) const __CPU__ __HC__ {
         index<N> idx;
         return section(idx, ext);
     }
@@ -5697,7 +5369,7 @@ public:
      * changed to K from 1.
      */
     template <int K>
-        array_view<T, K> view_as(extent<K> viewExtent) const __CPU__ __HC__ {
+        array_view<T, K> view_as(hc::extent<K> viewExtent) const __CPU__ __HC__ {
             static_assert(N == 1, "view_as is only permissible on array views of rank 1");
 #if __KALMAR_ACCELERATOR__ != 1
             if ( viewExtent.size() > extent.size())
@@ -5707,7 +5379,7 @@ public:
             return av;
         }
 
-    ~array_view() __CPU__ __HC__ {}
+    ~array_view() __CPU__ __HC__ = default;
 
     // FIXME: the following functions could be considered to move to private
     const acc_buffer_t& internal() const __CPU__ __HC__ { return cache; }
@@ -5834,7 +5506,7 @@ public:
      *                size of extent, the behavior is undefined.
      * @param[in] ext The extent of this array_view.
      */
-    array_view(const extent<N>& ext, const value_type* src) __CPU__ __HC__
+    array_view(const hc::extent<N>& ext, const value_type* src) __CPU__ __HC__
 #if __KALMAR_ACCELERATOR__ == 1
         : cache((nc_T*)(src)), extent(ext), extent_base(ext), offset(0) {}
 #else
@@ -5901,7 +5573,7 @@ public:
     /**
      * Access the extent that defines the shape of this array_view.
      */
-    extent<N> get_extent() const __CPU__ __HC__ { return extent; }
+    hc::extent<N> get_extent() const __CPU__ __HC__ { return extent; }
 
     /**
      * Access the accelerator_view where the data source of the array_view is
@@ -6192,7 +5864,7 @@ public:
      *         and with the specified extent.
      */
     array_view<const T, N> section(const index<N>& idx,
-                                   const extent<N>& ext) const __CPU__ __HC__ {
+                                   const hc::extent<N>& ext) const __CPU__ __HC__ {
         array_view<const T, N> av(cache, ext, extent_base, idx + index_base, offset);
         return av;
     }
@@ -6209,7 +5881,7 @@ public:
     /**
      * Equivalent to "section(index<N>(), ext)".
      */
-    array_view<const T, N> section(const extent<N>& ext) const __CPU__ __HC__ {
+    array_view<const T, N> section(const hc::extent<N>& ext) const __CPU__ __HC__ {
         index<N> idx;
         return section(idx, ext);
     }
@@ -6262,7 +5934,7 @@ public:
             int size = extent.size() * sizeof(T) / sizeof(ElementType);
             using buffer_type = typename array_view<ElementType, 1>::acc_buffer_t;
             array_view<const ElementType, 1> av(buffer_type(cache),
-                                                extent<1>(size),
+                                                hc::extent<1>(size),
                                                 (offset + index_base[0])* sizeof(T) / sizeof(ElementType));
             return av;
         }
@@ -6276,7 +5948,7 @@ public:
      * changed to K from 1.
      */
     template <int K>
-        array_view<const T, K> view_as(extent<K> viewExtent) const __CPU__ __HC__ {
+        array_view<const T, K> view_as(hc::extent<K> viewExtent) const __CPU__ __HC__ {
             static_assert(N == 1, "view_as is only permissible on array views of rank 1");
 #if __KALMAR_ACCELERATOR__ != 1
             if ( viewExtent.size() > extent.size())
@@ -6286,7 +5958,7 @@ public:
             return av;
         }
 
-    ~array_view() __CPU__ __HC__ {}
+    ~array_view() __CPU__ __HC__ = default;
 
     // FIXME: the following functions may be considered to move to private
     const acc_buffer_t& internal() const __CPU__ __HC__ { return cache; }
@@ -6305,7 +5977,7 @@ private:
         bool is_flat(const array_view<Q, K>&) noexcept;
     template <typename Q, int K> friend
         void copy(const array<Q, K>&, const array_view<Q, K>&);
-    template <typename InputIter, typename Q, int K>
+    template <typename InputIter, typename Q, int K> friend
         void copy(InputIter, InputIter, const array_view<Q, K>&);
     template <typename Q, int K> friend
         void copy(const array_view<const Q, K>&, array<Q, K>&);
@@ -6321,7 +5993,7 @@ private:
   
     // used by section and projection
     array_view(const acc_buffer_t& cache, const hc::extent<N>& ext_now,
-               const extent<N>& ext_b,
+               const hc::extent<N>& ext_b,
                const index<N>& idx_b, int off) __CPU__ __HC__
         : cache(cache), extent(ext_now), extent_base(ext_b), index_base(idx_b),
         offset(off) {}
@@ -6734,7 +6406,7 @@ template <typename InputIter, typename T, int N>
 void copy(InputIter srcBegin, array<T, N>& dest) {
     InputIter srcEnd = srcBegin;
     std::advance(srcEnd, dest.get_extent().size());
-    copy(srcBegin, srcEnd, dest);
+    hc::copy(srcBegin, srcEnd, dest);
 }
 
 /** @} */
@@ -6820,7 +6492,6 @@ void copy(const array_view<T, N> &src, OutputIter destBegin) {
 // ------------------------------------------------------------------------
 // utility function for copy_async
 // ------------------------------------------------------------------------
-
 
 // ------------------------------------------------------------------------
 // copy_async
@@ -7008,849 +6679,70 @@ completion_future copy_async(const array_view<T, N>& src, const array<T, N>& des
 }
 
 // ------------------------------------------------------------------------
-// atomic functions
-// ------------------------------------------------------------------------
-
-/** @{ */
-/**
- * Atomically read the value stored in dest , replace it with the value given
- * in val and return the old value to the caller. This function provides
- * overloads for int , unsigned int and float parameters.
- *
- * @param[out] dest A pointer to the location which needs to be atomically
- *                  modified. The location may reside within a
- *                  hc::array or hc::array_view or within a
- *                  tile_static variable.
- * @param[in] val The new value to be stored in the location pointed to be dest
- * @return These functions return the old value which was previously stored at
- *         dest, and that was atomically replaced. These functions always
- *         succeed.
- */
-#if __KALMAR_ACCELERATOR__ == 1
-extern "C" unsigned int atomic_exchange_unsigned(unsigned int *p, unsigned int val) __HC__;
-extern "C" int atomic_exchange_int(int *p, int val) __HC__;
-extern "C" float atomic_exchange_float(float *p, float val) __HC__;
-extern "C" uint64_t atomic_exchange_uint64(uint64_t *p, uint64_t val) __HC__;
-
-static inline unsigned int atomic_exchange(unsigned int * dest, unsigned int val) __CPU__ __HC__ {
-  return atomic_exchange_unsigned(dest, val);
-}
-static inline int atomic_exchange(int * dest, int val) __CPU__ __HC__ {
-  return atomic_exchange_int(dest, val);
-}
-static inline float atomic_exchange(float * dest, float val) __CPU__ __HC__ {
-  return atomic_exchange_float(dest, val);
-}
-static inline uint64_t atomic_exchange(uint64_t * dest, uint64_t val) __CPU__ __HC__ {
-  return atomic_exchange_uint64(dest, val);
-}
-#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-unsigned int atomic_exchange_unsigned(unsigned int *p, unsigned int val);
-int atomic_exchange_int(int *p, int val);
-float atomic_exchange_float(float *p, float val);
-uint64_t atomic_exchange_uint64(uint64_t *p, uint64_t val);
-
-static inline unsigned int atomic_exchange(unsigned int *dest, unsigned int val) __CPU__ __HC__ {
-  return atomic_exchange_unsigned(dest, val);
-}
-static inline int atomic_exchange(int *dest, int val) __CPU__ __HC__ {
-  return atomic_exchange_int(dest, val);
-}
-static inline float atomic_exchange(float *dest, float val) __CPU__ __HC__ {
-  return atomic_exchange_float(dest, val);
-}
-static inline uint64_t atomic_exchange(uint64_t *dest, uint64_t val) __CPU__ __HC__ {
-  return atomic_exchange_uint64(dest, val);
-}
-#else
-extern unsigned int atomic_exchange(unsigned int *dest, unsigned int val) __CPU__ __HC__;
-extern int atomic_exchange(int *dest, int val) __CPU__ __HC__;
-extern float atomic_exchange(float *dest, float val) __CPU__ __HC__;
-extern uint64_t atomic_exchange(uint64_t *dest, uint64_t val) __CPU__ __HC__;
-#endif
-/** @} */
-
-/** @{ */
-/**
- * These functions attempt to perform these three steps atomically:
- * 1. Read the value stored in the location pointed to by dest
- * 2. Compare the value read in the previous step with the value contained in
- *    the location pointed by expected_val
- * 3. Carry the following operations depending on the result of the comparison
- *    of the previous step:
- *    a. If the values are identical, then the function tries to atomically
- *       change the value pointed by dest to the value in val. The function
- *       indicates by its return value whether this transformation has been
- *       successful or not.
- *    b. If the values are not identical, then the function stores the value
- *       read in step (1) into the location pointed to by expected_val, and
- *       returns false.
- *
- * @param[out] dest An pointer to the location which needs to be atomically
- *                  modified. The location may reside within a
- *                  concurrency::array or concurrency::array_view or within a
- *                  tile_static variable.
- * @param[out] expected_val A pointer to a local variable or function
- *                          parameter. Upon calling the function, the location
- *                          pointed by expected_val contains the value the
- *                          caller expects dest to contain. Upon return from
- *                          the function, expected_val will contain the most
- *                          recent value read from dest.
- * @param[in] val The new value to be stored in the location pointed to be dest
- * @return The return value indicates whether the function has been successful
- *         in atomically reading, comparing and modifying the contents of the
- *         memory location.
- */
-#if __KALMAR_ACCELERATOR__ == 1
-extern "C" unsigned int atomic_compare_exchange_unsigned(unsigned int *dest, unsigned int expected_val, unsigned int val) __HC__;
-extern "C" int atomic_compare_exchange_int(int *dest, int expected_val, int val) __HC__;
-extern "C" uint64_t atomic_compare_exchange_uint64(uint64_t *dest, uint64_t expected_val, uint64_t val) __HC__;
-
-static inline bool atomic_compare_exchange(unsigned int *dest, unsigned int *expected_val, unsigned int val) __CPU__ __HC__ {
-  *expected_val = atomic_compare_exchange_unsigned(dest, *expected_val, val);
-  return (*dest == val);
-}
-static inline bool atomic_compare_exchange(int *dest, int *expected_val, int val) __CPU__ __HC__ {
-  *expected_val = atomic_compare_exchange_int(dest, *expected_val, val);
-  return (*dest == val);
-}
-static inline bool atomic_compare_exchange(uint64_t *dest, uint64_t *expected_val, uint64_t val) __CPU__ __HC__ {
-  *expected_val = atomic_compare_exchange_uint64(dest, *expected_val, val);
-  return (*dest == val);
-}
-#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-unsigned int atomic_compare_exchange_unsigned(unsigned int *dest, unsigned int expected_val, unsigned int val);
-int atomic_compare_exchange_int(int *dest, int expected_val, int val);
-uint64_t atomic_compare_exchange_uint64(uint64_t *dest, uint64_t expected_val, uint64_t val);
-
-static inline bool atomic_compare_exchange(unsigned int *dest, unsigned int *expected_val, unsigned int val) __CPU__ __HC__ {
-  *expected_val = atomic_compare_exchange_unsigned(dest, *expected_val, val);
-  return (*dest == val);
-}
-static inline bool atomic_compare_exchange(int *dest, int *expected_val, int val) __CPU__ __HC__ {
-  *expected_val = atomic_compare_exchange_int(dest, *expected_val, val);
-  return (*dest == val);
-}
-static inline bool atomic_compare_exchange(uint64_t *dest, uint64_t *expected_val, uint64_t val) __CPU__ __HC__ {
-  *expected_val = atomic_compare_exchange_uint64(dest, *expected_val, val);
-  return (*dest == val);
-}
-#else
-extern bool atomic_compare_exchange(unsigned int *dest, unsigned int *expected_val, unsigned int val) __CPU__ __HC__;
-extern bool atomic_compare_exchange(int *dest, int *expected_val, int val) __CPU__ __HC__;
-extern bool atomic_compare_exchange(uint64_t *dest, uint64_t *expected_val, uint64_t val) __CPU__ __HC__;
-#endif
-/** @} */
-
-/** @{ */
-/**
- * Atomically read the value stored in dest, apply the binary numerical
- * operation specific to the function with the read value and val serving as
- * input operands, and store the result back to the location pointed by dest.
- *
- * In terms of sequential semantics, the operation performed by any of the
- * above function is described by the following piece of pseudo-code:
- *
- * *dest = *dest @f$\otimes@f$ val;
- *
- * Where the operation denoted by @f$\otimes@f$ is one of: addition
- * (atomic_fetch_add), subtraction (atomic_fetch_sub), find maximum
- * (atomic_fetch_max), find minimum (atomic_fetch_min), bit-wise AND
- * (atomic_fetch_and), bit-wise OR (atomic_fetch_or), bit-wise XOR
- * (atomic_fetch_xor).
- *
- * @param[out] dest An pointer to the location which needs to be atomically
- *                  modified. The location may reside within a
- *                  concurrency::array or concurrency::array_view or within a
- *                  tile_static variable.
- * @param[in] val The second operand which participates in the calculation of
- *                the binary operation whose result is stored into the
- *                location pointed to be dest.
- * @return These functions return the old value which was previously stored at
- *         dest, and that was atomically replaced. These functions always
- *         succeed.
- */
-#if __KALMAR_ACCELERATOR__ == 1
-extern "C" unsigned int atomic_add_unsigned(unsigned int *p, unsigned int val) __HC__;
-extern "C" int atomic_add_int(int *p, int val) __HC__;
-extern "C" float atomic_add_float(float *p, float val) __HC__;
-extern "C" uint64_t atomic_add_uint64(uint64_t *p, uint64_t val) __HC__;
-
-static inline unsigned int atomic_fetch_add(unsigned int *x, unsigned int y) __CPU__ __HC__ {
-  return atomic_add_unsigned(x, y);
-}
-static inline int atomic_fetch_add(int *x, int y) __CPU__ __HC__ {
-  return atomic_add_int(x, y);
-}
-static inline float atomic_fetch_add(float *x, float y) __CPU__ __HC__ {
-  return atomic_add_float(x, y);
-}
-static inline uint64_t atomic_fetch_add(uint64_t *x, uint64_t y) __CPU__ __HC__ {
-  return atomic_add_uint64(x, y);
-}
-
-extern "C" unsigned int atomic_sub_unsigned(unsigned int *p, unsigned int val) __HC__;
-extern "C" int atomic_sub_int(int *p, int val) __HC__;
-extern "C" float atomic_sub_float(float *p, float val) __HC__;
-
-static inline unsigned int atomic_fetch_sub(unsigned int *x, unsigned int y) __CPU__ __HC__ {
-  return atomic_sub_unsigned(x, y);
-}
-static inline int atomic_fetch_sub(int *x, int y) __CPU__ __HC__ {
-  return atomic_sub_int(x, y);
-}
-static inline int atomic_fetch_sub(float *x, float y) __CPU__ __HC__ {
-  return atomic_sub_float(x, y);
-}
-
-extern "C" unsigned int atomic_and_unsigned(unsigned int *p, unsigned int val) __HC__;
-extern "C" int atomic_and_int(int *p, int val) __HC__;
-extern "C" uint64_t atomic_and_uint64(uint64_t *p, uint64_t val) __HC__;
-
-static inline unsigned int atomic_fetch_and(unsigned int *x, unsigned int y) __CPU__ __HC__ {
-  return atomic_and_unsigned(x, y);
-}
-static inline int atomic_fetch_and(int *x, int y) __CPU__ __HC__ {
-  return atomic_and_int(x, y);
-}
-static inline uint64_t atomic_fetch_and(uint64_t *x, uint64_t y) __CPU__ __HC__ {
-  return atomic_and_uint64(x, y);
-}
-
-extern "C" unsigned int atomic_or_unsigned(unsigned int *p, unsigned int val) __HC__;
-extern "C" int atomic_or_int(int *p, int val) __HC__;
-extern "C" uint64_t atomic_or_uint64(uint64_t *p, uint64_t val) __HC__;
-
-static inline unsigned int atomic_fetch_or(unsigned int *x, unsigned int y) __CPU__ __HC__ {
-  return atomic_or_unsigned(x, y);
-}
-static inline int atomic_fetch_or(int *x, int y) __CPU__ __HC__ {
-  return atomic_or_int(x, y);
-}
-static inline uint64_t atomic_fetch_or(uint64_t *x, uint64_t y) __CPU__ __HC__ {
-  return atomic_or_uint64(x, y);
-}
-
-extern "C" unsigned int atomic_xor_unsigned(unsigned int *p, unsigned int val) __HC__;
-extern "C" int atomic_xor_int(int *p, int val) __HC__;
-extern "C" uint64_t atomic_xor_uint64(uint64_t *p, uint64_t val) __HC__;
-
-static inline unsigned int atomic_fetch_xor(unsigned int *x, unsigned int y) __CPU__ __HC__ {
-  return atomic_xor_unsigned(x, y);
-}
-static inline int atomic_fetch_xor(int *x, int y) __CPU__ __HC__ {
-  return atomic_xor_int(x, y);
-}
-static inline uint64_t atomic_fetch_xor(uint64_t *x, uint64_t y) __CPU__ __HC__ {
-  return atomic_xor_uint64(x, y);
-}
-#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-unsigned int atomic_add_unsigned(unsigned int *p, unsigned int val);
-int atomic_add_int(int *p, int val);
-float atomic_add_float(float *p, float val);
-uint64_t atomic_add_uint64(uint64_t *p, uint64_t val);
-
-static inline unsigned int atomic_fetch_add(unsigned int *x, unsigned int y) __CPU__ __HC__ {
-  return atomic_add_unsigned(x, y);
-}
-static inline int atomic_fetch_add(int *x, int y) __CPU__ __HC__ {
-  return atomic_add_int(x, y);
-}
-static inline float atomic_fetch_add(float *x, float y) __CPU__ __HC__ {
-  return atomic_add_float(x, y);
-}
-static inline uint64_t atomic_fetch_add(uint64_t *x, uint64_t y) __CPU__ __HC__ {
-  return atomic_add_uint64(x, y);
-}
-
-unsigned int atomic_sub_unsigned(unsigned int *p, unsigned int val);
-int atomic_sub_int(int *p, int val);
-float atomic_sub_float(float *p, float val);
-
-static inline unsigned int atomic_fetch_sub(unsigned int *x, unsigned int y) __CPU__ __HC__ {
-  return atomic_sub_unsigned(x, y);
-}
-static inline int atomic_fetch_sub(int *x, int y) __CPU__ __HC__ {
-  return atomic_sub_int(x, y);
-}
-static inline float atomic_fetch_sub(float *x, float y) __CPU__ __HC__ {
-  return atomic_sub_float(x, y);
-}
-
-unsigned int atomic_and_unsigned(unsigned int *p, unsigned int val);
-int atomic_and_int(int *p, int val);
-uint64_t atomic_and_uint64(uint64_t *p, uint64_t val);
-
-static inline unsigned int atomic_fetch_and(unsigned int *x, unsigned int y) __CPU__ __HC__ {
-  return atomic_and_unsigned(x, y);
-}
-static inline int atomic_fetch_and(int *x, int y) __CPU__ __HC__ {
-  return atomic_and_int(x, y);
-}
-static inline uint64_t atomic_fetch_and(uint64_t *x, uint64_t y) __CPU__ __HC__ {
-  return atomic_and_uint64(x, y);
-}
-
-unsigned int atomic_or_unsigned(unsigned int *p, unsigned int val);
-int atomic_or_int(int *p, int val);
-uint64_t atomic_or_uint64(uint64_t *p, uint64_t val);
-
-static inline unsigned int atomic_fetch_or(unsigned int *x, unsigned int y) __CPU__ __HC__ {
-  return atomic_or_unsigned(x, y);
-}
-static inline int atomic_fetch_or(int *x, int y) __CPU__ __HC__ {
-  return atomic_or_int(x, y);
-}
-static inline uint64_t atomic_fetch_or(uint64_t *x, uint64_t y) __CPU__ __HC__ {
-  return atomic_or_uint64(x, y);
-}
-
-unsigned int atomic_xor_unsigned(unsigned int *p, unsigned int val);
-int atomic_xor_int(int *p, int val);
-uint64_t atomic_xor_uint64(uint64_t *p, uint64_t val);
-
-static inline unsigned int atomic_fetch_xor(unsigned int *x, unsigned int y) __CPU__ __HC__ {
-  return atomic_xor_unsigned(x, y);
-}
-static inline int atomic_fetch_xor(int *x, int y) __CPU__ __HC__ {
-  return atomic_xor_int(x, y);
-}
-static inline uint64_t atomic_fetch_xor(uint64_t *x, uint64_t y) __CPU__ __HC__ {
-  return atomic_xor_uint64(x, y);
-}
-#else
-extern unsigned atomic_fetch_add(unsigned *x, unsigned y) __CPU__ __HC__;
-extern int atomic_fetch_add(int *x, int y) __CPU__ __HC__;
-extern float atomic_fetch_add(float *x, float y) __CPU__ __HC__;
-extern uint64_t atomic_fetch_add(uint64_t *x, uint64_t y) __CPU__ __HC__;
-
-extern unsigned atomic_fetch_sub(unsigned *x, unsigned y) __CPU__ __HC__;
-extern int atomic_fetch_sub(int *x, int y) __CPU__ __HC__;
-extern float atomic_fetch_sub(float *x, float y) __CPU__ __HC__;
-
-extern unsigned atomic_fetch_and(unsigned *x, unsigned y) __CPU__ __HC__;
-extern int atomic_fetch_and(int *x, int y) __CPU__ __HC__;
-extern uint64_t atomic_fetch_and(uint64_t *x, uint64_t y) __CPU__ __HC__;
-
-extern unsigned atomic_fetch_or(unsigned *x, unsigned y) __CPU__ __HC__;
-extern int atomic_fetch_or(int *x, int y) __CPU__ __HC__;
-extern uint64_t atomic_fetch_or(uint64_t *x, uint64_t y) __CPU__ __HC__;
-
-extern unsigned atomic_fetch_xor(unsigned *x, unsigned y) __CPU__ __HC__;
-extern int atomic_fetch_xor(int *x, int y) __CPU__ __HC__;
-extern uint64_t atomic_fetch_xor(uint64_t *x, uint64_t y) __CPU__ __HC__;
-#endif
-
-#if __KALMAR_ACCELERATOR__ == 1
-extern "C" unsigned int atomic_max_unsigned(unsigned int *p, unsigned int val) __HC__;
-extern "C" int atomic_max_int(int *p, int val) __HC__;
-extern "C" uint64_t atomic_max_uint64(uint64_t *p, uint64_t val) __HC__;
-
-static inline unsigned int atomic_fetch_max(unsigned int *x, unsigned int y) __HC__ {
-  return atomic_max_unsigned(x, y);
-}
-static inline int atomic_fetch_max(int *x, int y) __HC__ {
-  return atomic_max_int(x, y);
-}
-static inline uint64_t atomic_fetch_max(uint64_t *x, uint64_t y) __HC__ {
-  return atomic_max_uint64(x, y);
-}
-
-extern "C" unsigned int atomic_min_unsigned(unsigned int *p, unsigned int val) __HC__;
-extern "C" int atomic_min_int(int *p, int val) __HC__;
-extern "C" uint64_t atomic_min_uint64(uint64_t *p, uint64_t val) __HC__;
-
-static inline unsigned int atomic_fetch_min(unsigned int *x, unsigned int y) __HC__ {
-  return atomic_min_unsigned(x, y);
-}
-static inline int atomic_fetch_min(int *x, int y) __HC__ {
-  return atomic_min_int(x, y);
-}
-static inline uint64_t atomic_fetch_min(uint64_t *x, uint64_t y) __HC__ {
-  return atomic_min_uint64(x, y);
-}
-#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-unsigned int atomic_max_unsigned(unsigned int *p, unsigned int val);
-int atomic_max_int(int *p, int val);
-uint64_t atomic_max_uint64(uint64_t *p, uint64_t val);
-
-static inline unsigned int atomic_fetch_max(unsigned int *x, unsigned int y) __HC__ {
-  return atomic_max_unsigned(x, y);
-}
-static inline int atomic_fetch_max(int *x, int y) __HC__ {
-  return atomic_max_int(x, y);
-}
-static inline uint64_t atomic_fetch_max(uint64_t *x, uint64_t y) __HC__ {
-  return atomic_max_uint64(x, y);
-}
-
-unsigned int atomic_min_unsigned(unsigned int *p, unsigned int val);
-int atomic_min_int(int *p, int val);
-uint64_t atomic_min_uint64(uint64_t *p, uint64_t val);
-
-static inline unsigned int atomic_fetch_min(unsigned int *x, unsigned int y) __HC__ {
-  return atomic_min_unsigned(x, y);
-}
-static inline int atomic_fetch_min(int *x, int y) __HC__ {
-  return atomic_min_int(x, y);
-}
-static inline uint64_t atomic_fetch_min(uint64_t *x, uint64_t y) __HC__ {
-  return atomic_min_uint64(x, y);
-}
-#else
-extern int atomic_fetch_max(int * dest, int val) __CPU__ __HC__;
-extern unsigned int atomic_fetch_max(unsigned int * dest, unsigned int val) __CPU__ __HC__;
-extern uint64_t atomic_fetch_max(uint64_t * dest, uint64_t val) __CPU__ __HC__;
-
-extern int atomic_fetch_min(int * dest, int val) __CPU__ __HC__;
-extern unsigned int atomic_fetch_min(unsigned int * dest, unsigned int val) __CPU__ __HC__;
-extern uint64_t atomic_fetch_min(uint64_t * dest, uint64_t val) __CPU__ __HC__;
-#endif
-
-/** @} */
-
-/** @{ */
-/**
- * Atomically increment or decrement the value stored at the location point to
- * by dest.
- *
- * @param[inout] dest An pointer to the location which needs to be atomically
- *                    modified. The location may reside within a
- *                    concurrency::array or concurrency::array_view or within a
- *                    tile_static variable.
- * @return These functions return the old value which was previously stored at
- *         dest, and that was atomically replaced. These functions always
- *         succeed.
- */
-#if __KALMAR_ACCELERATOR__ == 1
-extern "C" unsigned int atomic_inc_unsigned(unsigned int *p) __HC__;
-extern "C" int atomic_inc_int(int *p) __HC__;
-
-static inline unsigned int atomic_fetch_inc(unsigned int *x) __CPU__ __HC__ {
-  return atomic_inc_unsigned(x);
-}
-static inline int atomic_fetch_inc(int *x) __CPU__ __HC__ {
-  return atomic_inc_int(x);
-}
-
-extern "C" unsigned int atomic_dec_unsigned(unsigned int *p) __HC__;
-extern "C" int atomic_dec_int(int *p) __HC__;
-
-static inline unsigned int atomic_fetch_dec(unsigned int *x) __CPU__ __HC__ {
-  return atomic_dec_unsigned(x);
-}
-static inline int atomic_fetch_dec(int *x) __CPU__ __HC__ {
-  return atomic_dec_int(x);
-}
-#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-unsigned int atomic_inc_unsigned(unsigned int *p);
-int atomic_inc_int(int *p);
-
-static inline unsigned int atomic_fetch_inc(unsigned int *x) __CPU__ __HC__ {
-  return atomic_inc_unsigned(x);
-}
-static inline int atomic_fetch_inc(int *x) __CPU__ __HC__ {
-  return atomic_inc_int(x);
-}
-
-unsigned int atomic_dec_unsigned(unsigned int *p);
-int atomic_dec_int(int *p);
-
-static inline unsigned int atomic_fetch_dec(unsigned int *x) __CPU__ __HC__ {
-  return atomic_dec_unsigned(x);
-}
-static inline int atomic_fetch_dec(int *x) __CPU__ __HC__ {
-  return atomic_dec_int(x);
-}
-#else
-extern int atomic_fetch_inc(int * _Dest) __CPU__ __HC__;
-extern unsigned int atomic_fetch_inc(unsigned int * _Dest) __CPU__ __HC__;
-
-extern int atomic_fetch_dec(int * _Dest) __CPU__ __HC__;
-extern unsigned int atomic_fetch_dec(unsigned int * _Dest) __CPU__ __HC__;
-#endif
-
-/** @} */
-
-/**
- * Atomically do the following operations:
- * - reads the 32-bit value (original) from address pointer in global or group segment
- * - computes ((original >= val) ? 0 : (original + 1))
- * - stores the result back to the address
- *
- * @return The original value retrieved from address pointer.
- * 
- * Please refer to <a href="http://www.hsafoundation.com/html/HSA_Library.htm#PRM/Topics/06_Memory/atomic.htm">atomic_wrapinc in HSA PRM 6.6</a> for more detailed specification of the function.
- */
-extern "C" unsigned int __atomic_wrapinc(unsigned int* address, unsigned int val) __HC__;
-
-/**
- * Atomically do the following operations:
- * - reads the 32-bit value (original) from address pointer in global or group segment
- * - computes ((original == 0) || (original > val)) ? val : (original - 1)
- * - stores the result back to the address
- *
- * @return The original value retrieved from address pointer.
- * 
- * Please refer to <a href="http://www.hsafoundation.com/html/HSA_Library.htm#PRM/Topics/06_Memory/atomic.htm">atomic_wrapdec in HSA PRM 6.6</a> for more detailed specification of the function.
- */
-extern "C" unsigned int __atomic_wrapdec(unsigned int* address, unsigned int val) __HC__;
-
-
-// ------------------------------------------------------------------------
 // parallel_for_each
 // ------------------------------------------------------------------------
 
-template <int N, typename Kernel>
-completion_future parallel_for_each(const accelerator_view&, const extent<N>&, const Kernel&);
+template<typename Kernel, int n>
+completion_future parallel_for_each(
+    const accelerator_view&, const hc::extent<n>&, const Kernel&);
 
-template <typename Kernel>
-completion_future parallel_for_each(const accelerator_view&, const tiled_extent<3>&, const Kernel&);
+template<typename Kernel, int n>
+completion_future parallel_for_each(
+    const accelerator_view&, const tiled_extent<n>&, const Kernel&);
 
-template <typename Kernel>
-completion_future parallel_for_each(const accelerator_view&, const tiled_extent<2>&, const Kernel&);
-
-template <typename Kernel>
-completion_future parallel_for_each(const accelerator_view&, const tiled_extent<1>&, const Kernel&);
-
-template <int N, typename Kernel>
-completion_future parallel_for_each(const extent<N>& compute_domain, const Kernel& f) {
-    return parallel_for_each(accelerator::get_auto_selection_view(), compute_domain, f);
-}
-
-template <typename Kernel>
-completion_future parallel_for_each(const tiled_extent<3>& compute_domain, const Kernel& f) {
-    return parallel_for_each(accelerator::get_auto_selection_view(), compute_domain, f);
-}
-
-template <typename Kernel>
-completion_future parallel_for_each(const tiled_extent<2>& compute_domain, const Kernel& f) {
-    return parallel_for_each(accelerator::get_auto_selection_view(), compute_domain, f);
-}
-
-template <typename Kernel>
-completion_future parallel_for_each(const tiled_extent<1>& compute_domain, const Kernel& f) {
-    return parallel_for_each(accelerator::get_auto_selection_view(), compute_domain, f);
-}
-
-template <int N, typename Kernel, typename _Tp>
-struct pfe_helper
+template<typename Kernel, int n>
+inline
+completion_future parallel_for_each(
+    const hc::extent<n>& compute_domain, const Kernel& f)
 {
-    static inline void call(Kernel& k, _Tp& idx) __CPU__ __HC__ {
-        int i;
-        for (i = 0; i < k.ext[N - 1]; ++i) {
-            idx[N - 1] = i;
-            pfe_helper<N - 1, Kernel, _Tp>::call(k, idx);
-        }
-    }
-};
-template <typename Kernel, typename _Tp>
-struct pfe_helper<0, Kernel, _Tp>
-{
-    static inline void call(Kernel& k, _Tp& idx) __CPU__ __HC__ {
-#if __KALMAR_ACCELERATOR__ == 1
-        k.k(idx);
-#endif
-    }
-};
+    return parallel_for_each(
+        accelerator::get_auto_selection_view(), compute_domain, f);
+}
 
-template <int N, typename Kernel>
-class pfe_wrapper
-{
-public:
-    explicit pfe_wrapper(const extent<N>& other, const Kernel& f) __CPU__ __HC__
-        : ext(other), k(f) {}
-    void operator() (index<N> idx) __CPU__ __HC__ {
-        pfe_helper<N - 3, pfe_wrapper<N, Kernel>, index<N>>::call(*this, idx);
-    }
-private:
-    const extent<N> ext;
-    const Kernel k;
-    template <int K, typename Ker, typename _Tp>
-        friend struct pfe_helper;
-};
+template<int n, typename Kernel>
+inline
+completion_future parallel_for_each(
+    const tiled_extent<n>& compute_domain, const Kernel& f) {
+    return parallel_for_each(
+        accelerator::get_auto_selection_view(), compute_domain, f);
+}
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wreturn-type"
-#pragma clang diagnostic ignored "-Wunused-variable"
+
 //ND parallel_for_each, nontiled
-template <int N, typename Kernel>
-__attribute__((noinline,used)) completion_future parallel_for_each(
+template<typename Kernel, int n>
+inline
+completion_future parallel_for_each(
     const accelerator_view& av,
-    const extent<N>& compute_domain, const Kernel& f) __CPU__ __HC__ {
-#if __KALMAR_ACCELERATOR__ != 1
-    for(int i = 0 ; i < N ; i++)
-    {
-      // silently return in case the any dimension of the extent is 0
-      if (compute_domain[i] == 0)
-        return completion_future();
-      if (compute_domain[i] < 0)
-        throw invalid_compute_domain("Extent is less than 0.");
-      if (static_cast<size_t>(compute_domain[i]) > 4294967295L)
-        throw invalid_compute_domain("Extent size too large.");
-    }
-    size_t ext[3] = {static_cast<size_t>(compute_domain[N - 1]),
-        static_cast<size_t>(compute_domain[N - 2]),
-        static_cast<size_t>(compute_domain[N - 3])};
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-    if (is_cpu()) {
-        return launch_cpu_task_async(av.pQueue, f, compute_domain);
-    }
-#endif
+    const hc::extent<n>& compute_domain,
+    const Kernel& f)
+{
+    if (compute_domain.size() == 0) return completion_future{};
+
     if (av.get_accelerator().get_device_path() == L"cpu") {
-      throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
+      throw hc::runtime_exception{
+          Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL};
     }
-    const pfe_wrapper<N, Kernel> _pf(compute_domain, f);
-    return completion_future(Kalmar::mcw_cxxamp_launch_kernel_async<pfe_wrapper<N, Kernel>, 3>(av.pQueue, ext, NULL, _pf));
-#else
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-    int* foo1 = reinterpret_cast<int*>(&Kernel::__cxxamp_trampoline);
-#endif
-    auto bar = &pfe_wrapper<N, Kernel>::operator();
-    auto qq = &index<N>::__cxxamp_opencl_index;
-    int* foo = reinterpret_cast<int*>(&pfe_wrapper<N, Kernel>::__cxxamp_trampoline);
-#endif
-}
-#pragma clang diagnostic pop
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wreturn-type"
-#pragma clang diagnostic ignored "-Wunused-variable"
-//1D parallel_for_each, nontiled
-template <typename Kernel>
-__attribute__((noinline,used)) completion_future parallel_for_each(
-    const accelerator_view& av, const extent<1>& compute_domain, const Kernel& f) __CPU__ __HC__ {
-#if __KALMAR_ACCELERATOR__ != 1
-  // silently return in case the any dimension of the extent is 0
-  if (compute_domain[0] == 0)
-    return completion_future();
-  if (compute_domain[0] < 0) {
-    throw invalid_compute_domain("Extent is less than 0.");
-  }
-  if (static_cast<size_t>(compute_domain[0]) > 4294967295L)
-    throw invalid_compute_domain("Extent size too large.");
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-    if (is_cpu()) {
-        return launch_cpu_task_async(av.pQueue, f, compute_domain);
+    return completion_future{
+        Kalmar::launch_kernel_async(av.pQueue, compute_domain, f)};
+}
+
+//ND parallel_for_each, tiled
+template <typename Kernel, int n>
+completion_future parallel_for_each(
+    const accelerator_view& av,
+    const tiled_extent<n>& compute_domain,
+    const Kernel& f)
+{
+    if (compute_domain.size() == 0) return completion_future{};
+
+    if (av.get_accelerator().get_device_path() == L"cpu") {
+        throw hc::runtime_exception{
+            Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL};
     }
-#endif
-  size_t ext = compute_domain[0];
-  if (av.get_accelerator().get_device_path() == L"cpu") {
-    throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
-  }
-  return completion_future(Kalmar::mcw_cxxamp_launch_kernel_async<Kernel, 1>(av.pQueue, &ext, NULL, f));
-#else //if __KALMAR_ACCELERATOR__ != 1
-  //to ensure functor has right operator() defined
-  //this triggers the trampoline code being emitted
-  auto foo = &Kernel::__cxxamp_trampoline;
-  auto bar = &Kernel::operator();
-#endif
-}
-#pragma clang diagnostic pop
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wreturn-type"
-#pragma clang diagnostic ignored "-Wunused-variable"
-//2D parallel_for_each, nontiled
-template <typename Kernel>
-__attribute__((noinline,used)) completion_future parallel_for_each(
-    const accelerator_view& av, const extent<2>& compute_domain, const Kernel& f) __CPU__ __HC__ {
-#if __KALMAR_ACCELERATOR__ != 1
-  // silently return in case the any dimension of the extent is 0
-  if (compute_domain[0] == 0 || compute_domain[1] == 0)
-    return completion_future();
-  if (compute_domain[0] < 0 || compute_domain[1] < 0) {
-    throw invalid_compute_domain("Extent is less than 0.");
-  }
-  if (static_cast<size_t>(compute_domain[0]) > 4294967295L)
-    throw invalid_compute_domain("Extent size too large.");
-  if (static_cast<size_t>(compute_domain[1]) > 4294967295L)
-    throw invalid_compute_domain("Extent size too large.");
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-    if (is_cpu()) {
-        return launch_cpu_task_async(av.pQueue, f, compute_domain);
-    }
-#endif
-  size_t ext[2] = {static_cast<size_t>(compute_domain[1]),
-                   static_cast<size_t>(compute_domain[0])};
-  if (av.get_accelerator().get_device_path() == L"cpu") {
-    throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
-  }
-  return completion_future(Kalmar::mcw_cxxamp_launch_kernel_async<Kernel, 2>(av.pQueue, ext, NULL, f));
-#else //if __KALMAR_ACCELERATOR__ != 1
-  //to ensure functor has right operator() defined
-  //this triggers the trampoline code being emitted
-  auto foo = &Kernel::__cxxamp_trampoline;
-  auto bar = &Kernel::operator();
-#endif
+    return completion_future{
+        Kalmar::launch_kernel_with_dynamic_group_memory_async(
+            av.pQueue, compute_domain, f)};
 }
-#pragma clang diagnostic pop
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wreturn-type"
-#pragma clang diagnostic ignored "-Wunused-variable"
-//3D parallel_for_each, nontiled
-template <typename Kernel>
-__attribute__((noinline,used)) completion_future parallel_for_each(
-    const accelerator_view& av, const extent<3>& compute_domain, const Kernel& f) __CPU__ __HC__ {
-#if __KALMAR_ACCELERATOR__ != 1
-  // silently return in case the any dimension of the extent is 0
-  if (compute_domain[0] == 0 || compute_domain[1] == 0 || compute_domain[2] == 0)
-    return completion_future();
-  if (compute_domain[0] < 0 || compute_domain[1] < 0 || compute_domain[2] < 0) {
-    throw invalid_compute_domain("Extent is less than 0.");
-  }
-  if (static_cast<size_t>(compute_domain[0]) > 4294967295L)
-    throw invalid_compute_domain("Extent size too large.");
-  if (static_cast<size_t>(compute_domain[1]) > 4294967295L)
-    throw invalid_compute_domain("Extent size too large.");
-  if (static_cast<size_t>(compute_domain[2]) > 4294967295L)
-    throw invalid_compute_domain("Extent size too large.");
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-    if (is_cpu()) {
-        return launch_cpu_task_async(av.pQueue, f, compute_domain);
-    }
-#endif
-  size_t ext[3] = {static_cast<size_t>(compute_domain[2]),
-                   static_cast<size_t>(compute_domain[1]),
-                   static_cast<size_t>(compute_domain[0])};
-  if (av.get_accelerator().get_device_path() == L"cpu") {
-    throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
-  }
-  return completion_future(Kalmar::mcw_cxxamp_launch_kernel_async<Kernel, 3>(av.pQueue, ext, NULL, f));
-#else //if __KALMAR_ACCELERATOR__ != 1
-  //to ensure functor has right operator() defined
-  //this triggers the trampoline code being emitted
-  auto foo = &Kernel::__cxxamp_trampoline;
-  auto bar = &Kernel::operator();
-#endif
-}
-#pragma clang diagnostic pop
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wreturn-type"
-#pragma clang diagnostic ignored "-Wunused-variable"
-//1D parallel_for_each, tiled
-template <typename Kernel>
-__attribute__((noinline,used)) completion_future parallel_for_each(
-    const accelerator_view& av, const tiled_extent<1>& compute_domain, const Kernel& f) __CPU__ __HC__ {
-#if __KALMAR_ACCELERATOR__ != 1
-  // silently return in case the any dimension of the extent is 0
-  if (compute_domain[0] == 0)
-    return completion_future();
-  if (compute_domain[0] < 0) {
-    throw invalid_compute_domain("Extent is less than 0.");
-  }
-  if (static_cast<size_t>(compute_domain[0]) > 4294967295L)
-    throw invalid_compute_domain("Extent size too large.");
-  size_t ext = compute_domain[0];
-  size_t tile = compute_domain.tile_dim[0];
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-  if (is_cpu()) {
-      return launch_cpu_task_async(av.pQueue, f, compute_domain);
-  } else
-#endif
-  if (av.get_accelerator().get_device_path() == L"cpu") {
-    throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
-  }
-  void *kernel = Kalmar::mcw_cxxamp_get_kernel<Kernel>(av.pQueue, f);
-  return completion_future(Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async<Kernel, 1>(av.pQueue, &ext, &tile, f, kernel, compute_domain.get_dynamic_group_segment_size()));
-#else //if __KALMAR_ACCELERATOR__ != 1
-  tiled_index<1> this_is_used_to_instantiate_the_right_index;
-  //to ensure functor has right operator() defined
-  //this triggers the trampoline code being emitted
-  auto foo = &Kernel::__cxxamp_trampoline;
-  auto bar = &Kernel::operator();
-#endif
-}
-#pragma clang diagnostic pop
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wreturn-type"
-#pragma clang diagnostic ignored "-Wunused-variable"
-//2D parallel_for_each, tiled
-template <typename Kernel>
-__attribute__((noinline,used)) completion_future parallel_for_each(
-    const accelerator_view& av, const tiled_extent<2>& compute_domain, const Kernel& f) __CPU__ __HC__ {
-#if __KALMAR_ACCELERATOR__ != 1
-  // silently return in case the any dimension of the extent is 0
-  if (compute_domain[0] == 0 || compute_domain[1] == 0)
-    return completion_future();
-  if (compute_domain[0] < 0 || compute_domain[1] < 0) {
-    throw invalid_compute_domain("Extent is less than 0.");
-  }
-  if (static_cast<size_t>(compute_domain[0]) > 4294967295L)
-    throw invalid_compute_domain("Extent size too large.");
-  if (static_cast<size_t>(compute_domain[1]) > 4294967295L)
-    throw invalid_compute_domain("Extent size too large.");
-  size_t ext[2] = { static_cast<size_t>(compute_domain[1]),
-                    static_cast<size_t>(compute_domain[0])};
-  size_t tile[2] = { static_cast<size_t>(compute_domain.tile_dim[1]),
-                     static_cast<size_t>(compute_domain.tile_dim[0]) };
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-  if (is_cpu()) {
-      return launch_cpu_task_async(av.pQueue, f, compute_domain);
-  } else
-#endif
-  if (av.get_accelerator().get_device_path() == L"cpu") {
-    throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
-  }
-  void *kernel = Kalmar::mcw_cxxamp_get_kernel<Kernel>(av.pQueue, f);
-  return completion_future(Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async<Kernel, 2>(av.pQueue, ext, tile, f, kernel, compute_domain.get_dynamic_group_segment_size()));
-#else //if __KALMAR_ACCELERATOR__ != 1
-  tiled_index<2> this_is_used_to_instantiate_the_right_index;
-  //to ensure functor has right operator() defined
-  //this triggers the trampoline code being emitted
-  auto foo = &Kernel::__cxxamp_trampoline;
-  auto bar = &Kernel::operator();
-#endif
-}
-#pragma clang diagnostic pop
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wreturn-type"
-#pragma clang diagnostic ignored "-Wunused-variable"
-//3D parallel_for_each, tiled
-template <typename Kernel>
-__attribute__((noinline,used)) completion_future parallel_for_each(
-    const accelerator_view& av, const tiled_extent<3>& compute_domain, const Kernel& f) __CPU__ __HC__ {
-#if __KALMAR_ACCELERATOR__ != 1
-  // silently return in case the any dimension of the extent is 0
-  if (compute_domain[0] == 0 || compute_domain[1] == 0 || compute_domain[2] == 0)
-    return completion_future();
-  if (compute_domain[0] < 0 || compute_domain[1] < 0 || compute_domain[2] < 0) {
-    throw invalid_compute_domain("Extent is less than 0.");
-  }
-  if (static_cast<size_t>(compute_domain[0]) > 4294967295L)
-    throw invalid_compute_domain("Extent size too large.");
-  if (static_cast<size_t>(compute_domain[1]) > 4294967295L)
-    throw invalid_compute_domain("Extent size too large.");
-  if (static_cast<size_t>(compute_domain[2]) > 4294967295L)
-    throw invalid_compute_domain("Extent size too large.");
-  size_t ext[3] = { static_cast<size_t>(compute_domain[2]),
-                    static_cast<size_t>(compute_domain[1]),
-                    static_cast<size_t>(compute_domain[0])};
-  size_t tile[3] = { static_cast<size_t>(compute_domain.tile_dim[2]),
-                     static_cast<size_t>(compute_domain.tile_dim[1]),
-                     static_cast<size_t>(compute_domain.tile_dim[0]) };
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-  if (is_cpu()) {
-      return launch_cpu_task_async(av.pQueue, f, compute_domain);
-  } else
-#endif
-  if (av.get_accelerator().get_device_path() == L"cpu") {
-    throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
-  }
-  void *kernel = Kalmar::mcw_cxxamp_get_kernel<Kernel>(av.pQueue, f);
-  return completion_future(Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async<Kernel, 3>(av.pQueue, ext, tile, f, kernel, compute_domain.get_dynamic_group_segment_size()));
-#else //if __KALMAR_ACCELERATOR__ != 1
-  tiled_index<3> this_is_used_to_instantiate_the_right_index;
-  //to ensure functor has right operator() defined
-  //this triggers the trampoline code being emitted
-  auto foo = &Kernel::__cxxamp_trampoline;
-  auto bar = &Kernel::operator();
-#endif
-}
-#pragma clang diagnostic pop
-
 } // namespace hc

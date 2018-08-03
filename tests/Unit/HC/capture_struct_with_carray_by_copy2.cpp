@@ -6,22 +6,6 @@
 template<typename T>
 struct Foo {
   T table[3];
-
-  Foo() = default;
-
-  __attribute__((annotate("user_deserialize")))
-  Foo(T x0, T x1, T x2) [[cpu]][[hc]] {
-    table[0] = x0;
-    table[1] = x1;
-    table[2] = x2;
-  }
-
-  __attribute__((annotate("serialize")))
-  void __cxxamp_serialize(Kalmar::Serialize& s) const {
-    s.Append(sizeof(T), &table[0]);
-    s.Append(sizeof(T), &table[1]);
-    s.Append(sizeof(T), &table[2]);
-  }
 };
 
 template<typename T>

@@ -3,6 +3,8 @@
 #include "hc_defines.h"
 #include "kalmar_aligned_alloc.h"
 
+#include <stdexcept>
+
 namespace hc {
 class AmPointerInfo;
 class completion_future;
@@ -200,16 +202,38 @@ public:
   virtual void wait(hcWaitMode mode = hcWaitModeBlocked) {}
 
   // sync kernel launch with dynamic group memory
-  virtual void LaunchKernelWithDynamicGroupMemory(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size, size_t dynamic_group_size) {}
+  virtual
+  void LaunchKernelWithDynamicGroupMemory(
+    void* kernel,
+    size_t dim_ext,
+    const size_t* ext,
+    const size_t* local_size,
+    size_t dynamic_group_size) = 0;
 
   // async kernel launch with dynamic group memory
-  virtual std::shared_ptr<KalmarAsyncOp> LaunchKernelWithDynamicGroupMemoryAsync(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size, size_t dynamic_group_size) { return nullptr; }
+  virtual
+  std::shared_ptr<KalmarAsyncOp> LaunchKernelWithDynamicGroupMemoryAsync(
+    void* kernel,
+    std::size_t dim_ext,
+    const std::size_t* ext,
+    const std::size_t* local_size,
+    std::size_t dynamic_group_size) = 0;
 
   // sync kernel launch
-  virtual void LaunchKernel(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) {}
+  virtual
+  void LaunchKernel(
+    void* kernel,
+    size_t dim_ext,
+    const size_t* ext,
+    const size_t* local_size) = 0;
 
   // async kernel launch
-  virtual std::shared_ptr<KalmarAsyncOp> LaunchKernelAsync(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) { return LaunchKernelWithDynamicGroupMemoryAsync(kernel, dim_ext, ext, local_size, 0); }
+  virtual
+  std::shared_ptr<KalmarAsyncOp> LaunchKernelAsync(
+    void* kernel,
+    std::size_t dim_ext,
+    const std::size_t* ext,
+    const std::size_t* local_size) = 0;
 
   /// read data from device to host
   virtual void read(void* device, void* dst, size_t count, size_t offset) = 0;
@@ -376,7 +400,12 @@ public:
     virtual void BuildProgram(void* size, void* source) {}
 
     /// create kernel
-    virtual void* CreateKernel(const char* fun, KalmarQueue *queue) { return nullptr; }
+    virtual 
+    void* CreateKernel(
+        const char* fun,
+        KalmarQueue *queue,
+        const void* callable = nullptr,
+        std::size_t callable_size = 0u) = 0;
 
     /// check if a given kernel is compatible with the device
     virtual bool IsCompatibleKernel(void* size, void* source) { return true; }
@@ -457,6 +486,48 @@ public:
           memmove((char*)dst + dst_offset, (char*)src + src_offset, count);
   }
 
+  void* CreateKernel(
+      const char*, KalmarQueue*, const void*, std::size_t) override
+  {
+      return nullptr;
+  }
+  void LaunchKernel(
+      void*,
+      std::size_t,
+      const std::size_t*,
+      const std::size_t*) override
+  {
+    throw std::runtime_error{"Unsupported."};
+  }
+  [[noreturn]]
+  std::shared_ptr<KalmarAsyncOp> LaunchKernelAsync(
+      void*,
+      std::size_t,
+      const std::size_t*,
+      const std::size_t*) override
+  {
+    throw std::runtime_error{"Unsupported."};
+  }
+  void LaunchKernelWithDynamicGroupMemory(
+    void*,
+    std::size_t,
+    const std::size_t*,
+    const std::size_t*,
+    std::size_t) override
+  {
+    throw std::runtime_error{"Unsupported."};
+  }
+  [[noreturn]]
+  std::shared_ptr<KalmarAsyncOp> LaunchKernelWithDynamicGroupMemoryAsync(
+    void*,
+    std::size_t,
+    const std::size_t*,
+    const std::size_t*,
+    std::size_t) override
+  {
+    throw std::runtime_error{"Unimplemented."};
+  }
+
   void* map(void* device, size_t count, size_t offset, bool modify) override {
       return (char*)device + offset;
   }
@@ -482,7 +553,14 @@ public:
     std::shared_ptr<KalmarQueue> createQueue(execute_order order = execute_in_order) override { return std::shared_ptr<KalmarQueue>(new CPUQueue(this)); }
     void* create(size_t count, struct rw_info* /* not used */ ) override { return kalmar_aligned_alloc(0x1000, count); }
     void release(void* ptr, struct rw_info* /* nout used */) override { kalmar_aligned_free(ptr); }
-    void* CreateKernel(const char* fun, KalmarQueue *queue) { return nullptr; }
+    void* CreateKernel(
+        const char*,
+        KalmarQueue*,
+        const void* = nullptr,
+        std::size_t = 0u)
+    {
+        return nullptr;
+    }
 };
 
 /// KalmarContext
@@ -567,19 +645,8 @@ public:
 KalmarContext *getContext();
 
 namespace CLAMP {
-// used in parallel_for_each.h
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-extern bool is_cpu();
-extern bool in_cpu_kernel();
-extern void enter_kernel();
-extern void leave_kernel();
-#endif
-
-extern void *CreateKernel(std::string, KalmarQueue*);
-
-extern void PushArg(void *, int, size_t, const void *);
-extern void PushArgPtr(void *, int, size_t, const void *);
-
+void* CreateKernel(
+    const char*, KalmarQueue*, const void* = nullptr, std::size_t = 0u);
 } // namespace CLAMP
 
 static inline const std::shared_ptr<KalmarQueue> get_cpu_queue() {
@@ -681,14 +748,6 @@ struct rw_info
     rw_info(const size_t count, void* ptr)
         : data(ptr), count(count), curr(nullptr), master(nullptr), stage(nullptr),
         devs(), mode(access_type_none), HostPtr(ptr != nullptr), toReleaseDevPointer(true) {
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-            /// if array_view is constructed in cpu path kernel
-            /// allocate memory for it and do nothing
-            if (CLAMP::in_cpu_kernel() && ptr == nullptr) {
-                data = kalmar_aligned_alloc(0x1000, count);
-                return;
-            }
-#endif
             if (ptr) {
                 mode = access_type_read_write;
                 curr = master = get_cpu_queue();
@@ -705,12 +764,6 @@ struct rw_info
     rw_info(const std::shared_ptr<KalmarQueue>& Queue, const std::shared_ptr<KalmarQueue>& Stage,
             const size_t count, access_type mode_) : data(nullptr), count(count),
     curr(Queue), master(Queue), stage(nullptr), devs(), mode(mode_), HostPtr(false), toReleaseDevPointer(true) {
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-        if (CLAMP::in_cpu_kernel() && data == nullptr) {
-            data = kalmar_aligned_alloc(0x1000, count);
-            return;
-        }
-#endif
         if (mode == access_type_auto)
             mode = curr->getDev()->get_access();
         devs[curr->getDev()] = {curr->getDev()->create(count, this), modified};
@@ -789,10 +842,6 @@ struct rw_info
     /// @blcok: this call will be blocking or not
     ///         none blocking occurs in serialization stage
     void sync(std::shared_ptr<KalmarQueue> pQueue, bool modify, bool block = true) {
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-        if (CLAMP::in_cpu_kernel())
-            return;
-#endif
         if (!curr) {
             /// This can only happen if array_view is constructed with size and
             /// is not accessed before
@@ -928,13 +977,6 @@ struct rw_info
     }
 
     ~rw_info() {
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-        if (CLAMP::in_cpu_kernel()) {
-            if (data && !HostPtr)
-                kalmar_aligned_free(data);
-            return;
-        }
-#endif
         /// If this rw_info is constructed by host pointer
         /// 1. synchronize latest data to host pointer
         /// 2. Because the data pointer cannot be released, erase itself from devs

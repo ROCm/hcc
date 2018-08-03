@@ -12,6 +12,7 @@
 
 #pragma once
 
+#include "atomics.hpp"
 #include "hc_defines.h"
 #include "kalmar_exception.h"
 #include "kalmar_index.h"
@@ -19,7 +20,10 @@
 #include "kalmar_buffer.h"
 #include "kalmar_serialize.h"
 #include "kalmar_launch.h"
-#include "kalmar_cpu_launch.h"
+
+#include <climits>
+#include <cstddef>
+#include <type_traits>
 
 // forward declaration
 namespace Concurrency {
@@ -58,6 +62,7 @@ using accelerator_view_removed = Kalmar::accelerator_view_removed;
  */
 namespace Concurrency {
 
+using namespace hc::atomics;
 using namespace Kalmar::enums;
 using namespace Kalmar::CLAMP;
 
@@ -219,55 +224,37 @@ private:
     accelerator_view(std::shared_ptr<Kalmar::KalmarQueue> pQueue) : pQueue(pQueue) {}
     std::shared_ptr<Kalmar::KalmarQueue> pQueue;
     friend class accelerator;
-  
-    template<typename Kernel, int dim_ext> friend
-        void Kalmar::mcw_cxxamp_launch_kernel(const std::shared_ptr<Kalmar::KalmarQueue>&, size_t *, size_t *, const Kernel&);
-    template<typename Kernel, int dim_ext> friend
-        std::shared_future<void>* Kalmar::mcw_cxxamp_launch_kernel_async(const std::shared_ptr<Kalmar::KalmarQueue>&, size_t *, size_t *, const Kernel&);
 
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-    template <typename Kernel, int N> friend
-      void launch_cpu_task(const std::shared_ptr<Kalmar::KalmarQueue>&, Kernel const&, extent<N> const&);
-#endif
+    template<typename Domain, typename Kernel>
+    friend
+    void Kalmar::launch_kernel(
+        const std::shared_ptr<Kalmar::KalmarQueue>&,
+        const Domain&,
+        const Kernel&);
+    template<typename Domain, typename Kernel>
+    friend
+    std::shared_future<Kalmar::KalmarAsyncOp> Kalmar::launch_kernel_async(
+        const std::shared_ptr<Kalmar::KalmarQueue>&,
+        const Domain&,
+        const Kernel&);
 
     template <typename Q, int K> friend class array;
     template <typename Q, int K> friend class array_view;
-  
-    template <int N, typename Kernel> friend
-        void parallel_for_each(Concurrency::extent<N>, const Kernel&);
-    template <int N, typename Kernel> friend
-        void parallel_for_each(const accelerator_view&, Concurrency::extent<N>, const Kernel&);
-    template <typename Kernel> friend
-        void parallel_for_each(const accelerator_view&, Concurrency::extent<1>, const Kernel&);
-    template <typename Kernel> friend
-        void parallel_for_each(const accelerator_view&, Concurrency::extent<2>, const Kernel&);
-    template <typename Kernel> friend
-        void parallel_for_each(const accelerator_view&, Concurrency::extent<3>, const Kernel&);
-  
-    template <int D0, typename Kernel> friend
-        void parallel_for_each(tiled_extent<D0>, const Kernel&);
-    template <int D0, typename Kernel> friend
-        void parallel_for_each(const accelerator_view&, tiled_extent<D0>, const Kernel&);
-  
-    template <int D0, int D1, typename Kernel> friend
-        void parallel_for_each(tiled_extent<D0,D1>, const Kernel&);
-    template <int D0, int D1, typename Kernel> friend
-        void parallel_for_each(const accelerator_view&, tiled_extent<D0, D1>, const Kernel&);
-  
-    template <int D0, int D1, int D2, typename Kernel> friend
-        void parallel_for_each(tiled_extent<D0,D1,D2>, const Kernel&);
-    template <int D0, int D1, int D2, typename Kernel> friend
-        void parallel_for_each(const accelerator_view&, tiled_extent<D0, D1, D2>, const Kernel&);
+    template <int N, typename Kernel>
+    friend
+    void parallel_for_each(const Concurrency::extent<N>&, const Kernel&);
+    template <int N, typename Kernel>
+    friend
+    void parallel_for_each(
+        const accelerator_view&, const Concurrency::extent<N>&, const Kernel&);
 
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-public:
-#endif
-    __attribute__((annotate("user_deserialize")))
-    accelerator_view() restrict(amp,cpu) {
-#if __KALMAR_ACCELERATOR__ != 1
-        throw runtime_exception("errorMsg_throw", 0);
-#endif
-    }
+    template<typename Kernel, int... dims>
+    friend
+    void parallel_for_each(const tiled_extent<dims...>&, const Kernel&);
+    template<typename Kernel, int... dims>
+    friend
+    void parallel_for_each(
+        const accelerator_view&, const tiled_extent<dims...>&, const Kernel&);
 };
 
 // ------------------------------------------------------------------------
@@ -1100,36 +1087,6 @@ private:
 // utility class for tiled_barrier
 // ------------------------------------------------------------------------
 
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-template <typename Ker, typename Ti>
-void bar_wrapper(Ker *f, Ti *t)
-{
-    (*f)(*t);
-}
-
-struct barrier_t {
-    std::unique_ptr<ucontext_t[]> ctx;
-    int idx;
-    barrier_t (int a) :
-        ctx(new ucontext_t[a + 1]) {}
-    template <typename Ti, typename Ker>
-    void setctx(int x, char *stack, Ker& f, Ti* tidx, int S) {
-        getcontext(&ctx[x]);
-        ctx[x].uc_stack.ss_sp = stack;
-        ctx[x].uc_stack.ss_size = S;
-        ctx[x].uc_link = &ctx[x - 1];
-        makecontext(&ctx[x], (void (*)(void))bar_wrapper<Ker, Ti>, 2, &f, tidx);
-    }
-    void swap(int a, int b) {
-        swapcontext(&ctx[a], &ctx[b]);
-    }
-    void wait() {
-        --idx;
-        swapcontext(&ctx[idx + 1], &ctx[idx]);
-    }
-};
-#endif
-
 #ifndef CLK_LOCAL_MEM_FENCE
 #define CLK_LOCAL_MEM_FENCE (1)
 #endif
@@ -1151,20 +1108,6 @@ struct barrier_t {
  */
 class tile_barrier {
 public:
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-    using pb_t = std::shared_ptr<barrier_t>;
-    tile_barrier(pb_t pb) : pbar(pb) {}
-
-    /**
-     * Copy constructor. Constructs a new tile_barrier from the supplied
-     * argument "other".
-     *
-     * @param[in] other An object of type tile_barrier from which to initialize
-     *                  this.
-     */
-    tile_barrier(const tile_barrier& other) restrict(amp,cpu) : pbar(other.pbar) {}
-#else
-
     /**
      * Copy constructor. Constructs a new tile_barrier from the supplied
      * argument "other".
@@ -1173,7 +1116,6 @@ public:
      *                  this.
      */
     tile_barrier(const tile_barrier& other) restrict(amp,cpu) {}
-#endif
 
     /**
      * Blocks execution of all threads in the thread tile until all threads in
@@ -1186,11 +1128,7 @@ public:
      * wait_with_all_memory_fence().
      */
     void wait() const restrict(amp) {
-#if __KALMAR_ACCELERATOR__ == 1
         wait_with_all_memory_fence();
-#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-        pbar->wait();
-#endif
     }
 
     /**
@@ -1203,11 +1141,7 @@ public:
      * before hitting the barrier. This is identical to wait().
      */
     void wait_with_all_memory_fence() const restrict(amp) {
-#if __KALMAR_ACCELERATOR__ == 1
         amp_barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
-#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-        pbar->wait();
-#endif
     }
 
     /**
@@ -1220,11 +1154,7 @@ public:
      * after the barrier are executed before hitting the barrier.
      */
     void wait_with_global_memory_fence() const restrict(amp) {
-#if __KALMAR_ACCELERATOR__ == 1
         amp_barrier(CLK_GLOBAL_MEM_FENCE);
-#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-        pbar->wait();
-#endif
     }
 
     /**
@@ -1238,20 +1168,11 @@ public:
      * hitting the barrier.
      */
     void wait_with_tile_static_memory_fence() const restrict(amp) {
-#if __KALMAR_ACCELERATOR__ == 1
         amp_barrier(CLK_LOCAL_MEM_FENCE);
-#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-        pbar->wait();
-#endif
     }
 
 private:
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-    tile_barrier() restrict(amp,cpu) = default;
-    pb_t pbar;
-#else
-    tile_barrier() restrict(amp) {}
-#endif
+    tile_barrier() restrict(amp) = default;
 
     template<int D0, int D1, int D2> friend
         class tiled_index;
@@ -1397,16 +1318,7 @@ public:
     tiled_index(const index<3>& g) restrict(amp, cpu) : global(g) {}
 
 private:
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-    tiled_index(int a0, int a1, int a2, int b0, int b1, int b2,
-                int c0, int c1, int c2, tile_barrier& pb) restrict(amp,cpu)
-        : global(a2, a1, a0), local(b2, b1, b0), tile(c2, c1, c0),
-          tile_origin(a2 - b2, a1 - b1, a0 - b0), barrier(pb), tile_extent(D0, D1, D2) {}
-#endif
-
-    __attribute__((annotate("__cxxamp_opencl_index")))
-#if __KALMAR_ACCELERATOR__ == 1
-    __attribute__((always_inline)) tiled_index() restrict(amp)
+    tiled_index() restrict(amp)
         : global(index<3>(amp_get_global_id(2), amp_get_global_id(1), amp_get_global_id(0))),
           local(index<3>(amp_get_local_id(2), amp_get_local_id(1), amp_get_local_id(0))),
           tile(index<3>(amp_get_group_id(2), amp_get_group_id(1), amp_get_group_id(0))),
@@ -1414,20 +1326,14 @@ private:
                                amp_get_global_id(1)-amp_get_local_id(1),
                                amp_get_global_id(0)-amp_get_local_id(0))),
           tile_extent(D0, D1, D2)
-#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-    __attribute__((always_inline)) tiled_index() restrict(amp, cpu)
-#else
-    __attribute__((always_inline)) tiled_index() restrict(amp)
-#endif // __KALMAR_ACCELERATOR__
     {}
 
-    template<int D0_, int D1_, int D2_, typename K> friend
-        void parallel_for_each(const accelerator_view&, tiled_extent<D0_, D1_, D2_>, const K&);
-
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-    template<typename K, int D1_, int D2_, int D3_> friend
-        void partitioned_task_tile(K const&, tiled_extent<D1_, D2_, D3_> const&, int);
-#endif
+    template<typename K>
+    friend
+    void parallel_for_each(
+        const accelerator_view&, const tiled_extent<D0, D1, D2>&, const K&);
+    friend
+    struct Kalmar::Indexer;
 };
 
 /**
@@ -1535,33 +1441,19 @@ public:
     tiled_index(const index<1>& g) restrict(amp, cpu) : global(g) {}
 
 private:
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-    __attribute__((always_inline)) tiled_index(int a, int b, int c, tile_barrier& pb) restrict(amp, cpu)
-        : global(a), local(b), tile(c), tile_origin(a - b), barrier(pb), tile_extent(D0) {}
-#endif
-
-    __attribute__((annotate("__cxxamp_opencl_index")))
-#if __KALMAR_ACCELERATOR__ == 1
-    __attribute__((always_inline)) tiled_index() restrict(amp)
+    tiled_index() restrict(amp)
         : global(index<1>(amp_get_global_id(0))),
           local(index<1>(amp_get_local_id(0))),
           tile(index<1>(amp_get_group_id(0))),
           tile_origin(index<1>(amp_get_global_id(0)-amp_get_local_id(0))),
           tile_extent(D0)
-#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-    __attribute__((always_inline)) tiled_index() restrict(amp,cpu)
-#else
-    __attribute__((always_inline)) tiled_index() restrict(amp)
-#endif // __KALMAR_ACCELERATOR__
     {}
 
-    template<int D, typename K> friend
-        void parallel_for_each(const accelerator_view&, tiled_extent<D>, const K&);
-
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-    template<typename K, int D> friend
-        void partitioned_task_tile(K const&, tiled_extent<D> const&, int);
-#endif
+    template<typename K> friend
+    void parallel_for_each(
+        const accelerator_view&, const tiled_extent<D0>&, const K&);
+    friend
+    struct Kalmar::Indexer;
 };
 
 /**
@@ -1671,34 +1563,21 @@ public:
     tiled_index(const index<2>& g) restrict(amp, cpu) : global(g) {}
 
 private:
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-    tiled_index(int a0, int a1, int b0, int b1, int c0, int c1, tile_barrier& tbar) restrict(amp, cpu)
-      : global(a1, a0), local(b1, b0), tile(c1, c0), tile_origin(a1 - b1, a0 - b0), barrier(tbar), tile_extent(D0, D1) {}
-#endif
-
-    __attribute__((annotate("__cxxamp_opencl_index")))
-#if __KALMAR_ACCELERATOR__ == 1
-    __attribute__((always_inline)) tiled_index() restrict(amp)
+    tiled_index() restrict(amp)
         : global(index<2>(amp_get_global_id(1), amp_get_global_id(0))),
           local(index<2>(amp_get_local_id(1), amp_get_local_id(0))),
           tile(index<2>(amp_get_group_id(1), amp_get_group_id(0))),
           tile_origin(index<2>(amp_get_global_id(1)-amp_get_local_id(1),
                                amp_get_global_id(0)-amp_get_local_id(0))),
           tile_extent(D0, D1)
-#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-    __attribute__((always_inline)) tiled_index() restrict(amp,cpu)
-#else
-    __attribute__((always_inline)) tiled_index() restrict(amp)
-#endif // __KALMAR_ACCELERATOR__
     {}
 
-    template<int D0_, int D1_, typename K> friend
-        void parallel_for_each(const accelerator_view&, tiled_extent<D0_, D1_>, const K&);
-
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-    template<typename K, int D1_, int D2_> friend
-        void partitioned_task_tile(K const&, tiled_extent<D1_, D2_> const&, int);
-#endif
+    template<typename K>
+    friend
+    void parallel_for_each(
+        const accelerator_view&, const tiled_extent<D0, D1>&, const K&);
+    friend
+    struct Kalmar::Indexer;
 };
 
 // ------------------------------------------------------------------------
@@ -2032,182 +1911,6 @@ public:
 
     /** @} */
 };
-
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-#define SSIZE 1024 * 10
-template <int N, typename Kernel,  int K>
-struct cpu_helper
-{
-    static inline void call(const Kernel& k, index<K>& idx, const extent<K>& ext) restrict(amp,cpu) {
-        int i;
-        for (i = 0; i < ext[N]; ++i) {
-            idx[N] = i;
-            cpu_helper<N + 1, Kernel, K>::call(k, idx, ext);
-        }
-    }
-};
-template <typename Kernel, int K>
-struct cpu_helper<K, Kernel, K>
-{
-    static inline void call(const Kernel& k, const index<K>& idx, const extent<K>& ext) restrict(amp,cpu) {
-        (const_cast<Kernel&>(k))(idx);
-    }
-};
-
-template <typename Kernel, int N>
-void partitioned_task(const Kernel& ker, const extent<N>& ext, int part) {
-    index<N> idx;
-    int start = ext[0] * part / Kalmar::NTHREAD;
-    int end = ext[0] * (part + 1) / Kalmar::NTHREAD;
-    for (int i = start; i < end; i++) {
-        idx[0] = i;
-        cpu_helper<1, Kernel, N>::call(ker, idx, ext);
-    }
-}
-
-template <typename Kernel, int D0>
-void partitioned_task_tile(Kernel const& f, tiled_extent<D0> const& ext, int part) {
-    int start = (ext[0] / D0) * part / Kalmar::NTHREAD;
-    int end = (ext[0] / D0) * (part + 1) / Kalmar::NTHREAD;
-    int stride = end - start;
-    if (stride == 0)
-        return;
-    char *stk = new char[D0 * SSIZE];
-    tiled_index<D0> *tidx = new tiled_index<D0>[D0];
-    tile_barrier::pb_t amp_bar = std::make_shared<barrier_t>(D0);
-    tile_barrier tbar(amp_bar);
-    for (int tx = start; tx < end; tx++) {
-        int id = 0;
-        char *sp = stk;
-        tiled_index<D0> *tip = tidx;
-        for (int x = 0; x < D0; x++) {
-            new (tip) tiled_index<D0>(tx * D0 + x, x, tx, tbar);
-            amp_bar->setctx(++id, sp, f, tip, SSIZE);
-            sp += SSIZE;
-            ++tip;
-        }
-        amp_bar->idx = 0;
-        while (amp_bar->idx == 0) {
-            amp_bar->idx = id;
-            amp_bar->swap(0, id);
-        }
-    }
-    delete [] stk;
-    delete [] tidx;
-}
-template <typename Kernel, int D0, int D1>
-void partitioned_task_tile(Kernel const& f, tiled_extent<D0, D1> const& ext, int part) {
-    int start = (ext[0] / D0) * part / Kalmar::NTHREAD;
-    int end = (ext[0] / D0) * (part + 1) / Kalmar::NTHREAD;
-    int stride = end - start;
-    if (stride == 0)
-        return;
-    char *stk = new char[D1 * D0 * SSIZE];
-    tiled_index<D0, D1> *tidx = new tiled_index<D0, D1>[D0 * D1];
-    tile_barrier::pb_t amp_bar = std::make_shared<barrier_t>(D0 * D1);
-    tile_barrier tbar(amp_bar);
-
-    for (int tx = 0; tx < ext[1] / D1; tx++)
-        for (int ty = start; ty < end; ty++) {
-            int id = 0;
-            char *sp = stk;
-            tiled_index<D0, D1> *tip = tidx;
-            for (int x = 0; x < D1; x++)
-                for (int y = 0; y < D0; y++) {
-                    new (tip) tiled_index<D0, D1>(D1 * tx + x, D0 * ty + y, x, y, tx, ty, tbar);
-                    amp_bar->setctx(++id, sp, f, tip, SSIZE);
-                    ++tip;
-                    sp += SSIZE;
-                }
-            amp_bar->idx = 0;
-            while (amp_bar->idx == 0) {
-                amp_bar->idx = id;
-                amp_bar->swap(0, id);
-            }
-        }
-    delete [] stk;
-    delete [] tidx;
-}
-
-template <typename Kernel, int D0, int D1, int D2>
-void partitioned_task_tile(Kernel const& f, tiled_extent<D0, D1, D2> const& ext, int part) {
-    int start = (ext[0] / D0) * part / Kalmar::NTHREAD;
-    int end = (ext[0] / D0) * (part + 1) / Kalmar::NTHREAD;
-    int stride = end - start;
-    if (stride == 0)
-        return;
-    char *stk = new char[D2 * D1 * D0 * SSIZE];
-    tiled_index<D0, D1, D2> *tidx = new tiled_index<D0, D1, D2>[D0 * D1 * D2];
-    tile_barrier::pb_t amp_bar = std::make_shared<barrier_t>(D0 * D1 * D2);
-    tile_barrier tbar(amp_bar);
-
-    for (int i = 0; i < ext[2] / D2; i++)
-        for (int j = 0; j < ext[1] / D1; j++)
-            for(int k = start; k < end; k++) {
-                int id = 0;
-                char *sp = stk;
-                tiled_index<D0, D1, D2> *tip = tidx;
-                for (int x = 0; x < D2; x++)
-                    for (int y = 0; y < D1; y++)
-                        for (int z = 0; z < D0; z++) {
-                            new (tip) tiled_index<D0, D1, D2>(D2 * i + x,
-                                                              D1 * j + y,
-                                                              D0 * k + z,
-                                                              x, y, z, i, j, k, tbar);
-                            amp_bar->setctx(++id, sp, f, tip, SSIZE);
-                            ++tip;
-                            sp += SSIZE;
-                        }
-                amp_bar->idx = 0;
-                while (amp_bar->idx == 0) {
-                    amp_bar->idx = id;
-                    amp_bar->swap(0, id);
-                }
-            }
-    delete [] stk;
-    delete [] tidx;
-}
-
-template <typename Kernel, int N>
-void launch_cpu_task(const std::shared_ptr<Kalmar::KalmarQueue>& pQueue, Kernel const& f,
-                     extent<N> const& compute_domain)
-{
-    Kalmar::CPUKernelRAII<Kernel> obj(pQueue, f);
-    for (int i = 0; i < Kalmar::NTHREAD; ++i)
-        obj[i] = std::thread(partitioned_task<Kernel, N>, std::cref(f), std::cref(compute_domain), i);
-}
-
-template <typename Kernel, int D0>
-void launch_cpu_task(const std::shared_ptr<Kalmar::KalmarQueue>& pQueue, Kernel const& f,
-                     tiled_extent<D0> const& compute_domain)
-{
-    Kalmar::CPUKernelRAII<Kernel> obj(pQueue, f);
-    for (int i = 0; i < Kalmar::NTHREAD; ++i)
-        obj[i] = std::thread(partitioned_task_tile<Kernel, D0>,
-                             std::cref(f), std::cref(compute_domain), i);
-}
-
-template <typename Kernel, int D0, int D1>
-void launch_cpu_task(const std::shared_ptr<Kalmar::KalmarQueue>& pQueue, Kernel const& f,
-                     tiled_extent<D0, D1> const& compute_domain)
-{
-    Kalmar::CPUKernelRAII<Kernel> obj(pQueue, f);
-    for (int i = 0; i < Kalmar::NTHREAD; ++i)
-        obj[i] = std::thread(partitioned_task_tile<Kernel, D0, D1>,
-                             std::cref(f), std::cref(compute_domain), i);
-}
-
-template <typename Kernel, int D0, int D1, int D2>
-void launch_cpu_task(const std::shared_ptr<Kalmar::KalmarQueue>& pQueue, Kernel const& f,
-                     tiled_extent<D0, D1, D2> const& compute_domain)
-{
-    Kalmar::CPUKernelRAII<Kernel> obj(pQueue, f);
-    for (int i = 0; i < Kalmar::NTHREAD; ++i)
-        obj[i] = std::thread(partitioned_task_tile<Kernel, D0, D1, D2>,
-                             std::cref(f), std::cref(compute_domain), i);
-}
-
-#endif
 
 // ------------------------------------------------------------------------
 // utility helper classes for array_view
@@ -5347,757 +5050,102 @@ completion_future copy_async(const array_view<T, N>& src, const array<T, N>& des
 }
 
 // ------------------------------------------------------------------------
-// atomic functions
-// ------------------------------------------------------------------------
-
-/** @{ */
-/**
- * Atomically read the value stored in dest , replace it with the value given
- * in val and return the old value to the caller. This function provides
- * overloads for int , unsigned int and float parameters.
- *
- * @param[out] dest A pointer to the location which needs to be atomically
- *                  modified. The location may reside within a
- *                  concurrency::array or concurrency::array_view or within a
- *                  tile_static variable.
- * @param[in] val The new value to be stored in the location pointed to be dest
- * @return These functions return the old value which was previously stored at
- *         dest, and that was atomically replaced. These functions always
- *         succeed.
- */
-#if __KALMAR_ACCELERATOR__ == 1
-extern "C" unsigned int atomic_exchange_unsigned(unsigned int *p, unsigned int val) restrict(amp);
-extern "C" int atomic_exchange_int(int *p, int val) restrict(amp);
-extern "C" float atomic_exchange_float(float *p, float val) restrict(amp);
-
-static inline unsigned int atomic_exchange(unsigned int * dest, unsigned int val) restrict(amp,cpu) {
-  return atomic_exchange_unsigned(dest, val);
-}
-static inline int atomic_exchange(int * dest, int val) restrict(amp,cpu) {
-  return atomic_exchange_int(dest, val);
-}
-static inline float atomic_exchange(float * dest, float val) restrict(amp,cpu) {
-  return atomic_exchange_float(dest, val);
-}
-#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-unsigned int atomic_exchange_unsigned(unsigned int *p, unsigned int val);
-int atomic_exchange_int(int *p, int val);
-float atomic_exchange_float(float *p, float val);
-
-static inline unsigned int atomic_exchange(unsigned int *dest, unsigned int val) restrict(amp,cpu) {
-  return atomic_exchange_unsigned(dest, val);
-}
-static inline int atomic_exchange(int *dest, int val) restrict(amp,cpu) {
-  return atomic_exchange_int(dest, val);
-}
-static inline float atomic_exchange(float *dest, float val) restrict(amp,cpu) {
-  return atomic_exchange_float(dest, val);
-}
-#else
-extern unsigned int atomic_exchange(unsigned int *dest, unsigned int val) restrict(amp,cpu);
-extern int atomic_exchange(int *dest, int val) restrict(amp, cpu);
-extern float atomic_exchange(float *dest, float val) restrict(amp, cpu);
-#endif
-/** @} */
-
-/** @{ */
-/**
- * These functions attempt to perform these three steps atomically:
- * 1. Read the value stored in the location pointed to by dest
- * 2. Compare the value read in the previous step with the value contained in
- *    the location pointed by expected_val
- * 3. Carry the following operations depending on the result of the comparison
- *    of the previous step:
- *    a. If the values are identical, then the function tries to atomically
- *       change the value pointed by dest to the value in val. The function
- *       indicates by its return value whether this transformation has been
- *       successful or not.
- *    b. If the values are not identical, then the function stores the value
- *       read in step (1) into the location pointed to by expected_val, and
- *       returns false.
- *
- * @param[out] dest An pointer to the location which needs to be atomically
- *                  modified. The location may reside within a
- *                  concurrency::array or concurrency::array_view or within a
- *                  tile_static variable.
- * @param[out] expected_val A pointer to a local variable or function
- *                          parameter. Upon calling the function, the location
- *                          pointed by expected_val contains the value the
- *                          caller expects dest to contain. Upon return from
- *                          the function, expected_val will contain the most
- *                          recent value read from dest.
- * @param[in] val The new value to be stored in the location pointed to be dest
- * @return The return value indicates whether the function has been successful
- *         in atomically reading, comparing and modifying the contents of the
- *         memory location.
- */
-#if __KALMAR_ACCELERATOR__ == 1
-extern "C" unsigned int atomic_compare_exchange_unsigned(unsigned int *dest, unsigned int expected_val, unsigned int val) restrict(amp);
-extern "C" int atomic_compare_exchange_int(int *dest, int expected_val, int val) restrict(amp);
-
-static inline bool atomic_compare_exchange(unsigned int *dest, unsigned int *expected_val, unsigned int val) restrict(amp,cpu) {
-  *expected_val = atomic_compare_exchange_unsigned(dest, *expected_val, val);
-  return (*dest == val);
-}
-static inline bool atomic_compare_exchange(int *dest, int *expected_val, int val) restrict(amp,cpu) {
-  *expected_val = atomic_compare_exchange_int(dest, *expected_val, val);
-  return (*dest == val);
-}
-#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-unsigned int atomic_compare_exchange_unsigned(unsigned int *dest, unsigned int expected_val, unsigned int val);
-int atomic_compare_exchange_int(int *dest, int expected_val, int val);
-
-static inline bool atomic_compare_exchange(unsigned int *dest, unsigned int *expected_val, unsigned int val) restrict(amp,cpu) {
-  *expected_val = atomic_compare_exchange_unsigned(dest, *expected_val, val);
-  return (*dest == val);
-}
-static inline bool atomic_compare_exchange(int *dest, int *expected_val, int val) restrict(amp,cpu) {
-  *expected_val = atomic_compare_exchange_int(dest, *expected_val, val);
-  return (*dest == val);
-}
-#else
-extern unsigned int atomic_compare_exchange(unsigned int *dest, unsigned int *expected_val, unsigned int val) restrict(amp,cpu);
-extern int atomic_compare_exchange(int *dest, int *expected_val, int val) restrict(amp, cpu);
-#endif
-/** @} */
-
-
-/** @{ */
-/**
- * Atomically read the value stored in dest, apply the binary numerical
- * operation specific to the function with the read value and val serving as
- * input operands, and store the result back to the location pointed by dest.
- *
- * In terms of sequential semantics, the operation performed by any of the
- * above function is described by the following piece of pseudo-code:
- *
- * *dest = *dest @f$\otimes@f$ val;
- *
- * Where the operation denoted by @f$\otimes@f$ is one of: addition
- * (atomic_fetch_add), subtraction (atomic_fetch_sub), find maximum
- * (atomic_fetch_max), find minimum (atomic_fetch_min), bit-wise AND
- * (atomic_fetch_and), bit-wise OR (atomic_fetch_or), bit-wise XOR
- * (atomic_fetch_xor).
- *
- * @param[out] dest An pointer to the location which needs to be atomically
- *                  modified. The location may reside within a
- *                  concurrency::array or concurrency::array_view or within a
- *                  tile_static variable.
- * @param[in] val The second operand which participates in the calculation of
- *                the binary operation whose result is stored into the
- *                location pointed to be dest.
- * @return These functions return the old value which was previously stored at
- *         dest, and that was atomically replaced. These functions always
- *         succeed.
- */
-#if __KALMAR_ACCELERATOR__ == 1
-extern "C" unsigned int atomic_add_unsigned(unsigned int *p, unsigned int val) restrict(amp);
-extern "C" int atomic_add_int(int *p, int val) restrict(amp);
-extern "C" float atomic_add_float(float *p, float val) restrict(amp);
-
-static inline unsigned int atomic_fetch_add(unsigned int *x, unsigned int y) restrict(amp,cpu) {
-  return atomic_add_unsigned(x, y);
-}
-static inline int atomic_fetch_add(int *x, int y) restrict(amp,cpu) {
-  return atomic_add_int(x, y);
-}
-static inline float atomic_fetch_add(float *x, float y) restrict(amp,cpu) {
-  return atomic_add_float(x, y);
-}
-
-extern "C" unsigned int atomic_sub_unsigned(unsigned int *p, unsigned int val) restrict(amp);
-extern "C" int atomic_sub_int(int *p, int val) restrict(amp);
-extern "C" float atomic_sub_float(float *p, float val) restrict(amp);
-
-static inline unsigned int atomic_fetch_sub(unsigned int *x, unsigned int y) restrict(amp,cpu) {
-  return atomic_sub_unsigned(x, y);
-}
-static inline int atomic_fetch_sub(int *x, int y) restrict(amp,cpu) {
-  return atomic_sub_int(x, y);
-}
-static inline int atomic_fetch_sub(float *x, float y) restrict(amp,cpu) {
-  return atomic_sub_float(x, y);
-}
-
-extern "C" unsigned int atomic_and_unsigned(unsigned int *p, unsigned int val) restrict(amp);
-extern "C" int atomic_and_int(int *p, int val) restrict(amp);
-
-static inline unsigned int atomic_fetch_and(unsigned int *x, unsigned int y) restrict(amp,cpu) {
-  return atomic_and_unsigned(x, y);
-}
-static inline int atomic_fetch_and(int *x, int y) restrict(amp,cpu) {
-  return atomic_and_int(x, y);
-}
-
-extern "C" unsigned int atomic_or_unsigned(unsigned int *p, unsigned int val) restrict(amp);
-extern "C" int atomic_or_int(int *p, int val) restrict(amp);
-
-static inline unsigned int atomic_fetch_or(unsigned int *x, unsigned int y) restrict(amp,cpu) {
-  return atomic_or_unsigned(x, y);
-}
-static inline int atomic_fetch_or(int *x, int y) restrict(amp,cpu) {
-  return atomic_or_int(x, y);
-}
-
-extern "C" unsigned int atomic_xor_unsigned(unsigned int *p, unsigned int val) restrict(amp);
-extern "C" int atomic_xor_int(int *p, int val) restrict(amp);
-
-static inline unsigned int atomic_fetch_xor(unsigned int *x, unsigned int y) restrict(amp,cpu) {
-  return atomic_xor_unsigned(x, y);
-}
-static inline int atomic_fetch_xor(int *x, int y) restrict(amp,cpu) {
-  return atomic_xor_int(x, y);
-}
-#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-unsigned int atomic_add_unsigned(unsigned int *p, unsigned int val);
-int atomic_add_int(int *p, int val);
-float atomic_add_float(float *p, float val);
-
-static inline unsigned int atomic_fetch_add(unsigned int *x, unsigned int y) restrict(amp,cpu) {
-  return atomic_add_unsigned(x, y);
-}
-static inline int atomic_fetch_add(int *x, int y) restrict(amp,cpu) {
-  return atomic_add_int(x, y);
-}
-static inline float atomic_fetch_add(float *x, float y) restrict(amp,cpu) {
-  return atomic_add_float(x, y);
-}
-
-unsigned int atomic_sub_unsigned(unsigned int *p, unsigned int val);
-int atomic_sub_int(int *p, int val);
-float atomic_sub_float(float *p, float val);
-
-static inline unsigned int atomic_fetch_sub(unsigned int *x, unsigned int y) restrict(amp,cpu) {
-  return atomic_sub_unsigned(x, y);
-}
-static inline int atomic_fetch_sub(int *x, int y) restrict(amp,cpu) {
-  return atomic_sub_int(x, y);
-}
-static inline float atomic_fetch_sub(float *x, float y) restrict(amp,cpu) {
-  return atomic_sub_float(x, y);
-}
-
-unsigned int atomic_and_unsigned(unsigned int *p, unsigned int val);
-int atomic_and_int(int *p, int val);
-
-static inline unsigned int atomic_fetch_and(unsigned int *x, unsigned int y) restrict(amp,cpu) {
-  return atomic_and_unsigned(x, y);
-}
-static inline int atomic_fetch_and(int *x, int y) restrict(amp,cpu) {
-  return atomic_and_int(x, y);
-}
-
-unsigned int atomic_or_unsigned(unsigned int *p, unsigned int val);
-int atomic_or_int(int *p, int val);
-
-static inline unsigned int atomic_fetch_or(unsigned int *x, unsigned int y) restrict(amp,cpu) {
-  return atomic_or_unsigned(x, y);
-}
-static inline int atomic_fetch_or(int *x, int y) restrict(amp,cpu) {
-  return atomic_or_int(x, y);
-}
-
-unsigned int atomic_xor_unsigned(unsigned int *p, unsigned int val);
-int atomic_xor_int(int *p, int val);
-
-static inline unsigned int atomic_fetch_xor(unsigned int *x, unsigned int y) restrict(amp,cpu) {
-  return atomic_xor_unsigned(x, y);
-}
-static inline int atomic_fetch_xor(int *x, int y) restrict(amp,cpu) {
-  return atomic_xor_int(x, y);
-}
-#else
-extern unsigned atomic_fetch_add(unsigned *x, unsigned y) restrict(amp,cpu);
-extern int atomic_fetch_add(int *x, int y) restrict(amp, cpu);
-extern float atomic_fetch_add(float *x, float y) restrict(amp, cpu);
-
-extern unsigned atomic_fetch_sub(unsigned *x, unsigned y) restrict(amp,cpu);
-extern int atomic_fetch_sub(int *x, int y) restrict(amp, cpu);
-extern float atomic_fetch_sub(float *x, float y) restrict(amp, cpu);
-
-extern unsigned atomic_fetch_and(unsigned *x, unsigned y) restrict(amp,cpu);
-extern int atomic_fetch_and(int *x, int y) restrict(amp, cpu);
-
-extern unsigned atomic_fetch_or(unsigned *x, unsigned y) restrict(amp,cpu);
-extern int atomic_fetch_or(int *x, int y) restrict(amp, cpu);
-
-extern unsigned atomic_fetch_xor(unsigned *x, unsigned y) restrict(amp,cpu);
-extern int atomic_fetch_xor(int *x, int y) restrict(amp, cpu);
-#endif
-
-#if __KALMAR_ACCELERATOR__ == 1
-extern "C" unsigned int atomic_max_unsigned(unsigned int *p, unsigned int val) restrict(amp);
-extern "C" int atomic_max_int(int *p, int val) restrict(amp);
-
-static inline unsigned int atomic_fetch_max(unsigned int *x, unsigned int y) restrict(amp) {
-  return atomic_max_unsigned(x, y);
-}
-static inline int atomic_fetch_max(int *x, int y) restrict(amp) {
-  return atomic_max_int(x, y);
-}
-
-extern "C" unsigned int atomic_min_unsigned(unsigned int *p, unsigned int val) restrict(amp);
-extern "C" int atomic_min_int(int *p, int val) restrict(amp);
-
-static inline unsigned int atomic_fetch_min(unsigned int *x, unsigned int y) restrict(amp) {
-  return atomic_min_unsigned(x, y);
-}
-static inline int atomic_fetch_min(int *x, int y) restrict(amp) {
-  return atomic_min_int(x, y);
-}
-#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-unsigned int atomic_max_unsigned(unsigned int *p, unsigned int val);
-int atomic_max_int(int *p, int val);
-
-static inline unsigned int atomic_fetch_max(unsigned int *x, unsigned int y) restrict(amp) {
-  return atomic_max_unsigned(x, y);
-}
-static inline int atomic_fetch_max(int *x, int y) restrict(amp) {
-  return atomic_max_int(x, y);
-}
-
-unsigned int atomic_min_unsigned(unsigned int *p, unsigned int val);
-int atomic_min_int(int *p, int val);
-
-static inline unsigned int atomic_fetch_min(unsigned int *x, unsigned int y) restrict(amp) {
-  return atomic_min_unsigned(x, y);
-}
-static inline int atomic_fetch_min(int *x, int y) restrict(amp) {
-  return atomic_min_int(x, y);
-}
-#else
-extern int atomic_fetch_max(int * dest, int val) restrict(amp, cpu);
-extern unsigned int atomic_fetch_max(unsigned int * dest, unsigned int val) restrict(amp, cpu);
-
-extern int atomic_fetch_min(int * dest, int val) restrict(amp, cpu);
-extern unsigned int atomic_fetch_min(unsigned int * dest, unsigned int val) restrict(amp, cpu);
-#endif
-
-/** @} */
-
-/** @{ */
-/**
- * Atomically increment or decrement the value stored at the location point to
- * by dest.
- *
- * @param[inout] dest An pointer to the location which needs to be atomically
- *                    modified. The location may reside within a
- *                    concurrency::array or concurrency::array_view or within a
- *                    tile_static variable.
- * @return These functions return the old value which was previously stored at
- *         dest, and that was atomically replaced. These functions always
- *         succeed.
- */
-#if __KALMAR_ACCELERATOR__ == 1
-extern "C" unsigned int atomic_inc_unsigned(unsigned int *p) restrict(amp);
-extern "C" int atomic_inc_int(int *p) restrict(amp);
-
-static inline unsigned int atomic_fetch_inc(unsigned int *x) restrict(amp,cpu) {
-  return atomic_inc_unsigned(x);
-}
-static inline int atomic_fetch_inc(int *x) restrict(amp,cpu) {
-  return atomic_inc_int(x);
-}
-
-extern "C" unsigned int atomic_dec_unsigned(unsigned int *p) restrict(amp);
-extern "C" int atomic_dec_int(int *p) restrict(amp);
-
-static inline unsigned int atomic_fetch_dec(unsigned int *x) restrict(amp,cpu) {
-  return atomic_dec_unsigned(x);
-}
-static inline int atomic_fetch_dec(int *x) restrict(amp,cpu) {
-  return atomic_dec_int(x);
-}
-#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-unsigned int atomic_inc_unsigned(unsigned int *p);
-int atomic_inc_int(int *p);
-
-static inline unsigned atomic_fetch_inc(unsigned *x) restrict(amp,cpu) {
-  return atomic_inc_unsigned(x);
-}
-static inline int atomic_fetch_inc(int *x) restrict(amp,cpu) {
-  return atomic_inc_int(x);
-}
-
-unsigned int atomic_dec_unsigned(unsigned int *p);
-int atomic_dec_int(int *p);
-
-static inline unsigned atomic_fetch_dec(unsigned *x) restrict(amp,cpu) {
-  return atomic_dec_unsigned(x);
-}
-static inline int atomic_fetch_dec(int *x) restrict(amp,cpu) {
-  return atomic_dec_int(x);
-}
-#else
-extern int atomic_fetch_inc(int * _Dest) restrict(amp, cpu);
-extern unsigned int atomic_fetch_inc(unsigned int * _Dest) restrict(amp, cpu);
-
-extern int atomic_fetch_dec(int * _Dest) restrict(amp, cpu);
-extern unsigned int atomic_fetch_dec(unsigned int * _Dest) restrict(amp, cpu);
-#endif
-
-/** @} */
-
-// ------------------------------------------------------------------------
 // parallel_for_each
 // ------------------------------------------------------------------------
 
-template <int N, typename Kernel>
-void parallel_for_each(const accelerator_view&, extent<N> compute_domain, const Kernel& f);
-
-template <int D0, int D1, int D2, typename Kernel>
-void parallel_for_each(const accelerator_view& accl_view,
-                       tiled_extent<D0,D1,D2> compute_domain, const Kernel& f);
-
-template <int D0, int D1, typename Kernel>
-void parallel_for_each(const accelerator_view& accl_view,
-                       tiled_extent<D0,D1> compute_domain, const Kernel& f);
-
-template <int D0, typename Kernel>
-void parallel_for_each(const accelerator_view& accl_view,
-                       tiled_extent<D0> compute_domain, const Kernel& f);
-
-template <int N, typename Kernel>
-void parallel_for_each(extent<N> compute_domain, const Kernel& f){
-    auto que = Kalmar::get_availabe_que(f);
-    const accelerator_view av(que);
-    parallel_for_each(av, compute_domain, f);
-}
-
-template <int D0, int D1, int D2, typename Kernel>
-void parallel_for_each(tiled_extent<D0,D1,D2> compute_domain, const Kernel& f) {
-    auto que = Kalmar::get_availabe_que(f);
-    const accelerator_view av(que);
-    parallel_for_each(av, compute_domain, f);
-}
-
-template <int D0, int D1, typename Kernel>
-void parallel_for_each(tiled_extent<D0,D1> compute_domain, const Kernel& f) {
-    auto que = Kalmar::get_availabe_que(f);
-    const accelerator_view av(que);
-    parallel_for_each(av, compute_domain, f);
-}
-
-template <int D0, typename Kernel>
-void parallel_for_each(tiled_extent<D0> compute_domain, const Kernel& f) {
-    auto que = Kalmar::get_availabe_que(f);
-    const accelerator_view av(que);
-    parallel_for_each(av, compute_domain, f);
-}
-
-template <int N, typename Kernel, typename _Tp>
-struct pfe_helper
+template<int N, typename Kernel>
+inline
+void parallel_for_each(const extent<N>& compute_domain, const Kernel& f)
 {
-    static inline void call(Kernel& k, _Tp& idx) restrict(amp,cpu) {
-        int i;
-        for (i = 0; i < k.ext[N - 1]; ++i) {
-            idx[N - 1] = i;
-            pfe_helper<N - 1, Kernel, _Tp>::call(k, idx);
+    parallel_for_each(
+        accelerator::get_auto_selection_view(), compute_domain, f);
+}
+
+template<typename Kernel, int... dims>
+inline
+void parallel_for_each(
+    const tiled_extent<dims...>& compute_domain, const Kernel& f)
+{
+    parallel_for_each(
+        accelerator::get_auto_selection_view(), compute_domain, f);
+}
+
+template<int n>
+inline
+void validate_compute_domain(const Concurrency::extent<n>& compute_domain)
+{
+    std::size_t sz{1};
+    for (auto i = 0; i != n; ++i) {
+        sz *= compute_domain[i];
+
+        if (sz < 1) throw invalid_compute_domain{"Extent is not positive."};
+        if (sz > UINT_MAX) throw invalid_compute_domain{"Extent is too large."};
+    }
+}
+
+template<int N, typename Kernel>
+inline
+void parallel_for_each(
+    const accelerator_view& av,
+    const extent<N>& compute_domain,
+    const Kernel& f)
+{
+    if (av.get_accelerator().get_device_path() == L"cpu") {
+      throw runtime_exception{
+          Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL};
+    }
+
+    validate_compute_domain(compute_domain);
+
+    Kalmar::launch_kernel(av.pQueue, compute_domain, f);
+}
+
+
+// parallel_for_each, tiled
+inline
+void validate_tile_dims()
+{}
+
+template<int dim, int... dims>
+inline
+void validate_tile_dims()
+{
+    static_assert(
+        dim <= 1024, "The maximum number of threads in a tile is 1024.");
+
+    validate_tile_dims<dims...>();
+}
+
+
+template<int... dims>
+inline
+void validate_tiled_compute_domain(const tiled_extent<dims...>& compute_domain)
+{
+    constexpr int tmp[]{dims...};
+
+    for (auto i = 0u; i != compute_domain.rank; ++i) {
+        if (compute_domain[i] % tmp[i]) {
+            throw invalid_compute_domain{"Extent not divisible by tile size."};
         }
     }
-};
-template <typename Kernel, typename _Tp>
-struct pfe_helper<0, Kernel, _Tp>
+}
+
+template <typename Kernel, int... dims>
+inline
+void parallel_for_each(
+    const accelerator_view& av,
+    const tiled_extent<dims...>& compute_domain,
+    const Kernel& f)
 {
-    static inline void call(Kernel& k, _Tp& idx) restrict(amp,cpu) {
-#if __KALMAR_ACCELERATOR__ == 1
-        k.k(idx);
-#endif
-    }
-};
+    validate_tile_dims<dims...>();
 
-template <int N, typename Kernel>
-class pfe_wrapper
-{
-public:
-    explicit pfe_wrapper(extent<N>& other, const Kernel& f) restrict(amp,cpu)
-        : ext(other), k(f) {}
-    void operator() (index<N> idx) restrict(amp,cpu) {
-        pfe_helper<N - 3, pfe_wrapper<N, Kernel>, index<N>>::call(*this, idx);
-    }
-private:
-    const extent<N> ext;
-    const Kernel k;
-    template <int K, typename Ker, typename _Tp>
-        friend struct pfe_helper;
-};
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunused-variable"
-template <int N, typename Kernel>
-__attribute__((noinline,used))
-void parallel_for_each(const accelerator_view& av, extent<N> compute_domain,
-                       const Kernel& f) restrict(cpu, amp) {
-#if __KALMAR_ACCELERATOR__ != 1
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-    int* foo1 = reinterpret_cast<int*>(&Kernel::__cxxamp_trampoline);
-    auto bar = &pfe_wrapper<N, Kernel>::operator();
-    auto qq = &index<N>::__cxxamp_opencl_index;
-    int* foo = reinterpret_cast<int*>(&pfe_wrapper<N, Kernel>::__cxxamp_trampoline);
-#endif
-    size_t compute_domain_size = 1;
-    for(int i = 0 ; i < N ; i++)
-    {
-      if(compute_domain[i]<=0)
-        throw invalid_compute_domain("Extent is less or equal than 0.");
-      if (static_cast<size_t>(compute_domain[i]) > 4294967295L)
-        throw invalid_compute_domain("Extent size too large.");
-      compute_domain_size *= static_cast<size_t>(compute_domain[i]);
-      if (compute_domain_size > 4294967295L)
-        throw invalid_compute_domain("Extent size too large.");
-    }
-
-    size_t ext[3] = {static_cast<size_t>(compute_domain[N - 1]),
-        static_cast<size_t>(compute_domain[N - 2]),
-        static_cast<size_t>(compute_domain[N - 3])};
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-    if (is_cpu()) {
-        launch_cpu_task(av.pQueue, f, compute_domain);
-        return;
-    }
-#endif
     if (av.get_accelerator().get_device_path() == L"cpu") {
-      throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
+        throw runtime_exception{
+            Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL};
     }
-    const pfe_wrapper<N, Kernel> _pf(compute_domain, f);
-    Kalmar::mcw_cxxamp_launch_kernel<pfe_wrapper<N, Kernel>, 3>(av.pQueue, ext, NULL, _pf);
-#else
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-    int* foo1 = reinterpret_cast<int*>(&Kernel::__cxxamp_trampoline);
-#endif
-    auto bar = &pfe_wrapper<N, Kernel>::operator();
-    auto qq = &index<N>::__cxxamp_opencl_index;
-    int* foo = reinterpret_cast<int*>(&pfe_wrapper<N, Kernel>::__cxxamp_trampoline);
-#endif
-}
-#pragma clang diagnostic pop
+    validate_compute_domain(compute_domain);
+    validate_tiled_domain(compute_domain);
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunused-variable"
-//1D parallel_for_each, nontiled
-template <typename Kernel>
-__attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av,
-    extent<1> compute_domain, const Kernel& f) restrict(cpu,amp) {
-#if __KALMAR_ACCELERATOR__ != 1
-  if(compute_domain[0]<=0) {
-    throw invalid_compute_domain("Extent is less or equal than 0.");
-  }
-  if (static_cast<size_t>(compute_domain[0]) > 4294967295L)
-    throw invalid_compute_domain("Extent size too large.");
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-  if (is_cpu()) {
-      launch_cpu_task(av.pQueue, f, compute_domain);
-      return;
-  }
-#endif
-  size_t ext = compute_domain[0];
-  if (av.get_accelerator().get_device_path() == L"cpu") {
-    throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
-  }
-  Kalmar::mcw_cxxamp_launch_kernel<Kernel, 1>(av.pQueue, &ext, NULL, f);
-#else //if __KALMAR_ACCELERATOR__ != 1
-  //to ensure functor has right operator() defined
-  //this triggers the trampoline code being emitted
-  auto foo = &Kernel::__cxxamp_trampoline;
-  auto bar = &Kernel::operator();
-#endif
+    Kalmar::launch_kernel(av.pQueue, compute_domain, f);
 }
-#pragma clang diagnostic pop
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunused-variable"
-//2D parallel_for_each, nontiled
-template <typename Kernel>
-__attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av,
-    extent<2> compute_domain, const Kernel& f) restrict(cpu,amp) {
-#if __KALMAR_ACCELERATOR__ != 1
-  if(compute_domain[0]<=0 || compute_domain[1]<=0) {
-    throw invalid_compute_domain("Extent is less or equal than 0.");
-  }
-  if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[1]) > 4294967295L)
-    throw invalid_compute_domain("Extent size too large.");
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-  if (is_cpu()) {
-      launch_cpu_task(av.pQueue, f, compute_domain);
-      return;
-  }
-#endif
-  size_t ext[2] = {static_cast<size_t>(compute_domain[1]),
-      static_cast<size_t>(compute_domain[0])};
-  if (av.get_accelerator().get_device_path() == L"cpu") {
-    throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
-  }
-  Kalmar::mcw_cxxamp_launch_kernel<Kernel, 2>(av.pQueue, ext, NULL, f);
-#else //if __KALMAR_ACCELERATOR__ != 1
-  //to ensure functor has right operator() defined
-  //this triggers the trampoline code being emitted
-  auto foo = &Kernel::__cxxamp_trampoline;
-  auto bar = &Kernel::operator();
-#endif
-}
-#pragma clang diagnostic pop
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunused-variable"
-//3D parallel_for_each, nontiled
-template <typename Kernel>
-__attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av,
-    extent<3> compute_domain, const Kernel& f) restrict(cpu,amp) {
-#if __KALMAR_ACCELERATOR__ != 1
-  if(compute_domain[0]<=0 || compute_domain[1]<=0 || compute_domain[2]<=0) {
-    throw invalid_compute_domain("Extent is less or equal than 0.");
-  }
-  if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[1]) > 4294967295L)
-    throw invalid_compute_domain("Extent size too large.");
-  if (static_cast<size_t>(compute_domain[1]) * static_cast<size_t>(compute_domain[2]) > 4294967295L)
-    throw invalid_compute_domain("Extent size too large.");
-  if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[2]) > 4294967295L)
-    throw invalid_compute_domain("Extent size too large.");
-  if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[1]) * static_cast<size_t>(compute_domain[2]) > 4294967295L)
-    throw invalid_compute_domain("Extent size too large.");
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-  if (is_cpu()) {
-      launch_cpu_task(av.pQueue, f, compute_domain);
-      return;
-  }
-#endif
-  size_t ext[3] = {static_cast<size_t>(compute_domain[2]),
-      static_cast<size_t>(compute_domain[1]),
-      static_cast<size_t>(compute_domain[0])};
-  if (av.get_accelerator().get_device_path() == L"cpu") {
-    throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
-  }
-  Kalmar::mcw_cxxamp_launch_kernel<Kernel, 3>(av.pQueue, ext, NULL, f);
-#else //if __KALMAR_ACCELERATOR__ != 1
-  //to ensure functor has right operator() defined
-  //this triggers the trampoline code being emitted
-  auto foo = &Kernel::__cxxamp_trampoline;
-  auto bar = &Kernel::operator();
-#endif
-}
-#pragma clang diagnostic pop
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunused-variable"
-//1D parallel_for_each, tiled
-template <int D0, typename Kernel>
-__attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av,
-    tiled_extent<D0> compute_domain, const Kernel& f) restrict(cpu,amp) {
-#if __KALMAR_ACCELERATOR__ != 1
-  if(compute_domain[0]<=0) {
-    throw invalid_compute_domain("Extent is less or equal than 0.");
-  }
-  if (static_cast<size_t>(compute_domain[0]) > 4294967295L)
-    throw invalid_compute_domain("Extent size too large.");
-  size_t ext = compute_domain[0];
-  size_t tile = compute_domain.tile_dim0;
-  static_assert( compute_domain.tile_dim0 <= 1024, "The maximum nuimber of threads in a tile is 1024");
-  if(ext % tile != 0) {
-    throw invalid_compute_domain("Extent can't be evenly divisible by tile size.");
-  }
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-  if (is_cpu()) {
-      launch_cpu_task(av.pQueue, f, compute_domain);
-  } else
-#endif
-  if (av.get_accelerator().get_device_path() == L"cpu") {
-    throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
-  }
-  Kalmar::mcw_cxxamp_launch_kernel<Kernel, 1>(av.pQueue, &ext, &tile, f);
-#else //if __KALMAR_ACCELERATOR__ != 1
-  tiled_index<D0> this_is_used_to_instantiate_the_right_index;
-  //to ensure functor has right operator() defined
-  //this triggers the trampoline code being emitted
-  auto foo = &Kernel::__cxxamp_trampoline;
-  auto bar = &Kernel::operator();
-#endif
-}
-#pragma clang diagnostic pop
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunused-variable"
-//2D parallel_for_each, tiled
-template <int D0, int D1, typename Kernel>
-__attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av,
-    tiled_extent<D0, D1> compute_domain, const Kernel& f) restrict(cpu,amp) {
-#if __KALMAR_ACCELERATOR__ != 1
-  if(compute_domain[0]<=0 || compute_domain[1]<=0) {
-    throw invalid_compute_domain("Extent is less or equal than 0.");
-  }
-  if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[1]) > 4294967295L)
-    throw invalid_compute_domain("Extent size too large.");
-  size_t ext[2] = { static_cast<size_t>(compute_domain[1]),
-                    static_cast<size_t>(compute_domain[0])};
-  size_t tile[2] = { compute_domain.tile_dim1,
-                     compute_domain.tile_dim0};
-  static_assert( (compute_domain.tile_dim1 * compute_domain.tile_dim0)<= 1024, "The maximum nuimber of threads in a tile is 1024");
-  if((ext[0] % tile[0] != 0) || (ext[1] % tile[1] != 0)) {
-    throw invalid_compute_domain("Extent can't be evenly divisible by tile size.");
-  }
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-  if (is_cpu()) {
-      launch_cpu_task(av.pQueue, f, compute_domain);
-  } else
-#endif
-  if (av.get_accelerator().get_device_path() == L"cpu") {
-    throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
-  }
-  Kalmar::mcw_cxxamp_launch_kernel<Kernel, 2>(av.pQueue, ext, tile, f);
-#else //if __KALMAR_ACCELERATOR__ != 1
-  tiled_index<D0, D1> this_is_used_to_instantiate_the_right_index;
-  //to ensure functor has right operator() defined
-  //this triggers the trampoline code being emitted
-  auto foo = &Kernel::__cxxamp_trampoline;
-  auto bar = &Kernel::operator();
-#endif
-}
-#pragma clang diagnostic pop
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunused-variable"
-//3D parallel_for_each, tiled
-template <int D0, int D1, int D2, typename Kernel>
-__attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av,
-    tiled_extent<D0, D1, D2> compute_domain, const Kernel& f) restrict(cpu,amp) {
-#if __KALMAR_ACCELERATOR__ != 1
-  if(compute_domain[0]<=0 || compute_domain[1]<=0 || compute_domain[2]<=0) {
-    throw invalid_compute_domain("Extent is less or equal than 0.");
-  }
-  if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[1]) > 4294967295L)
-    throw invalid_compute_domain("Extent size too large.");
-  if (static_cast<size_t>(compute_domain[1]) * static_cast<size_t>(compute_domain[2]) > 4294967295L)
-    throw invalid_compute_domain("Extent size too large.");
-  if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[2]) > 4294967295L)
-    throw invalid_compute_domain("Extent size too large.");
-  if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[1]) * static_cast<size_t>(compute_domain[2]) > 4294967295L)
-    throw invalid_compute_domain("Extent size too large.");
-  size_t ext[3] = { static_cast<size_t>(compute_domain[2]),
-                    static_cast<size_t>(compute_domain[1]),
-                    static_cast<size_t>(compute_domain[0])};
-  size_t tile[3] = { compute_domain.tile_dim2,
-                     compute_domain.tile_dim1,
-                     compute_domain.tile_dim0};
-  static_assert(( compute_domain.tile_dim2 * compute_domain.tile_dim1* compute_domain.tile_dim0)<= 1024, "The maximum nuimber of threads in a tile is 1024");
-  if((ext[0] % tile[0] != 0) || (ext[1] % tile[1] != 0) || (ext[2] % tile[2] != 0)) {
-    throw invalid_compute_domain("Extent can't be evenly divisible by tile size.");
-  }
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-  if (is_cpu()) {
-      launch_cpu_task(av.pQueue, f, compute_domain);
-  } else
-#endif
-  if (av.get_accelerator().get_device_path() == L"cpu") {
-    throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
-  }
-  Kalmar::mcw_cxxamp_launch_kernel<Kernel, 3>(av.pQueue, ext, tile, f);
-#else //if __KALMAR_ACCELERATOR__ != 1
-  tiled_index<D0, D1, D2> this_is_used_to_instantiate_the_right_index;
-  //to ensure functor has right operator() defined
-  //this triggers the trampoline code being emitted
-  auto foo = &Kernel::__cxxamp_trampoline;
-  auto bar = &Kernel::operator();
-#endif
-}
-#pragma clang diagnostic pop
-
 } // namespace Concurrency

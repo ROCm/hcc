@@ -6,7 +6,21 @@
 
 // Kalmar Runtime implementation (HSA version)
 
+#include "kalmar_runtime.h"
+#include "kalmar_aligned_alloc.h"
+
+#include "hc_am_internal.hpp"
+#include "unpinned_copy_engine.h"
+#include "hc_rt_debug.h"
+#include "hc_printf.hpp"
+
 #include "../hc2/headers/types/program_state.hpp"
+
+#include <hsa/hsa.h>
+#include <hsa/hsa_ext_finalize.h>
+#include <hsa/hsa_ext_amd.h>
+#include <hsa/amd_hsa_kernel_code.h>
+#include <hsa/hsa_ven_amd_loader.h>
 
 #include <algorithm>
 #include <cassert>
@@ -14,10 +28,13 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <ctime>
 #include <fstream>
 #include <future>
+#include <iomanip>
 #include <iostream>
 #include <map>
+#include <memory>
 #include <mutex>
 #include <sstream>
 #include <string>
@@ -27,28 +44,11 @@
 #include <vector>
 
 #ifndef USE_LIBCXX
-#include <cxxabi.h>
+    #include <cxxabi.h>
 #endif
 
-#include <hsa/hsa.h>
-#include <hsa/hsa_ext_finalize.h>
-#include <hsa/hsa_ext_amd.h>
-#include <hsa/amd_hsa_kernel_code.h>
-#include <hsa/hsa_ven_amd_loader.h>
-
-#include "kalmar_runtime.h"
-#include "kalmar_aligned_alloc.h"
-
-#include "hc_am_internal.hpp"
-#include "unpinned_copy_engine.h"
-#include "hc_rt_debug.h"
-#include "hc_printf.hpp"
-
-#include <time.h>
-#include <iomanip>
-
 #ifndef KALMAR_DEBUG
-#define KALMAR_DEBUG (0)
+    #define KALMAR_DEBUG (0)
 #endif
 
 #define CHECK_OLDER_COMPLETE 0
@@ -550,11 +550,6 @@ inline static void checkHCCRuntimeStatus(const HCCRuntimeStatus status, const un
 
 } // namespace Kalmar
 
-
-
-extern "C" void PushArgImpl(void *ker, int idx, size_t sz, const void *v);
-extern "C" void PushArgPtrImpl(void *ker, int idx, size_t sz, const void *v);
-
 // forward declaration
 namespace Kalmar {
 class HSAQueue;
@@ -983,87 +978,95 @@ public:
 }; // end of HSABarrier
 
 class HSADispatch : public HSAOp {
-private:
-    Kalmar::HSADevice* device;
+    Kalmar::HSADevice* device_{nullptr};
 
-    const char *kernel_name;
-    const HSAKernel* kernel;
+    const char* kernel_name_{nullptr};
+    const HSAKernel* kernel_{nullptr};
 
-    std::vector<uint8_t> arg_vec;
-    uint32_t arg_count;
-    size_t prevArgVecCapacity;
-    void* kernargMemory;
-    int kernargMemoryIndex;
+    std::unique_ptr<void, decltype(hsa_amd_memory_unlock)*> kernargMemory_{
+        nullptr, hsa_amd_memory_unlock};
 
+    hsa_kernel_dispatch_packet_t aql_{};
+    bool isDispatched_{false};
+    hsa_wait_state_t waitMode_{};
 
-    hsa_kernel_dispatch_packet_t aql;
-    bool isDispatched;
-    hsa_wait_state_t waitMode;
-
-
-    std::shared_future<void>* future;
-
+    std::unique_ptr<std::shared_future<void>> future_{};
 public:
-    std::shared_future<void>* getFuture() override { return future; }
+    std::shared_future<void>* getFuture() override { return future_.get(); }
 
-    void setKernelName(const char *x_kernel_name) { kernel_name = x_kernel_name;};
-    const char *getKernelName() { return kernel_name ? kernel_name : (kernel ? kernel->shortKernelName.c_str() : "<unknown_kernel>"); };
-    const char *getLongKernelName() { return (kernel ? kernel->getLongKernelName().c_str() : "<unknown_kernel>"); };
-
+    void setKernelName(const char* name) { kernel_name_ = name; }
+    const char* getKernelName() const
+    {
+        return kernel_name_ ? kernel_name_ :
+            (kernel_ ? kernel_->shortKernelName.c_str() : "<unknown_kernel>");
+    }
+    const char* getLongKernelName() const
+    {
+        return kernel_ ?
+            kernel_->getLongKernelName().c_str() : "<unknown_kernel>";
+    }
 
     void setWaitMode(Kalmar::hcWaitMode mode) override {
         switch (mode) {
             case Kalmar::hcWaitModeBlocked:
-                waitMode = HSA_WAIT_STATE_BLOCKED;
+                waitMode_ = HSA_WAIT_STATE_BLOCKED;
             break;
             case Kalmar::hcWaitModeActive:
-                waitMode = HSA_WAIT_STATE_ACTIVE;
+                waitMode_ = HSA_WAIT_STATE_ACTIVE;
             break;
         }
     }
 
-
     ~HSADispatch() {
-
-        if (isDispatched) {
-            hsa_status_t status = HSA_STATUS_SUCCESS;
-            status = waitComplete();
+        if (isDispatched_) {
+            auto status = waitComplete();
             STATUS_CHECK(status, __LINE__);
         }
         dispose();
     }
 
-    HSADispatch(Kalmar::HSADevice* _device, Kalmar::KalmarQueue* _queue, HSAKernel* _kernel,
-                const hsa_kernel_dispatch_packet_t *aql=nullptr);
+    HSADispatch(
+        Kalmar::HSADevice* device,
+        Kalmar::KalmarQueue* queue,
+        HSAKernel* kernel,
+        const hsa_kernel_dispatch_packet_t* aql = nullptr);
+    HSADispatch(
+        Kalmar::HSADevice* device,
+        Kalmar::KalmarQueue* queue,
+        HSAKernel* kernel,
+        const void* callable,
+        std::size_t callable_size,
+        const hsa_kernel_dispatch_packet_t* aql = nullptr)
+        : HSADispatch{device, queue, kernel, aql}
+    {
+        void* tmp{nullptr};
+        auto r = hsa_amd_memory_lock(
+            const_cast<void*>(callable), callable_size, nullptr, 0, &tmp);
 
-    hsa_status_t pushFloatArg(float f) { return pushArgPrivate(f); }
-    hsa_status_t pushIntArg(int i) { return pushArgPrivate(i); }
-    hsa_status_t pushBooleanArg(unsigned char z) { return pushArgPrivate(z); }
-    hsa_status_t pushByteArg(char b) { return pushArgPrivate(b); }
-    hsa_status_t pushLongArg(long j) { return pushArgPrivate(j); }
-    hsa_status_t pushDoubleArg(double d) { return pushArgPrivate(d); }
-    hsa_status_t pushShortArg(short s) { return pushArgPrivate(s); }
-    hsa_status_t pushPointerArg(void *addr) { return pushArgPrivate(addr); }
+        STATUS_CHECK(r, __LINE__);
 
-    hsa_status_t clearArgs() {
-        arg_count = 0;
-        arg_vec.clear();
-        return HSA_STATUS_SUCCESS;
+        kernargMemory_.reset(tmp);
     }
 
-
     void overrideAcquireFenceIfNeeded();
-    hsa_status_t setLaunchConfiguration(const int dims, size_t *globalDims, size_t *localDims,
-                                        const int dynamicGroupSize);
+    hsa_status_t setLaunchConfiguration(
+        int dims,
+        const std::size_t* globalDims,
+        const std::size_t* localDims,
+        int dynamicGroupSize);
 
     hsa_status_t dispatchKernelWaitComplete();
 
     hsa_status_t dispatchKernelAsyncFromOp();
-    hsa_status_t dispatchKernelAsync(const void *hostKernarg, int hostKernargSize, bool allocSignal);
+    hsa_status_t dispatchKernelAsync(
+        void *hostKernarg, std::size_t hostKernargSize, bool allocSignal);
 
     // dispatch a kernel asynchronously
-    hsa_status_t dispatchKernel(hsa_queue_t* lockedHsaQueue, const void *hostKernarg,
-                               int hostKernargSize, bool allocSignal);
+    hsa_status_t dispatchKernel(
+        hsa_queue_t* lockedHsaQueue,
+        void *hostKernarg,
+        std::size_t hostKernargSize,
+        bool allocSignal);
 
     // wait for the kernel to finish execution
     hsa_status_t waitComplete();
@@ -1081,36 +1084,7 @@ public:
 
     uint64_t getEndTimestamp() override;
 
-    const hsa_kernel_dispatch_packet_t &getAql() const { return aql; };
-
-private:
-    template <typename T>
-    hsa_status_t pushArgPrivate(T val) {
-        /* add padding if necessary */
-        int padding_size = (arg_vec.size() % sizeof(T)) ? (sizeof(T) - (arg_vec.size() % sizeof(T))) : 0;
-#if KALMAR_DEBUG && HCC_DEBUG_KARG
-        printf("push %lu bytes into kernarg: ", sizeof(T) + padding_size);
-#endif
-        for (size_t i = 0; i < padding_size; ++i) {
-            arg_vec.push_back((uint8_t)0x00);
-#if KALMAR_DEBUG && HCC_DEBUG_KARG
-            printf("%02X ", (uint8_t)0x00);
-#endif
-        }
-        uint8_t* ptr = static_cast<uint8_t*>(static_cast<void*>(&val));
-        for (size_t i = 0; i < sizeof(T); ++i) {
-            arg_vec.push_back(ptr[i]);
-#if KALMAR_DEBUG && HCC_DEBUG_KARG
-            printf("%02X ", ptr[i]);
-#endif
-        }
-#if KALMAR_DEBUG && HCC_DEBUG_KARG
-        printf("\n");
-#endif
-        arg_count++;
-        return HSA_STATUS_SUCCESS;
-    }
-
+    const hsa_kernel_dispatch_packet_t& getAql() const { return aql_; };
 }; // end of HSADispatch
 
 //-----
@@ -1603,27 +1577,29 @@ public:
         drainingQueue_ = false;
    }
 
-    void LaunchKernel(void *ker, size_t nr_dim, size_t *global, size_t *local) override {
+    void LaunchKernel(
+        void* ker,
+        size_t nr_dim,
+        const size_t* global,
+        const size_t* local) override
+    {
         LaunchKernelWithDynamicGroupMemory(ker, nr_dim, global, local, 0);
     }
 
-    void LaunchKernelWithDynamicGroupMemory(void *ker, size_t nr_dim, size_t *global, size_t *local, size_t dynamic_group_size) override {
-        HSADispatch *dispatch =
-            reinterpret_cast<HSADispatch*>(ker);
-        size_t tmp_local[] = {0, 0, 0};
-        if (!local)
-            local = tmp_local;
-        dispatch->setLaunchConfiguration(nr_dim, global, local, dynamic_group_size);
+    void LaunchKernelWithDynamicGroupMemory(
+      void* ker,
+      size_t nr_dim,
+      const size_t* global,
+      const size_t* local,
+      size_t dynamic_group_size) override
+    {
+        std::unique_ptr<HSADispatch> dispatch{static_cast<HSADispatch*>(ker)};
+        dispatch->setLaunchConfiguration(
+            nr_dim, global, local, dynamic_group_size);
 
         // wait for previous kernel dispatches be completed
-        std::for_each(std::begin(kernelBufferMap[ker]), std::end(kernelBufferMap[ker]),
-                      [&] (void* buffer) {
-                        waitForDependentAsyncOps(buffer);
-                      });
-
-        waitForStreamDeps(dispatch);
-
-
+        for (auto&& buf : kernelBufferMap[ker]) waitForDependentAsyncOps(buf);
+        waitForStreamDeps(dispatch.get());
 
         // dispatch the kernel
         // and wait for its completion
@@ -1632,61 +1608,60 @@ public:
         // clear data in kernelBufferMap
         kernelBufferMap[ker].clear();
         kernelBufferMap.erase(ker);
-
-        delete(dispatch);
     }
 
-    std::shared_ptr<KalmarAsyncOp> LaunchKernelAsync(void *ker, size_t nr_dim, size_t *global, size_t *local) override {
-        return LaunchKernelWithDynamicGroupMemoryAsync(ker, nr_dim, global, local, 0);
+    std::shared_ptr<KalmarAsyncOp> LaunchKernelAsync(
+        void* ker,
+        std::size_t nr_dim,
+        const std::size_t* global,
+        const std::size_t* local) override
+    {
+        return LaunchKernelWithDynamicGroupMemoryAsync(
+            ker, nr_dim, global, local, 0);
     }
 
-    std::shared_ptr<KalmarAsyncOp> LaunchKernelWithDynamicGroupMemoryAsync(void *ker, size_t nr_dim, size_t *global, size_t *local, size_t dynamic_group_size) override {
-        hsa_status_t status = HSA_STATUS_SUCCESS;
-
+    std::shared_ptr<KalmarAsyncOp> LaunchKernelWithDynamicGroupMemoryAsync(
+        void* ker,
+        size_t nr_dim,
+        const size_t* global,
+        const size_t* local,
+        size_t dynamic_group_size) override
+    {
         HSADispatch *dispatch =
             reinterpret_cast<HSADispatch*>(ker);
 
-
-
-        bool hasArrayViewBufferDeps = (kernelBufferMap.find(ker) != kernelBufferMap.end());
-
+        bool hasArrayViewBufferDeps =
+            (kernelBufferMap.find(ker) != kernelBufferMap.end());
 
         if (hasArrayViewBufferDeps) {
-            // wait for previous kernel dispatches be completed
-            std::for_each(std::begin(kernelBufferMap[ker]), std::end(kernelBufferMap[ker]),
-                      [&] (void* buffer) {
-                        waitForDependentAsyncOps(buffer);
-                     });
+            for (auto&& buffer : kernelBufferMap[ker]) {
+                waitForDependentAsyncOps(buffer);
+            }
         }
 
         waitForStreamDeps(dispatch);
-
 
         // create a shared_ptr instance
         std::shared_ptr<KalmarAsyncOp> sp_dispatch(dispatch);
         // associate the kernel dispatch with this queue
         pushAsyncOp(std::static_pointer_cast<HSAOp> (sp_dispatch));
 
-        size_t tmp_local[] = {0, 0, 0};
-        if (!local)
-            local = tmp_local;
-        dispatch->setLaunchConfiguration(nr_dim, global, local, dynamic_group_size);
+        dispatch->setLaunchConfiguration(
+            nr_dim, global, local, dynamic_group_size);
 
         // dispatch the kernel
-        status = dispatch->dispatchKernelAsyncFromOp();
+        auto status = dispatch->dispatchKernelAsyncFromOp();
         STATUS_CHECK(status, __LINE__);
 
-
         if (hasArrayViewBufferDeps) {
-            // associate all buffers used by the kernel with the kernel dispatch instance
-            std::for_each(std::begin(kernelBufferMap[ker]), std::end(kernelBufferMap[ker]),
-                          [&] (void* buffer) {
-                            bufferKernelMap[buffer].push_back(sp_dispatch);
-                          });
+            // associate all buffers used by the kernel with the kernel dispatch
+            // instance
+            for (auto&& buffer : kernelBufferMap[ker]) {
+                bufferKernelMap[buffer].emplace_back(sp_dispatch);
+            }
 
-                // clear data in kernelBufferMap
-                kernelBufferMap[ker].clear();
-                kernelBufferMap.erase(ker);
+            // clear data in kernelBufferMap
+            kernelBufferMap.erase(ker);
         }
 
         return sp_dispatch;
@@ -1957,8 +1932,6 @@ public:
     }
 
     void Push(void *kernel, int idx, void *device, bool modify) override {
-        PushArgImpl(kernel, idx, sizeof(void*), &device);
-
         // register the buffer with the kernel
         // when the buffer may be read/written by the kernel
         // the buffer is not registered if it's only read by the kernel
@@ -1992,9 +1965,12 @@ public:
         return true;
     }
 
-    void dispatch_hsa_kernel(const hsa_kernel_dispatch_packet_t *aql,
-                             const void * args, size_t argsize,
-                             hc::completion_future *cf, const char *kernelName) override ;
+    void dispatch_hsa_kernel(
+        const hsa_kernel_dispatch_packet_t* aql,
+        void* args,
+        size_t argsize,
+        hc::completion_future* cf,
+        const char* kernelName) override;
 
     bool set_cu_mask(const std::vector<bool>& cu_mask) override {
         // get device's total compute unit count
@@ -2762,7 +2738,11 @@ public:
         return isCompatible;
     }
 
-    void* CreateKernel(const char* fun, Kalmar::KalmarQueue *queue) override {
+    void* CreateKernel(
+        const char* fun,
+        Kalmar::KalmarQueue *queue,
+        const void* callable,
+        std::size_t callable_size) override {
         // try load kernels lazily in case it was not done so at bootstrap
         // due to HCC_LAZYINIT env var
         if (executables.size() == 0) {
@@ -2786,64 +2766,14 @@ public:
 #endif
                 shortName = demangleStatus ? fun : std::string(demangled);
                 try {
-                    if (demangleStatus == 0) {
+                    if (demangleStatus == 0 && kernelNameFormat == 2) {
+                        shortName = demangled;
+                    }
 
-                        if (kernelNameFormat == 2) {
-                            shortName = demangled;
-                        } else {
-                            // kernelNameFormat == 0 or unspecified:
-
-                            // Example: HIP_kernel_functor_name_begin_unnamed_HIP_kernel_functor_name_end_5::__cxxamp_trampoline(unsigned int, unsigned int, unsigned int, unsigned int, unsigned int, unsigned int, float*, long long)"
-
-                            std::string hip_begin_str  ("::HIP_kernel_functor_name_begin_");
-                            std::string hip_end_str    ("_HIP_kernel_functor_name_end");
-                            int hip_begin = shortName.find(hip_begin_str);
-                            int hip_end   = shortName.find(hip_end_str);
-
-                            if ((hip_begin != -1) && (hip_end != -1) && (hip_end > hip_begin)) {
-                                // HIP kernel with markers
-                                int start_pos = hip_begin + hip_begin_str.length();
-                                std::string hipname = shortName.substr(start_pos, hip_end - start_pos) ;
-                                DBOUTL(DB_CODE, "hipname=" << hipname);
-                                if (hipname == "unnamed") {
-                                    shortName = shortName.substr(0, hip_begin);
-                                } else {
-                                    shortName = hipname;
-                                }
-
-                            } else {
-                                // PFE not from HIP:
-
-                                // strip off hip launch template wrapper:
-                                std::string hipImplString ("void hip_impl::grid_launch_hip_impl_<");
-                                int begin = shortName.find(hipImplString);
-                                if ((begin != std::string::npos)) {
-                                    begin += hipImplString.length() ;
-                                } else {
-                                    begin = 0;
-                                }
-
-                                shortName = shortName.substr(begin);
-
-                                // Strip off any leading return type:
-                                begin = shortName.find(" ", 0);
-                                if (begin == std::string::npos) {
-                                    begin = 0;
-                                } else {
-                                    begin +=1; // skip the space
-                                }
-                                shortName = shortName.substr(begin);
-
-                                DBOUTL(DB_CODE, "shortKernel processing demangled non-hip.  beginChar=" << begin << " shortName=" << shortName);
-                            }
-
-                        }
-
-                        if (HCC_DB_SYMBOL_FORMAT & 0x10) {
-                            // trim everything after first (
-                            int begin = shortName.find("(");
-                            shortName = shortName.substr(0, begin);
-                        }
+                    if (HCC_DB_SYMBOL_FORMAT & 0x10) {
+                        // trim everything after first (
+                        int begin = shortName.find("(");
+                        shortName = shortName.substr(0, begin);
                     }
                 } catch (std::out_of_range& exception) {
                     // Do something sensible if string pattern is not what we expect
@@ -2855,13 +2785,16 @@ public:
             DBOUT (DB_CODE, "CreateKernel_raw=       " << fun << "\n");
 
             if (executables.size() != 0) {
-                for (auto executable_iterator : executables) {
+                for (auto&& executable_iterator : executables) {
                     HSAExecutable *executable = executable_iterator.second;
 
                     // Get symbol handle.
-                    hsa_status_t status;
                     hsa_executable_symbol_t kernelSymbol;
-                    status = hsa_executable_get_symbol_by_name(executable->hsaExecutable, fun, const_cast<hsa_agent_t*>(&agent), &kernelSymbol);
+                    auto status = hsa_executable_get_symbol_by_name(
+                        executable->hsaExecutable,
+                        fun,
+                        const_cast<hsa_agent_t*>(&agent),
+                        &kernelSymbol);
                     if (status == HSA_STATUS_SUCCESS) {
                         // Get code handle.
                         uint64_t kernelCodeHandle;
@@ -2915,8 +2848,7 @@ public:
         // HSAQueue::LaunchKernel()
         // or it will be created as a shared_ptr<KalmarAsyncOp> in:
         // HSAQueue::LaunchKernelAsync()
-        HSADispatch *dispatch = new HSADispatch(this, queue, kernel);
-        return dispatch;
+        return new HSADispatch{this, queue, kernel, callable, callable_size};
     }
 
     std::shared_ptr<KalmarQueue> createQueue(execute_order order = execute_in_order) override {
@@ -2936,7 +2868,7 @@ public:
     std::vector< std::shared_ptr<KalmarQueue> > get_all_queues() override {
         std::vector< std::shared_ptr<KalmarQueue> > result;
         queues_mutex.lock();
-        for (auto queue : queues) {
+        for (auto&& queue : queues) {
             if (!queue.expired()) {
                 result.push_back(queue.lock());
             }
@@ -3046,137 +2978,6 @@ public:
                 hsa_amd_memory_pool_free(kernargBuffer);
             }
          }
-    }
-
-    void growKernargBuffer()
-    {
-        uint8_t * kernargMemory = nullptr;
-        // increase kernarg pool on demand by KERNARG_POOL_SIZE
-        hsa_amd_memory_pool_t kernarg_region = getHSAKernargRegion();
-
-        hsa_status_t status = hsa_amd_memory_pool_allocate(kernarg_region, KERNARG_POOL_SIZE * KERNARG_BUFFER_SIZE, 0, (void**)(&kernargMemory));
-        STATUS_CHECK(status, __LINE__);
-
-        status = hsa_amd_agents_allow_access(1, &agent, NULL, kernargMemory);
-        STATUS_CHECK(status, __LINE__);
-
-        for (size_t i = 0; i < KERNARG_POOL_SIZE * KERNARG_BUFFER_SIZE; i+=KERNARG_BUFFER_SIZE) {
-            kernargPool.push_back(kernargMemory+i);
-            kernargPoolFlag.push_back(false);
-        };
-    }
-
-    std::pair<void*, int> getKernargBuffer(int size) {
-        void* ret = nullptr;
-        int cursor = 0;
-
-        // find an available buffer in the pool in case
-        // - kernarg pool is available
-        // - requested size is smaller than KERNARG_BUFFER_SIZE
-        if ( (KERNARG_POOL_SIZE > 0) && (size <= KERNARG_BUFFER_SIZE) ) {
-            kernargPoolMutex.lock();
-            cursor = kernargCursor;
-
-            if (kernargPoolFlag[cursor] == false) {
-                // the cursor is valid, use it
-                ret = kernargPool[cursor];
-
-                // set the kernarg buffer as used
-                kernargPoolFlag[cursor] = true;
-
-                // simply move the cursor to the next index
-                ++kernargCursor;
-                if (kernargCursor == kernargPool.size()) kernargCursor = 0;
-            } else {
-                // the cursor is not valid, sequentially find the next available slot
-                bool found = false;
-
-                int startingCursor = cursor;
-                do {
-                    ++cursor;
-                    if (cursor == kernargPool.size()) cursor = 0;
-
-                    if (kernargPoolFlag[cursor] == false) {
-                        // the cursor is valid, use it
-                        ret = kernargPool[cursor];
-
-                        // set the kernarg buffer as used
-                        kernargPoolFlag[cursor] = true;
-
-                        // simply move the cursor to the next index
-                        kernargCursor = cursor + 1;
-                        if (kernargCursor == kernargPool.size()) kernargCursor = 0;
-
-                        // break from the loop
-                        found = true;
-                        break;
-                    }
-                } while(cursor != startingCursor); // ensure we at most scan the vector once
-
-                if (found == false) {
-                    hsa_status_t status = HSA_STATUS_SUCCESS;
-
-                    // increase kernarg pool on demand by KERNARG_POOL_SIZE
-                    hsa_amd_memory_pool_t kernarg_region = getHSAKernargRegion();
-
-                    // keep track of the size of kernarg pool before increasing it
-                    int oldKernargPoolSize = kernargPool.size();
-                    int oldKernargPoolFlagSize = kernargPoolFlag.size();
-                    assert(oldKernargPoolSize == oldKernargPoolFlagSize);
-
-
-                    growKernargBuffer();
-                    assert(kernargPool.size() == oldKernargPoolSize + KERNARG_POOL_SIZE);
-                    assert(kernargPoolFlag.size() == oldKernargPoolFlagSize + KERNARG_POOL_SIZE);
-
-                    // set return values, after the pool has been increased
-
-                    // use the first item in the newly allocated pool
-                    cursor = oldKernargPoolSize;
-
-                    // access the new item through the newly assigned cursor
-                    ret = kernargPool[cursor];
-
-                    // mark the item as used
-                    kernargPoolFlag[cursor] = true;
-
-                    // simply move the cursor to the next index
-                    kernargCursor = cursor + 1;
-                    if (kernargCursor == kernargPool.size()) kernargCursor = 0;
-
-                    found = true;
-                }
-
-            }
-
-            kernargPoolMutex.unlock();
-            memset (ret, 0x00, KERNARG_BUFFER_SIZE);
-        } else {
-            // allocate new buffers in case:
-            // - the kernarg pool is set at compile-time
-            // - requested kernarg buffer size is larger than KERNARG_BUFFER_SIZE
-            //
-
-            hsa_status_t status = HSA_STATUS_SUCCESS;
-            hsa_amd_memory_pool_t kernarg_region = getHSAKernargRegion();
-
-            status = hsa_amd_memory_pool_allocate(kernarg_region, size, 0, &ret);
-            STATUS_CHECK(status, __LINE__);
-
-            status = hsa_amd_agents_allow_access(1, &agent, NULL, ret);
-            STATUS_CHECK(status, __LINE__);
-
-            DBOUTL(DB_RESOURCE, "Allocating non-pool kernarg buffer size=" << size );
-
-            // set cursor value as -1 to notice the buffer would be deallocated
-            // instead of recycled back into the pool
-            cursor = -1;
-            memset (ret, 0x00, size);
-        }
-
-
-
-        return std::make_pair(ret, cursor);
     }
 
     void* getSymbolAddress(const char* symbolName) override {
@@ -3898,13 +3699,6 @@ HSADevice::HSADevice(hsa_agent_t a, hsa_agent_t host, int x_accSeqNum) : KalmarD
     }
     useCoarseGrainedRegion = result;
 
-    /// pre-allocate a pool of kernarg buffers in case:
-    /// - kernarg region is available
-    /// - compile-time macro KERNARG_POOL_SIZE is larger than 0
-#if KERNARG_POOL_SIZE > 0
-    growKernargBuffer();
-#endif
-
     // Setup AM pool.
     ri._am_memory_pool = (ri._found_local_memory_pool)
                              ? ri._local_memory_pool
@@ -4254,9 +4048,12 @@ std::shared_ptr<KalmarAsyncOp> HSAQueue::EnqueueAsyncCopy(const void *src, void 
 
 
 void
-HSAQueue::dispatch_hsa_kernel(const hsa_kernel_dispatch_packet_t *aql,
-                         const void * args, size_t argSize,
-                         hc::completion_future *cf, const char *kernelName) override
+HSAQueue::dispatch_hsa_kernel(
+    const hsa_kernel_dispatch_packet_t *aql,
+    void * args,
+    size_t argSize,
+    hc::completion_future* cf,
+    const char *kernelName)
 {
     uint16_t dims = (aql->setup >> HSA_KERNEL_DISPATCH_PACKET_SETUP_DIMENSIONS) &
                     ((1 << HSA_KERNEL_DISPATCH_PACKET_SETUP_WIDTH_DIMENSIONS) - 1);
@@ -4310,25 +4107,21 @@ HSAQueue::dispatch_hsa_kernel(const hsa_kernel_dispatch_packet_t *aql,
 // member function implementation of HSADispatch
 // ----------------------------------------------------------------------
 
-HSADispatch::HSADispatch(Kalmar::HSADevice* _device, Kalmar::KalmarQueue *queue, HSAKernel* _kernel,
-                         const hsa_kernel_dispatch_packet_t *aql) :
-    HSAOp(queue, Kalmar::hcCommandKernel),
-    device(_device),
-    kernel_name(nullptr),
-    kernel(_kernel),
-    isDispatched(false),
-    waitMode(HSA_WAIT_STATE_BLOCKED),
-    future(nullptr),
-    kernargMemory(nullptr)
-{
-    if (aql) {
-        this->aql = *aql;
-    }
-    clearArgs();
-}
-
-
-
+HSADispatch::HSADispatch(
+    Kalmar::HSADevice* device,
+    Kalmar::KalmarQueue *queue,
+    HSAKernel* kernel,
+    const hsa_kernel_dispatch_packet_t *aql) :
+    HSAOp{queue, Kalmar::hcCommandKernel},
+    device_{device},
+    kernel_name_{nullptr},
+    kernel_{kernel},
+    aql_{aql ? *aql : hsa_kernel_dispatch_packet_t{}},
+    isDispatched_{false},
+    waitMode_{HSA_WAIT_STATE_BLOCKED},
+    future_{},
+    kernargMemory_{nullptr, hsa_amd_memory_unlock}
+{}
 
 static std::ostream& PrintHeader(std::ostream& os, uint16_t h)
 {
@@ -4430,13 +4223,15 @@ static void printKernarg(const void *kernarg_address, int bytesToPrint)
 
 
 // dispatch a kernel asynchronously
-// -  allocates signal, copies arguments into kernarg buffer, and places aql packet into queue.
-hsa_status_t
-HSADispatch::dispatchKernel(hsa_queue_t* lockedHsaQueue, const void *hostKernarg,
-                            int hostKernargSize, bool allocSignal) {
-
+// -  allocates signal and places aql packet into queue.
+hsa_status_t HSADispatch::dispatchKernel(
+    hsa_queue_t* lockedHsaQueue,
+    void *hostKernarg,
+    std::size_t hostKernargSize,
+    bool allocSignal)
+{
     hsa_status_t status = HSA_STATUS_SUCCESS;
-    if (isDispatched) {
+    if (isDispatched_) {
         return HSA_STATUS_ERROR_INVALID_ARGUMENT;
     }
 
@@ -4446,7 +4241,7 @@ HSADispatch::dispatchKernel(hsa_queue_t* lockedHsaQueue, const void *hostKernarg
      */
     // set dispatch fences
     // The fence bits must be set on entry into this function.
-    uint16_t header = aql.header;
+    uint16_t header = aql_.header;
     if (hsaQueue()->get_execute_order() == Kalmar::execute_in_order) {
         //std::cout << "barrier bit on\n";
         // set AQL header with barrier bit on if execute in order
@@ -4458,25 +4253,9 @@ HSADispatch::dispatchKernel(hsa_queue_t* lockedHsaQueue, const void *hostKernarg
         header |= (HSA_PACKET_TYPE_KERNEL_DISPATCH << HSA_PACKET_HEADER_TYPE);
     }
 
+    aql_.kernarg_address = kernargMemory_.get();
 
-    // bind kernel arguments
-    //printf("hostKernargSize size: %d in bytesn", hostKernargSize);
-
-    if (hostKernargSize > 0) {
-        hsa_amd_memory_pool_t kernarg_region = device->getHSAKernargRegion();
-        std::pair<void*, int> ret = device->getKernargBuffer(hostKernargSize);
-        kernargMemory = ret.first;
-        kernargMemoryIndex = ret.second;
-        //std::cerr << "op #" << getSeqNum() << " allocated kernarg cursor=" << kernargMemoryIndex << "\n";
-
-        // as kernarg buffers are fine-grained, we can directly use memcpy
-        memcpy(kernargMemory, hostKernarg, hostKernargSize);
-
-        aql.kernarg_address = kernargMemory;
-    } else {
-        aql.kernarg_address = nullptr;
-    }
-
+    std::cout << aql_.kernarg_address << std::endl;
 
     // write packet
     uint32_t queueMask = lockedHsaQueue->size - 1;
@@ -4492,7 +4271,7 @@ HSADispatch::dispatchKernel(hsa_queue_t* lockedHsaQueue, const void *hostKernarg
         &(((hsa_kernel_dispatch_packet_t*)(lockedHsaQueue->base_address))[index & queueMask]);
 
     // Copy mostly-finished AQL packet into the queue
-    *q_aql = aql;
+    *q_aql = aql_;
 
     // Set some specific fields:
     if (allocSignal) {
@@ -4523,7 +4302,7 @@ HSADispatch::dispatchKernel(hsa_queue_t* lockedHsaQueue, const void *hostKernarg
     // Ring door bell
     hsa_signal_store_relaxed(lockedHsaQueue->doorbell_signal, index);
 
-    isDispatched = true;
+    isDispatched_ = true;
 
     return status;
 }
@@ -4533,18 +4312,15 @@ HSADispatch::dispatchKernel(hsa_queue_t* lockedHsaQueue, const void *hostKernarg
 // wait for the kernel to finish execution
 inline hsa_status_t
 HSADispatch::waitComplete() {
-    hsa_status_t status = HSA_STATUS_SUCCESS;
-    if (!isDispatched)  {
+    if (!isDispatched_)  {
         return HSA_STATUS_ERROR_INVALID_ARGUMENT;
     }
 
-
-
     if (_signal.handle) {
-        DBOUT(DB_MISC, "wait for kernel dispatch op#" << *this  << " completion with wait flag: " << waitMode << "  signal="<< std::hex  << _signal.handle << std::dec << "\n");
+        DBOUT(DB_MISC, "wait for kernel dispatch op#" << *this  << " completion with wait flag: " << waitMode_ << "  signal="<< std::hex  << _signal.handle << std::dec << "\n");
 
         // wait for completion
-        if (hsa_signal_wait_scacquire(_signal, HSA_SIGNAL_CONDITION_LT, 1, uint64_t(-1), waitMode)!=0) {
+        if (hsa_signal_wait_scacquire(_signal, HSA_SIGNAL_CONDITION_LT, 1, uint64_t(-1), waitMode_) != 0) {
             throw Kalmar::runtime_exception("Signal wait returned unexpected value\n", 0);
         }
 
@@ -4563,35 +4339,31 @@ HSADispatch::waitComplete() {
         this->hsaQueue()->removeAsyncOp(this);
     }
 
-    isDispatched = false;
-    return status;
+    isDispatched_ = false;
+    return HSA_STATUS_SUCCESS;
 }
 
-inline hsa_status_t
-HSADispatch::dispatchKernelWaitComplete() {
-    hsa_status_t status = HSA_STATUS_SUCCESS;
-
-    if (isDispatched) {
+hsa_status_t HSADispatch::dispatchKernelWaitComplete() {
+    if (isDispatched_) {
         return HSA_STATUS_ERROR_INVALID_ARGUMENT;
     }
 
     // WaitComplete dispatches need to ensure all data is released to system scope
     // This ensures the op is trule "complete" before continuing.
     // This WaitComplete path is used for AMP-style dispatches and may merit future review&optimization.
-    aql.header =
-        ((HSA_FENCE_SCOPE_SYSTEM) << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
-        ((HSA_FENCE_SCOPE_SYSTEM) << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
+    aql_.header =
+        ((HSA_FENCE_SCOPE_SYSTEM) << HSA_PACKET_HEADER_SCACQUIRE_FENCE_SCOPE) |
+        ((HSA_FENCE_SCOPE_SYSTEM) << HSA_PACKET_HEADER_SCRELEASE_FENCE_SCOPE);
 
-    {
-        // extract hsa_queue_t from HSAQueue
-        hsa_queue_t* rocrQueue = hsaQueue()->acquireLockedRocrQueue();
+    // extract hsa_queue_t from HSAQueue
+    hsa_queue_t* rocrQueue = hsaQueue()->acquireLockedRocrQueue();
 
-        // dispatch kernel
-        status = dispatchKernel(rocrQueue, arg_vec.data(), arg_vec.size(), true);
-        STATUS_CHECK(status, __LINE__);
+    // dispatch kernel
+    auto status = dispatchKernel(
+        rocrQueue, kernargMemory_.get(), sizeof(kernargMemory_.get()), true);
+    STATUS_CHECK(status, __LINE__);
 
-        hsaQueue()->releaseLockedRocrQueue();
-    }
+    hsaQueue()->releaseLockedRocrQueue();
 
     // wait for completion
     status = waitComplete();
@@ -4603,16 +4375,17 @@ HSADispatch::dispatchKernelWaitComplete() {
 
 // Flavor used when launching dispatch with args and signal created by HCC
 // (As opposed to the dispatch_hsa_kernel path)
-inline hsa_status_t
-HSADispatch::dispatchKernelAsyncFromOp()
+hsa_status_t HSADispatch::dispatchKernelAsyncFromOp()
 {
-    return dispatchKernelAsync(arg_vec.data(), arg_vec.size(), true);
+    return dispatchKernelAsync( // TODO: CACAT
+        kernargMemory_.get(), sizeof(kernargMemory_.get()), true);
 }
 
-inline hsa_status_t
-HSADispatch::dispatchKernelAsync(const void *hostKernarg, int hostKernargSize, bool allocSignal) {
-
-
+hsa_status_t HSADispatch::dispatchKernelAsync(
+    void *hostKernarg,
+    std::size_t hostKernargSize,
+    bool allocSignal)
+{
     if (HCC_SERIALIZE_KERNEL & 0x1) {
         hsaQueue()->wait();
     }
@@ -4637,9 +4410,8 @@ HSADispatch::dispatchKernelAsync(const void *hostKernarg, int hostKernargSize, b
 
 
     // dynamically allocate a std::shared_future<void> object
-    future = new std::shared_future<void>(std::async(std::launch::deferred, [&] {
-        waitComplete();
-    }).share());
+    future_.reset(new std::shared_future<void>{
+        std::async(std::launch::deferred, [&] { waitComplete(); }).share()});
 
     if (HCC_SERIALIZE_KERNEL & 0x2) {
         status = waitComplete();
@@ -4652,16 +4424,6 @@ HSADispatch::dispatchKernelAsync(const void *hostKernarg, int hostKernargSize, b
 
 inline void
 HSADispatch::dispose() {
-    hsa_status_t status;
-    if (kernargMemory != nullptr) {
-      //std::cerr << "op#" << getSeqNum() << " releasing kernal arg buffer index=" << kernargMemoryIndex<< "\n";
-      device->releaseKernargBuffer(kernargMemory, kernargMemoryIndex);
-      kernargMemory = nullptr;
-    }
-
-    clearArgs();
-    std::vector<uint8_t>().swap(arg_vec);
-
     if (HCC_PROFILE & HCC_PROFILE_TRACE) {
         uint64_t start = getBeginTimestamp();
         uint64_t end   = getEndTimestamp();
@@ -4670,11 +4432,6 @@ HSADispatch::dispose() {
         LOG_PROFILE(this, start, end, "kernel", getKernelName(), "");
     }
     Kalmar::ctx.releaseSignal(_signal, _signalIndex);
-
-    if (future != nullptr) {
-      delete future;
-      future = nullptr;
-    }
 }
 
 inline uint64_t
@@ -4696,14 +4453,18 @@ void HSADispatch::overrideAcquireFenceIfNeeded()
     if (hsaQueue()->nextKernelNeedsSysAcquire())  {
        DBOUT( DB_CMD2, "  kernel AQL packet adding system-scope acquire\n");
        // Pick up system acquire if needed.
-       aql.header |= ((HSA_FENCE_SCOPE_SYSTEM) << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) ;
+       aql_.header |= ((HSA_FENCE_SCOPE_SYSTEM) << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) ;
        hsaQueue()->setNextKernelNeedsSysAcquire(false);
     }
 }
 
-inline hsa_status_t
-HSADispatch::setLaunchConfiguration(const int dims, size_t *globalDims, size_t *localDims,
-                                    const int dynamicGroupSize) {
+inline
+hsa_status_t HSADispatch::setLaunchConfiguration(
+    int dims,
+    const size_t* globalDims,
+    const size_t* localDims,
+    int dynamicGroupSize)
+{
     assert((0 < dims) && (dims <= 3));
 
 #if KALMAR_DEBUG && HCC_DEBUG_KARG
@@ -4712,7 +4473,7 @@ HSADispatch::setLaunchConfiguration(const int dims, size_t *globalDims, size_t *
 #endif
     // Set group dims
     // for each workgroup dimension, make sure it does not exceed the maximum allowable limit
-    const uint16_t* workgroup_max_dim = device->getWorkgroupMaxDim();
+    const uint16_t* workgroup_max_dim = device_->getWorkgroupMaxDim();
 
     unsigned int workgroup_size[3] = { 1, 1, 1};
 
@@ -4723,12 +4484,12 @@ HSADispatch::setLaunchConfiguration(const int dims, size_t *globalDims, size_t *
         // throw an error
         if (localDims[i] > workgroup_max_dim[i]) {
           std::stringstream msg;
-          msg << "The extent of the tile (" << localDims[i] 
+          msg << "The extent of the tile (" << localDims[i]
               << ") exceeds the device limit (" << workgroup_max_dim[i] << ").";
           throw Kalmar::runtime_exception(msg.str().c_str(), -1);
         } else if (localDims[i] > globalDims[i]) {
           std::stringstream msg;
-          msg << "The extent of the tile (" << localDims[i] 
+          msg << "The extent of the tile (" << localDims[i]
               << ") exceeds the compute grid extent (" << globalDims[i] << ").";
           throw Kalmar::runtime_exception(msg.str().c_str(), -1);
         }
@@ -4749,7 +4510,7 @@ HSADispatch::setLaunchConfiguration(const int dims, size_t *globalDims, size_t *
         for (unsigned int i = 1; ; i<<=1) {
           if (i == recommended_flat_workgroup_size
               || i >= globalDims[0]) {
-            workgroup_size[0] = 
+            workgroup_size[0] =
               std::min(i, static_cast<unsigned int>(globalDims[0]));
             break;
           }
@@ -4764,7 +4525,7 @@ HSADispatch::setLaunchConfiguration(const int dims, size_t *globalDims, size_t *
         for (unsigned int i = 1; ; i<<=1) {
           if (i == recommended_flat_workgroup_size
               || i >= globalDims[0]) {
-            workgroup_size[0] = 
+            workgroup_size[0] =
               std::min(i, static_cast<unsigned int>(globalDims[0]));
             break;
           }
@@ -4779,26 +4540,26 @@ HSADispatch::setLaunchConfiguration(const int dims, size_t *globalDims, size_t *
           }
           else if (flat_group_size == recommended_flat_workgroup_size
               || j >= globalDims[1]) {
-            workgroup_size[1] = 
+            workgroup_size[1] =
               std::min(j, static_cast<unsigned int>(globalDims[1]));
             break;
           }
         }
 
         // compute the group size for the 3rd dimension
-        workgroup_size[2] = recommended_flat_workgroup_size / 
+        workgroup_size[2] = recommended_flat_workgroup_size /
                               (workgroup_size[0] * workgroup_size[1]);
       }
     }
 
-    auto kernel = this->kernel;
+    auto kernel = this->kernel_;
 
     auto calculate_kernel_max_flat_workgroup_size = [&] {
       constexpr unsigned int max_num_vgprs_per_work_item = 256;
       constexpr unsigned int num_work_items_per_simd = 64;
       constexpr unsigned int num_simds_per_cu = 4;
       const unsigned int workitem_vgpr_count = std::max((unsigned int)kernel->workitem_vgpr_count, 1u);
-      unsigned int max_flat_group_size = (max_num_vgprs_per_work_item / workitem_vgpr_count) 
+      unsigned int max_flat_group_size = (max_num_vgprs_per_work_item / workitem_vgpr_count)
                                            * num_work_items_per_simd * num_simds_per_cu;
       return max_flat_group_size;
     };
@@ -4808,7 +4569,7 @@ HSADispatch::setLaunchConfiguration(const int dims, size_t *globalDims, size_t *
       const unsigned int max_num_work_items_per_cu = calculate_kernel_max_flat_workgroup_size();
       if (actual_flat_group_size > max_num_work_items_per_cu) {
         std::stringstream msg;
-        msg << "The number of work items (" << actual_flat_group_size 
+        msg << "The number of work items (" << actual_flat_group_size
             << ") per work group exceeds the limit (" << max_num_work_items_per_cu << ") of kernel "
             << kernel->kernelName << " .";
         throw Kalmar::runtime_exception(msg.str().c_str(), -1);
@@ -4816,34 +4577,34 @@ HSADispatch::setLaunchConfiguration(const int dims, size_t *globalDims, size_t *
     };
     validate_kernel_flat_group_size();
 
-    memset(&aql, 0, sizeof(aql));
+    aql_ = {};
 
     // Copy info from kernel into AQL packet:
     // bind kernel code
-    aql.kernel_object = kernel->kernelCodeHandle;
+    aql_.kernel_object = kernel->kernelCodeHandle;
 
-    aql.group_segment_size   = kernel->static_group_segment_size + dynamicGroupSize;
-    aql.private_segment_size = kernel->private_segment_size;
+    aql_.group_segment_size   = kernel->static_group_segment_size + dynamicGroupSize;
+    aql_.private_segment_size = kernel->private_segment_size;
 
     // Set global dims:
-    aql.grid_size_x = globalDims[0];
-    aql.grid_size_y = (dims > 1 ) ? globalDims[1] : 1;
-    aql.grid_size_z = (dims > 2 ) ? globalDims[2] : 1;
+    aql_.grid_size_x = globalDims[0];
+    aql_.grid_size_y = (dims > 1 ) ? globalDims[1] : 1;
+    aql_.grid_size_z = (dims > 2 ) ? globalDims[2] : 1;
 
-    aql.workgroup_size_x = workgroup_size[0];
-    aql.workgroup_size_y = workgroup_size[1];
-    aql.workgroup_size_z = workgroup_size[2];
+    aql_.workgroup_size_x = workgroup_size[0];
+    aql_.workgroup_size_y = workgroup_size[1];
+    aql_.workgroup_size_z = workgroup_size[2];
 
-    aql.setup = dims << HSA_KERNEL_DISPATCH_PACKET_SETUP_DIMENSIONS;
+    aql_.setup = dims << HSA_KERNEL_DISPATCH_PACKET_SETUP_DIMENSIONS;
 
-    aql.header = 0;
+    aql_.header = 0;
     if (HCC_OPT_FLUSH) {
-        aql.header = ((HSA_FENCE_SCOPE_AGENT) << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
-                     ((HSA_FENCE_SCOPE_AGENT) << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
+        aql_.header = ((HSA_FENCE_SCOPE_AGENT) << HSA_PACKET_HEADER_SCACQUIRE_FENCE_SCOPE) |
+                     ((HSA_FENCE_SCOPE_AGENT) << HSA_PACKET_HEADER_SCRELEASE_FENCE_SCOPE);
         overrideAcquireFenceIfNeeded();
     } else {
-        aql.header = ((HSA_FENCE_SCOPE_SYSTEM) << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
-                     ((HSA_FENCE_SCOPE_SYSTEM) << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
+        aql_.header = ((HSA_FENCE_SCOPE_SYSTEM) << HSA_PACKET_HEADER_SCACQUIRE_FENCE_SCOPE) |
+                     ((HSA_FENCE_SCOPE_SYSTEM) << HSA_PACKET_HEADER_SCRELEASE_FENCE_SCOPE);
     }
 
     return HSA_STATUS_SUCCESS;
@@ -5625,39 +5386,6 @@ HSACopy::syncCopy() {
 extern "C" void *GetContextImpl() {
   return &Kalmar::ctx;
 }
-
-extern "C" void PushArgImpl(void *ker, int idx, size_t sz, const void *v) {
-  //std::cerr << "pushing:" << ker << " of size " << sz << "\n";
-  HSADispatch *dispatch =
-      reinterpret_cast<HSADispatch*>(ker);
-  void *val = const_cast<void*>(v);
-  switch (sz) {
-    case sizeof(double):
-      dispatch->pushDoubleArg(*reinterpret_cast<double*>(val));
-      break;
-    case sizeof(short):
-      dispatch->pushShortArg(*reinterpret_cast<short*>(val));
-      break;
-    case sizeof(int):
-      dispatch->pushIntArg(*reinterpret_cast<int*>(val));
-      //std::cerr << "(int) value = " << *reinterpret_cast<int*>(val) <<"\n";
-      break;
-    case sizeof(unsigned char):
-      dispatch->pushBooleanArg(*reinterpret_cast<unsigned char*>(val));
-      break;
-    default:
-      assert(0 && "Unsupported kernel argument size");
-  }
-}
-
-extern "C" void PushArgPtrImpl(void *ker, int idx, size_t sz, const void *v) {
-  //std::cerr << "pushing:" << ker << " of size " << sz << "\n";
-  HSADispatch *dispatch =
-      reinterpret_cast<HSADispatch*>(ker);
-  void *val = const_cast<void*>(v);
-  dispatch->pushPointerArg(val);
-}
-
 
 // op printer
 std::ostream& operator<<(std::ostream& os, const HSAOp & op)

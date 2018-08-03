@@ -66,12 +66,10 @@ public:
     BufferArgumentsAppender(std::shared_ptr<KalmarQueue> pQueue, void* k)
         : pQueue(pQueue), k_(k), current_idx_(0) {}
     void Append(size_t sz, const void *s) override {
-        CLAMP::PushArg(k_, current_idx_++, sz, s);
     }
     void AppendPtr(size_t sz, const void *s) override {
-        CLAMP::PushArgPtr(k_, current_idx_++, sz, s);
     }
-    void visit_buffer(struct rw_info* rw, bool modify, bool isArray) override {
+    void visit_buffer(rw_info* rw, bool modify, bool isArray) override {
         if (isArray) {
             auto curr = pQueue->getDev()->get_path();
             auto path = rw->master->getDev()->get_path();

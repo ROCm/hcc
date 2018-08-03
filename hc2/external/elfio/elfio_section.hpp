@@ -45,6 +45,17 @@ class section
     ELFIO_GET_SET_ACCESS_DECL( Elf64_Addr,  address            );
     ELFIO_GET_SET_ACCESS_DECL( Elf_Xword,   size               );
     ELFIO_GET_SET_ACCESS_DECL( Elf_Word,    name_string_offset );
+    ELFIO_GET_ACCESS_DECL    ( Elf64_Off,   offset             );
+    size_t stream_size;
+    size_t get_stream_size() const
+     {
+	return stream_size;
+     }
+
+    void set_stream_size(size_t value)
+     {
+	stream_size = value;
+     }
 
     virtual const char* get_data() const                                = 0;
     virtual void        set_data( const char* pData, Elf_Word size )    = 0;
@@ -53,7 +64,7 @@ class section
     virtual void        append_data( const std::string& data )          = 0;
 
   protected:
-    ELFIO_GET_SET_ACCESS_DECL( Elf64_Off, offset );
+    ELFIO_SET_ACCESS_DECL( Elf64_Off, offset );
     ELFIO_SET_ACCESS_DECL( Elf_Half,  index  );
     
     virtual void load( std::istream&  f,
@@ -223,23 +234,29 @@ class section_impl : public section
           std::streampos header_offset )
     {
         std::fill_n( reinterpret_cast<char*>( &header ), sizeof( header ), '\0' );
+
+	stream.seekg ( 0, stream.end );
+	set_stream_size ( stream.tellg() );
+
         stream.seekg( header_offset );
         stream.read( reinterpret_cast<char*>( &header ), sizeof( header ) );
 
+
         Elf_Xword size = get_size();
-        if ( 0 == data && SHT_NULL != get_type() && SHT_NOBITS != get_type() ) {
-            try {
-                data = new char[size];
-            } catch (const std::bad_alloc&) {
-                data      = 0;
-                data_size = 0;
-            }
-            if ( 0 != size ) {
-                stream.seekg( (*convertor)( header.sh_offset ) );
-                stream.read( data, size );
-                data_size = size;
-            }
-        }
+	if ( 0 == data && SHT_NULL != get_type() && SHT_NOBITS != get_type() && size < get_stream_size()) {
+	    try {
+		data = new char[size + 1];
+	    } catch (const std::bad_alloc&) {
+		data      = 0;
+		data_size = 0;
+	    }
+	    if ( 0 != size ) {
+		stream.seekg( (*convertor)( header.sh_offset ) );
+		stream.read( data, size );
+		data[size] = 0; //ensure data is ended with 0 to avoid oob read
+		data_size = size;
+	    }
+	}
     }
 
 //------------------------------------------------------------------------------

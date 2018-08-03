@@ -235,16 +235,8 @@ public:
     data = v; 
   }
 
-  __attribute__((annotate("user_deserialize")))
   __vector_data_container(const SCALAR_TYPE x) __CPU_GPU__ {
     data = { x };
-  }
-
-  __attribute__((annotate("serialize")))
-  void __cxxamp_serialize(Kalmar::Serialize& s) const {
-    for (auto &component : ar) {
-      s.Append(sizeof(SCALAR_TYPE), &component);
-    }
   }
 };
 
@@ -271,18 +263,6 @@ public:
   __vector_data_container(vector_value_type v) __CPU_GPU__ { 
     data = v; 
   }
-
-  __attribute__((annotate("user_deserialize")))
-  __vector_data_container(const SCALAR_TYPE x, const SCALAR_TYPE y) __CPU_GPU__ {
-    data = { x, y };
-  }
-
-  __attribute__((annotate("serialize")))
-  void __cxxamp_serialize(Kalmar::Serialize& s) const {
-    for (auto &component : ar) {
-      s.Append(sizeof(SCALAR_TYPE), &component);
-    }
-  }
 };
 
 
@@ -307,18 +287,6 @@ public:
 
   __vector_data_container(vector_value_type v) __CPU_GPU__ { 
     data = v; 
-  }
-
-  __attribute__((annotate("user_deserialize")))
-  __vector_data_container(const SCALAR_TYPE x, const SCALAR_TYPE y, const SCALAR_TYPE z) __CPU_GPU__ {
-    data = { x, y, z };
-  }
-
-  __attribute__((annotate("serialize")))
-  void __cxxamp_serialize(Kalmar::Serialize& s) const {
-    for (auto &component : ar) {
-      s.Append(sizeof(SCALAR_TYPE), &component);
-    }
   }
 };
 
@@ -345,18 +313,6 @@ public:
   __vector_data_container(vector_value_type v) __CPU_GPU__ { 
     data = v; 
   }
-
-  __attribute__((annotate("user_deserialize")))
-  __vector_data_container(const SCALAR_TYPE x, const SCALAR_TYPE y, const SCALAR_TYPE z, const SCALAR_TYPE w) __CPU_GPU__ {
-    data = { x,y,z,w };
-  }
-
-  __attribute__((annotate("serialize")))
-  void __cxxamp_serialize(Kalmar::Serialize& s) const {
-    for (auto &component : ar) {
-      s.Append(sizeof(SCALAR_TYPE), &component);
-    }
-  }
 };
 
 
@@ -382,19 +338,6 @@ public:
   __vector_data_container(vector_value_type v) __CPU_GPU__ { 
     data = v; 
   }
-
-  __attribute__((annotate("user_deserialize")))
-  __vector_data_container(const SCALAR_TYPE x, const SCALAR_TYPE y, const SCALAR_TYPE z, const SCALAR_TYPE w
-     , const SCALAR_TYPE s4, const SCALAR_TYPE s5, const SCALAR_TYPE s6, const SCALAR_TYPE s7) __CPU_GPU__ {
-    data = { x,y,z,w,s4,s5,s6,s7 };
-  }
-
-  __attribute__((annotate("serialize")))
-  void __cxxamp_serialize(Kalmar::Serialize& s) const {
-    for (auto &component : ar) {
-      s.Append(sizeof(SCALAR_TYPE), &component);
-    }
-  }
 };
 
 
@@ -419,21 +362,6 @@ public:
 
   __vector_data_container(vector_value_type v) __CPU_GPU__ { 
     data = v; 
-  }
-
-  __attribute__((annotate("user_deserialize")))
-  __vector_data_container(const SCALAR_TYPE x, const SCALAR_TYPE y, const SCALAR_TYPE z, const SCALAR_TYPE w
-     , const SCALAR_TYPE s4, const SCALAR_TYPE s5, const SCALAR_TYPE s6, const SCALAR_TYPE s7
-     , const SCALAR_TYPE s8, const SCALAR_TYPE s9, const SCALAR_TYPE sA, const SCALAR_TYPE sB
-     , const SCALAR_TYPE sC, const SCALAR_TYPE sD, const SCALAR_TYPE sE, const SCALAR_TYPE sF) __CPU_GPU__ {
-    data = { x,y,z,w,s4,s5,s6,s7,s8,s9,sA,sB,sC,sD,sE,sF };
-  }
-
-  __attribute__((annotate("serialize")))
-  void __cxxamp_serialize(Kalmar::Serialize& s) const {
-    for (auto &component : ar) {
-      s.Append(sizeof(SCALAR_TYPE), &component);
-    }
   }
 };
 
