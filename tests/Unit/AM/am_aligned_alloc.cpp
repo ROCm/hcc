@@ -17,7 +17,7 @@ int main()
 {
 
     hc::accelerator acc;
-
+    bool ret = true;
     char *a = am_aligned_alloc(10000, acc, 0, 65536);
     char *b = am_alloc(20000, acc, 0);
 
@@ -27,9 +27,32 @@ int main()
 
     TRACKER_PRINT(a);
     TRACKER_PRINT(b);
+    hc::AmPointerInfo amPointerInfo(NULL, NULL, NULL, 0, acc, 0, 0);
+    am_status_t status = hc::am_memtracker_getinfo(&amPointerInfo, b);
+    if (status == AM_SUCCESS) {
+       if (amPointerInfo._hostPointer == NULL) {
+           hc::am_free(b);
+       }
+       else { 
+           printf("Failed device pointer check for b\n");
+           ret = false;
+       }
+    } else {
+           printf("Failed tracker info for b\n");
+           ret = false;
+    }
 
-    hc::am_free(b);
-    hc::am_free(a);
-
-    return 0; // passed!
+    status = hc::am_memtracker_getinfo(&amPointerInfo, a);
+    if (status == AM_SUCCESS) {
+       if (amPointerInfo._hostPointer == NULL)
+           hc::am_free(a);
+       else {
+           printf("Failed device pointer check for a\n");
+           ret = false;
+       }
+    } else {
+        printf("Failed tracker info for a\n");
+        ret = false;
+    }
+    return !(ret == true);
 }
