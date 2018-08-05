@@ -53,11 +53,6 @@
 
 #define CHECK_OLDER_COMPLETE 0
 
-// Detailed debug of kernarg serialization and pushing.
-// TODO - remove when new serialization logic comes online.
-#define HCC_DEBUG_KARG 0
-
-
 // Used to mark pieces of HCC runtime which may be specific to AMD's HSA implementation.
 // Intended to help identify this code when porting to another HSA impl.
 // FIXME - The AMD_HSA path is experimental and should not be enabled in production
@@ -272,9 +267,10 @@ static void dumpHSAAgentInfo(hsa_agent_t agent, const char* extra_string = (cons
   wchar_t path_wchar[128] {0};
   swprintf(path_wchar, 128, L"%s%u", name, node);
 
-  printf("Dump Agent Info (%s)\n",extra_string);
-  printf("\t Agent: ");
-  std::wcerr  << path_wchar << L"\n";
+
+  DBSTREAM << "Dump Agent Info (" << extra_string << ")" << std::endl;
+  DBSTREAM << "\t Agent: ";
+  DBWSTREAM  << path_wchar << L"\n";
 
   return;
 }
@@ -1705,10 +1701,10 @@ public:
                    const void* src, hsa_agent_t src_agent,
                    size_t size) {
 
-#if KALMAR_DEBUG
-      dumpHSAAgentInfo(src_agent, "sync_copy source agent");
-      dumpHSAAgentInfo(dst_agent, "sync_copy destination agent");
-#endif
+      if (DBFLAG(DB_COPY)) {
+        dumpHSAAgentInfo(src_agent, "sync_copy source agent");
+        dumpHSAAgentInfo(dst_agent, "sync_copy destination agent");
+      }
 
       hsa_status_t status;
       hsa_signal_store_relaxed(sync_copy_signal, 1);
@@ -1727,9 +1723,8 @@ public:
         // do read
         if (dst != device) {
             if (!getDev()->is_unified()) {
-#if KALMAR_DEBUG
-                std::cerr << "read(" << device << "," << dst << "," << count << "," << offset << "): use HSA memory copy\n";
-#endif
+                DBOUT(DB_COPY, "read(" << device << "," << dst << "," << count << "," << offset 
+                                << "): use HSA memory copy\n");
                 hsa_status_t status = HSA_STATUS_SUCCESS;
                 // Make sure host memory is accessible to gpu
                 // FIXME: host memory is allocated through OS allocator, if not, correct it.
@@ -1754,9 +1749,8 @@ public:
                 // Unlock the host memory
                 status = hsa_amd_memory_unlock(dst);
             } else {
-#if KALMAR_DEBUG
-                std::cerr << "read(" << device << "," << dst << "," << count << "," << offset << "): use host memory copy\n";
-#endif
+                DBOUT(DB_COPY, "read(" << device << "," << dst << "," << count << "," << offset 
+                                << "): use host memory copy\n");
                 memmove(dst, (char*)device + offset, count);
             }
         }
@@ -1769,9 +1763,8 @@ public:
         // do write
         if (src != device) {
             if (!getDev()->is_unified()) {
-#if KALMAR_DEBUG
-                std::cerr << "write(" << device << "," << src << "," << count << "," << offset << "," << blocking << "): use HSA memory copy\n";
-#endif
+                DBOUT(DB_COPY, "write(" << device << "," << src << "," << count << "," << offset 
+                                << "," << blocking << "): use HSA memory copy\n");
                 hsa_status_t status = HSA_STATUS_SUCCESS;
                 // Make sure host memory is accessible to gpu
                 // FIXME: host memory is allocated through OS allocator, if not, correct it.
@@ -1791,9 +1784,8 @@ public:
                 // Unlock the host memory
                 status = hsa_amd_memory_unlock(const_cast<void*>(src));
             } else {
-#if KALMAR_DEBUG
-                std::cerr << "write(" << device << "," << src << "," << count << "," << offset << "," << blocking << "): use host memory copy\n";
-#endif
+                DBOUT(DB_COPY, "write(" << device << "," << src << "," << count << "," << offset 
+                                << "," << blocking << "): use host memory copy\n");
                 memmove((char*)device + offset, src, count);
             }
         }
@@ -1810,9 +1802,8 @@ public:
         // do copy
         if (src != dst) {
             if (!getDev()->is_unified()) {
-#if KALMAR_DEBUG
-                std::cerr << "copy(" << src << "," << dst << "," << count << "," << src_offset << "," << dst_offset << "," << blocking << "): use HSA memory copy\n";
-#endif
+                DBOUT(DB_COPY, "copy(" << src << "," << dst << "," << count << "," << src_offset 
+                               << "," << dst_offset << "," << blocking << "): use HSA memory copy\n");
                 hsa_status_t status = HSA_STATUS_SUCCESS;
                 // FIXME: aftre p2p enabled, if this function is not expected to copy between two buffers from different device, then, delete allow_access API call.
                 hsa_agent_t* agent = static_cast<hsa_agent_t*>(getHSAAgent());
@@ -1821,18 +1812,17 @@ public:
                 status = hsa_memory_copy((char*)dst + dst_offset, (char*)src + src_offset, count);
                 STATUS_CHECK(status, __LINE__);
             } else {
-#if KALMAR_DEBUG
-                std::cerr << "copy(" << src << "," << dst << "," << count << "," << src_offset << "," << dst_offset << "," << blocking << "): use host memory copy\n";
-#endif
+                DBOUT(DB_COPY, "copy(" << src << "," << dst << "," << count << "," << src_offset 
+                               << "," << dst_offset << "," << blocking << "): use host memory copy\n");
                 memmove((char*)dst + dst_offset, (char*)src + src_offset, count);
             }
         }
     }
 
     void* map(void* device, size_t count, size_t offset, bool modify) override {
-#if KALMAR_DEBUG
-        dumpHSAAgentInfo(*static_cast<hsa_agent_t*>(getHSAAgent()), "map(...)");
-#endif
+        if (DBFLAG(DB_COPY)) {
+            dumpHSAAgentInfo(*static_cast<hsa_agent_t*>(getHSAAgent()), "map(...)");
+        }
         waitForDependentAsyncOps(device);
         releaseToSystemIfNeeded();
 
@@ -1840,10 +1830,11 @@ public:
         // as HSA runtime doesn't have map/unmap facility at this moment,
         // we explicitly allocate a host memory buffer in this case
         if (!getDev()->is_unified()) {
-#if KALMAR_DEBUG
-            std::wcerr << getDev()->get_path();
-            std::cerr << ": map( <device> " << device << ", <count> " << count << ", <offset> " << offset << ", <modify> " << modify << "): use HSA memory map\n";
-#endif
+            if (DBFLAG(DB_COPY)) {
+                DBWSTREAM << getDev()->get_path();
+                DBSTREAM << ": map( <device> " << device << ", <count> " << count << ", <offset> " << offset 
+                         << ", <modify> " << modify << "): use HSA memory map\n";
+            }
             hsa_status_t status = HSA_STATUS_SUCCESS;
             // allocate a host buffer
             // TODO: for safety, we copy to host, but we can map device memory to host through hsa_amd_agents_allow_access
@@ -1853,46 +1844,22 @@ public:
             status = hsa_amd_memory_pool_allocate(*am_host_region, count, 0, &data);
             STATUS_CHECK(status, __LINE__);
             if (data != nullptr) {
-#if KALMAR_DEBUG
-            std::wcerr << getDev()->get_path();
-            std::cerr << ": map() allow device access to mapped buffer\n";
-#endif
               // copy data from device buffer to host buffer
               hsa_agent_t* agent = static_cast<hsa_agent_t*>(getHSAAgent());
               status = hsa_amd_agents_allow_access(1, agent, NULL, data);
               STATUS_CHECK(status, __LINE__);
-#if KALMAR_DEBUG
-                std::wcerr << getDev()->get_path();
-                std::cerr << ": map() copy device buffer to host buffer\n";
-#endif
-                sync_copy(data, *static_cast<hsa_agent_t*>(getHostAgent()), ((char*)device) + offset, *agent, count);
-#if KALMAR_DEBUG
-                std::wcerr << getDev()->get_path();
-                std::cerr << ": map() copy done\n";
-#endif
+              sync_copy(data, *static_cast<hsa_agent_t*>(getHostAgent()), ((char*)device) + offset, *agent, count);
             } else {
-              hc::print_backtrace();
-#if KALMAR_DEBUG
-              std::cerr << "host buffer allocation failed!\n";
-#endif
-              abort();
+              throw Kalmar::runtime_exception("host buffer allocation failed!", 0);
             }
-#if KALMAR_DEBUG
-            std::wcerr << getDev()->get_path();
-            std::cerr << ": map() -> <pointer> " << data << "\n";
-#endif
-
             return data;
         } else {
-#if KALMAR_DEBUG
-            std::wcerr << getDev()->get_path();
-            std::cerr << ": map( <device> " << device << ", <count> " << count << ", <offset> " << offset << ", <modify> " << modify << "): use host memory map\n";
-#endif
+            if (DBFLAG(DB_COPY)) {
+              DBWSTREAM << getDev()->get_path();
+              DBSTREAM << ": map( <device> " << device << ", <count> " << count << ", <offset> " << offset 
+                       << ", <modify> " << modify << "): use host memory map\n";
+            }
             // for host memory we simply return the pointer plus offset
-#if KALMAR_DEBUG
-            std::wcerr << getDev()->get_path();
-            std::cerr << ": map() -> <pointer> " << ((char*)device+offset) << "\n";
-#endif
             return (char*)device + offset;
         }
     }
@@ -1903,33 +1870,27 @@ public:
         // as HSA runtime doesn't have map/unmap facility at this moment,
         // we free the host memory buffer allocated in map()
         if (!getDev()->is_unified()) {
-#if KALMAR_DEBUG
-            std::wcerr << getDev()->get_path();
-            std::cerr << ": unmap( <device> " << device << ", <addr> " << addr << ", <count> " << count << ", <offset> " << offset << ", <modify> " << modify << "): use HSA memory unmap\n";
-#endif
+            if (DBFLAG(DB_COPY)) {
+                DBWSTREAM << getDev()->get_path();
+                DBSTREAM << ": unmap( <device> " << device << ", <addr> " << addr << ", <count> " << count 
+                         << ", <offset> " << offset << ", <modify> " << modify << "): use HSA memory unmap\n";
+            }
             if (modify) {
-#if KALMAR_DEBUG
-                std::wcerr << getDev()->get_path();
-                std::cerr << ": unmap() copy host buffer to device buffer\n";
-#endif
                 // copy data from host buffer to device buffer
                 hsa_status_t status = HSA_STATUS_SUCCESS;
 
                 hsa_agent_t* agent = static_cast<hsa_agent_t*>(getHSAAgent());
                 sync_copy(((char*)device) + offset, *agent, addr, *static_cast<hsa_agent_t*>(getHostAgent()), count);
-#if KALMAR_DEBUG
-                std::wcerr << getDev()->get_path();
-                std::cerr << ": unmap() copy done\n";
-#endif
             }
 
             // deallocate the host buffer
             hsa_amd_memory_pool_free(addr);
         } else {
-#if KALMAR_DEBUG
-            std::wcerr << getDev()->get_path();
-            std::cerr << ": unmap( <device> " << device << ", <addr> " << addr << ", <count> " << count << ", <offset> " << offset << ", <modify> " << modify <<"): use host memory unmap\n";
-#endif
+            if (DBFLAG(DB_COPY)) {
+                DBWSTREAM << getDev()->get_path();
+                DBSTREAM << ": unmap( <device> " << device << ", <addr> " << addr << ", <count> " << count 
+                         << ", <offset> " << offset << ", <modify> " << modify <<"): use host memory unmap\n";
+            }
             // for host memory there's nothing to be done
         }
     }
@@ -2127,9 +2088,7 @@ public:
 
     // synchronous copy
     void copy(const void *src, void *dst, size_t size_bytes) override {
-#if KALMAR_DEBUG
-        std::cerr << "HSAQueue::copy(" << src << ", " << dst << ", " << size_bytes << ")\n";
-#endif
+        DBOUT(DB_COPY, "HSAQueue::copy(" << src << ", " << dst << ", " << size_bytes << ")\n");
         // wait for all previous async commands in this queue to finish
         this->wait();
 
@@ -2140,10 +2099,6 @@ public:
         copyCommand->syncCopy();
 
         delete(copyCommand);
-
-#if KALMAR_DEBUG
-        std::cerr << "HSAQueue::copy() complete\n";
-#endif
     }
 
     void copy_ext(const void *src, void *dst, size_t size_bytes, hc::hcCommandKind copyDir, const hc::AmPointerInfo &srcPtrInfo, const hc::AmPointerInfo &dstPtrInfo,
@@ -2466,9 +2421,7 @@ public:
             ri->_found_kernarg_memory_pool = true;
           }
           else {
-#if KALMAR_DEBUG
-            std::cerr << "Unknown memory pool with kernarg_init flag set!!!, size(MB) = " << size << std::endl;
-#endif
+            DBOUT(DB_INIT, "Unknown memory pool with kernarg_init flag set!!!, size(MB) = " << size << std::endl);
           }
         }
 
@@ -2607,10 +2560,7 @@ public:
         void *data = nullptr;
 
         if (!is_unified()) {
-#if KALMAR_DEBUG
-            std::wcerr << get_path();
-            std::cerr << ": create( <count> " << count << ", <key> " << key << "): use HSA memory allocator\n";
-#endif
+            DBOUT(DB_INIT, "create( <count> " << count << ", <key> " << key << "): use HSA memory allocator\n");
             hsa_status_t status = HSA_STATUS_SUCCESS;
             auto am_region = getHSAAMRegion();
 
@@ -2621,18 +2571,9 @@ public:
             status = hsa_amd_agents_allow_access(1, agent, NULL, data);
             STATUS_CHECK(status, __LINE__);
         } else {
-#if KALMAR_DEBUG
-            std::wcerr << get_path();
-            std::cerr << ": create( <count> " << count << ", <key> " << key << "): use host memory allocator\n";
-#endif
+            DBOUT(DB_INIT, "create( <count> " << count << ", <key> " << key << "): use host memory allocator\n");
             data = kalmar_aligned_alloc(0x1000, count);
         }
-
-#if KALMAR_DEBUG
-        std::wcerr << get_path();
-        std::cerr << ": create -> <pointer> " << data << "\n";
-#endif
-
         return data;
     }
 
@@ -3011,9 +2952,7 @@ public:
                 }
             }
         } else {
-#if KALMAR_DEBUG
-            std::cerr << "HSA executable NOT built yet!\n";
-#endif
+            throw Kalmar::runtime_exception("HSA executable NOT built yet!", 0);
         }
 
         return symbol_ptr;
@@ -3038,9 +2977,7 @@ public:
                 STATUS_CHECK(status, __LINE__);
             }
         } else {
-#if KALMAR_DEBUG
-            std::cerr << "HSA executable NOT built yet!\n";
-#endif
+            throw Kalmar::runtime_exception("HSA executable NOT built yet!", 0);
         }
     }
 
@@ -3050,9 +2987,7 @@ public:
             unsigned long* symbol_ptr = (unsigned long*)getSymbolAddress(symbolName);
             memcpySymbol(symbol_ptr, hostptr, count, offset, kind);
         } else {
-#if KALMAR_DEBUG
-            std::cerr << "HSA executable NOT built yet!\n";
-#endif
+            throw Kalmar::runtime_exception("HSA executable NOT built yet!", 0);
         }
     }
 
@@ -3117,9 +3052,9 @@ private:
             auto code_object_reader = load_code_object_and_freeze_executable(
                 kernelBuffer, kernelSize, agent, hsaExecutable);
 
-            #if KALMAR_DEBUG
+            if (DBFLAG(DB_INIT)) {
                 dumpHSAAgentInfo(agent, "Loading code object ");
-            #endif
+            }
 
             // save everything as an HSAExecutable instance
             executables[index] = new HSAExecutable(
@@ -3467,9 +3402,6 @@ public:
         signalPoolMutex.unlock();
 
         // shutdown HSA runtime
-#if KALMAR_DEBUG
-        std::cerr << "HSAContext::~HSAContext(): shut down HSA runtime\n";
-#endif
         status = hsa_shut_down();
         STATUS_CHECK(status, __LINE__);
 
@@ -3645,10 +3577,10 @@ HSADevice::HSADevice(hsa_agent_t a, hsa_agent_t host, int x_accSeqNum) : HCCDevi
         path = std::wstring(path_wchar);
         description = std::wstring(description_wchar);
 
-#if KALMAR_DEBUG
-        std::wcerr << L"Path: " << path << L"\n";
-        std::wcerr << L"Description: " << description << L"\n";
-#endif
+        if (DBFLAG(DB_INIT)) {
+          DBWSTREAM << L"Path: " << path << L"\n";
+          DBWSTREAM << L"Description: " << description << L"\n";
+        }
 
         status = hsa_agent_get_info(agent, HSA_AGENT_INFO_VERSION_MAJOR, &versionMajor);
         STATUS_CHECK(status, __LINE__);
@@ -4468,11 +4400,9 @@ hsa_status_t HSADispatch::setLaunchConfiguration(
     int dynamicGroupSize)
 {
     assert((0 < dims) && (dims <= 3));
+    DBOUT(DB_MISC, "static group segment size: " << kernel->static_group_segment_size
+                   << " dynamic group segment size: " << dynamicGroupSize << "\n");
 
-#if KALMAR_DEBUG && HCC_DEBUG_KARG
-    std::cerr << "static group segment size: " << kernel->static_group_segment_size << "\n";
-    std::cerr << "dynamic group segment size: " << dynamicGroupSize << "\n";
-#endif
     // Set group dims
     // for each workgroup dimension, make sure it does not exceed the maximum allowable limit
     const uint16_t* workgroup_max_dim = device_->getWorkgroupMaxDim();
