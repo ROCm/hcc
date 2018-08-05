@@ -35,30 +35,7 @@ namespace hc
 }
 
 /** \cond HIDDEN_SYMBOLS */
-namespace Kalmar {
-
-template <typename Kernel>
-inline
-void append_kernel(
-  const std::shared_ptr<KalmarQueue>& pQueue, const Kernel& f, void* kernel)
-{
-  Kalmar::BufferArgumentsAppender vis(pQueue, kernel);
-  Kalmar::Serialize s(&vis);
-  //f.__cxxamp_serialize(s);
-}
-
-// template<typename Kernel>
-// inline
-// std::shared_ptr<KalmarQueue> get_available_que(const Kernel& f)
-// {
-//     Kalmar::QueueSearcher ser;
-//     Kalmar::Serialize s(&ser);
-//     f.__cxxamp_serialize(s);
-//     if (ser.get_que())
-//         return ser.get_que();
-//     else
-//         return getContext()->auto_select();
-// }
+namespace detail {
 
 struct Indexer {
     template<int n>
@@ -87,11 +64,14 @@ template<typename Index, typename Kernel>
 struct Kernel_emitter {
     static
     __attribute__((used, annotate("__HCC_KERNEL__")))
-    void entry_point(Kernel f) restrict(cpu, amp)
+    void entry_point(Kernel f) [[cpu]][[hc]]
     {
-        #if __KALMAR_ACCELERATOR__ != 0
+        #if __HCC_ACCELERATOR__ != 0
             Index tmp = Indexer{};
             f(tmp);
+        #else
+            struct { void operator()(const Kernel&) {} } tmp{};
+            tmp(f);
         #endif
     }
 };
@@ -193,13 +173,18 @@ using IndexType = typename Index_type<T>::index_type;
 template<typename Domain, typename Kernel>
 inline
 void* make_registered_kernel(
-    const std::shared_ptr<KalmarQueue>& q, const Kernel& f)
+    const std::shared_ptr<HCCQueue>& q, const Kernel& f)
 {
-    using K = Kalmar::Kernel_emitter<IndexType<Domain>, Kernel>;
+    struct Deleter {
+        void operator()(void* p) const { delete static_cast<Kernel*>(p); }
+    };
 
+    using K = detail::Kernel_emitter<IndexType<Domain>, Kernel>;
+
+    std::unique_ptr<void, void (*)(void*)> tmp{
+        new Kernel{f}, [](void* p) { delete static_cast<Kernel*>(p); }};
     void *kernel{CLAMP::CreateKernel(
-      linker_name_for<K>(), q.get(), &f, sizeof(Kernel))};
-    append_kernel(q, f, kernel);
+        linker_name_for<K>(), q.get(), std::move(tmp), sizeof(Kernel))};
 
     return kernel;
 }
@@ -236,22 +221,25 @@ inline
 std::pair<
     std::array<std::size_t, Domain::rank>,
     std::array<std::size_t, Domain::rank>> dimensions(const Domain& domain)
-{
+{   // TODO: optimise.
     using R = std::pair<
         std::array<std::size_t, Domain::rank>,
         std::array<std::size_t, Domain::rank>>;
 
     R r{};
-    for (auto i = 0; i != domain.rank; ++i) r.first[i] = domain[i];
-    r.second = local_dimensions(domain);
+    auto tmp = local_dimensions(domain);
+    for (auto i = 0; i != Domain::rank; ++i) {
+        r.first[i] = domain[i];
+        r.second[i] = tmp[i];
+    }
 
     return r;
 }
 
 template<typename Domain, typename Kernel>
 inline
-std::shared_ptr<KalmarAsyncOp> launch_kernel_async(
-    const std::shared_ptr<KalmarQueue>& q,
+std::shared_ptr<HCCAsyncOp> launch_kernel_async(
+    const std::shared_ptr<HCCQueue>& q,
     const Domain& domain,
     const Kernel& f)
 {
@@ -267,7 +255,7 @@ std::shared_ptr<KalmarAsyncOp> launch_kernel_async(
 template<typename Domain, typename Kernel>
 inline
 void launch_kernel(
-    const std::shared_ptr<KalmarQueue>& q,
+    const std::shared_ptr<HCCQueue>& q,
     const Domain& domain,
     const Kernel& f)
 {
@@ -283,10 +271,9 @@ void launch_kernel(
 template<typename Domain, typename Kernel>
 inline
 void launch_kernel_with_dynamic_group_memory(
-    const std::shared_ptr<KalmarQueue>& q,
+    const std::shared_ptr<HCCQueue>& q,
     const Domain& domain,
-    const Kernel& f,
-    std::size_t dynamic_group_memory_size)
+    const Kernel& f)
 {
     const auto dims{dimensions(domain)};
 
@@ -300,8 +287,8 @@ void launch_kernel_with_dynamic_group_memory(
 
 template<typename Domain, typename Kernel>
 inline
-std::shared_ptr<KalmarAsyncOp> launch_kernel_with_dynamic_group_memory_async(
-  const std::shared_ptr<KalmarQueue>& q,
+std::shared_ptr<HCCAsyncOp> launch_kernel_with_dynamic_group_memory_async(
+  const std::shared_ptr<HCCQueue>& q,
   const Domain& domain,
   const Kernel& f)
 {
@@ -314,5 +301,5 @@ std::shared_ptr<KalmarAsyncOp> launch_kernel_with_dynamic_group_memory_async(
         dims.second.data(),
         domain.get_dynamic_group_segment_size());
 }
-} // namespace Kalmar
+} // namespace detail
 /** \endcond */

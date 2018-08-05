@@ -61,11 +61,11 @@ extern "C" __attribute__((noduplicate,amp)) void amp_barrier(unsigned int n) ;
 #endif
 
 /**
- * @namespace Kalmar
- * namespace for internal classes of Kalmar compiler / runtime
+ * @namespace detail
+ * namespace for internal classes of detail compiler / runtime
  */
-namespace Kalmar {
-} // namespace Kalmar
+namespace detail {
+} // namespace detail
 
 // Provide automatic type conversion for void*.
 class auto_voidp {

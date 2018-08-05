@@ -7,292 +7,295 @@
 
 #pragma once
 
+#include "hc_defines.h"
+
 #include <cmath>
 #include <stdexcept>
 
-extern "C" __fp16 __hc_acos_half(__fp16 x) restrict(amp);
+extern "C" _Float16 __hc_acos_half(_Float16 x) restrict(amp);
 extern "C" float __hc_acos(float x) restrict(amp);
 extern "C" double __hc_acos_double(double x) restrict(amp);
 
-extern "C" __fp16 __hc_acosh_half(__fp16 x) restrict(amp);
+extern "C" _Float16 __hc_acosh_half(_Float16 x) restrict(amp);
 extern "C" float __hc_acosh(float x) restrict(amp);
 extern "C" double __hc_acosh_double(double x) restrict(amp);
 
-extern "C" __fp16 __hc_asin_half(__fp16 x) restrict(amp);
+extern "C" _Float16 __hc_asin_half(_Float16 x) restrict(amp);
 extern "C" float __hc_asin(float x) restrict(amp);
 extern "C" double __hc_asin_double(double x) restrict(amp);
 
-extern "C" __fp16 __hc_asinh_half(__fp16 x) restrict(amp);
+extern "C" _Float16 __hc_asinh_half(_Float16 x) restrict(amp);
 extern "C" float __hc_asinh(float x) restrict(amp);
 extern "C" double __hc_asinh_double(double x) restrict(amp);
 
-extern "C" __fp16 __hc_atan_half(__fp16 x) restrict(amp);
+extern "C" _Float16 __hc_atan_half(_Float16 x) restrict(amp);
 extern "C" float __hc_atan(float x) restrict(amp);
 extern "C" double __hc_atan_double(double x) restrict(amp);
 
-extern "C" __fp16 __hc_atanh_half(__fp16 x) restrict(amp);
+extern "C" _Float16 __hc_atanh_half(_Float16 x) restrict(amp);
 extern "C" float __hc_atanh(float x) restrict(amp);
 extern "C" double __hc_atanh_double(double x) restrict(amp);
 
-extern "C" __fp16 __hc_atan2_half(__fp16 y, __fp16 x) restrict(amp);
+extern "C" _Float16 __hc_atan2_half(_Float16 y, _Float16 x) restrict(amp);
 extern "C" float __hc_atan2(float y, float x) restrict(amp);
 extern "C" double __hc_atan2_double(double y, double x) restrict(amp);
 
-extern "C" __fp16 __hc_cbrt_half(__fp16 x) restrict(amp);
+extern "C" _Float16 __hc_cbrt_half(_Float16 x) restrict(amp);
 extern "C" float __hc_cbrt(float x) restrict(amp);
 extern "C" double __hc_cbrt_double(double x) restrict(amp);
 
-extern "C" __fp16 __hc_ceil_half(__fp16 x) restrict(amp);
+extern "C" _Float16 __hc_ceil_half(_Float16 x) restrict(amp);
 extern "C" float __hc_ceil(float x) restrict(amp);
 extern "C" double __hc_ceil_double(double x) restrict(amp);
 
-extern "C" __fp16 __hc_copysign_half(__fp16 x, __fp16 y) restrict(amp);
+extern "C" _Float16 __hc_copysign_half(_Float16 x, _Float16 y) restrict(amp);
 extern "C" float __hc_copysign(float x, float y) restrict(amp);
 extern "C" double __hc_copysign_double(double x, double y) restrict(amp);
 
-extern "C" __fp16 __hc_cos_half(__fp16 x) restrict(amp);
-extern "C" __fp16 __hc_cos_native_half(__fp16 x) restrict(amp);
+extern "C" _Float16 __hc_cos_half(_Float16 x) restrict(amp);
+extern "C" _Float16 __hc_cos_native_half(_Float16 x) restrict(amp);
 extern "C" float __hc_cos(float x) restrict(amp);
 extern "C" float __hc_cos_native(float x) restrict(amp);
 extern "C" double __hc_cos_double(double x) restrict(amp);
 
-extern "C" __fp16 __hc_cosh_half(__fp16 x) restrict(amp);
+extern "C" _Float16 __hc_cosh_half(_Float16 x) restrict(amp);
 extern "C" float __hc_cosh(float x) restrict(amp);
 extern "C" double __hc_cosh_double(double x) restrict(amp);
 
-extern "C" __fp16 __hc_cospi_half(__fp16 x) restrict(amp);
+extern "C" _Float16 __hc_cospi_half(_Float16 x) restrict(amp);
 extern "C" float __hc_cospi(float x) restrict(amp);
 extern "C" double __hc_cospi_double(double x) restrict(amp);
 
-extern "C" __fp16 __hc_erf_half(__fp16 x) restrict(amp);
+extern "C" _Float16 __hc_erf_half(_Float16 x) restrict(amp);
 extern "C" float __hc_erf(float x) restrict(amp);
 extern "C" double __hc_erf_double(double x) restrict(amp);
 
-extern "C" __fp16 __hc_erfc_half(__fp16 x) restrict(amp);
+extern "C" _Float16 __hc_erfc_half(_Float16 x) restrict(amp);
 extern "C" float __hc_erfc(float x) restrict(amp);
 extern "C" double __hc_erfc_double(double x) restrict(amp);
 
-extern "C" __fp16 __hc_erfcinv_half(__fp16 x) restrict(amp);
+extern "C" _Float16 __hc_erfcinv_half(_Float16 x) restrict(amp);
 extern "C" float __hc_erfcinv(float x) restrict(amp);
 extern "C" double __hc_erfcinv_double(double x) restrict(amp);
 
-extern "C" __fp16 __hc_erfinv_half(__fp16 x) restrict(amp);
+extern "C" _Float16 __hc_erfinv_half(_Float16 x) restrict(amp);
 extern "C" float __hc_erfinv(float x) restrict(amp);
 extern "C" double __hc_erfinv_double(double x) restrict(amp);
 
-extern "C" __fp16 __hc_exp_half(__fp16 x) restrict(amp);
+extern "C" _Float16 __hc_exp_half(_Float16 x) restrict(amp);
 extern "C" float __hc_exp(float x) restrict(amp);
 extern "C" double __hc_exp_double(double x) restrict(amp);
 
-extern "C" __fp16 __hc_exp10_half(__fp16 x) restrict(amp);
+extern "C" _Float16 __hc_exp10_half(_Float16 x) restrict(amp);
 extern "C" float __hc_exp10(float x) restrict(amp);
 extern "C" double __hc_exp10_double(double x) restrict(amp);
 
-extern "C" __fp16 __hc_exp2_native_half(__fp16 x) restrict(amp);
-extern "C" __fp16 __hc_exp2_half(__fp16 x) restrict(amp);
+extern "C" _Float16 __hc_exp2_native_half(_Float16 x) restrict(amp);
+extern "C" _Float16 __hc_exp2_half(_Float16 x) restrict(amp);
 extern "C" float __hc_exp2(float x) restrict(amp);
 extern "C" float __hc_exp2_native(float x) restrict(amp);
 extern "C" double __hc_exp2_double(double x) restrict(amp);
 
-extern "C" __fp16 __hc_expm1_half(__fp16 x) restrict(amp);
+extern "C" _Float16 __hc_expm1_half(_Float16 x) restrict(amp);
 extern "C" float __hc_expm1(float x) restrict(amp);
 extern "C" double __hc_expm1_double(double x) restrict(amp);
 
-extern "C" __fp16 __hc_fabs_half(__fp16 x) restrict(amp);
+extern "C" _Float16 __hc_fabs_half(_Float16 x) restrict(amp);
 extern "C" float __hc_fabs(float x) restrict(amp);
 extern "C" double __hc_fabs_double(double x) restrict(amp);
 
-extern "C" __fp16 __hc_fdim_half(__fp16 x, __fp16 y) restrict(amp);
+extern "C" _Float16 __hc_fdim_half(_Float16 x, _Float16 y) restrict(amp);
 extern "C" float __hc_fdim(float x, float y) restrict(amp);
 extern "C" double __hc_fdim_double(double x, double y) restrict(amp);
 
-extern "C" __fp16 __hc_floor_half(__fp16 x) restrict(amp);
+extern "C" _Float16 __hc_floor_half(_Float16 x) restrict(amp);
 extern "C" float __hc_floor(float x) restrict(amp);
 extern "C" double __hc_floor_double(double x) restrict(amp);
 
-extern "C" __fp16 __hc_fma_half(__fp16 x, __fp16 y, __fp16 z) restrict(amp);
+extern "C" _Float16 __hc_fma_half(
+    _Float16 x, _Float16 y, _Float16 z) restrict(amp);
 extern "C" float __hc_fma(float x, float y, float z) restrict(amp);
 extern "C" double __hc_fma_double(double x, double y, double z) restrict(amp);
 
-extern "C" __fp16 __hc_fmax_half(__fp16 x, __fp16 y) restrict(amp);
+extern "C" _Float16 __hc_fmax_half(_Float16 x, _Float16 y) restrict(amp);
 extern "C" float __hc_fmax(float x, float y) restrict(amp);
 extern "C" double __hc_fmax_double(double x, double y) restrict(amp);
 
-extern "C" __fp16 __hc_fmin_half(__fp16 x, __fp16 y) restrict(amp);
+extern "C" _Float16 __hc_fmin_half(_Float16 x, _Float16 y) restrict(amp);
 extern "C" float __hc_fmin(float x, float y) restrict(amp);
 extern "C" double __hc_fmin_double(double x, double y) restrict(amp);
 
-extern "C" __fp16 __hc_fmod_half(__fp16 x, __fp16 y) restrict(amp);
+extern "C" _Float16 __hc_fmod_half(_Float16 x, _Float16 y) restrict(amp);
 extern "C" float __hc_fmod(float x, float y) restrict(amp);
 extern "C" double __hc_fmod_double(double x, double y) restrict(amp);
 
-extern "C" int __hc_fpclassify_half(__fp16 x) restrict(amp);
+extern "C" int __hc_fpclassify_half(_Float16 x) restrict(amp);
 extern "C" int __hc_fpclassify(float x) restrict(amp);
 extern "C" int __hc_fpclassify_double(double x) restrict(amp);
 
-extern "C" __fp16 __hc_frexp_half(__fp16 x, int *exp) restrict(amp);
+extern "C" _Float16 __hc_frexp_half(_Float16 x, int *exp) restrict(amp);
 extern "C" float __hc_frexp(float x, int *exp) restrict(amp);
 extern "C" double __hc_frexp_double(double x, int *exp) restrict(amp);
 
-extern "C" __fp16 __hc_hypot_half(__fp16 x, __fp16 y) restrict(amp);
+extern "C" _Float16 __hc_hypot_half(_Float16 x, _Float16 y) restrict(amp);
 extern "C" float __hc_hypot(float x, float y) restrict(amp);
 extern "C" double __hc_hypot_double(double x, double y) restrict(amp);
 
-extern "C" int __hc_ilogb_half(__fp16 x) restrict(amp);
+extern "C" int __hc_ilogb_half(_Float16 x) restrict(amp);
 extern "C" int __hc_ilogb(float x) restrict(amp);
 extern "C" int __hc_ilogb_double(double x) restrict(amp);
 
-extern "C" int __hc_isfinite_half(__fp16 x) restrict(amp);
+extern "C" int __hc_isfinite_half(_Float16 x) restrict(amp);
 extern "C" int __hc_isfinite(float x) restrict(amp);
 extern "C" int __hc_isfinite_double(double x) restrict(amp);
 
-extern "C" int __hc_isinf_half(__fp16 x) restrict(amp);
+extern "C" int __hc_isinf_half(_Float16 x) restrict(amp);
 extern "C" int __hc_isinf(float x) restrict(amp);
 extern "C" int __hc_isinf_double(double x) restrict(amp);
 
-extern "C" int __hc_isnan_half(__fp16 x) restrict(amp);
+extern "C" int __hc_isnan_half(_Float16 x) restrict(amp);
 extern "C" int __hc_isnan(float x) restrict(amp);
 extern "C" int __hc_isnan_double(double x) restrict(amp);
 
-extern "C" int __hc_isnormal_half(__fp16 x) restrict(amp);
+extern "C" int __hc_isnormal_half(_Float16 x) restrict(amp);
 extern "C" int __hc_isnormal(float x) restrict(amp);
 extern "C" int __hc_isnormal_double(double x) restrict(amp);
 
-extern "C" __fp16 __hc_ldexp_half(__fp16 x, std::int16_t exp) [[hc]];
+extern "C" _Float16 __hc_ldexp_half(_Float16 x, std::int16_t exp) [[hc]];
 extern "C" float __hc_ldexp(float x, int exp) restrict(amp);
 extern "C" double __hc_ldexp_double(double x, int exp) restrict(amp);
 
-extern "C" __fp16 __hc_lgamma_half(__fp16 x) restrict(amp);
+extern "C" _Float16 __hc_lgamma_half(_Float16 x) restrict(amp);
 extern "C" float __hc_lgamma(float x) restrict(amp);
 extern "C" double __hc_lgamma_double(double x) restrict(amp);
 
-extern "C" __fp16 __hc_log_half(__fp16 x) restrict(amp);
+extern "C" _Float16 __hc_log_half(_Float16 x) restrict(amp);
 extern "C" float __hc_log(float x) restrict(amp);
 extern "C" float __hc_log_native(float x) restrict(amp);
 extern "C" double __hc_log_double(double x) restrict(amp);
 
-extern "C" __fp16 __hc_log10_half(__fp16 x) restrict(amp);
+extern "C" _Float16 __hc_log10_half(_Float16 x) restrict(amp);
 extern "C" float __hc_log10(float x) restrict(amp);
 extern "C" double __hc_log10_double(double x) restrict(amp);
 
-extern "C" __fp16 __hc_log2_half(__fp16 x) restrict(amp);
-extern "C" __fp16 __hc_log2_native_half(__fp16 x) restrict(amp);
+extern "C" _Float16 __hc_log2_half(_Float16 x) restrict(amp);
+extern "C" _Float16 __hc_log2_native_half(_Float16 x) restrict(amp);
 extern "C" float __hc_log2(float x) restrict(amp);
 extern "C" float __hc_log2_native(float x) restrict(amp);
 extern "C" double __hc_log2_double(double x) restrict(amp);
 
-extern "C" __fp16 __hc_log1p_half(__fp16 x) restrict(amp);
+extern "C" _Float16 __hc_log1p_half(_Float16 x) restrict(amp);
 extern "C" float __hc_log1p(float x) restrict(amp);
 extern "C" double __hc_log1p_double(double x) restrict(amp);
 
-extern "C" __fp16 __hc_logb_half(__fp16 x) restrict(amp);
+extern "C" _Float16 __hc_logb_half(_Float16 x) restrict(amp);
 extern "C" float __hc_logb(float x) restrict(amp);
 extern "C" double __hc_logb_double(double x) restrict(amp);
 
-extern "C" __fp16 __hc_modf_half(__fp16 x, __fp16 *iptr) restrict(amp);
+extern "C" _Float16 __hc_modf_half(_Float16 x, _Float16 *iptr) restrict(amp);
 extern "C" float __hc_modf(float x, float *iptr) restrict(amp);
 extern "C" double __hc_modf_double(double x, double *iptr) restrict(amp);
 
-extern "C" __fp16 __hc_nan_half(int tagp) restrict(amp);
+extern "C" _Float16 __hc_nan_half(int tagp) restrict(amp);
 extern "C" float __hc_nan(int tagp) restrict(amp);
 extern "C" double __hc_nan_double(unsigned long tagp) restrict(amp);
 
-extern "C" __fp16 __hc_nearbyint_half(__fp16 x) restrict(amp);
+extern "C" _Float16 __hc_nearbyint_half(_Float16 x) restrict(amp);
 extern "C" float __hc_nearbyint(float x) restrict(amp);
 extern "C" double __hc_nearbyint_double(double x) restrict(amp);
 
-extern "C" __fp16 __hc_nextafter_half(__fp16 x, __fp16 y) restrict(amp);
+extern "C" _Float16 __hc_nextafter_half(_Float16 x, _Float16 y) restrict(amp);
 extern "C" float __hc_nextafter(float x, float y) restrict(amp);
 extern "C" double __hc_nextafter_double(double x, double y) restrict(amp);
 
-extern "C" __fp16 __hc_pow_half(__fp16 x, __fp16 y) restrict(amp);
+extern "C" _Float16 __hc_pow_half(_Float16 x, _Float16 y) restrict(amp);
 extern "C" float __hc_pow(float x, float y) restrict(amp);
 extern "C" double __hc_pow_double(double x, double y) restrict(amp);
 
-extern "C" __fp16 __hc_rcbrt_half(__fp16 x) restrict(amp);
+extern "C" _Float16 __hc_rcbrt_half(_Float16 x) restrict(amp);
 extern "C" float __hc_rcbrt(float x) restrict(amp);
 extern "C" double __hc_rcbrt_double(double x) restrict(amp);
 
 // TODO: rcp is implementation only, it does not have a public interface.
-extern "C" __fp16 __hc_rcp_native_half(__fp16 x) restrict(amp);
+extern "C" _Float16 __hc_rcp_native_half(_Float16 x) restrict(amp);
 extern "C" float __hc_rcp_native(float x) restrict(amp);
 
-extern "C" __fp16 __hc_remainder_half(__fp16 x, __fp16 y) restrict(amp);
+extern "C" _Float16 __hc_remainder_half(_Float16 x, _Float16 y) restrict(amp);
 extern "C" float __hc_remainder(float x, float y) restrict(amp);
 extern "C" double __hc_remainder_double(double x, double y) restrict(amp);
 
-extern "C" __fp16 __hc_remquo_half(__fp16 x, __fp16 y, int *quo) restrict(amp);
+extern "C" _Float16 __hc_remquo_half(_Float16 x, _Float16 y, int *quo) restrict(amp);
 extern "C" float __hc_remquo(float x, float y, int *quo) restrict(amp);
 extern "C" double __hc_remquo_double(double x, double y, int *quo) restrict(amp);
 
-extern "C" __fp16 __hc_round_half(__fp16 x) restrict(amp);
+extern "C" _Float16 __hc_round_half(_Float16 x) restrict(amp);
 extern "C" float __hc_round(float x) restrict(amp);
 extern "C" double __hc_round_double(double x) restrict(amp);
 
-extern "C" __fp16 __hc_rsqrt_half(__fp16 x) restrict(amp);
-extern "C" __fp16 __hc_rsqrt_native_half(__fp16 x) restrict(amp);
+extern "C" _Float16 __hc_rsqrt_half(_Float16 x) restrict(amp);
+extern "C" _Float16 __hc_rsqrt_native_half(_Float16 x) restrict(amp);
 extern "C" float __hc_rsqrt(float x) restrict(amp);
 extern "C" float __hc_rsqrt_native(float x) restrict(amp);
 extern "C" double __hc_rsqrt_double(double x) restrict(amp);
 
-extern "C" __fp16 __hc_scalb_half(__fp16 x, __fp16 exp) restrict(amp);
+extern "C" _Float16 __hc_scalb_half(_Float16 x, _Float16 exp) restrict(amp);
 extern "C" float __hc_scalb(float x, float exp) restrict(amp);
 extern "C" double __hc_scalb_double(double x, double exp) restrict(amp);
 
-extern "C" __fp16 __hc_scalbn_half(__fp16 x, int exp) restrict(amp);
+extern "C" _Float16 __hc_scalbn_half(_Float16 x, int exp) restrict(amp);
 extern "C" float __hc_scalbn(float x, int exp) restrict(amp);
 extern "C" double __hc_scalbn_double(double x, int exp) restrict(amp);
 
-extern "C" __fp16 __hc_sinpi_half(__fp16 x) restrict(amp);
+extern "C" _Float16 __hc_sinpi_half(_Float16 x) restrict(amp);
 extern "C" float __hc_sinpi(float x) restrict(amp);
 extern "C" double __hc_sinpi_double(double x) restrict(amp);
 
-extern "C" int __hc_signbit_half(__fp16 x) restrict(amp);
+extern "C" int __hc_signbit_half(_Float16 x) restrict(amp);
 extern "C" int __hc_signbit(float x) restrict(amp);
 extern "C" int __hc_signbit_double(double x) restrict(amp);
 
-extern "C" __fp16 __hc_sin_half(__fp16 x) restrict(amp);
-extern "C" __fp16 __hc_sin_native_half(__fp16 x) restrict(amp);
+extern "C" _Float16 __hc_sin_half(_Float16 x) restrict(amp);
+extern "C" _Float16 __hc_sin_native_half(_Float16 x) restrict(amp);
 extern "C" float __hc_sin(float x) restrict(amp);
 extern "C" float __hc_sin_native(float x) restrict(amp);
 extern "C" double __hc_sin_double(double x) restrict(amp);
 
-extern "C" __fp16 __hc_sincos_half(__fp16 x, __fp16 *c) restrict(amp);
+extern "C" _Float16 __hc_sincos_half(_Float16 x, _Float16 *c) restrict(amp);
 extern "C" float __hc_sincos(float x, float *c) restrict(amp);
 extern "C" double __hc_sincos_double(double x, double *c) restrict(amp);
 
-extern "C" __fp16 __hc_sinh_half(__fp16 x) restrict(amp);
+extern "C" _Float16 __hc_sinh_half(_Float16 x) restrict(amp);
 extern "C" float __hc_sinh(float x) restrict(amp);
 extern "C" double __hc_sinh_double(double x) restrict(amp);
 
-extern "C" __fp16 __hc_sqrt_half(__fp16 x) restrict(amp);
-extern "C" __fp16 __hc_sqrt_native_half(__fp16 x) restrict(amp);
+extern "C" _Float16 __hc_sqrt_half(_Float16 x) restrict(amp);
+extern "C" _Float16 __hc_sqrt_native_half(_Float16 x) restrict(amp);
 extern "C" float __hc_sqrt(float x) restrict(amp);
 extern "C" float __hc_sqrt_native(float x) restrict(amp);
 extern "C" double __hc_sqrt_double(double x) restrict(amp);
 
-extern "C" __fp16 __hc_tgamma_half(__fp16 x) restrict(amp);
+extern "C" _Float16 __hc_tgamma_half(_Float16 x) restrict(amp);
 extern "C" float __hc_tgamma(float x) restrict(amp);
 extern "C" double __hc_tgamma_double(double x) restrict(amp);
 
-extern "C" __fp16 __hc_tan_half(__fp16 x) restrict(amp);
+extern "C" _Float16 __hc_tan_half(_Float16 x) restrict(amp);
 extern "C" float __hc_tan(float x) restrict(amp);
 extern "C" double __hc_tan_double(double x) restrict(amp);
 
-extern "C" __fp16 __hc_tanh_half(__fp16 x) restrict(amp);
+extern "C" _Float16 __hc_tanh_half(_Float16 x) restrict(amp);
 extern "C" float __hc_tanh(float x) restrict(amp);
 extern "C" double __hc_tanh_double(double x) restrict(amp);
 
-extern "C" __fp16 __hc_tanpi_half(__fp16 x) restrict(amp);
+extern "C" _Float16 __hc_tanpi_half(_Float16 x) restrict(amp);
 extern "C" float __hc_tanpi(float x) restrict(amp);
 extern "C" double __hc_tanpi_double(double x) restrict(amp);
 
-extern "C" __fp16 __hc_trunc_half(__fp16 x) restrict(amp);
+extern "C" _Float16 __hc_trunc_half(_Float16 x) restrict(amp);
 extern "C" float __hc_trunc(float x) restrict(amp);
 extern "C" double __hc_trunc_double(double x) restrict(amp);
 
 #define HCC_MATH_LIB_FN inline __attribute__((used, hc))
-namespace Kalmar
+namespace detail
 {
     namespace fast_math
     {
@@ -364,7 +367,7 @@ namespace Kalmar
         float acosf(float x) { return __hc_acos(x); }
 
         HCC_MATH_LIB_FN
-        __fp16 acos(__fp16 x) { return __hc_acos_half(x); }
+        _Float16 acos(_Float16 x) { return __hc_acos_half(x); }
 
         HCC_MATH_LIB_FN
         float acos(float x) { return fast_math::acosf(x); }
@@ -373,7 +376,7 @@ namespace Kalmar
         float asinf(float x) { return __hc_asin(x); }
 
         HCC_MATH_LIB_FN
-        __fp16 asin(__fp16 x) { return __hc_asin_half(x); }
+        _Float16 asin(_Float16 x) { return __hc_asin_half(x); }
 
         HCC_MATH_LIB_FN
         float asin(float x) { return fast_math::asinf(x); }
@@ -382,7 +385,7 @@ namespace Kalmar
         float atanf(float x) { return __hc_atan(x); }
 
         HCC_MATH_LIB_FN
-        __fp16 atan(__fp16 x) { return __hc_atan_half(x); }
+        _Float16 atan(_Float16 x) { return __hc_atan_half(x); }
 
         HCC_MATH_LIB_FN
         float atan(float x) { return fast_math::atanf(x); }
@@ -391,7 +394,7 @@ namespace Kalmar
         float atan2f(float y, float x) { return __hc_atan2(y, x); }
 
         HCC_MATH_LIB_FN
-        __fp16 atan2(__fp16 y, __fp16 x) { return __hc_atan2_half(y, x); }
+        _Float16 atan2(_Float16 y, _Float16 x) { return __hc_atan2_half(y, x); }
 
         HCC_MATH_LIB_FN
         float atan2(float y, float x) { return fast_math::atan2f(y, x); }
@@ -400,7 +403,7 @@ namespace Kalmar
         float ceilf(float x) { return __hc_ceil(x); }
 
         HCC_MATH_LIB_FN
-        __fp16 ceil(__fp16 x) { return __hc_ceil_half(x); }
+        _Float16 ceil(_Float16 x) { return __hc_ceil_half(x); }
 
         HCC_MATH_LIB_FN
         float ceil(float x) { return fast_math::ceilf(x); }
@@ -409,7 +412,7 @@ namespace Kalmar
         float cosf(float x) { return __hc_cos_native(x); }
 
         HCC_MATH_LIB_FN
-        __fp16 cos(__fp16 x) { return __hc_cos_native_half(x); }
+        _Float16 cos(_Float16 x) { return __hc_cos_native_half(x); }
 
         HCC_MATH_LIB_FN
         float cos(float x) { return fast_math::cosf(x); }
@@ -418,7 +421,7 @@ namespace Kalmar
         float coshf(float x) { return __hc_cosh(x); }
 
         HCC_MATH_LIB_FN
-        __fp16 cosh(__fp16 x) { return __hc_cosh_half(x); }
+        _Float16 cosh(_Float16 x) { return __hc_cosh_half(x); }
 
         HCC_MATH_LIB_FN
         float cosh(float x) { return fast_math::coshf(x); }
@@ -427,7 +430,7 @@ namespace Kalmar
         float expf(float x) { return __hc_exp2_native(M_LOG2E * x); }
 
         HCC_MATH_LIB_FN
-        __fp16 exp(__fp16 x) { return __hc_exp2_native_half(M_LOG2E * x); }
+        _Float16 exp(_Float16 x) { return __hc_exp2_native_half(M_LOG2E * x); }
 
         HCC_MATH_LIB_FN
         float exp(float x) { return fast_math::expf(x); }
@@ -436,7 +439,7 @@ namespace Kalmar
         float exp2f(float x) { return __hc_exp2_native(x); }
 
         HCC_MATH_LIB_FN
-        __fp16 exp2(__fp16 x) { return __hc_exp2_native_half(x); }
+        _Float16 exp2(_Float16 x) { return __hc_exp2_native_half(x); }
 
         HCC_MATH_LIB_FN
         float exp2(float x) { return fast_math::exp2f(x); }
@@ -445,7 +448,7 @@ namespace Kalmar
         float fabsf(float x) { return __hc_fabs(x); }
 
         HCC_MATH_LIB_FN
-        __fp16 fabs(__fp16 x) { return __hc_fabs_half(x); }
+        _Float16 fabs(_Float16 x) { return __hc_fabs_half(x); }
 
         HCC_MATH_LIB_FN
         float fabs(float x) { return fast_math::fabsf(x); }
@@ -454,7 +457,7 @@ namespace Kalmar
         float floorf(float x) { return __hc_floor(x); }
 
         HCC_MATH_LIB_FN
-        __fp16 floor(__fp16 x) { return __hc_floor_half(x); }
+        _Float16 floor(_Float16 x) { return __hc_floor_half(x); }
 
         HCC_MATH_LIB_FN
         float floor(float x) { return fast_math::floorf(x); }
@@ -463,7 +466,7 @@ namespace Kalmar
         float fmaxf(float x, float y) { return __hc_fmax(x, y); }
 
         HCC_MATH_LIB_FN
-        __fp16 fmax(__fp16 x, __fp16 y) { return __hc_fmax_half(x, y); }
+        _Float16 fmax(_Float16 x, _Float16 y) { return __hc_fmax_half(x, y); }
 
         HCC_MATH_LIB_FN
         float fmax(float x, float y) { return fast_math::fmaxf(x, y); }
@@ -472,7 +475,7 @@ namespace Kalmar
         float fminf(float x, float y) { return __hc_fmin(x, y); }
 
         HCC_MATH_LIB_FN
-        __fp16 fmin(__fp16 x, __fp16 y) { return __hc_fmin_half(x, y); }
+        _Float16 fmin(_Float16 x, _Float16 y) { return __hc_fmin_half(x, y); }
 
         HCC_MATH_LIB_FN
         float fmin(float x, float y) { return fast_math::fminf(x, y); }
@@ -481,7 +484,7 @@ namespace Kalmar
         float fmodf(float x, float y) { return __hc_fmod(x, y); }
 
         HCC_MATH_LIB_FN
-        __fp16 fmod(__fp16 x, __fp16 y) { return __hc_fmod_half(x, y); }
+        _Float16 fmod(_Float16 x, _Float16 y) { return __hc_fmod_half(x, y); }
 
         HCC_MATH_LIB_FN
         float fmod(float x, float y) { return fast_math::fmodf(x, y); }
@@ -490,25 +493,25 @@ namespace Kalmar
         float frexpf(float x, int *exp) { return __hc_frexp(x, exp); }
 
         HCC_MATH_LIB_FN
-        __fp16 frexp(__fp16 x, int *exp) { return __hc_frexp_half(x, exp); }
+        _Float16 frexp(_Float16 x, int *exp) { return __hc_frexp_half(x, exp); }
 
         HCC_MATH_LIB_FN
         float frexp(float x, int *exp) { return fast_math::frexpf(x, exp); }
 
         HCC_MATH_LIB_FN
-        int isfinite(__fp16 x) { return __hc_isfinite_half(x); }
+        int isfinite(_Float16 x) { return __hc_isfinite_half(x); }
 
         HCC_MATH_LIB_FN
         int isfinite(float x) { return __hc_isfinite(x); }
 
         HCC_MATH_LIB_FN
-        int isinf(__fp16 x) { return __hc_isinf_half(x); }
+        int isinf(_Float16 x) { return __hc_isinf_half(x); }
 
         HCC_MATH_LIB_FN
         int isinf(float x) { return __hc_isinf(x); }
 
         HCC_MATH_LIB_FN
-        int isnan(__fp16 x) { return __hc_isnan_half(x); }
+        int isnan(_Float16 x) { return __hc_isnan_half(x); }
 
         HCC_MATH_LIB_FN
         int isnan(float x) { return __hc_isnan(x); }
@@ -517,7 +520,7 @@ namespace Kalmar
         float ldexpf(float x, int exp) { return __hc_ldexp(x,exp); }
 
         HCC_MATH_LIB_FN
-        __fp16 ldexp(__fp16 x, std::uint16_t exp)
+        _Float16 ldexp(_Float16 x, std::uint16_t exp)
         {
             return __hc_ldexp_half(x, exp);
         }
@@ -539,9 +542,10 @@ namespace Kalmar
         float logf(float x) { return __hc_log2_native(x) * M_RLOG2_E_F; }
 
         HCC_MATH_LIB_FN
-        __fp16 log(__fp16 x)
+        _Float16 log(_Float16 x)
         {
-            return __hc_log2_native_half(x) * static_cast<__fp16>(M_RLOG2_E_F);
+            return
+                __hc_log2_native_half(x) * static_cast<_Float16>(M_RLOG2_E_F);
         }
 
         HCC_MATH_LIB_FN
@@ -551,9 +555,10 @@ namespace Kalmar
         float log10f(float x) { return __hc_log2_native(x) * M_RLOG2_10_F; }
 
         HCC_MATH_LIB_FN
-        __fp16 log10(__fp16 x)
+        _Float16 log10(_Float16 x)
         {
-            return __hc_log2_native_half(x) * static_cast<__fp16>(M_RLOG2_10_F);
+            return
+                __hc_log2_native_half(x) * static_cast<_Float16>(M_RLOG2_10_F);
         }
 
         HCC_MATH_LIB_FN
@@ -563,7 +568,7 @@ namespace Kalmar
         float log2f(float x) { return __hc_log2_native(x); }
 
         HCC_MATH_LIB_FN
-        __fp16 log2(__fp16 x) { return __hc_log2_native_half(x); }
+        _Float16 log2(_Float16 x) { return __hc_log2_native_half(x); }
 
         HCC_MATH_LIB_FN
         float log2(float x) { return fast_math::log2f(x); }
@@ -572,7 +577,7 @@ namespace Kalmar
         float modff(float x, float *iptr) { return __hc_modf(x, iptr); }
 
         HCC_MATH_LIB_FN
-        __fp16 modf(__fp16 x, __fp16 *iptr) { return __hc_modf_half(x, iptr); }
+        _Float16 modf(_Float16 x, _Float16 *iptr) { return __hc_modf_half(x, iptr); }
 
 
         HCC_MATH_LIB_FN
@@ -582,7 +587,7 @@ namespace Kalmar
         float powf(float x, float y) { return __hc_pow(x, y); }
 
         HCC_MATH_LIB_FN
-        __fp16 pow(__fp16 x, __fp16 y) { return __hc_pow_half(x, y); }
+        _Float16 pow(_Float16 x, _Float16 y) { return __hc_pow_half(x, y); }
 
         HCC_MATH_LIB_FN
         float pow(float x, float y) { return fast_math::powf(x, y); }
@@ -591,7 +596,7 @@ namespace Kalmar
         float roundf(float x) { return __hc_round(x); }
 
         HCC_MATH_LIB_FN
-        __fp16 round(__fp16 x) { return __hc_round_half(x); }
+        _Float16 round(_Float16 x) { return __hc_round_half(x); }
 
         HCC_MATH_LIB_FN
         float round(float x) { return fast_math::roundf(x); }
@@ -600,7 +605,7 @@ namespace Kalmar
         float rsqrtf(float x) { return __hc_rsqrt_native(x); }
 
         HCC_MATH_LIB_FN
-        __fp16 rsqrt(__fp16 x) { return __hc_rsqrt_native_half(x); }
+        _Float16 rsqrt(_Float16 x) { return __hc_rsqrt_native_half(x); }
 
         HCC_MATH_LIB_FN
         float rsqrt(float x) { return fast_math::rsqrtf(x); }
@@ -609,7 +614,7 @@ namespace Kalmar
         int signbitf(float x) { return __hc_signbit(x); }
 
         HCC_MATH_LIB_FN
-        int signbit(__fp16 x) { return __hc_signbit_half(x); }
+        int signbit(_Float16 x) { return __hc_signbit_half(x); }
 
         HCC_MATH_LIB_FN
         int signbit(float x) { return fast_math::signbitf(x); }
@@ -618,7 +623,7 @@ namespace Kalmar
         float sinf(float x) { return __hc_sin_native(x); }
 
         HCC_MATH_LIB_FN
-        __fp16 sin(__fp16 x) { return __hc_sin_native_half(x); }
+        _Float16 sin(_Float16 x) { return __hc_sin_native_half(x); }
 
         HCC_MATH_LIB_FN
         float sin(float x) { return fast_math::sinf(x); }
@@ -627,7 +632,7 @@ namespace Kalmar
         void sincosf(float x, float *s, float *c) { *s = __hc_sincos(x, c); }
 
         HCC_MATH_LIB_FN
-        void sincos(__fp16 x, __fp16 *s, __fp16 *c)
+        void sincos(_Float16 x, _Float16 *s, _Float16 *c)
         {
             *s = __hc_sincos_half(x, c);
         }
@@ -642,7 +647,7 @@ namespace Kalmar
         float sinhf(float x) { return __hc_sinh(x); }
 
         HCC_MATH_LIB_FN
-        __fp16 sinh(__fp16 x) { return __hc_sinh_half(x); }
+        _Float16 sinh(_Float16 x) { return __hc_sinh_half(x); }
 
         HCC_MATH_LIB_FN
         float sinh(float x) { return fast_math::sinhf(x); }
@@ -651,7 +656,7 @@ namespace Kalmar
         float sqrtf(float x) { return __hc_sqrt_native(x); }
 
         HCC_MATH_LIB_FN
-        __fp16 sqrt(__fp16 x) { return __hc_sqrt_native_half(x); }
+        _Float16 sqrt(_Float16 x) { return __hc_sqrt_native_half(x); }
 
         HCC_MATH_LIB_FN
         float sqrt(float x) { return fast_math::sqrtf(x); }
@@ -660,7 +665,7 @@ namespace Kalmar
         float tanf(float x) { return __hc_tan(x); }
 
         HCC_MATH_LIB_FN
-        __fp16 tan(__fp16 x)
+        _Float16 tan(_Float16 x)
         {
             return __hc_sin_native_half(x) *
                 __hc_rcp_native_half(__hc_cos_native_half(x));
@@ -673,7 +678,7 @@ namespace Kalmar
         float tanhf(float x) { return __hc_tanh(x); }
 
         HCC_MATH_LIB_FN
-        __fp16 tanh(__fp16 x) { return __hc_tanh_half(x); }
+        _Float16 tanh(_Float16 x) { return __hc_tanh_half(x); }
 
         HCC_MATH_LIB_FN
         float tanh(float x) { return fast_math::tanhf(x); }
@@ -682,7 +687,7 @@ namespace Kalmar
         float truncf(float x) { return __hc_trunc(x); }
 
         HCC_MATH_LIB_FN
-        __fp16 trunc(__fp16 x) { return __hc_trunc_half(x); }
+        _Float16 trunc(_Float16 x) { return __hc_trunc_half(x); }
 
         HCC_MATH_LIB_FN
         float trunc(float x) { return fast_math::truncf(x); }
@@ -798,7 +803,7 @@ namespace Kalmar
         float acosf(float x) { return __hc_acos(x); }
 
         HCC_MATH_LIB_FN
-        __fp16 acos(__fp16 x) { return __hc_acos_half(x); }
+        _Float16 acos(_Float16 x) { return __hc_acos_half(x); }
 
         HCC_MATH_LIB_FN
         float acos(float x) { return precise_math::acosf(x); }
@@ -810,7 +815,7 @@ namespace Kalmar
         float acoshf(float x) { return __hc_acosh(x); }
 
         HCC_MATH_LIB_FN
-        __fp16 acosh(__fp16 x) { return __hc_acosh_half(x); }
+        _Float16 acosh(_Float16 x) { return __hc_acosh_half(x); }
 
         HCC_MATH_LIB_FN
         float acosh(float x) { return precise_math::acoshf(x); }
@@ -822,7 +827,7 @@ namespace Kalmar
         float asinf(float x) { return __hc_asin(x); }
 
         HCC_MATH_LIB_FN
-        __fp16 asin(__fp16 x) { return __hc_asin_half(x); }
+        _Float16 asin(_Float16 x) { return __hc_asin_half(x); }
 
         HCC_MATH_LIB_FN
         float asin(float x) { return precise_math::asinf(x); }
@@ -834,7 +839,7 @@ namespace Kalmar
         float asinhf(float x) { return __hc_asinh(x); }
 
         HCC_MATH_LIB_FN
-        __fp16 asinh(__fp16 x) { return __hc_asinh_half(x); }
+        _Float16 asinh(_Float16 x) { return __hc_asinh_half(x); }
 
         HCC_MATH_LIB_FN
         float asinh(float x) { return precise_math::asinhf(x); }
@@ -846,7 +851,7 @@ namespace Kalmar
         float atanf(float x) { return __hc_atan(x); }
 
         HCC_MATH_LIB_FN
-        __fp16 atan(__fp16 x) { return __hc_atan_half(x); }
+        _Float16 atan(_Float16 x) { return __hc_atan_half(x); }
 
         HCC_MATH_LIB_FN
         float atan(float x) { return precise_math::atanf(x); }
@@ -858,7 +863,7 @@ namespace Kalmar
         float atanhf(float x) { return __hc_atanh(x); }
 
         HCC_MATH_LIB_FN
-        __fp16 atanh(__fp16 x) { return __hc_atanh_half(x); }
+        _Float16 atanh(_Float16 x) { return __hc_atanh_half(x); }
 
         HCC_MATH_LIB_FN
         float atanh(float x) { return precise_math::atanhf(x); }
@@ -870,7 +875,7 @@ namespace Kalmar
         float atan2f(float y, float x) { return __hc_atan2(y, x); }
 
         HCC_MATH_LIB_FN
-        __fp16 atan2(__fp16 x, __fp16 y) { return __hc_atan2_half(x, y); }
+        _Float16 atan2(_Float16 x, _Float16 y) { return __hc_atan2_half(x, y); }
 
         HCC_MATH_LIB_FN
         float atan2(float y, float x) { return precise_math::atan2f(y, x); }
@@ -882,7 +887,7 @@ namespace Kalmar
         float cbrtf(float x) { return __hc_cbrt(x); }
 
         HCC_MATH_LIB_FN
-        __fp16 cbrt(__fp16 x) { return __hc_cbrt_half(x); }
+        _Float16 cbrt(_Float16 x) { return __hc_cbrt_half(x); }
 
         HCC_MATH_LIB_FN
         float cbrt(float x) { return precise_math::cbrtf(x); }
@@ -894,7 +899,7 @@ namespace Kalmar
         float ceilf(float x) { return __hc_ceil(x); }
 
         HCC_MATH_LIB_FN
-        __fp16 ceil(__fp16 x) { return __hc_ceil_half(x); }
+        _Float16 ceil(_Float16 x) { return __hc_ceil_half(x); }
 
         HCC_MATH_LIB_FN
         float ceil(float x) { return precise_math::ceilf(x); }
@@ -906,7 +911,10 @@ namespace Kalmar
         float copysignf(float x, float y) { return __hc_copysign(x, y); }
 
         HCC_MATH_LIB_FN
-        __fp16 copysign(__fp16 x, __fp16 y) { return __hc_copysign_half(x, y); }
+        _Float16 copysign(_Float16 x, _Float16 y)
+        {
+            return __hc_copysign_half(x, y);
+        }
 
         HCC_MATH_LIB_FN
         float copysign(float x, float y)
@@ -924,7 +932,7 @@ namespace Kalmar
         float cosf(float x) { return __hc_cos(x); }
 
         HCC_MATH_LIB_FN
-        __fp16 cos(__fp16 x) { return __hc_cos_half(x); }
+        _Float16 cos(_Float16 x) { return __hc_cos_half(x); }
 
         HCC_MATH_LIB_FN
         float cos(float x) { return precise_math::cosf(x); }
@@ -936,7 +944,7 @@ namespace Kalmar
         float coshf(float x) { return __hc_cosh(x); }
 
         HCC_MATH_LIB_FN
-        __fp16 cosh(__fp16 x) { return __hc_cosh_half(x); }
+        _Float16 cosh(_Float16 x) { return __hc_cosh_half(x); }
 
         HCC_MATH_LIB_FN
         float cosh(float x) { return precise_math::coshf(x); }
@@ -948,7 +956,7 @@ namespace Kalmar
         float cospif(float x) { return __hc_cospi(x); }
 
         HCC_MATH_LIB_FN
-        __fp16 cospi(__fp16 x) { return __hc_cospi_half(x); }
+        _Float16 cospi(_Float16 x) { return __hc_cospi_half(x); }
 
         HCC_MATH_LIB_FN
         float cospi(float x) { return precise_math::cospif(x); }
@@ -960,7 +968,7 @@ namespace Kalmar
         float erff(float x) { return __hc_erf(x); }
 
         HCC_MATH_LIB_FN
-        __fp16 erf(__fp16 x) { return __hc_erf_half(x); }
+        _Float16 erf(_Float16 x) { return __hc_erf_half(x); }
 
         HCC_MATH_LIB_FN
         float erf(float x) { return precise_math::erff(x); }
@@ -972,7 +980,7 @@ namespace Kalmar
         float erfcf(float x) { return __hc_erfc(x); }
 
         HCC_MATH_LIB_FN
-        __fp16 erfc(__fp16 x) { return __hc_erfc_half(x); }
+        _Float16 erfc(_Float16 x) { return __hc_erfc_half(x); }
 
         HCC_MATH_LIB_FN
         float erfc(float x) { return precise_math::erfcf(x); }
@@ -984,7 +992,7 @@ namespace Kalmar
         float erfcinvf(float x) { return __hc_erfcinv(x); }
 
         HCC_MATH_LIB_FN
-        __fp16 erfcinv(__fp16 x) { return __hc_erfcinv_half(x); }
+        _Float16 erfcinv(_Float16 x) { return __hc_erfcinv_half(x); }
 
         HCC_MATH_LIB_FN
         float erfcinv(float x) { return precise_math::erfcinvf(x); }
@@ -996,7 +1004,7 @@ namespace Kalmar
         float erfinvf(float x) { return __hc_erfinv(x); }
 
         HCC_MATH_LIB_FN
-        __fp16 erfinv(__fp16 x) { return __hc_erfinv_half(x); }
+        _Float16 erfinv(_Float16 x) { return __hc_erfinv_half(x); }
 
         HCC_MATH_LIB_FN
         float erfinv(float x) { return precise_math::erfinvf(x); }
@@ -1008,7 +1016,7 @@ namespace Kalmar
         float expf(float x) { return __hc_exp(x); }
 
         HCC_MATH_LIB_FN
-        __fp16 exp(__fp16 x) { return __hc_exp_half(x); }
+        _Float16 exp(_Float16 x) { return __hc_exp_half(x); }
 
         HCC_MATH_LIB_FN
         float exp(float x) { return precise_math::expf(x); }
@@ -1020,7 +1028,7 @@ namespace Kalmar
         float exp2f(float x) { return __hc_exp2(x); }
 
         HCC_MATH_LIB_FN
-        __fp16 exp2(__fp16 x) { return __hc_exp2_half(x); }
+        _Float16 exp2(_Float16 x) { return __hc_exp2_half(x); }
 
         HCC_MATH_LIB_FN
         float exp2(float x) { return precise_math::exp2f(x); }
@@ -1032,7 +1040,7 @@ namespace Kalmar
         float exp10f(float x) { return __hc_exp10(x); }
 
         HCC_MATH_LIB_FN
-        __fp16 exp10(__fp16 x) { return __hc_exp10_half(x); }
+        _Float16 exp10(_Float16 x) { return __hc_exp10_half(x); }
 
         HCC_MATH_LIB_FN
         float exp10(float x) { return precise_math::exp10f(x); }
@@ -1044,7 +1052,7 @@ namespace Kalmar
         float expm1f(float x) { return __hc_expm1(x); }
 
         HCC_MATH_LIB_FN
-        __fp16 expm1(__fp16 x) { return __hc_expm1_half(x); }
+        _Float16 expm1(_Float16 x) { return __hc_expm1_half(x); }
 
         HCC_MATH_LIB_FN
         float expm1(float x) { return precise_math::expm1f(x); }
@@ -1056,7 +1064,7 @@ namespace Kalmar
         float fabsf(float x) { return __hc_fabs(x); }
 
         HCC_MATH_LIB_FN
-        __fp16 fabs(__fp16 x) { return __hc_fabs_half(x); }
+        _Float16 fabs(_Float16 x) { return __hc_fabs_half(x); }
 
         HCC_MATH_LIB_FN
         float fabs(float x) { return precise_math::fabsf(x); }
@@ -1068,7 +1076,7 @@ namespace Kalmar
         float fdimf(float x, float y) { return __hc_fdim(x, y); }
 
         HCC_MATH_LIB_FN
-        __fp16 fdim(__fp16 x, __fp16 y) { return __hc_fdim_half(x, y); }
+        _Float16 fdim(_Float16 x, _Float16 y) { return __hc_fdim_half(x, y); }
 
         HCC_MATH_LIB_FN
         float fdim(float x, float y) { return precise_math::fdimf(x, y); }
@@ -1080,7 +1088,7 @@ namespace Kalmar
         float floorf(float x) { return __hc_floor(x); }
 
         HCC_MATH_LIB_FN
-        __fp16 floor(__fp16 x) { return __hc_floor_half(x); }
+        _Float16 floor(_Float16 x) { return __hc_floor_half(x); }
 
         HCC_MATH_LIB_FN
         float floor(float x) { return precise_math::floorf(x); }
@@ -1092,7 +1100,7 @@ namespace Kalmar
         float fmaf(float x, float y, float z) { return __hc_fma(x, y, z); }
 
         HCC_MATH_LIB_FN
-        __fp16 fma(__fp16 x, __fp16 y, __fp16 z)
+        _Float16 fma(_Float16 x, _Float16 y, _Float16 z)
         {
             return __hc_fma_half(x, y, z);
         }
@@ -1113,7 +1121,7 @@ namespace Kalmar
         float fmaxf(float x, float y) { return __hc_fmax(x, y); }
 
         HCC_MATH_LIB_FN
-        __fp16 fmax(__fp16 x, __fp16 y) { return __hc_fmax_half(x, y); }
+        _Float16 fmax(_Float16 x, _Float16 y) { return __hc_fmax_half(x, y); }
 
         HCC_MATH_LIB_FN
         float fmax(float x, float y) { return precise_math::fmaxf(x, y); }
@@ -1125,7 +1133,7 @@ namespace Kalmar
         float fminf(float x, float y) { return __hc_fmin(x, y); }
 
         HCC_MATH_LIB_FN
-        __fp16 fmin(__fp16 x, __fp16 y) { return __hc_fmin_half(x, y); }
+        _Float16 fmin(_Float16 x, _Float16 y) { return __hc_fmin_half(x, y); }
 
         HCC_MATH_LIB_FN
         float fmin(float x, float y) { return precise_math::fminf(x, y); }
@@ -1137,7 +1145,7 @@ namespace Kalmar
         float fmodf(float x, float y) { return __hc_fmod(x, y); }
 
         HCC_MATH_LIB_FN
-        __fp16 fmod(__fp16 x, __fp16 y) { return __hc_fmod_half(x, y); }
+        _Float16 fmod(_Float16 x, _Float16 y) { return __hc_fmod_half(x, y); }
 
         HCC_MATH_LIB_FN
         float fmod(float x, float y) { return precise_math::fmodf(x, y); }
@@ -1146,7 +1154,7 @@ namespace Kalmar
         double fmod(double x, double y) { return __hc_fmod_double(x, y); }
 
         HCC_MATH_LIB_FN
-        int fpclassify(__fp16 x) { return __hc_fpclassify_half(x); }
+        int fpclassify(_Float16 x) { return __hc_fpclassify_half(x); }
 
         HCC_MATH_LIB_FN
         int fpclassify(float x) { return __hc_fpclassify(x); }
@@ -1158,7 +1166,7 @@ namespace Kalmar
         float frexpf(float x, int *exp) { return __hc_frexp(x, exp); }
 
         HCC_MATH_LIB_FN
-        __fp16 frexp(__fp16 x, int* exp) { return __hc_frexp_half(x, exp); }
+        _Float16 frexp(_Float16 x, int* exp) { return __hc_frexp_half(x, exp); }
 
         HCC_MATH_LIB_FN
         float frexp(float x, int *exp) { return precise_math::frexpf(x, exp); }
@@ -1170,7 +1178,7 @@ namespace Kalmar
         float hypotf(float x, float y) { return __hc_hypot(x, y); }
 
         HCC_MATH_LIB_FN
-        __fp16 hypot(__fp16 x, __fp16 y) { return __hc_hypot_half(x, y); }
+        _Float16 hypot(_Float16 x, _Float16 y) { return __hc_hypot_half(x, y); }
 
         HCC_MATH_LIB_FN
         float hypot(float x, float y) { return precise_math::hypotf(x, y); }
@@ -1182,7 +1190,7 @@ namespace Kalmar
         int ilogbf(float x) { return __hc_ilogb(x); }
 
         HCC_MATH_LIB_FN
-        int ilogb(__fp16 x) { return __hc_ilogb_half(x); }
+        int ilogb(_Float16 x) { return __hc_ilogb_half(x); }
 
         HCC_MATH_LIB_FN
         int ilogb(float x) { return precise_math::ilogbf(x); }
@@ -1191,7 +1199,7 @@ namespace Kalmar
         int ilogb(double x) { return __hc_ilogb_double(x); }
 
         HCC_MATH_LIB_FN
-        int isfinite(__fp16 x) { return __hc_isfinite_half(x); }
+        int isfinite(_Float16 x) { return __hc_isfinite_half(x); }
 
         HCC_MATH_LIB_FN
         int isfinite(float x) { return __hc_isfinite(x); }
@@ -1200,7 +1208,7 @@ namespace Kalmar
         int isfinite(double x) { return __hc_isfinite_double(x); }
 
         HCC_MATH_LIB_FN
-        int isinf(__fp16 x) { return __hc_isinf_half(x); }
+        int isinf(_Float16 x) { return __hc_isinf_half(x); }
 
         HCC_MATH_LIB_FN
         int isinf(float x) { return __hc_isinf(x); }
@@ -1209,7 +1217,7 @@ namespace Kalmar
         int isinf(double x) { return __hc_isinf_double(x); }
 
         HCC_MATH_LIB_FN
-        int isnan(__fp16 x) { return __hc_isnan_half(x); }
+        int isnan(_Float16 x) { return __hc_isnan_half(x); }
 
         HCC_MATH_LIB_FN
         int isnan(float x) { return __hc_isnan(x); }
@@ -1218,7 +1226,7 @@ namespace Kalmar
         int isnan(double x) { return __hc_isnan_double(x); }
 
         HCC_MATH_LIB_FN
-        int isnormal(__fp16 x) { return __hc_isnormal_half(x); }
+        int isnormal(_Float16 x) { return __hc_isnormal_half(x); }
 
         HCC_MATH_LIB_FN
         int isnormal(float x) { return __hc_isnormal(x); }
@@ -1230,7 +1238,10 @@ namespace Kalmar
         float ldexpf(float x, int exp) { return __hc_ldexp(x, exp); }
 
         HCC_MATH_LIB_FN
-        __fp16 ldexp(__fp16 x, std::int16_t e) { return __hc_ldexp_half(x, e); }
+        _Float16 ldexp(_Float16 x, std::int16_t e)
+        {
+            return __hc_ldexp_half(x, e);
+        }
 
         HCC_MATH_LIB_FN
         float ldexp(float x, int exp) { return precise_math::ldexpf(x, exp); }
@@ -1242,7 +1253,7 @@ namespace Kalmar
         float lgammaf(float x) { return __hc_lgamma(x); }
 
         HCC_MATH_LIB_FN
-        __fp16 lgamma(__fp16 x) { return __hc_lgamma_half(x); }
+        _Float16 lgamma(_Float16 x) { return __hc_lgamma_half(x); }
 
         HCC_MATH_LIB_FN
         float lgamma(float x) { return precise_math::lgammaf(x); }
@@ -1254,7 +1265,7 @@ namespace Kalmar
         float logf(float x) { return __hc_log(x); }
 
         HCC_MATH_LIB_FN
-        __fp16 log(__fp16 x) { return __hc_log_half(x); }
+        _Float16 log(_Float16 x) { return __hc_log_half(x); }
 
         HCC_MATH_LIB_FN
         float log(float x) { return precise_math::logf(x); }
@@ -1266,7 +1277,7 @@ namespace Kalmar
         float log10f(float x) { return __hc_log10(x); }
 
         HCC_MATH_LIB_FN
-        __fp16 log10(__fp16 x) { return __hc_log10_half(x); }
+        _Float16 log10(_Float16 x) { return __hc_log10_half(x); }
 
         HCC_MATH_LIB_FN
         float log10(float x) { return precise_math::log10f(x); }
@@ -1278,7 +1289,7 @@ namespace Kalmar
         float log2f(float x) { return __hc_log2(x); }
 
         HCC_MATH_LIB_FN
-        __fp16 log2(__fp16 x) { return __hc_log2_half(x); }
+        _Float16 log2(_Float16 x) { return __hc_log2_half(x); }
 
         HCC_MATH_LIB_FN
         float log2(float x) { return precise_math::log2f(x); }
@@ -1290,7 +1301,7 @@ namespace Kalmar
         float log1pf(float x) { return __hc_log1p(x); }
 
         HCC_MATH_LIB_FN
-        __fp16 log1p(__fp16 x) { return __hc_log1p_half(x); }
+        _Float16 log1p(_Float16 x) { return __hc_log1p_half(x); }
 
         HCC_MATH_LIB_FN
         float log1p(float x) { return precise_math::log1pf(x); }
@@ -1302,7 +1313,7 @@ namespace Kalmar
         float logbf(float x) { return __hc_logb(x); }
 
         HCC_MATH_LIB_FN
-        __fp16 logb(__fp16 x) { return __hc_logb_half(x); }
+        _Float16 logb(_Float16 x) { return __hc_logb_half(x); }
 
         HCC_MATH_LIB_FN
         float logb(float x) { return precise_math::logbf(x); }
@@ -1314,7 +1325,7 @@ namespace Kalmar
         float modff(float x, float *iptr) { return __hc_modf(x, iptr); }
 
         HCC_MATH_LIB_FN
-        __fp16 modf(__fp16 x, __fp16* p) { return __hc_modf_half(x, p); }
+        _Float16 modf(_Float16 x, _Float16* p) { return __hc_modf_half(x, p); }
 
         HCC_MATH_LIB_FN
         float modf(float x, float* p) { return precise_math::modff(x, p); }
@@ -1323,7 +1334,7 @@ namespace Kalmar
         double modf(double x, double* p) { return __hc_modf_double(x, p); }
 
         HCC_MATH_LIB_FN
-        __fp16 nanh(int x) { return __hc_nan_half(x); }
+        _Float16 nanh(int x) { return __hc_nan_half(x); }
 
         HCC_MATH_LIB_FN
         float nanf(int tagp) { return __hc_nan(tagp); }
@@ -1338,7 +1349,7 @@ namespace Kalmar
         float nearbyintf(float x) { return __hc_nearbyint(x); }
 
         HCC_MATH_LIB_FN
-        __fp16 nearbyint(__fp16 x) { return __hc_nearbyint_half(x); }
+        _Float16 nearbyint(_Float16 x) { return __hc_nearbyint_half(x); }
 
         HCC_MATH_LIB_FN
         float nearbyint(float x) { return precise_math::nearbyintf(x); }
@@ -1350,7 +1361,7 @@ namespace Kalmar
         float nextafterf(float x, float y) { return __hc_nextafter(x, y); }
 
         HCC_MATH_LIB_FN
-        __fp16 nextafter(__fp16 x, __fp16 y)
+        _Float16 nextafter(_Float16 x, _Float16 y)
         {
             return __hc_nextafter_half(x, y);
         }
@@ -1371,7 +1382,7 @@ namespace Kalmar
         float powf(float x, float y) { return __hc_pow(x, y); }
 
         HCC_MATH_LIB_FN
-        __fp16 pow(__fp16 x, __fp16 y) { return __hc_pow_half(x, y); }
+        _Float16 pow(_Float16 x, _Float16 y) { return __hc_pow_half(x, y); }
 
         HCC_MATH_LIB_FN
         float pow(float x, float y) { return precise_math::powf(x, y); }
@@ -1383,7 +1394,7 @@ namespace Kalmar
         float rcbrtf(float x) { return __hc_rcbrt(x); }
 
         HCC_MATH_LIB_FN
-        __fp16 rcbrt(__fp16 x) { return __hc_rcbrt_half(x); }
+        _Float16 rcbrt(_Float16 x) { return __hc_rcbrt_half(x); }
 
         HCC_MATH_LIB_FN
         float rcbrt(float x) { return precise_math::rcbrtf(x); }
@@ -1395,7 +1406,7 @@ namespace Kalmar
         float remainderf(float x, float y) { return __hc_remainder(x, y); }
 
         HCC_MATH_LIB_FN
-        __fp16 remainder(__fp16 x, __fp16 y)
+        _Float16 remainder(_Float16 x, _Float16 y)
         {
             return __hc_remainder_half(x, y);
         }
@@ -1419,7 +1430,7 @@ namespace Kalmar
         }
 
         HCC_MATH_LIB_FN
-        __fp16 remquo(__fp16 x, __fp16 y, int* q)
+        _Float16 remquo(_Float16 x, _Float16 y, int* q)
         {
             return __hc_remquo_half(x, y, q);
         }
@@ -1440,7 +1451,7 @@ namespace Kalmar
         float roundf(float x) { return __hc_round(x); }
 
         HCC_MATH_LIB_FN
-        __fp16 round(__fp16 x) { return __hc_round_half(x); }
+        _Float16 round(_Float16 x) { return __hc_round_half(x); }
 
         HCC_MATH_LIB_FN
         float round(float x) { return precise_math::roundf(x); }
@@ -1452,7 +1463,7 @@ namespace Kalmar
         float rsqrtf(float x) { return __hc_rsqrt(x); }
 
         HCC_MATH_LIB_FN
-        __fp16 rsqrt(__fp16 x) { return __hc_rsqrt_half(x); }
+        _Float16 rsqrt(_Float16 x) { return __hc_rsqrt_half(x); }
 
         HCC_MATH_LIB_FN
         float rsqrt(float x) { return precise_math::rsqrtf(x); }
@@ -1464,7 +1475,7 @@ namespace Kalmar
         float sinpif(float x) { return __hc_sinpi(x); }
 
         HCC_MATH_LIB_FN
-        __fp16 sinpi(__fp16 x) { return __hc_sinpi_half(x); }
+        _Float16 sinpi(_Float16 x) { return __hc_sinpi_half(x); }
 
         HCC_MATH_LIB_FN
         float sinpi(float x) { return precise_math::sinpif(x); }
@@ -1476,7 +1487,7 @@ namespace Kalmar
         float scalbf(float x, float exp) { return __hc_scalb(x, exp); }
 
         HCC_MATH_LIB_FN
-        __fp16 scalb(__fp16 x, __fp16 y) { return __hc_scalb_half(x, y); }
+        _Float16 scalb(_Float16 x, _Float16 y) { return __hc_scalb_half(x, y); }
 
         HCC_MATH_LIB_FN
         float scalb(float x, float exp) { return precise_math::scalbf(x, exp); }
@@ -1488,7 +1499,7 @@ namespace Kalmar
         float scalbnf(float x, int exp) { return __hc_scalbn(x, exp); }
 
         HCC_MATH_LIB_FN
-        __fp16 scalbn(__fp16 x, int e) { return __hc_scalbn_half(x, e); }
+        _Float16 scalbn(_Float16 x, int e) { return __hc_scalbn_half(x, e); }
 
         HCC_MATH_LIB_FN
         float scalbn(float x, int exp) { return precise_math::scalbnf(x, exp); }
@@ -1500,7 +1511,7 @@ namespace Kalmar
         int signbitf(float x) { return __hc_signbit(x); }
 
         HCC_MATH_LIB_FN
-        int signbit(__fp16 x) { return __hc_signbit_half(x); }
+        int signbit(_Float16 x) { return __hc_signbit_half(x); }
 
         HCC_MATH_LIB_FN
         int signbit(float x) { return precise_math::signbitf(x); }
@@ -1512,7 +1523,7 @@ namespace Kalmar
         float sinf(float x) { return __hc_sin(x); }
 
         HCC_MATH_LIB_FN
-        __fp16 sin(__fp16 x) { return __hc_sin_half(x); }
+        _Float16 sin(_Float16 x) { return __hc_sin_half(x); }
 
         HCC_MATH_LIB_FN
         float sin(float x) { return precise_math::sinf(x); }
@@ -1524,7 +1535,7 @@ namespace Kalmar
         void sincosf(float x, float *s, float *c) { *s = __hc_sincos(x, c); }
 
         HCC_MATH_LIB_FN
-        void sincos(__fp16 x, __fp16* s, __fp16* c)
+        void sincos(_Float16 x, _Float16* s, _Float16* c)
         {
             *s = __hc_sincos_half(x, c);
         }
@@ -1545,7 +1556,7 @@ namespace Kalmar
         float sinhf(float x) { return __hc_sinh(x); }
 
         HCC_MATH_LIB_FN
-        __fp16 sinh(__fp16 x) { return __hc_sinh_half(x); }
+        _Float16 sinh(_Float16 x) { return __hc_sinh_half(x); }
 
         HCC_MATH_LIB_FN
         float sinh(float x) { return precise_math::sinhf(x); }
@@ -1557,7 +1568,7 @@ namespace Kalmar
         float sqrtf(float x) { return __hc_sqrt(x); }
 
         HCC_MATH_LIB_FN
-        __fp16 sqrt(__fp16 x) { return __hc_sqrt_half(x); }
+        _Float16 sqrt(_Float16 x) { return __hc_sqrt_half(x); }
 
         HCC_MATH_LIB_FN
         float sqrt(float x) { return precise_math::sqrtf(x); }
@@ -1569,7 +1580,7 @@ namespace Kalmar
         float tgammaf(float x) { return __hc_tgamma(x); }
 
         HCC_MATH_LIB_FN
-        __fp16 tgamma(__fp16 x) { return __hc_tgamma_half(x); }
+        _Float16 tgamma(_Float16 x) { return __hc_tgamma_half(x); }
 
         HCC_MATH_LIB_FN
         float tgamma(float x) { return precise_math::tgammaf(x); }
@@ -1581,7 +1592,7 @@ namespace Kalmar
         float tanf(float x) { return __hc_tan(x); }
 
         HCC_MATH_LIB_FN
-        __fp16 tan(__fp16 x) { return __hc_tan_half(x); }
+        _Float16 tan(_Float16 x) { return __hc_tan_half(x); }
 
         HCC_MATH_LIB_FN
         float tan(float x) { return precise_math::tanf(x); }
@@ -1593,7 +1604,7 @@ namespace Kalmar
         float tanhf(float x) { return __hc_tanh(x); }
 
         HCC_MATH_LIB_FN
-        __fp16 tanh(__fp16 x) { return __hc_tanh_half(x); }
+        _Float16 tanh(_Float16 x) { return __hc_tanh_half(x); }
 
         HCC_MATH_LIB_FN
         float tanh(float x) { return precise_math::tanhf(x); }
@@ -1605,7 +1616,7 @@ namespace Kalmar
         float tanpif(float x) { return __hc_tanpi(x); }
 
         HCC_MATH_LIB_FN
-        __fp16 tanpi(__fp16 x) { return __hc_tanpi_half(x); }
+        _Float16 tanpi(_Float16 x) { return __hc_tanpi_half(x); }
 
         HCC_MATH_LIB_FN
         float tanpi(float x) { return precise_math::tanpif(x); }
@@ -1617,7 +1628,7 @@ namespace Kalmar
         float truncf(float x) { return __hc_trunc(x); }
 
         HCC_MATH_LIB_FN
-        __fp16 trunc(__fp16 x) { return __hc_trunc_half(x); }
+        _Float16 trunc(_Float16 x) { return __hc_trunc_half(x); }
 
         HCC_MATH_LIB_FN
         float trunc(float x) { return precise_math::truncf(x); }
@@ -1625,4 +1636,4 @@ namespace Kalmar
         HCC_MATH_LIB_FN
         double trunc(double x) { return __hc_trunc_double(x); }
     } // namespace precise_math
-} // namespace Kalmar
+} // namespace detail

@@ -5,14 +5,14 @@
 #include "kalmar_exception.h"
 
 /** \cond HIDDEN_SYMBOLS */
-namespace Kalmar
+namespace detail
 {
 
 /// traverse all the buffers that are going to be used in kernel
 class FunctorBufferWalker {
 public:
-    virtual void Append(size_t sz, const void* s) {}
-    virtual void AppendPtr(size_t sz, const void* s) {}
+    virtual void Append(size_t, const void*) {}
+    virtual void AppendPtr(size_t, const void*) {}
     virtual void visit_buffer(struct rw_info* rw, bool modify, bool isArray) = 0;
 };
 
@@ -32,10 +32,10 @@ public:
 /// before/after kernel launches in cpu path
 class CPUVisitor : public FunctorBufferWalker
 {
-    std::shared_ptr<KalmarQueue> pQueue;
+    std::shared_ptr<HCCQueue> pQueue;
     std::set<struct rw_info*> bufs;
 public:
-    CPUVisitor(std::shared_ptr<KalmarQueue> pQueue) : pQueue(pQueue) {}
+    CPUVisitor(std::shared_ptr<HCCQueue> pQueue) : pQueue(pQueue) {}
     void visit_buffer(struct rw_info* rw, bool modify, bool isArray) override {
         if (isArray) {
             auto curr = pQueue->getDev()->get_path();
@@ -59,15 +59,15 @@ public:
 /// Append kernel argument to kernel
 class BufferArgumentsAppender : public FunctorBufferWalker
 {
-    std::shared_ptr<KalmarQueue> pQueue;
+    std::shared_ptr<HCCQueue> pQueue;
     void* k_;
     int current_idx_;
 public:
-    BufferArgumentsAppender(std::shared_ptr<KalmarQueue> pQueue, void* k)
+    BufferArgumentsAppender(std::shared_ptr<HCCQueue> pQueue, void* k)
         : pQueue(pQueue), k_(k), current_idx_(0) {}
-    void Append(size_t sz, const void *s) override {
+    void Append(size_t, const void*) override {
     }
-    void AppendPtr(size_t sz, const void *s) override {
+    void AppendPtr(size_t, const void*) override {
     }
     void visit_buffer(rw_info* rw, bool modify, bool isArray) override {
         if (isArray) {
@@ -89,13 +89,14 @@ public:
 /// and the view using which work is submitted to the accelerator, is chosen
 /// from the objects of type array<T,N> that were captured in the kernel lambda.
 ///
-/// Thise Searcher will visit all the array<T, N> and find a view to launch kernel
+/// This Searcher will visit all the array<T, N> and find a view to launch kernel
 class QueueSearcher : public FunctorBufferWalker
 {
-    std::shared_ptr<KalmarQueue> pQueue;
+    std::shared_ptr<HCCQueue> pQueue;
 public:
     QueueSearcher() = default;
-    void visit_buffer(struct rw_info* rw, bool modify, bool isArray) override {
+    void visit_buffer(struct rw_info* rw, bool, bool isArray) override
+    {
         if (isArray && !pQueue) {
             if (rw->master->getDev()->get_path() != L"cpu")
                 pQueue = rw->master;
@@ -103,8 +104,8 @@ public:
                 pQueue = rw->stage;
         }
     }
-    std::shared_ptr<KalmarQueue> get_que() const { return pQueue; }
+    std::shared_ptr<HCCQueue> get_que() const { return pQueue; }
 };
 
-} // namespace Kalmar
+} // namespace detail
 /** \endcond */

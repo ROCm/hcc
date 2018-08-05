@@ -48,11 +48,11 @@ namespace Concurrency {
  * Represents a unique position in N-dimensional space.
  */
 template <int N>
-using index = Kalmar::index<N>;
+using index = detail::index<N>;
 
-using runtime_exception = Kalmar::runtime_exception;
-using invalid_compute_domain = Kalmar::invalid_compute_domain;
-using accelerator_view_removed = Kalmar::accelerator_view_removed;
+using runtime_exception = detail::runtime_exception;
+using invalid_compute_domain = detail::invalid_compute_domain;
+using accelerator_view_removed = detail::accelerator_view_removed;
 } // namespace Concurrency
 
 
@@ -63,8 +63,8 @@ using accelerator_view_removed = Kalmar::accelerator_view_removed;
 namespace Concurrency {
 
 using namespace hc::atomics;
-using namespace Kalmar::enums;
-using namespace Kalmar::CLAMP;
+using namespace detail::enums;
+using namespace detail::CLAMP;
 
 // ------------------------------------------------------------------------
 // accelerator_view
@@ -221,20 +221,20 @@ public:
     bool operator!=(const accelerator_view& other) const { return !(*this == other); }
 
 private:
-    accelerator_view(std::shared_ptr<Kalmar::KalmarQueue> pQueue) : pQueue(pQueue) {}
-    std::shared_ptr<Kalmar::KalmarQueue> pQueue;
+    accelerator_view(std::shared_ptr<detail::HCCQueue> pQueue) : pQueue(pQueue) {}
+    std::shared_ptr<detail::HCCQueue> pQueue;
     friend class accelerator;
 
     template<typename Domain, typename Kernel>
     friend
-    void Kalmar::launch_kernel(
-        const std::shared_ptr<Kalmar::KalmarQueue>&,
+    void detail::launch_kernel(
+        const std::shared_ptr<detail::HCCQueue>&,
         const Domain&,
         const Kernel&);
     template<typename Domain, typename Kernel>
     friend
-    std::shared_future<Kalmar::KalmarAsyncOp> Kalmar::launch_kernel_async(
-        const std::shared_ptr<Kalmar::KalmarQueue>&,
+    std::shared_future<detail::HCCAsyncOp> detail::launch_kernel_async(
+        const std::shared_ptr<detail::HCCQueue>&,
         const Domain&,
         const Kernel&);
 
@@ -319,7 +319,7 @@ public:
      * @param[in] path The device path of this accelerator.
      */
     explicit accelerator(const std::wstring& path)
-        : pDev(Kalmar::getContext()->getDevice(path)) {}
+        : pDev(detail::getContext()->getDevice(path)) {}
   
     /**
      * Copy constructs an accelerator object. This function does a shallow copy
@@ -338,7 +338,7 @@ public:
      * @return A vector of accelerators.
      */
     static std::vector<accelerator> get_all() {
-        auto Devices = Kalmar::getContext()->getDevices();
+        auto Devices = detail::getContext()->getDevices();
         std::vector<accelerator> ret(Devices.size());
         for (std::size_t i = 0; i < ret.size(); ++i)
             ret[i] = Devices[i];
@@ -359,7 +359,7 @@ public:
      *         false, and the function will have no effect.
      */
     static bool set_default(const std::wstring& path) {
-        return Kalmar::getContext()->set_default(path);
+        return detail::getContext()->set_default(path);
     }
 
     /**
@@ -378,7 +378,7 @@ public:
      *         of the target for a parallel_for_each execution.
      */
     static accelerator_view get_auto_selection_view() {
-        return Kalmar::getContext()->auto_select();
+        return detail::getContext()->auto_select();
     }
 
     /**
@@ -537,9 +537,9 @@ public:
     access_type get_default_cpu_access_type() const { return pDev->get_access(); }
 
 private:
-    accelerator(Kalmar::KalmarDevice* pDev) : pDev(pDev) {}
+    accelerator(detail::HCCDevice* pDev) : pDev(pDev) {}
     friend class accelerator_view;
-    Kalmar::KalmarDevice* pDev;
+    detail::HCCDevice* pDev;
 };
 
 // ------------------------------------------------------------------------
@@ -880,7 +880,7 @@ public:
      *         by this extent (with an assumed origin of zero).
      */
     bool contains(const index<N>& idx) const restrict(amp,cpu) {
-        return Kalmar::amp_helper<N, index<N>, extent<N>>::contains(idx, *this);
+        return detail::amp_helper<N, index<N>, extent<N>>::contains(idx, *this);
     }
 
     /**
@@ -889,7 +889,7 @@ public:
      * extent[0] * extent[1] ... * extent[N-1]
      */
     unsigned int size() const restrict(amp,cpu) {
-        return Kalmar::index_helper<N, extent<N>>::count_size(*this);
+        return detail::index_helper<N, extent<N>>::count_size(*this);
     }
 
 
@@ -939,7 +939,7 @@ public:
     // FIXME: the signature is not entirely the same as defined in:
     //        C++AMP spec v1.2 #1255
     bool operator==(const extent& other) const restrict(amp,cpu) {
-        return Kalmar::index_helper<N, extent<N> >::equal(*this, other);
+        return detail::index_helper<N, extent<N> >::equal(*this, other);
     }
     bool operator!=(const extent& other) const restrict(amp,cpu) {
         return !(*this == other);
@@ -1077,10 +1077,10 @@ public:
             : base_(other.base_) {}
 
 private:
-    typedef Kalmar::index_impl<typename Kalmar::__make_indices<N>::type> base;
+    typedef detail::index_impl<typename detail::__make_indices<N>::type> base;
     base base_;
-    template <int K, typename Q> friend struct Kalmar::index_helper;
-    template <int K, typename Q1, typename Q2> friend struct Kalmar::amp_helper;
+    template <int K, typename Q> friend struct detail::index_helper;
+    template <int K, typename Q1, typename Q2> friend struct detail::amp_helper;
 };
 
 // ------------------------------------------------------------------------
@@ -1333,7 +1333,7 @@ private:
     void parallel_for_each(
         const accelerator_view&, const tiled_extent<D0, D1, D2>&, const K&);
     friend
-    struct Kalmar::Indexer;
+    struct detail::Indexer;
 };
 
 /**
@@ -1453,7 +1453,7 @@ private:
     void parallel_for_each(
         const accelerator_view&, const tiled_extent<D0>&, const K&);
     friend
-    struct Kalmar::Indexer;
+    struct detail::Indexer;
 };
 
 /**
@@ -1577,7 +1577,7 @@ private:
     void parallel_for_each(
         const accelerator_view&, const tiled_extent<D0, D1>&, const K&);
     friend
-    struct Kalmar::Indexer;
+    struct detail::Indexer;
 };
 
 // ------------------------------------------------------------------------
@@ -2165,9 +2165,9 @@ class array {
     static_assert(0 == (sizeof(T) % sizeof(int)), "only value types whose size is a multiple of the size of an integer are allowed in array");
 public:
 #if __KALMAR_ACCELERATOR__ == 1
-    typedef Kalmar::_data<T> acc_buffer_t;
+    typedef detail::_data<T> acc_buffer_t;
 #else
-    typedef Kalmar::_data_host<T> acc_buffer_t;
+    typedef detail::_data_host<T> acc_buffer_t;
 #endif
 
     /**
@@ -2724,7 +2724,7 @@ public:
         m_device.synchronize(true);
 #endif
         T *ptr = reinterpret_cast<T*>(m_device.get());
-        return ptr[Kalmar::amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx, extent)];
+        return ptr[detail::amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx, extent)];
     }
     T& operator()(const index<N>& idx) restrict(amp,cpu) {
         return (*this)[idx];
@@ -2750,7 +2750,7 @@ public:
         m_device.synchronize();
 #endif
         T *ptr = reinterpret_cast<T*>(m_device.get());
-        return ptr[Kalmar::amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx, extent)];
+        return ptr[detail::amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx, extent)];
     }
     const T& operator()(const index<N>& idx) const restrict(amp,cpu) {
         return (*this)[idx];
@@ -2848,7 +2848,7 @@ public:
      */
     array_view<T, N> section(const Concurrency::index<N>& origin, const Concurrency::extent<N>& ext) restrict(amp,cpu) {
 #if __KALMAR_ACCELERATOR__ != 1
-        if( !Kalmar::amp_helper<N, index<N>, Concurrency::extent<N>>::contains(origin,  ext ,this->extent) )
+        if( !detail::amp_helper<N, index<N>, Concurrency::extent<N>>::contains(origin,  ext ,this->extent) )
             throw runtime_exception("errorMsg_throw", 0);
 #endif
         array_view<T, N> av(*this);
@@ -2867,7 +2867,7 @@ public:
      */
     array_view<T, N> section(const index<N>& idx) restrict(amp,cpu) {
 #if __KALMAR_ACCELERATOR__ != 1
-        if( !Kalmar::amp_helper<N, index<N>, Concurrency::extent<N>>::contains(idx, this->extent ) )
+        if( !detail::amp_helper<N, index<N>, Concurrency::extent<N>>::contains(idx, this->extent ) )
             throw runtime_exception("errorMsg_throw", 0);
 #endif
         array_view<T, N> av(*this);
@@ -3082,9 +3082,9 @@ class array_view
 public:
     typedef typename std::remove_const<T>::type nc_T;
 #if __KALMAR_ACCELERATOR__ == 1
-    typedef Kalmar::_data<T> acc_buffer_t;
+    typedef detail::_data<T> acc_buffer_t;
 #else
-    typedef Kalmar::_data_host<T> acc_buffer_t;
+    typedef detail::_data_host<T> acc_buffer_t;
 #endif
 
     /**
@@ -3453,7 +3453,7 @@ public:
         cache.get_cpu_access(true);
 #endif
         T *ptr = reinterpret_cast<T*>(cache.get() + offset);
-        return ptr[Kalmar::amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx + index_base, extent_base)];
+        return ptr[detail::amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx + index_base, extent_base)];
     }
 
     T& operator() (const index<N>& idx) const restrict(amp,cpu) {
@@ -3546,7 +3546,7 @@ public:
     array_view<T, N> section(const Concurrency::index<N>& idx,
                              const Concurrency::extent<N>& ext) const restrict(amp,cpu) {
 #if __KALMAR_ACCELERATOR__ != 1
-        if ( !Kalmar::amp_helper<N, index<N>, Concurrency::extent<N>>::contains(idx, ext,this->extent ) )
+        if ( !detail::amp_helper<N, index<N>, Concurrency::extent<N>>::contains(idx, ext,this->extent ) )
             throw runtime_exception("errorMsg_throw", 0);
 #endif
         array_view<T, N> av(cache, ext, extent_base, idx + index_base, offset);
@@ -3558,7 +3558,7 @@ public:
      */
     array_view<T, N> section(const Concurrency::index<N>& idx) const restrict(amp,cpu) {
         Concurrency::extent<N> ext(extent);
-        Kalmar::amp_helper<N, Concurrency::index<N>, Concurrency::extent<N>>::minus(idx, ext);
+        detail::amp_helper<N, Concurrency::index<N>, Concurrency::extent<N>>::minus(idx, ext);
         return section(idx, ext);
     }
 
@@ -3653,7 +3653,7 @@ public:
             cache.get_cpu_access(true);
 #endif
             T *ptr = reinterpret_cast<T*>(cache.get() + offset);
-            return ptr[Kalmar::amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx.global + index_base, extent_base)];
+            return ptr[detail::amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx.global + index_base, extent_base)];
         }
 
     const acc_buffer_t& internal() const restrict(amp,cpu) { return cache; }
@@ -3717,9 +3717,9 @@ public:
     typedef typename std::remove_const<T>::type nc_T;
 
 #if __KALMAR_ACCELERATOR__ == 1
-    typedef Kalmar::_data<nc_T> acc_buffer_t;
+    typedef detail::_data<nc_T> acc_buffer_t;
 #else
-    typedef Kalmar::_data_host<const T> acc_buffer_t;
+    typedef detail::_data_host<const T> acc_buffer_t;
 #endif
 
     /**
@@ -4032,7 +4032,7 @@ public:
         cache.get_cpu_access();
 #endif
         const T *ptr = reinterpret_cast<const T*>(cache.get() + offset);
-        return ptr[Kalmar::amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx + index_base, extent_base)];
+        return ptr[detail::amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx + index_base, extent_base)];
     }
     const T& operator() (const index<N>& idx) const restrict(amp,cpu) {
         return (*this)[idx];
@@ -4137,7 +4137,7 @@ public:
      */
     array_view<const T, N> section(const Concurrency::index<N>& idx) const restrict(amp,cpu) {
         Concurrency::extent<N> ext(extent);
-        Kalmar::amp_helper<N, Concurrency::index<N>, Concurrency::extent<N>>::minus(idx, ext);
+        detail::amp_helper<N, Concurrency::index<N>, Concurrency::extent<N>>::minus(idx, ext);
         return section(idx, ext);
     }
   
@@ -5092,16 +5092,17 @@ void parallel_for_each(
 {
     if (av.get_accelerator().get_device_path() == L"cpu") {
       throw runtime_exception{
-          Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL};
+          detail::__errorMsg_UnsupportedAccelerator, E_FAIL};
     }
 
     validate_compute_domain(compute_domain);
 
-    Kalmar::launch_kernel(av.pQueue, compute_domain, f);
+    detail::launch_kernel(av.pQueue, compute_domain, f);
 }
 
 
 // parallel_for_each, tiled
+template<typename...>
 inline
 void validate_tile_dims()
 {}
@@ -5110,19 +5111,21 @@ template<int dim, int... dims>
 inline
 void validate_tile_dims()
 {
+    static_assert(dim > 0, "The number of threads in a tile must be positive.");
     static_assert(
         dim <= 1024, "The maximum number of threads in a tile is 1024.");
 
     validate_tile_dims<dims...>();
 }
 
-
 template<int... dims>
 inline
 void validate_tiled_compute_domain(const tiled_extent<dims...>& compute_domain)
 {
-    constexpr int tmp[]{dims...};
+    validate_tile_dims<dims...>();
+    validate_compute_domain(compute_domain);
 
+    constexpr int tmp[]{dims...};
     for (auto i = 0u; i != compute_domain.rank; ++i) {
         if (compute_domain[i] % tmp[i]) {
             throw invalid_compute_domain{"Extent not divisible by tile size."};
@@ -5137,15 +5140,13 @@ void parallel_for_each(
     const tiled_extent<dims...>& compute_domain,
     const Kernel& f)
 {
-    validate_tile_dims<dims...>();
-
     if (av.get_accelerator().get_device_path() == L"cpu") {
         throw runtime_exception{
-            Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL};
+            detail::__errorMsg_UnsupportedAccelerator, E_FAIL};
     }
-    validate_compute_domain(compute_domain);
-    validate_tiled_domain(compute_domain);
 
-    Kalmar::launch_kernel(av.pQueue, compute_domain, f);
+    validate_tiled_compute_domain(compute_domain);
+
+    detail::launch_kernel(av.pQueue, compute_domain, f);
 }
 } // namespace Concurrency

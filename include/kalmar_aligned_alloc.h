@@ -11,7 +11,7 @@
 #include <stdlib.h>
 
 /** \cond HIDDEN_SYMBOLS */
-namespace Kalmar {
+namespace detail {
 
 constexpr inline bool kalmar_is_alignment(std::size_t value) noexcept {
     return (value > 0) && ((value & (value - 1)) == 0);
@@ -39,5 +39,5 @@ inline void kalmar_aligned_free(void* ptr) noexcept {
     }
 }
 
-} // namespace Kalmar
+} // namespace detail
 /** \endcond */

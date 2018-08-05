@@ -43,7 +43,7 @@ namespace hc
             return __atomic_exchange_n(dest, val, __ATOMIC_RELAXED);
         }
         inline
-        float atomic_exchange(float* dest, float val) //[[cpu]][[hc]]
+        float atomic_exchange(float* dest, float val) [[cpu]][[hc]]
         {
             static_assert(sizeof(float) == sizeof(unsigned int), "");
 
@@ -59,7 +59,7 @@ namespace hc
             return r;
         }
         inline
-        double atomic_exchange(double* dest, double val) //[[cpu]][[hc]]
+        double atomic_exchange(double* dest, double val) [[cpu]][[hc]]
         {
             static_assert(sizeof(double) == sizeof(std::uint64_t), "");
 
@@ -175,7 +175,8 @@ namespace hc
             typename T,
             typename std::enable_if<
                 std::is_integral<T>{} &&
-                sizeof(T) >= sizeof(std::int32_t)>::type* = nullptr>        inline
+                sizeof(T) >= sizeof(std::int32_t)>::type* = nullptr>
+        inline
         T atomic_fetch_sub(T* dest, T val) [[cpu]][[hc]]
         {
             return __atomic_fetch_sub(dest, val, __ATOMIC_RELAXED);
@@ -185,27 +186,54 @@ namespace hc
             typename T,
             typename std::enable_if<
                 std::is_integral<T>{} &&
-                sizeof(T) >= sizeof(std::int32_t)>::type* = nullptr>        inline
+                std::is_signed<T>{} &&
+                sizeof(T) >= sizeof(std::int32_t)>::type* = nullptr>
+        inline
         T atomic_fetch_max(T* dest, T val) [[cpu]][[hc]]
         {
             return __sync_fetch_and_max(dest, val);
         }
-
         template<
             typename T,
             typename std::enable_if<
                 std::is_integral<T>{} &&
-                sizeof(T) >= sizeof(std::int32_t)>::type* = nullptr>        inline
-        T atomic_fetch_min(T* dest, T val) [[cpu]][[hc]]
+                std::is_unsigned<T>{} &&
+                sizeof(T) >= sizeof(std::uint32_t)>::type* = nullptr>
+        inline
+        T atomic_fetch_max(T* dest, T val) [[cpu]][[hc]]
         {
-            return __sync_fetch_and_min(dest, val);
+            return __sync_fetch_and_umax(dest, val);
         }
 
         template<
             typename T,
             typename std::enable_if<
                 std::is_integral<T>{} &&
-                sizeof(T) >= sizeof(std::int32_t)>::type* = nullptr>        inline
+                std::is_signed<T>{} &&
+                sizeof(T) >= sizeof(std::int32_t)>::type* = nullptr>
+        inline
+        T atomic_fetch_min(T* dest, T val) [[cpu]][[hc]]
+        {
+            return __sync_fetch_and_min(dest, val);
+        }
+        template<
+            typename T,
+            typename std::enable_if<
+                std::is_integral<T>{} &&
+                std::is_unsigned<T>{} &&
+                sizeof(T) >= sizeof(std::uint32_t)>::type* = nullptr>
+        inline
+        T atomic_fetch_min(T* dest, T val) [[cpu]][[hc]]
+        {
+            return __sync_fetch_and_umin(dest, val);
+        }
+
+        template<
+            typename T,
+            typename std::enable_if<
+                std::is_integral<T>{} &&
+                sizeof(T) >= sizeof(std::int32_t)>::type* = nullptr>
+        inline
         T atomic_fetch_and(T* dest, T val) [[cpu]][[hc]]
         {
             return __atomic_fetch_and(dest, val, __ATOMIC_RELAXED);
@@ -215,7 +243,8 @@ namespace hc
             typename T,
             typename std::enable_if<
                 std::is_integral<T>{} &&
-                sizeof(T) >= sizeof(std::int32_t)>::type* = nullptr>        inline
+                sizeof(T) >= sizeof(std::int32_t)>::type* = nullptr>
+        inline
         T atomic_fetch_or(T* dest, T val) [[cpu]][[hc]]
         {
             return __atomic_fetch_or(dest, val, __ATOMIC_RELAXED);
@@ -225,7 +254,8 @@ namespace hc
             typename T,
             typename std::enable_if<
                 std::is_integral<T>{} &&
-                sizeof(T) >= sizeof(std::int32_t)>::type* = nullptr>        inline
+                sizeof(T) >= sizeof(std::int32_t)>::type* = nullptr>
+        inline
         T atomic_fetch_xor(T* dest, T val) [[cpu]][[hc]]
         {
             return __atomic_fetch_xor(dest, val, __ATOMIC_RELAXED);

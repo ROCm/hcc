@@ -11,17 +11,18 @@
 #include "kalmar_serialize.h"
 
 /** \cond HIDDEN_SYMBOLS */
-namespace Kalmar {
+namespace detail {
 
 // Dummy interface that looks somewhat like std::shared_ptr<T>
 template <typename T>
 class _data {
 public:
     _data() = delete;
-    _data(int count) : p_(nullptr) {}
+    explicit
+    _data(int) : p_(nullptr) {}
     _data(const _data& d) restrict(cpu, amp)
         : p_(d.p_) {}
-    _data(int count, void* d) restrict(cpu, amp)
+    _data(int, void* d) restrict(cpu, amp)
         : p_(static_cast<T*>(d)) {}
     template <typename U>
     _data(const _data<U>& d) restrict(cpu, amp)
@@ -29,20 +30,20 @@ public:
     explicit _data(T* t) restrict(cpu, amp) { p_ = t; }
     T* get(void) const restrict(cpu, amp) { return p_; }
     T* get_device_pointer() const restrict(cpu, amp) { return p_; }
-    std::shared_ptr<KalmarQueue> get_av() const { return nullptr; }
+    std::shared_ptr<HCCQueue> get_av() const { return nullptr; }
     void reset() const {}
 
-    T* map_ptr(bool modify, size_t count, size_t offset) const { return nullptr; }
-    void unmap_ptr(const void* addr, bool modify, size_t count, size_t offset) const {}
-    void synchronize(bool modify = false) const {}
-    void get_cpu_access(bool modify = false) const {}
-    void copy(_data<T> other, int, int, int) const {}
-    void write(const T*, int , int offset = 0, bool blocking = false) const {}
-    void read(T*, int , int offset = 0) const {}
+    T* map_ptr(bool, size_t, size_t) const { return nullptr; }
+    void unmap_ptr(const void*, bool, size_t, size_t) const {}
+    void synchronize(bool = false) const {}
+    void get_cpu_access(bool = false) const {}
+    void copy(_data<T>, int, int, int) const {}
+    void write(const T*, int , int = 0, bool = false) const {}
+    void read(T*, int , int = 0) const {}
     void refresh() const {}
     void set_const() const {}
     access_type get_access() const { return access_type_auto; }
-    std::shared_ptr<KalmarQueue> get_stage() const { return nullptr; }
+    std::shared_ptr<HCCQueue> get_stage() const { return nullptr; }
 
 private:
     T* p_;
@@ -58,11 +59,11 @@ public:
         : mm(std::make_shared<rw_info>(count*sizeof(T), const_cast<void*>(src))),
         isArray(false) {}
 
-    _data_host(std::shared_ptr<KalmarQueue> av, std::shared_ptr<KalmarQueue> stage, int count,
+    _data_host(std::shared_ptr<HCCQueue> av, std::shared_ptr<HCCQueue> stage, int count,
                access_type mode)
         : mm(std::make_shared<rw_info>(av, stage, count*sizeof(T), mode)), isArray(true) {}
 
-    _data_host(std::shared_ptr<KalmarQueue> av, std::shared_ptr<KalmarQueue> stage, int count,
+    _data_host(std::shared_ptr<HCCQueue> av, std::shared_ptr<HCCQueue> stage, int count,
                void* device_pointer, access_type mode)
         : mm(std::make_shared<rw_info>(av, stage, count*sizeof(T), device_pointer, mode)), isArray(true) {}
 
@@ -79,8 +80,8 @@ public:
     size_t size() const { return mm->count; }
     void reset() const { mm.reset(); }
     void get_cpu_access(bool modify = false) const { mm->get_cpu_access(modify); }
-    std::shared_ptr<KalmarQueue> get_av() const { return mm->master; }
-    std::shared_ptr<KalmarQueue> get_stage() const { return mm->stage; }
+    std::shared_ptr<HCCQueue> get_av() const { return mm->master; }
+    std::shared_ptr<HCCQueue> get_stage() const { return mm->stage; }
     access_type get_access() const { return mm->mode; }
     void copy(_data_host<T> other, int src_offset, int dst_offset, int size) const {
         mm->copy(other.mm.get(), src_offset * sizeof(T), dst_offset * sizeof(T), size * sizeof(T));
@@ -95,10 +96,10 @@ public:
         return (T*)mm->map(count * sizeof(T), offset * sizeof(T), modify);
     }
     void unmap_ptr(const void* addr, bool modify, size_t count, size_t offset) const { return mm->unmap(const_cast<void*>(addr), count * sizeof(T), offset * sizeof(T), modify); }
-    void sync_to(std::shared_ptr<KalmarQueue> pQueue) const { mm->sync(pQueue, false); }
+    void sync_to(std::shared_ptr<HCCQueue> pQueue) const { mm->sync(pQueue, false); }
 
-    explicit _data_host(typename std::remove_const<T>::type* t) {}
+    explicit _data_host(typename std::remove_const<T>::type*) {}
 };
 
-} // namespace Kalmar
+} // namespace detail
 /** \endcond */

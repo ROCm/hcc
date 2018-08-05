@@ -12,7 +12,7 @@ class completion_future;
 
 typedef struct hsa_kernel_dispatch_packet_s hsa_kernel_dispatch_packet_t;
 
-namespace Kalmar {
+namespace detail {
 namespace enums {
 
 /// access_type is used for accelerator that supports unified memory
@@ -73,7 +73,7 @@ enum hcCommandKind {
 
 
 // Commands sent to copy queues:
-static inline bool isCopyCommand(hcCommandKind k) 
+static inline bool isCopyCommand(hcCommandKind k)
 {
     switch (k) {
         case hcMemcpyHostToHost:
@@ -107,34 +107,34 @@ enum hcAgentProfile {
 };
 
 } // namespace enums
-} // namespace Kalmar
+} // namespace detail
 
- 
+
 /** \cond HIDDEN_SYMBOLS */
-namespace Kalmar {
+namespace detail {
 
-using namespace Kalmar::enums;
+using namespace enums;
 
 /// forward declaration
-class KalmarDevice;
-class KalmarQueue;
+class HCCDevice;
+class HCCQueue;
 struct rw_info;
 
-/// KalmarAsyncOp
+/// HCCAsyncOp
 ///
-/// This is an abstraction of all asynchronous operations within Kalmar
-class KalmarAsyncOp {
+/// This is an abstraction of all asynchronous operations within detail
+class HCCAsyncOp {
 public:
-  KalmarAsyncOp(KalmarQueue *xqueue, hcCommandKind xCommandKind) : queue(xqueue), commandKind(xCommandKind), seqNum(0) {} 
+  HCCAsyncOp(HCCQueue *xqueue, hcCommandKind xCommandKind) : queue(xqueue), commandKind(xCommandKind), seqNum(0) {}
 
-  virtual ~KalmarAsyncOp() {} 
+  virtual ~HCCAsyncOp() {}
   virtual std::shared_future<void>* getFuture() { return nullptr; }
   virtual void* getNativeHandle() { return nullptr;}
 
   /**
    * Get the timestamp when the asynchronous operation begins.
    *
-   * @return An implementaion-defined timestamp.
+   * @return An implementation-defined timestamp.
    */
   virtual uint64_t getBeginTimestamp() { return 0L; }
 
@@ -164,7 +164,7 @@ public:
    *
    * @param mode[in] wait mode, must be one of the value in hcWaitMode enum.
    */
-  virtual void setWaitMode(hcWaitMode mode) {}
+  virtual void setWaitMode(hcWaitMode mode) = 0;
 
   void setSeqNumFromQueue();
   uint64_t getSeqNum () const { return seqNum;};
@@ -172,10 +172,10 @@ public:
   hcCommandKind getCommandKind() const { return commandKind; };
   void          setCommandKind(hcCommandKind xCommandKind) { commandKind = xCommandKind; };
 
-  KalmarQueue  *getQueue() const { return queue; };
+  HCCQueue  *getQueue() const { return queue; };
 
 private:
-  KalmarQueue    *queue;
+  HCCQueue    *queue;
 
   // Kind of this command - copy, kernel, barrier, etc:
   hcCommandKind  commandKind;
@@ -186,20 +186,20 @@ private:
 
 };
 
-/// KalmarQueue
+/// HCCQueue
 /// This is the implementation of accelerator_view
-/// KalamrQueue is responsible for data operations and launch kernel
-class KalmarQueue
+/// HCCQueue is responsible for data operations and launch kernel
+class HCCQueue
 {
 public:
 
-  KalmarQueue(KalmarDevice* pDev, queuing_mode mode = queuing_mode_automatic, execute_order order = execute_in_order)
+  HCCQueue(HCCDevice* pDev, queuing_mode mode = queuing_mode_automatic, execute_order order = execute_in_order)
       : pDev(pDev), mode(mode), order(order), opSeqNums(0) {}
 
-  virtual ~KalmarQueue() {}
+  virtual ~HCCQueue() {}
 
   virtual void flush() {}
-  virtual void wait(hcWaitMode mode = hcWaitModeBlocked) {}
+  virtual void wait(hcWaitMode mode = hcWaitModeBlocked) = 0;
 
   // sync kernel launch with dynamic group memory
   virtual
@@ -212,7 +212,7 @@ public:
 
   // async kernel launch with dynamic group memory
   virtual
-  std::shared_ptr<KalmarAsyncOp> LaunchKernelWithDynamicGroupMemoryAsync(
+  std::shared_ptr<HCCAsyncOp> LaunchKernelWithDynamicGroupMemoryAsync(
     void* kernel,
     std::size_t dim_ext,
     const std::size_t* ext,
@@ -229,7 +229,7 @@ public:
 
   // async kernel launch
   virtual
-  std::shared_ptr<KalmarAsyncOp> LaunchKernelAsync(
+  std::shared_ptr<HCCAsyncOp> LaunchKernelAsync(
     void* kernel,
     std::size_t dim_ext,
     const std::size_t* ext,
@@ -238,7 +238,7 @@ public:
   /// read data from device to host
   virtual void read(void* device, void* dst, size_t count, size_t offset) = 0;
 
-  /// wrtie data from host to device
+  /// write data from host to device
   virtual void write(void* device, const void* src, size_t count, size_t offset, bool blocking) = 0;
 
   /// copy data between two device pointers
@@ -257,7 +257,7 @@ public:
 
   virtual uint32_t GetGroupSegmentSize(void *kernel) { return 0; }
 
-  KalmarDevice* getDev() const { return pDev; }
+  HCCDevice* getDev() const { return pDev; }
   queuing_mode get_mode() const { return mode; }
   void set_mode(queuing_mode mod) { mode = mod; }
 
@@ -279,7 +279,7 @@ public:
   virtual void* getHSAAMRegion() { return nullptr; }
 
   virtual void* getHSAAMHostRegion() { return nullptr; }
-  
+
   virtual void* getHSACoherentAMHostRegion() { return nullptr; }
 
   /// get kernarg region handle
@@ -289,19 +289,19 @@ public:
   virtual bool hasHSAInterOp() { return false; }
 
   /// enqueue marker
-  virtual std::shared_ptr<KalmarAsyncOp> EnqueueMarker(memory_scope) { return nullptr; }
+  virtual std::shared_ptr<HCCAsyncOp> EnqueueMarker(memory_scope) { return nullptr; }
 
   /// enqueue marker with prior dependency
-  virtual std::shared_ptr<KalmarAsyncOp> EnqueueMarkerWithDependency(int count, std::shared_ptr <KalmarAsyncOp> *depOps, memory_scope scope) { return nullptr; }
+  virtual std::shared_ptr<HCCAsyncOp> EnqueueMarkerWithDependency(int count, std::shared_ptr <HCCAsyncOp> *depOps, memory_scope scope) { return nullptr; }
 
-  virtual std::shared_ptr<KalmarAsyncOp> detectStreamDeps(hcCommandKind commandKind, KalmarAsyncOp *newCopyOp) { return nullptr; };
+  virtual std::shared_ptr<HCCAsyncOp> detectStreamDeps(hcCommandKind commandKind, HCCAsyncOp *newCopyOp) { return nullptr; };
 
 
   /// copy src to dst asynchronously
-  virtual std::shared_ptr<KalmarAsyncOp> EnqueueAsyncCopy(const void* src, void* dst, size_t size_bytes) { return nullptr; }
-  virtual std::shared_ptr<KalmarAsyncOp> EnqueueAsyncCopyExt(const void* src, void* dst, size_t size_bytes, 
-                                                             hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, 
-                                                             const Kalmar::KalmarDevice *copyDevice) { return nullptr; };
+  virtual std::shared_ptr<HCCAsyncOp> EnqueueAsyncCopy(const void* src, void* dst, size_t size_bytes) { return nullptr; }
+  virtual std::shared_ptr<HCCAsyncOp> EnqueueAsyncCopyExt(const void* src, void* dst, size_t size_bytes,
+                                                             hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo,
+                                                             const detail::HCCDevice *copyDevice) { return nullptr; };
 
   // Copy src to dst synchronously
   virtual void copy(const void *src, void *dst, size_t size_bytes) { }
@@ -309,8 +309,8 @@ public:
   /// copy src to dst, with caller providing extended information about the pointers.
   //// TODO - remove me, this form is deprecated.
   virtual void copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, bool forceUnpinnedCopy) { };
-  virtual void copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, 
-                        const Kalmar::KalmarDevice *copyDev, bool forceUnpinnedCopy) { };
+  virtual void copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo,
+                        const detail::HCCDevice *copyDev, bool forceUnpinnedCopy) { };
 
   /// cleanup internal resource
   /// this function is usually called by dtor of the implementation classes
@@ -318,10 +318,10 @@ public:
   /// resource clean up sequence
   virtual void dispose() {}
 
-  virtual void dispatch_hsa_kernel(const hsa_kernel_dispatch_packet_t *aql, 
+  virtual void dispatch_hsa_kernel(const hsa_kernel_dispatch_packet_t *aql,
                                    const void * args, size_t argsize,
                                    hc::completion_future *cf, const char *kernel_name)  { };
- 
+
   /// set CU affinity of this queue.
   /// the setting is permanent until the queue is destroyed or another setting
   /// is called.
@@ -331,17 +331,17 @@ public:
   uint64_t assign_op_seq_num() { return ++opSeqNums; };
 
 private:
-  KalmarDevice* pDev;
+  HCCDevice* pDev;
   queuing_mode mode;
   execute_order order;
 
   uint64_t      opSeqNums; // last seqnum assigned to an op in this queue
 };
 
-/// KalmarDevice
+/// HCCDevice
 /// This is the base implementation of accelerator
-/// KalmarDevice is responsible for create/release memory on device
-class KalmarDevice
+/// HCCDevice is responsible for create/release memory on device
+class HCCDevice
 {
 private:
     access_type cpu_type;
@@ -349,13 +349,13 @@ private:
     // Set true if the device has large bar
 
 #if !TLS_QUEUE
-    /// default KalmarQueue
-    std::shared_ptr<KalmarQueue> def;
-    /// make sure KalamrQueue is created only once
+    /// default HCCQueue
+    std::shared_ptr<HCCQueue> def;
+    /// make sure HCCQueue is created only once
     std::once_flag flag;
 #else
-    /// default KalmarQueue for each calling thread
-    std::map< std::thread::id, std::shared_ptr<KalmarQueue> > tlsDefaultQueueMap;
+    /// default HCCQueue for each calling thread
+    std::map< std::thread::id, std::shared_ptr<HCCQueue> > tlsDefaultQueueMap;
     /// mutex for tlsDefaultQueueMap
     std::mutex tlsDefaultQueueMap_mutex;
 #endif
@@ -366,7 +366,7 @@ protected:
     bool cpu_accessible_am;
 
 
-    KalmarDevice(access_type type = access_type_read_write)
+    HCCDevice(access_type type = access_type_read_write)
         : cpu_type(type),
 #if !TLS_QUEUE
           def(), flag()
@@ -400,11 +400,11 @@ public:
     virtual void BuildProgram(void* size, void* source) {}
 
     /// create kernel
-    virtual 
+    virtual
     void* CreateKernel(
         const char* fun,
-        KalmarQueue *queue,
-        const void* callable = nullptr,
+        HCCQueue *queue,
+        std::unique_ptr<void, void (*)(void*)> callable,
         std::size_t callable_size = 0u) = 0;
 
     /// check if a given kernel is compatible with the device
@@ -413,13 +413,13 @@ public:
     /// check the dimension information is correct
     virtual bool check(size_t* size, size_t dim_ext) { return true; }
 
-    /// create KalmarQueue from current device
-    virtual std::shared_ptr<KalmarQueue> createQueue(execute_order order = execute_in_order) = 0;
-    virtual ~KalmarDevice() {}
+    /// create HCCQueue from current device
+    virtual std::shared_ptr<HCCQueue> createQueue(execute_order order = execute_in_order) = 0;
+    virtual ~HCCDevice() {}
 
-    std::shared_ptr<KalmarQueue> get_default_queue() {
+    std::shared_ptr<HCCQueue> get_default_queue() {
 #if !TLS_QUEUE
-        std::call_once(flag, [&]() { 
+        std::call_once(flag, [&]() {
             def = createQueue();
         });
         return def;
@@ -429,7 +429,7 @@ public:
         if (tlsDefaultQueueMap.find(tid) == tlsDefaultQueueMap.end()) {
             tlsDefaultQueueMap[tid] = createQueue();
         }
-        std::shared_ptr<KalmarQueue> result = tlsDefaultQueueMap[tid];
+        std::shared_ptr<HCCQueue> result = tlsDefaultQueueMap[tid];
         tlsDefaultQueueMap_mutex.unlock();
         return result;
 #endif
@@ -439,7 +439,7 @@ public:
     virtual size_t GetMaxTileStaticSize() { return 0; }
 
     /// get all queues associated with this device
-    virtual std::vector< std::shared_ptr<KalmarQueue> > get_all_queues() { return std::vector< std::shared_ptr<KalmarQueue> >(); }
+    virtual std::vector< std::shared_ptr<HCCQueue> > get_all_queues() { return std::vector< std::shared_ptr<HCCQueue> >(); }
 
     virtual void memcpySymbol(const char* symbolName, void* hostptr, size_t count, size_t offset = 0, hcCommandKind kind = hcMemcpyHostToDevice) {}
 
@@ -454,7 +454,7 @@ public:
     virtual hcAgentProfile getProfile() { return hcAgentProfileNone; }
 
     /// check if @p other can access to this device's device memory, return true if so, false otherwise
-    virtual bool is_peer(const KalmarDevice* other) {return false;}
+    virtual bool is_peer(const HCCDevice* other) {return false;}
 
     /// get device's compute unit count
     virtual unsigned int get_compute_unit_count() {return 0;}
@@ -465,11 +465,11 @@ public:
 
 };
 
-class CPUQueue final : public KalmarQueue
+class CPUQueue final : public HCCQueue
 {
 public:
 
-  CPUQueue(KalmarDevice* pDev) : KalmarQueue(pDev) {}
+  CPUQueue(HCCDevice* pDev) : HCCQueue(pDev) {}
 
   void read(void* device, void* dst, size_t count, size_t offset) override {
       if (dst != device)
@@ -486,10 +486,11 @@ public:
           memmove((char*)dst + dst_offset, (char*)src + src_offset, count);
   }
 
+  [[noreturn]]
   void* CreateKernel(
-      const char*, KalmarQueue*, const void*, std::size_t) override
+      const char*, HCCQueue*, const void*, std::size_t) override
   {
-      return nullptr;
+      throw std::runtime_error{"Unsupported."};
   }
   void LaunchKernel(
       void*,
@@ -500,7 +501,7 @@ public:
     throw std::runtime_error{"Unsupported."};
   }
   [[noreturn]]
-  std::shared_ptr<KalmarAsyncOp> LaunchKernelAsync(
+  std::shared_ptr<HCCAsyncOp> LaunchKernelAsync(
       void*,
       std::size_t,
       const std::size_t*,
@@ -518,7 +519,7 @@ public:
     throw std::runtime_error{"Unsupported."};
   }
   [[noreturn]]
-  std::shared_ptr<KalmarAsyncOp> LaunchKernelWithDynamicGroupMemoryAsync(
+  std::shared_ptr<HCCAsyncOp> LaunchKernelWithDynamicGroupMemoryAsync(
     void*,
     std::size_t,
     const std::size_t*,
@@ -535,10 +536,12 @@ public:
   void unmap(void* device, void* addr, size_t count, size_t offset, bool modify) override {}
 
   void Push(void *kernel, int idx, void* device, bool modify) override {}
+
+  void wait(hcWaitMode = hcWaitModeBlocked) override {}
 };
 
 /// cpu accelerator
-class CPUDevice final : public KalmarDevice
+class CPUDevice final : public HCCDevice
 {
 public:
     std::wstring get_path() const override { return L"cpu"; }
@@ -550,29 +553,34 @@ public:
     bool is_emulated() const override { return true; }
     uint32_t get_version() const override { return 0; }
 
-    std::shared_ptr<KalmarQueue> createQueue(execute_order order = execute_in_order) override { return std::shared_ptr<KalmarQueue>(new CPUQueue(this)); }
+    std::shared_ptr<HCCQueue> createQueue(
+        execute_order order = execute_in_order) override
+    {
+        return std::shared_ptr<HCCQueue>(new CPUQueue(this));
+    }
     void* create(size_t count, struct rw_info* /* not used */ ) override { return kalmar_aligned_alloc(0x1000, count); }
-    void release(void* ptr, struct rw_info* /* nout used */) override { kalmar_aligned_free(ptr); }
+    void release(void* ptr, struct rw_info* /* not used */) override { kalmar_aligned_free(ptr); }
+    [[noreturn]]
     void* CreateKernel(
         const char*,
-        KalmarQueue*,
-        const void* = nullptr,
+        HCCQueue*,
+        std::unique_ptr<void, void (*)(void*)>,
         std::size_t = 0u)
     {
-        return nullptr;
+        throw std::runtime_error{"Unsupported."};
     }
 };
 
-/// KalmarContext
+/// HCCContext
 /// This is responsible for managing all devices
 /// User will need to add their customize devices
-class KalmarContext
+class HCCContext
 {
 private:
     //TODO: Think about a system which has multiple CPU socket, e.g. server. In this case,
     //We might be able to assume that only the first device is CPU, or we only mimic one cpu
-    //device when constructing KalmarContext.
-    KalmarDevice* get_default_dev() {
+    //device when constructing HCCContext.
+    HCCDevice* get_default_dev() {
         if (!def) {
             if (Devices.size() <= 1) {
                 fprintf(stderr, "There is no device can be used to do the computation\n");
@@ -584,46 +592,47 @@ private:
     }
 protected:
     /// default device
-    KalmarDevice* def;
-    std::vector<KalmarDevice*> Devices;
-    KalmarContext() : def(nullptr), Devices() { Devices.push_back(new CPUDevice); }
+    HCCDevice* def;
+    std::vector<HCCDevice*> Devices;
+    HCCContext() : def(nullptr), Devices() { Devices.push_back(new CPUDevice); }
 
-    bool init_success = false; 
+    bool init_success = false;
 
 public:
-    virtual ~KalmarContext() {}
+    virtual ~HCCContext() {}
 
-    std::vector<KalmarDevice*> getDevices() { return Devices; }
+    std::vector<HCCDevice*> getDevices() { return Devices; }
 
     /// set default device by path
-    bool set_default(const std::wstring& path) {
-        auto result = std::find_if(std::begin(Devices), std::end(Devices),
-                                   [&] (const KalmarDevice* pDev)
-                                   { return pDev->get_path() == path; });
-        if (result == std::end(Devices))
-            return false;
-        else {
-            def = *result;
+    bool set_default(const std::wstring& path)
+    {
+        for (auto&& Device : Devices) {
+            if (Device->get_path() != path) continue;
+
+            def = Device;
+
             return true;
         }
+
+        return false;
     }
 
     /// get auto selection queue
-    std::shared_ptr<KalmarQueue> auto_select() {
+    std::shared_ptr<HCCQueue> auto_select() {
         return get_default_dev()->get_default_queue();
     }
 
     /// get device from path
-    KalmarDevice* getDevice(std::wstring path = L"") {
-        if (path == L"default" || path == L"")
-            return get_default_dev();
-        auto result = std::find_if(std::begin(Devices), std::end(Devices),
-                                   [&] (const KalmarDevice* dev)
-                                   { return dev->get_path() == path; });
-        if (result != std::end(Devices))
-            return *result;
-        else
-            return get_default_dev();
+    HCCDevice* getDevice(std::wstring path = L"") {
+        if (path == L"default" || path == L"") return get_default_dev();
+
+        for (auto&& Device : Devices) {
+            if (Device->get_path() != path) continue;
+
+            return Device;
+        }
+
+        return get_default_dev();
     }
 
     /// get system ticks
@@ -642,24 +651,27 @@ public:
     virtual void* getPrintfBufferPointerVA() { return nullptr; };
 };
 
-KalmarContext *getContext();
+HCCContext *getContext();
 
 namespace CLAMP {
 void* CreateKernel(
-    const char*, KalmarQueue*, const void* = nullptr, std::size_t = 0u);
+    const char*,
+    HCCQueue*,
+    std::unique_ptr<void, void (*)(void*)>,
+    std::size_t = 0u);
 } // namespace CLAMP
 
-static inline const std::shared_ptr<KalmarQueue> get_cpu_queue() {
+static inline const std::shared_ptr<HCCQueue> get_cpu_queue() {
     static auto cpu_queue = getContext()->getDevice(L"cpu")->get_default_queue();
     return cpu_queue;
 }
 
-static inline bool is_cpu_queue(const std::shared_ptr<KalmarQueue>& Queue) {
+static inline bool is_cpu_queue(const std::shared_ptr<HCCQueue>& Queue) {
     return Queue->getDev()->get_path() == L"cpu";
 }
 
-static inline void copy_helper(std::shared_ptr<KalmarQueue>& srcQueue, void* src,
-                               std::shared_ptr<KalmarQueue>& dstQueue, void* dst,
+static inline void copy_helper(std::shared_ptr<HCCQueue>& srcQueue, void* src,
+                               std::shared_ptr<HCCQueue>& dstQueue, void* dst,
                                size_t cnt, bool block,
                                size_t src_offset = 0, size_t dst_offset = 0) {
     /// In shared memory architecture, src and dst may points to the same buffer
@@ -668,8 +680,8 @@ static inline void copy_helper(std::shared_ptr<KalmarQueue>& srcQueue, void* src
         return ;
     /// If device pointer comes from cpu, let the device queue to handle the copy
     /// For example, if src is on cpu and dst is on device,
-    /// in OpenCL, clEnqueueWrtieBuffer to write data from src to device
-    
+    /// in OpenCL, clEnqueueWriteBuffer to write data from src to device
+
     if (is_cpu_queue(dstQueue))
         srcQueue->read(src, (char*)dst + dst_offset, cnt, src_offset);
     else
@@ -681,7 +693,7 @@ static inline void copy_helper(std::shared_ptr<KalmarQueue>& srcQueue, void* src
 /// Used to avoid unnecessary copy when array_view<const, T> is used
 enum states
 {
-    /// exclusive owned data, safe to read and wrtie
+    /// exclusive owned data, safe to read and write
     modified,
     /// shared on multiple devices, the content are all the same, cannot modify
     shared,
@@ -718,17 +730,17 @@ struct rw_info
     ///    unified memory and access_type is not none
     void *data;
     const size_t count;
-    /// This pointer pointes to the latest queue that manages the data
-    std::shared_ptr<KalmarQueue> curr;
-    /// This pointer pointes to the queue that used to construct this rw_info
+    /// This pointer points to the latest queue that manages the data
+    std::shared_ptr<HCCQueue> curr;
+    /// This pointer points to the queue that used to construct this rw_info
     /// This will be null if the constructor is constructed by size only
-    std::shared_ptr<KalmarQueue> master;
+    std::shared_ptr<HCCQueue> master;
     /// staged queue
-    std::shared_ptr<KalmarQueue> stage;
+    std::shared_ptr<HCCQueue> stage;
     /// This is used as cache for device buffer
     /// When this rw_info is going to be used(computed) on device,
     /// rw_info will allocate buffer for the device
-    std::map<KalmarDevice*, dev_info> devs;
+    std::map<HCCDevice*, dev_info> devs;
     access_type mode;
     /// This will be set if this rw_info is constructed with host pointer
     /// because rw_info cannot free host pointer
@@ -740,7 +752,7 @@ struct rw_info
     bool toReleaseDevPointer;
 
 
-    /// consruct array_view
+    /// construct array_view
     /// According to standard, array_view will be constructed by size, or size with
     /// host pointer.
     /// If it is constructed with host pointer, treat it is constructed on cpu
@@ -758,10 +770,10 @@ struct rw_info
     /// construct array
     /// According to AMP standard, array should be constructed with
     /// 1. one accelerator_view
-    /// 2. one acceleratir_view, with another staged one
+    /// 2. one accelerator_view, with another staged one
     ///    In this case, master should be cpu device
     ///    If it is not, ignore the stage one, fallback to case 1.
-    rw_info(const std::shared_ptr<KalmarQueue>& Queue, const std::shared_ptr<KalmarQueue>& Stage,
+    rw_info(const std::shared_ptr<HCCQueue>& Queue, const std::shared_ptr<HCCQueue>& Stage,
             const size_t count, access_type mode_) : data(nullptr), count(count),
     curr(Queue), master(Queue), stage(nullptr), devs(), mode(mode_), HostPtr(false), toReleaseDevPointer(true) {
         if (mode == access_type_auto)
@@ -785,7 +797,7 @@ struct rw_info
     /// toReleaseDevPointer is now set as false, so when this instance goes
     /// into destruction, device memory associated with it will NOT be
     /// released
-    rw_info(const std::shared_ptr<KalmarQueue>& Queue, const std::shared_ptr<KalmarQueue>& Stage,
+    rw_info(const std::shared_ptr<HCCQueue>& Queue, const std::shared_ptr<HCCQueue>& Stage,
             const size_t count,
             void* device_pointer,
             access_type mode_) : data(nullptr), count(count), curr(Queue), master(Queue), stage(nullptr), devs(), mode(mode_), HostPtr(false), toReleaseDevPointer(false) {
@@ -809,7 +821,7 @@ struct rw_info
         return devs[curr->getDev()].data;
     }
 
-    void construct(std::shared_ptr<KalmarQueue> pQueue) {
+    void construct(std::shared_ptr<HCCQueue> pQueue) {
         curr = pQueue;
         devs[pQueue->getDev()] = {pQueue->getDev()->create(count, this), invalid};
         if (is_cpu_queue(pQueue))
@@ -825,7 +837,7 @@ struct rw_info
     /// shared, it implies that the data on cpu is the same on device where
     /// curr located, use data on cpu to perform the later operation
     /// For example, if data on device a is going to be copied to device b
-    /// and the data on device a and cpu is the same, it is okay to copy data 
+    /// and the data on device a and cpu is the same, it is okay to copy data
     /// from cpu to device b
     void try_switch_to_cpu() {
         if (is_cpu_queue(curr))
@@ -836,12 +848,12 @@ struct rw_info
                 curr = cpu_queue;
     }
 
-    /// synchronize data to device pQueue belongs to by using pQuquq
+    /// synchronize data to device pQueue belongs to by using pQueue
     /// @pQueue: queue that used to synchronize
     /// @modify: the data will be modified or not
-    /// @blcok: this call will be blocking or not
+    /// @block: this call will be blocking or not
     ///         none blocking occurs in serialization stage
-    void sync(std::shared_ptr<KalmarQueue> pQueue, bool modify, bool block = true) {
+    void sync(std::shared_ptr<HCCQueue> pQueue, bool modify, bool block = true) {
         if (!curr) {
             /// This can only happen if array_view is constructed with size and
             /// is not accessed before
@@ -857,7 +869,7 @@ struct rw_info
         if (curr == pQueue)
             return;
 
-        /// If both queues are from the same device, upadte state only
+        /// If both queues are from the same device, update state only
         if (curr->getDev() == pQueue->getDev()) {
             // curr->wait();
             curr = pQueue;
@@ -994,7 +1006,7 @@ struct rw_info
                 cpu_dev->release(devs[cpu_dev].data, this);
             devs.erase(cpu_dev);
         }
-        KalmarDevice* pDev;
+        HCCDevice* pDev;
         dev_info info;
         for (const auto it : devs) {
             std::tie(pDev, info) = it;
@@ -1008,8 +1020,8 @@ struct rw_info
 //--- Implementation:
 //
 
-inline void KalmarAsyncOp::setSeqNumFromQueue()  { seqNum = queue->assign_op_seq_num(); };
+inline void HCCAsyncOp::setSeqNumFromQueue()  { seqNum = queue->assign_op_seq_num(); };
 
-} // namespace Kalmar
+} // namespace detail
 
 /** \endcond */

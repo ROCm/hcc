@@ -24,9 +24,21 @@
 
 #include "hcc_features.hpp"
 
+//#include <hsa/hsa.h>
+//#include <hsa/hsa_ext_amd.h>
+
+#include "/opt/rocm/include/hsa/hsa.h"
+#include "/opt/rocm/include/hsa/hsa_ext_amd.h"
+
+#include <array>
+#include <atomic>
 #include <climits>
 #include <cstddef>
+#include <cstdint>
+#include <future>
+#include <memory>
 #include <type_traits>
+#include <utility>
 
 #ifndef __HC__
 #   define __HC__ [[hc]]
@@ -42,7 +54,7 @@ typedef struct hsa_kernel_dispatch_packet_s hsa_kernel_dispatch_packet_t;
  * @namespace hc
  * Heterogeneous  C++ (HC) namespace
  */
-namespace Kalmar {
+namespace detail {
     class HSAQueue;
 };
 
@@ -51,8 +63,8 @@ namespace hc {
 class AmPointerInfo;
 
 using namespace atomics;
-using namespace Kalmar::enums;
-using namespace Kalmar::CLAMP;
+using namespace detail::enums;
+using namespace detail::CLAMP;
 
 
 // forward declaration
@@ -67,11 +79,11 @@ template <typename T, int N> class array;
 
 
 // namespace alias
-// namespace hc::fast_math is an alias of namespace Kalmar::fast_math
-namespace fast_math = Kalmar::fast_math;
+// namespace hc::fast_math is an alias of namespace detail::fast_math
+namespace fast_math = detail::fast_math;
 
-// namespace hc::precise_math is an alias of namespace Kalmar::precise_math
-namespace precise_math = Kalmar::precise_math;
+// namespace hc::precise_math is an alias of namespace detail::precise_math
+namespace precise_math = detail::precise_math;
 
 // type alias
 
@@ -79,11 +91,11 @@ namespace precise_math = Kalmar::precise_math;
  * Represents a unique position in N-dimensional space.
  */
 template <int N>
-using index = Kalmar::index<N>;
+using index = detail::index<N>;
 
-using runtime_exception = Kalmar::runtime_exception;
-using invalid_compute_domain = Kalmar::invalid_compute_domain;
-using accelerator_view_removed = Kalmar::accelerator_view_removed;
+using runtime_exception = detail::runtime_exception;
+using invalid_compute_domain = detail::invalid_compute_domain;
+using accelerator_view_removed = detail::accelerator_view_removed;
 
 // ------------------------------------------------------------------------
 // global functions
@@ -95,17 +107,17 @@ using accelerator_view_removed = Kalmar::accelerator_view_removed;
  * @return An implementation-defined tick count
  */
 inline uint64_t get_system_ticks() {
-    return Kalmar::getContext()->getSystemTicks();
+    return detail::getContext()->getSystemTicks();
 }
 
 /**
- * Get the frequency of ticks per second for the underlying asynchrnous operation.
+ * Get the frequency of ticks per second for the underlying asynchronous operation.
  *
  * @return An implementation-defined frequency in Hz in case the instance is
  *         created by a kernel dispatch or a barrier packet. 0 otherwise.
  */
 inline uint64_t get_tick_frequency() {
-    return Kalmar::getContext()->getSystemTickFrequency();
+    return detail::getContext()->getSystemTickFrequency();
 }
 
 #define GET_SYMBOL_ADDRESS(acc, symbol) \
@@ -198,7 +210,7 @@ public:
      * the parent accelerator.
      */
     // FIXME: dummy implementation now
-    bool get_is_debug() const { return 0; } 
+    bool get_is_debug() const { return 0; }
 
     /**
      * Performs a blocking wait for completion of all commands submitted to the
@@ -209,9 +221,9 @@ public:
      *                     hcWaitModeActive would be used to reduce latency with
      *                     the expense of using one CPU core for active waiting.
      */
-    void wait(hcWaitMode waitMode = hcWaitModeBlocked) { 
-      pQueue->wait(waitMode); 
-      Kalmar::getContext()->flushPrintfBuffer();
+    void wait(hcWaitMode waitMode = hcWaitModeBlocked) {
+      pQueue->wait(waitMode);
+      detail::getContext()->flushPrintfBuffer();
     }
 
     /**
@@ -221,10 +233,10 @@ public:
      * An accelerator_view internally maintains a buffer of commands such as
      * data transfers between the host memory and device buffers, and kernel
      * invocations (parallel_for_each calls). This member function sends the
-     * commands to the device for processing. Normally, these commands 
+     * commands to the device for processing. Normally, these commands
      * to the GPU automatically whenever the runtime determines that they need
-     * to be, such as when the command buffer is full or when waiting for 
-     * transfer of data from the device buffers to host memory. The flush 
+     * to be, such as when the command buffer is full or when waiting for
+     * transfer of data from the device buffers to host memory. The flush
      * member function will send the commands manually to the device.
      *
      * Calling this member function incurs an overhead and must be used with
@@ -235,7 +247,7 @@ public:
      * references to them have been removed.
      *
      * Because flush operates asynchronously, it can return either before or
-     * after the device finishes executing the buffered commandser, the
+     * after the device finishes executing the buffered commands, the
      * commands will eventually always complete.
      *
      * If the queuing_mode is queuing_mode_immediate, this function has no effect.
@@ -250,7 +262,7 @@ public:
      * commands that were submitted prior to the marker event creation have
      * completed, the future is ready.
      *
-     * Regardless of the accelerator_view's execute_order (execute_any_order, execute_in_order), 
+     * Regardless of the accelerator_view's execute_order (execute_any_order, execute_in_order),
      * the marker always ensures older commands complete before the returned completion_future
      * is marked ready.   Thus, markers provide a mechanism to enforce order between
      * commands in an execute_any_order accelerator_view.
@@ -273,7 +285,7 @@ public:
      * dependent event and all commands submitted prior to the marker event
      * creation have been completed, the future is ready.
      *
-     * Regardless of the accelerator_view's execute_order (execute_any_order, execute_in_order), 
+     * Regardless of the accelerator_view's execute_order (execute_any_order, execute_in_order),
      * the marker always ensures older commands complete before the returned completion_future
      * is marked ready.   Thus, markers provide a mechanism to enforce order between
      * commands in an execute_any_order accelerator_view.
@@ -284,7 +296,7 @@ public:
      *   - system_scope: Memory is acquired from and released to system scope (all accelerators including CPUs)
      *
      * dependent_futures may be recorded in another queue or another accelerator.  If in another accelerator,
-     * the runtime performs cross-accelerator sychronization.  
+     * the runtime performs cross-accelerator synchronisation.
      *
      * @return A future which can be waited on, and will block until the
      *         current batch of commands, plus the dependent event have
@@ -300,7 +312,7 @@ public:
      * dependent events and all commands submitted prior to the marker event
      * creation have been completed, the completion_future is ready.
      *
-     * Regardless of the accelerator_view's execute_order (execute_any_order, execute_in_order), 
+     * Regardless of the accelerator_view's execute_order (execute_any_order, execute_in_order),
      * the marker always ensures older commands complete before the returned completion_future
      * is marked ready.   Thus, markers provide a mechanism to enforce order between
      * commands in an execute_any_order accelerator_view.
@@ -325,7 +337,7 @@ public:
      * dependent events and all commands submitted prior to the marker event
      * creation have been completed, the completion_future is ready.
      *
-     * Regardless of the accelerator_view's execute_order (execute_any_order, execute_in_order), 
+     * Regardless of the accelerator_view's execute_order (execute_any_order, execute_in_order),
      * the marker always ensures older commands complete before the returned completion_future
      * is marked ready.   Thus, markers provide a mechanism to enforce order between
      * commands in an execute_any_order accelerator_view.
@@ -338,8 +350,8 @@ public:
     completion_future create_blocking_marker(InputIterator first, InputIterator last, memory_scope scope) const;
 
     /**
-     * Copies size_bytes bytes from src to dst.  
-     * Src and dst must not overlap.  
+     * Copies size_bytes bytes from src to dst.
+     * Src and dst must not overlap.
      * Note the src is the first parameter and dst is second, following C++ convention.
      * The copy command will execute after any commands already inserted into the accelerator_view finish.
      * This is a synchronous copy command, and the copy operation complete before this call returns.
@@ -350,15 +362,15 @@ public:
 
 
     /**
-     * Copies size_bytes bytes from src to dst.  
-     * Src and dst must not overlap.  
+     * Copies size_bytes bytes from src to dst.
+     * Src and dst must not overlap.
      * Note the src is the first parameter and dst is second, following C++ convention.
      * The copy command will execute after any commands already inserted into the accelerator_view finish.
      * This is a synchronous copy command, and the copy operation complete before this call returns.
      * The copy_ext flavor allows caller to provide additional information about each pointer, which can improve performance by eliminating replicated lookups.
      * This interface is intended for language runtimes such as HIP.
-    
-     @p copyDir : Specify direction of copy.  Must be hcMemcpyHostToHost, hcMemcpyHostToDevice, hcMemcpyDeviceToHost, or hcMemcpyDeviceToDevice. 
+
+     @p copyDir : Specify direction of copy.  Must be hcMemcpyHostToHost, hcMemcpyHostToDevice, hcMemcpyDeviceToHost, or hcMemcpyDeviceToDevice.
      @p forceUnpinnedCopy : Force copy to be performed with host involvement rather than with accelerator copy engines.
      */
     void copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, const hc::accelerator *copyAcc, bool forceUnpinnedCopy);
@@ -368,14 +380,14 @@ public:
     void copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, bool forceUnpinnedCopy) ;
 
     /**
-     * Copies size_bytes bytes from src to dst.  
-     * Src and dst must not overlap.  
-     * Note the src is the first parameter and dst is second, following C++ convention.  
+     * Copies size_bytes bytes from src to dst.
+     * Src and dst must not overlap.
+     * Note the src is the first parameter and dst is second, following C++ convention.
      * This is an asynchronous copy command, and this call may return before the copy operation completes.
      * If the source or dest is host memory, the memory must be pinned or a runtime exception will be thrown.
      * Pinned memory can be created with am_alloc with flag=amHostPinned flag.
      *
-     * The copy command will be implicitly ordered with respect to commands previously equeued to this accelerator_view:
+     * The copy command will be implicitly ordered with respect to commands previously enqueued to this accelerator_view:
      * - If the accelerator_view execute_order is execute_in_order (the default), then the copy will execute after all previously sent commands finish execution.
      * - If the accelerator_view execute_order is execute_any_order, then the copy will start after all previously send commands start but can execute in any order.
      *
@@ -383,11 +395,10 @@ public:
      */
     completion_future copy_async(const void *src, void *dst, size_t size_bytes);
 
-
     /**
-     * Copies size_bytes bytes from src to dst.  
-     * Src and dst must not overlap.  
-     * Note the src is the first parameter and dst is second, following C++ convention.  
+     * Copies size_bytes bytes from src to dst.
+     * Src and dst must not overlap.
+     * Note the src is the first parameter and dst is second, following C++ convention.
      * This is an asynchronous copy command, and this call may return before the copy operation completes.
      * If the source or dest is host memory, the memory must be pinned or a runtime exception will be thrown.
      * Pinned memory can be created with am_alloc with flag=amHostPinned flag.
@@ -398,18 +409,18 @@ public:
      *   The copyAcc determines where the copy is executed and does not affect the ordering.
      *
      * The copy_async_ext flavor allows caller to provide additional information about each pointer, which can improve performance by eliminating replicated lookups,
-     * and also allow control over which device performs the copy.  
+     * and also allow control over which device performs the copy.
      * This interface is intended for language runtimes such as HIP.
      *
-     *  @p copyDir : Specify direction of copy.  Must be hcMemcpyHostToHost, hcMemcpyHostToDevice, hcMemcpyDeviceToHost, or hcMemcpyDeviceToDevice. 
+     *  @p copyDir : Specify direction of copy.  Must be hcMemcpyHostToHost, hcMemcpyHostToDevice, hcMemcpyDeviceToHost, or hcMemcpyDeviceToDevice.
      *  @p copyAcc : Specify which accelerator performs the copy operation.  The specified accelerator must have access to the source and dest pointers - either
      *               because the memory is allocated on those devices or because the accelerator has peer access to the memory.
      *               If copyAcc is nullptr, then the copy will be performed by the host.  In this case, the host accelerator must have access to both pointers.
-     *               The copy operation will be performed by the specified engine but is not synchronized with respect to any operations on that device.  
+     *               The copy operation will be performed by the specified engine but is not synchronized with respect to any operations on that device.
      *
      */
-    completion_future copy_async_ext(const void *src, void *dst, size_t size_bytes, 
-                                     hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, 
+    completion_future copy_async_ext(const void *src, void *dst, size_t size_bytes,
+                                     hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo,
                                      const hc::accelerator *copyAcc);
 
     /**
@@ -485,7 +496,7 @@ public:
 
     /**
      * Returns an opaque handle which points to the AM region on the HSA agent.
-     * This region can be used to allocate accelerator memory which is accessible from the 
+     * This region can be used to allocate accelerator memory which is accessible from the
      * specified accelerator.
      *
      * @return An opaque handle of the region, if the accelerator is based
@@ -498,7 +509,7 @@ public:
 
     /**
      * Returns an opaque handle which points to the AM system region on the HSA agent.
-     * This region can be used to allocate system memory which is accessible from the 
+     * This region can be used to allocate system memory which is accessible from the
      * specified accelerator.
      *
      * @return An opaque handle of the region, if the accelerator is based
@@ -510,7 +521,7 @@ public:
 
     /**
      * Returns an opaque handle which points to the AM system region on the HSA agent.
-     * This region can be used to allocate finegrained system memory which is accessible from the 
+     * This region can be used to allocate finegrained system memory which is accessible from the
      * specified accelerator.
      *
      * @return An opaque handle of the region, if the accelerator is based
@@ -541,34 +552,34 @@ public:
     /**
      * Dispatch a kernel into the accelerator_view.
      *
-     * This function is intended to provide a gateway to dispatch code objects, with 
+     * This function is intended to provide a gateway to dispatch code objects, with
      * some assistance from HCC.  Kernels are specified in the standard code object
-     * format, and can be created from a varety of compiler tools including the 
+     * format, and can be created from a variety of compiler tools including the
      * assembler, offline cl compilers, or other tools.    The caller also
-     * specifies the execution configuration and kernel arguments.    HCC 
+     * specifies the execution configuration and kernel arguments.    HCC
      * will copy the kernel arguments into an appropriate segment and insert
-     * the packet into the queue.   HCC will also automatically handle signal 
+     * the packet into the queue.   HCC will also automatically handle signal
      * and kernarg allocation and deallocation for the command.
      *
-     *  The kernel is dispatched asynchronously, and thus this API may return before the 
+     *  The kernel is dispatched asynchronously, and thus this API may return before the
      *  kernel finishes executing.
-     
+
      *  Kernels dispatched with this API may be interleaved with other copy and kernel
-     *  commands generated from copy or parallel_for_each commands.  
-     *  The kernel honors the execute_order associated with the accelerator_view.  
+     *  commands generated from copy or parallel_for_each commands.
+     *  The kernel honors the execute_order associated with the accelerator_view.
      *  Specifically, if execute_order is execute_in_order, then the kernel
      *  will wait for older data and kernel commands in the same queue before
-     *  beginning execution.  If execute_order is execute_any_order, then the 
-     *  kernel may begin executing without regards to the state of older kernels.  
-     *  This call honors the packer barrier bit (1 << HSA_PACKET_HEADER_BARRIER) 
+     *  beginning execution.  If execute_order is execute_any_order, then the
+     *  kernel may begin executing without regards to the state of older kernels.
+     *  This call honors the packer barrier bit (1 << HSA_PACKET_HEADER_BARRIER)
      *  if set in the aql.header field.  If set, this provides the same synchronization
-     *  behaviora as execute_in_order for the command generated by this API.
+     *  behavior as execute_in_order for the command generated by this API.
      *
-     * @p aql is an HSA-format "AQL" packet. The following fields must 
+     * @p aql is an HSA-format "AQL" packet. The following fields must
      * be set by the caller:
-     *  aql.kernel_object 
+     *  aql.kernel_object
      *  aql.group_segment_size : includes static + dynamic group size
-     *  aql.private_segment_size 
+     *  aql.private_segment_size
      *  aql.grid_size_x, aql.grid_size_y, aql.grid_size_z
      *  aql.group_size_x, aql.group_size_y, aql.group_size_z
      *  aql.setup :  The 2 bits at HSA_KERNEL_DISPATCH_PACKET_SETUP_DIMENSIONS.
@@ -578,19 +589,19 @@ public:
                  (1 << HSA_PACKET_HEADER_BARRIER);
 
      * The following fields are ignored.  The API will will set up these fields before dispatching the AQL packet:
-     *  aql.completion_signal 
-     *  aql.kernarg 
-     * 
-     * @p args : Pointer to kernel arguments with the size and aligment expected by the kernel.  The args are copied and then passed directly to the kernel.   After this function returns, the args memory may be deallocated.
+     *  aql.completion_signal
+     *  aql.kernarg
+     *
+     * @p args : Pointer to kernel arguments with the size and alignment expected by the kernel.  The args are copied and then passed directly to the kernel.   After this function returns, the args memory may be deallocated.
      * @p argSz : Size of the arguments.
      * @p cf : Written with a completion_future that can be used to track the status
-     *          of the dispatch.  May be NULL, in which case no completion_future is 
-     *          returned and the caller must use other synchronization techniqueues 
+     *          of the dispatch.  May be NULL, in which case no completion_future is
+     *          returned and the caller must use other synchronization techniques
      *          such as calling accelerator_view::wait() or waiting on a younger command
      *          in the same queue.
-     * @p kernel_name : Optionally specify the name of the kernel for debug and profiling.  
+     * @p kernel_name : Optionally specify the name of the kernel for debug and profiling.
      * May be null.  If specified, the caller is responsible for ensuring the memory for the name remains allocated until the kernel completes.
-     *        
+     *
      *
      * The dispatch_hsa_kernel call will perform the following operations:
      *    - Efficiently allocate a kernarg region and copy the arguments.
@@ -598,17 +609,17 @@ public:
      *    - Dispatch the command into the queue and flush it to the GPU.
      *    - Kernargs and signals are automatically reclaimed by the HCC runtime.
      */
-    void dispatch_hsa_kernel(const hsa_kernel_dispatch_packet_t *aql, 
+    void dispatch_hsa_kernel(const hsa_kernel_dispatch_packet_t *aql,
                            const void * args, size_t argsize,
-                           hc::completion_future *cf=nullptr, const char *kernel_name = nullptr) 
+                           hc::completion_future *cf=nullptr, const char *kernel_name = nullptr)
     {
         pQueue->dispatch_hsa_kernel(aql, args, argsize, cf, kernel_name);
     }
 
     /**
-     * Set a CU affinity to specific command queues. 
+     * Set a CU affinity to specific command queues.
      * The setting is permanent until the queue is destroyed or CU affinity is
-     * set again. This setting is "atomic", it won't affect the dispatch in flight. 
+     * set again. This setting is "atomic", it won't affect the dispatch in flight.
      *
      * @param cu_mask a bool vector to indicate what CUs you want to use. True
      *        represents using the cu. The first 32 elements represents the first
@@ -628,8 +639,8 @@ public:
      }
 
 private:
-    accelerator_view(std::shared_ptr<Kalmar::KalmarQueue> pQueue) : pQueue(pQueue) {}
-    std::shared_ptr<Kalmar::KalmarQueue> pQueue;
+    accelerator_view(std::shared_ptr<detail::HCCQueue> pQueue) : pQueue(pQueue) {}
+    std::shared_ptr<detail::HCCQueue> pQueue;
 
     friend class accelerator;
     template <typename Q, int K> friend class array;
@@ -637,27 +648,27 @@ private:
 
     template<typename Domain, typename Kernel>
     friend
-    void Kalmar::launch_kernel_with_dynamic_group_memory(
-        const std::shared_ptr<Kalmar::KalmarQueue>&,
+    void detail::launch_kernel_with_dynamic_group_memory(
+        const std::shared_ptr<detail::HCCQueue>&,
         const Domain&,
         const Kernel&);
     template<typename Domain, typename Kernel>
     friend
-    std::shared_ptr<Kalmar::KalmarAsyncOp>
-        Kalmar::launch_kernel_with_dynamic_group_memory_async(
-        const std::shared_ptr<Kalmar::KalmarQueue>&,
+    std::shared_ptr<detail::HCCAsyncOp>
+        detail::launch_kernel_with_dynamic_group_memory_async(
+        const std::shared_ptr<detail::HCCQueue>&,
         const Domain&,
         const Kernel&);
     template<typename Domain, typename Kernel>
     friend
-    void Kalmar::launch_kernel(
-        const std::shared_ptr<Kalmar::KalmarQueue>&,
+    void detail::launch_kernel(
+        const std::shared_ptr<detail::HCCQueue>&,
         const Domain&,
         const Kernel&);
     template<typename Domain, typename Kernel>
     friend
-    std::shared_ptr<Kalmar::KalmarAsyncOp> Kalmar::launch_kernel_async(
-        const std::shared_ptr<Kalmar::KalmarQueue>&,
+    std::shared_ptr<detail::HCCAsyncOp> detail::launch_kernel_async(
+        const std::shared_ptr<detail::HCCQueue>&,
         const Domain&,
         const Kernel&);
 
@@ -676,8 +687,8 @@ private:
         const accelerator_view&, const tiled_extent<n>&, const Kernel&);
 
     accelerator_view() __CPU__ __HC__ {
-#if __KALMAR_ACCELERATOR__ != 1
-        throw runtime_exception("errorMsg_throw", 0);
+#if __HCC_ACCELERATOR__ != 1
+        throw runtime_exception{"errorMsg_throw", 0};
 #endif
     }
 };
@@ -696,7 +707,7 @@ class accelerator
 public:
     /**
      * Constructs a new accelerator object that represents the default
-     * accelerator. This is equivalent to calling the constructor 
+     * accelerator. This is equivalent to calling the constructor
      * @code{.cpp}
      * accelerator(accelerator::default_accelerator)
      * @endcode
@@ -722,7 +733,7 @@ public:
      * @param[in] path The device path of this accelerator.
      */
     explicit accelerator(const std::wstring& path)
-        : pDev(Kalmar::getContext()->getDevice(path)) {}
+        : pDev(detail::getContext()->getDevice(path)) {}
 
     /**
      * Copy constructs an accelerator object. This function does a shallow copy
@@ -741,7 +752,7 @@ public:
      * @return A vector of accelerators.
      */
     static std::vector<accelerator> get_all() {
-        auto Devices = Kalmar::getContext()->getDevices();
+        auto Devices = detail::getContext()->getDevices();
         std::vector<accelerator> ret;
         for(auto&& i : Devices)
           ret.push_back(i);
@@ -762,7 +773,7 @@ public:
      *         false, and the function will have no effect.
      */
     static bool set_default(const std::wstring& path) {
-        return Kalmar::getContext()->set_default(path);
+        return detail::getContext()->set_default(path);
     }
 
     /**
@@ -781,7 +792,7 @@ public:
      *         of the target for a parallel_for_each execution.
      */
     static accelerator_view get_auto_selection_view() {
-        return Kalmar::getContext()->auto_select();
+        return detail::getContext()->auto_select();
     }
 
     /**
@@ -812,14 +823,14 @@ public:
      *
      * @param[in] qmode The queuing mode of the accelerator_view to be created.
      *                  See "Queuing Mode". The default value would be
-     *                  queueing_mdoe_automatic if not specified.
+     *                  queueing_mode_automatic if not specified.
      */
     accelerator_view create_view(execute_order order = execute_in_order, queuing_mode mode = queuing_mode_automatic) {
         auto pQueue = pDev->createQueue(order);
         pQueue->set_mode(mode);
         return pQueue;
     }
-  
+
     /**
      * Compares "this" accelerator with the passed accelerator object to
      * determine if they represent the same underlying device.
@@ -848,9 +859,9 @@ public:
      * this this accelerator.
      *
      * This method only succeeds if the default_cpu_access_type for the
-     * accelerator has not already been overriden by a previous call to this 
-     * method and the runtime selected default_cpu_access_type for this 
-     * accelerator has not yet been used for allocating an array or for an 
+     * accelerator has not already been overriden by a previous call to this
+     * method and the runtime selected default_cpu_access_type for this
+     * accelerator has not yet been used for allocating an array or for an
      * implicit array_view memory allocation on this accelerator.
      *
      * @param[in] default_cpu_access_type The default cpu access_type to be used
@@ -938,8 +949,8 @@ public:
      * Get the default cpu access_type for buffers created on this accelerator
      */
     access_type get_default_cpu_access_type() const { return pDev->get_access(); }
-  
-  
+
+
     /**
      * Returns the maximum size of tile static area available on this
      * accelerator.
@@ -947,13 +958,13 @@ public:
     size_t get_max_tile_static_size() {
       return get_default_view().get_max_tile_static_size();
     }
-  
+
     /**
      * Returns a vector of all accelerator_view associated with this accelerator.
      */
     std::vector<accelerator_view> get_all_views() {
         std::vector<accelerator_view> result;
-        std::vector< std::shared_ptr<Kalmar::KalmarQueue> > queues = pDev->get_all_queues();
+        std::vector< std::shared_ptr<detail::HCCQueue> > queues = pDev->get_all_queues();
         for (auto q : queues) {
             result.push_back(q);
         }
@@ -962,7 +973,7 @@ public:
 
     /**
      * Returns an opaque handle which points to the AM region on the HSA agent.
-     * This region can be used to allocate accelerator memory which is accessible from the 
+     * This region can be used to allocate accelerator memory which is accessible from the
      * specified accelerator.
      *
      * @return An opaque handle of the region, if the accelerator is based
@@ -974,7 +985,7 @@ public:
 
     /**
      * Returns an opaque handle which points to the AM system region on the HSA agent.
-     * This region can be used to allocate system memory which is accessible from the 
+     * This region can be used to allocate system memory which is accessible from the
      * specified accelerator.
      *
      * @return An opaque handle of the region, if the accelerator is based
@@ -986,7 +997,7 @@ public:
 
     /**
      * Returns an opaque handle which points to the AM system region on the HSA agent.
-     * This region can be used to allocate finegrained system memory which is accessible from the 
+     * This region can be used to allocate finegrained system memory which is accessible from the
      * specified accelerator.
      *
      * @return An opaque handle of the region, if the accelerator is based
@@ -1050,27 +1061,24 @@ public:
      * Check if @p other is peer of this accelerator.
      *
      * @return true if other can access this accelerator's device memory pool or false if not.
-     * The acceleratos is not its own peer.
+     * The accelerator is not its own peer.
      */
     bool get_is_peer(const accelerator& other) const {
         return pDev->is_peer(other.pDev);
     }
-      
+
     /**
-     * Return a std::vector of this accelerator's peers. peer is other accelerator which can access this 
+     * Return a std::vector of this accelerator's peers. peer is other accelerator which can access this
      * accelerator's device memory using map_to_peer family of APIs.
      *
      */
-    std::vector<accelerator> get_peers() const {
+    std::vector<accelerator> get_peers() const
+    {   // TODO: remove / optimise.
         std::vector<accelerator> peers;
 
-        const auto &accs = get_all();
+        static const auto accs = get_all();
+        for (auto&& acc : accs) if (get_is_peer(acc)) peers.push_back(acc);
 
-        for(auto iter = accs.begin(); iter != accs.end(); iter++)
-        {
-            if(this->get_is_peer(*iter))
-                peers.push_back(*iter);
-        }
         return peers;
     }
 
@@ -1101,12 +1109,12 @@ public:
         return pDev->has_cpu_accessible_am();
     };
 
-    Kalmar::KalmarDevice *get_dev_ptr() const { return pDev; }; 
+    detail::HCCDevice *get_dev_ptr() const { return pDev; };
 
 private:
-    accelerator(Kalmar::KalmarDevice* pDev) : pDev(pDev) {}
+    accelerator(detail::HCCDevice* pDev) : pDev(pDev) {}
     friend class accelerator_view;
-    Kalmar::KalmarDevice* pDev;
+    detail::HCCDevice* pDev;
 };
 
 // ------------------------------------------------------------------------
@@ -1132,7 +1140,7 @@ public:
     completion_future() : __amp_future(), __thread_then(nullptr), __asyncOp(nullptr) {};
 
     /**
-     * Copy constructor. Constructs a new completion_future object that referes
+     * Copy constructor. Constructs a new completion_future object that refers
      * to the same asynchronous operation as the other completion_future object.
      *
      * @param[in] other An object of type completion_future from which to
@@ -1143,7 +1151,7 @@ public:
 
     /**
      * Move constructor. Move constructs a new completion_future object that
-     * referes to the same asynchronous operation as originally refered by the
+     * refers to the same asynchronous operation as originally referred by the
      * other completion_future object. After this constructor returns,
      * other.valid() == false
      *
@@ -1230,12 +1238,12 @@ public:
         if (this->valid()) {
             if (__asyncOp != nullptr) {
                 __asyncOp->setWaitMode(mode);
-            }   
+            }
             //TODO-ASYNC - need to reclaim older AsyncOps here.
             __amp_future.wait();
         }
 
-        Kalmar::getContext()->flushPrintfBuffer();
+        detail::getContext()->flushPrintfBuffer();
     }
 
     template <class _Rep, class _Period>
@@ -1269,19 +1277,17 @@ public:
     //        the original signature in the specification should be
     //        template<typename functor>
     //        void then(const functor& func) const;
-    template<typename functor>
-    void then(const functor & func) {
-#if __KALMAR_ACCELERATOR__ != 1
-      // could only assign once
-      if (__thread_then == nullptr) {
-        // spawn a new thread to wait on the future and then execute the callback functor
-        __thread_then = new std::thread([&]() __CPU__ {
-          this->wait();
-          if(this->valid())
-            func();
-        });
-      }
-#endif
+    template<typename F>
+    void then(const F& func)
+    {   // TODO: this should be completely redone, it is inefficient and odd.
+        // could only assign once
+        if (__thread_then == nullptr) {
+            // spawn a new thread to wait on the future and then execute the callback functor
+            __thread_then = new std::thread([&]() __CPU__ {
+            this->wait();
+            if(this->valid()) func();
+            });
+        }
     }
 
     /**
@@ -1290,7 +1296,7 @@ public:
      * purpose.
      * Applications should retain the parent completion_future to ensure
      * the native handle is not deallocated by the HCC runtime.  The completion_future
-     * pointer to the native handle is reference counted, so a copy of 
+     * pointer to the native handle is reference counted, so a copy of
      * the completion_future is sufficient to retain the native_handle.
      */
     void* get_native_handle() const {
@@ -1330,7 +1336,8 @@ public:
     }
 
     /**
-     * Get the frequency of ticks per second for the underlying asynchrnous operation.
+     * Get the frequency of ticks per second for the underlying asynchronous
+     * operation.
      *
      * @return An implementation-defined frequency in Hz in case the instance is
      *         created by a kernel dispatch or a barrier packet. 0 otherwise.
@@ -1362,7 +1369,7 @@ public:
       }
       delete __thread_then;
       __thread_then = nullptr;
-      
+
       if (__asyncOp != nullptr) {
         __asyncOp = nullptr;
       }
@@ -1377,14 +1384,14 @@ public:
 private:
     std::shared_future<void> __amp_future;
     std::thread* __thread_then = nullptr;
-    std::shared_ptr<Kalmar::KalmarAsyncOp> __asyncOp;
+    std::shared_ptr<detail::HCCAsyncOp> __asyncOp;
 
-    completion_future(std::shared_ptr<Kalmar::KalmarAsyncOp> event) : __amp_future(*(event->getFuture())), __asyncOp(event) {}
+    completion_future(std::shared_ptr<detail::HCCAsyncOp> event) : __amp_future(*(event->getFuture())), __asyncOp(event) {}
 
     completion_future(const std::shared_future<void> &__future)
         : __amp_future(__future), __thread_then(nullptr), __asyncOp(nullptr) {}
 
-    friend class Kalmar::HSAQueue;
+    friend class detail::HSAQueue;
 
     // non-tiled parallel_for_each
     // generic version
@@ -1441,10 +1448,10 @@ accelerator_view::get_accelerator() const { return pQueue->getDev(); }
 
 inline completion_future
 accelerator_view::create_marker(memory_scope scope) const {
-    std::shared_ptr<Kalmar::KalmarAsyncOp> deps[1]; 
+    std::shared_ptr<detail::HCCAsyncOp> deps[1];
     // If necessary create an explicit dependency on previous command
     // This is necessary for example if copy command is followed by marker - we need the marker to wait for the copy to complete.
-    std::shared_ptr<Kalmar::KalmarAsyncOp> depOp = pQueue->detectStreamDeps(hcCommandMarker, nullptr);
+    std::shared_ptr<detail::HCCAsyncOp> depOp = pQueue->detectStreamDeps(hcCommandMarker, nullptr);
 
     int cnt = 0;
     if (depOp) {
@@ -1457,11 +1464,11 @@ accelerator_view::create_marker(memory_scope scope) const {
 inline unsigned int accelerator_view::get_version() const { return get_accelerator().get_version(); }
 
 inline completion_future accelerator_view::create_blocking_marker(completion_future& dependent_future, memory_scope scope) const {
-    std::shared_ptr<Kalmar::KalmarAsyncOp> deps[2]; 
+    std::shared_ptr<detail::HCCAsyncOp> deps[2];
 
     // If necessary create an explicit dependency on previous command
     // This is necessary for example if copy command is followed by marker - we need the marker to wait for the copy to complete.
-    std::shared_ptr<Kalmar::KalmarAsyncOp> depOp = pQueue->detectStreamDeps(hcCommandMarker, nullptr);
+    std::shared_ptr<detail::HCCAsyncOp> depOp = pQueue->detectStreamDeps(hcCommandMarker, nullptr);
 
     int cnt = 0;
     if (depOp) {
@@ -1470,21 +1477,21 @@ inline completion_future accelerator_view::create_blocking_marker(completion_fut
 
     if (dependent_future.__asyncOp) {
         deps[cnt++] = dependent_future.__asyncOp; // retrieve async op associated with completion_future
-    } 
-    
+    }
+
     return completion_future(pQueue->EnqueueMarkerWithDependency(cnt, deps, scope));
 }
 
 template<typename InputIterator>
 inline completion_future
 accelerator_view::create_blocking_marker(InputIterator first, InputIterator last, memory_scope scope) const {
-    std::shared_ptr<Kalmar::KalmarAsyncOp> deps[5]; // array of 5 pointers to the native handle of async ops. 5 is the max supported by barrier packet
+    std::shared_ptr<detail::HCCAsyncOp> deps[5]; // array of 5 pointers to the native handle of async ops. 5 is the max supported by barrier packet
     hc::completion_future lastMarker;
 
 
     // If necessary create an explicit dependency on previous command
     // This is necessary for example if copy command is followed by marker - we need the marker to wait for the copy to complete.
-    std::shared_ptr<Kalmar::KalmarAsyncOp> depOp = pQueue->detectStreamDeps(hcCommandMarker, nullptr);
+    std::shared_ptr<detail::HCCAsyncOp> depOp = pQueue->detectStreamDeps(hcCommandMarker, nullptr);
 
     int cnt = 0;
     if (depOp) {
@@ -1534,8 +1541,8 @@ accelerator_view::copy_async(const void *src, void *dst, size_t size_bytes) {
 
 inline completion_future
 accelerator_view::copy_async_ext(const void *src, void *dst, size_t size_bytes,
-                             hcCommandKind copyDir, 
-                             const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, 
+                             hcCommandKind copyDir,
+                             const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo,
                              const hc::accelerator *copyAcc)
 {
     return completion_future(pQueue->EnqueueAsyncCopyExt(src, dst, size_bytes, copyDir, srcInfo, dstInfo, copyAcc ? copyAcc->pDev : nullptr));
@@ -1663,7 +1670,7 @@ public:
      *         by this extent (with an assumed origin of zero).
      */
     bool contains(const index<N>& idx) const __CPU__ __HC__ {
-        return Kalmar::amp_helper<N, index<N>, extent<N>>::contains(idx, *this);
+        return detail::amp_helper<N, index<N>, extent<N>>::contains(idx, *this);
     }
 
     /**
@@ -1672,7 +1679,7 @@ public:
      * extent[0] * extent[1] ... * extent[N-1]
      */
     unsigned int size() const __CPU__ __HC__ {
-        return Kalmar::index_helper<N, extent<N>>::count_size(*this);
+        return detail::index_helper<N, extent<N>>::count_size(*this);
     }
 
     /** @{ */
@@ -1715,7 +1722,7 @@ public:
      * @param[in] other The right-hand extent<N> to be compared.
      */
     bool operator==(const extent& other) const __CPU__ __HC__ {
-        return Kalmar::index_helper<N, extent<N> >::equal(*this, other);
+        return detail::index_helper<N, extent<N> >::equal(*this, other);
     }
     bool operator!=(const extent& other) const __CPU__ __HC__ {
         return !(*this == other);
@@ -1845,10 +1852,10 @@ public:
     /** @} */
 
 private:
-    typedef Kalmar::index_impl<typename Kalmar::__make_indices<N>::type> base;
+    typedef detail::index_impl<typename detail::__make_indices<N>::type> base;
     base base_;
-    template <int K, typename Q> friend struct Kalmar::index_helper;
-    template <int K, typename Q1, typename Q2> friend struct Kalmar::amp_helper;
+    template <int K, typename Q> friend struct detail::index_helper;
+    template <int K, typename Q1, typename Q2> friend struct detail::amp_helper;
 };
 
 // ------------------------------------------------------------------------
@@ -1975,12 +1982,12 @@ template <int N>
 class tiled_extent : public extent<N> {
 public:
     static const int rank = N;
-  
+
     /**
      * Tile size for each dimension.
      */
     int tile_dim[N];
-  
+
     /**
      * Default constructor. The origin and extent is default-constructed and
      * thus zero.
@@ -2063,7 +2070,7 @@ public:
      * @param[in] ext The extent of this tiled_extent
      * @param[in] t0 Size of tile.
      */
-    tiled_extent(const extent<1>& ext, int t0) __CPU__ __HC__ : extent(ext), dynamic_group_segment_size(0), tile_dim{t0} {} 
+    tiled_extent(const extent<1>& ext, int t0) __CPU__ __HC__ : extent(ext), dynamic_group_segment_size(0), tile_dim{t0} {}
 
     /**
      * Constructs a tiled_extent<N> with the extent "ext".
@@ -2350,7 +2357,7 @@ tiled_extent<3> extent<N>::tile_with_dynamic(int t0, int t1, int t2, int dynamic
  * @return The size of a wavefront.
  */
 #define __HSA_WAVEFRONT_SIZE__ (64)
-extern "C" unsigned int __wavesize() __HC__; 
+extern "C" unsigned int __wavesize() __HC__;
 
 
 #if __hcc_backend__==HCC_BACKEND_AMDGPU
@@ -2362,7 +2369,7 @@ extern "C" inline unsigned int __wavesize() __HC__ {
 /**
  * Count number of 1 bits in the input
  *
- * @param[in] input An unsinged 32-bit integer.
+ * @param[in] input An unsigned 32-bit integer.
  * @return Number of 1 bits in the input.
  */
 extern "C" inline unsigned int __popcount_u32_b32(unsigned int input) __HC__ {
@@ -2372,7 +2379,7 @@ extern "C" inline unsigned int __popcount_u32_b32(unsigned int input) __HC__ {
 /**
  * Count number of 1 bits in the input
  *
- * @param[in] input An unsinged 64-bit integer.
+ * @param[in] input An unsigned 64-bit integer.
  * @return Number of 1 bits in the input.
  */
 extern "C" inline unsigned int __popcount_u32_b64(unsigned long long int input) __HC__ {
@@ -2531,7 +2538,7 @@ extern "C" inline unsigned int __lastbit_u32_s64(unsigned long long input) __HC_
 /** @{ */
 /**
  * Copy and interleave the lower half of the elements from
- * each source into the desitionation
+ * each source into the destination
  *
  * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/packed_data.htm">HSA PRM 5.9</a> for more detailed specification of these functions.
  */
@@ -2559,7 +2566,7 @@ extern "C" int64_t __unpacklo_s32x2(int64_t src0, int64_t src1) __HC__;
 /** @{ */
 /**
  * Copy and interleave the upper half of the elements from
- * each source into the desitionation
+ * each source into the destination
  *
  * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/packed_data.htm">HSA PRM 5.9</a> for more detailed specification of these functions.
  */
@@ -2890,15 +2897,15 @@ inline float __amdgcn_ds_swizzle(float src, int pattern) [[hc]] {
 /**
  * move DPP intrinsic
  */
-extern "C" int __amdgcn_move_dpp(int src, int dpp_ctrl, int row_mask, int bank_mask, bool bound_ctrl) [[hc]]; 
+extern "C" int __amdgcn_move_dpp(int src, int dpp_ctrl, int row_mask, int bank_mask, bool bound_ctrl) [[hc]];
 
 /**
- * Shift the value of src to the right by one thread within a wavefront.  
- * 
+ * Shift the value of src to the right by one thread within a wavefront.
+ *
  * @param[in] src variable being shifted
  * @param[in] bound_ctrl When set to true, a zero will be shifted into thread 0; otherwise, the original value will be returned for thread 0
- * @return value of src being shifted into from the neighboring lane 
- * 
+ * @return value of src being shifted into from the neighboring lane
+ *
  */
 extern "C" int __amdgcn_wave_sr1(int src, bool bound_ctrl) [[hc]];
 inline unsigned int __amdgcn_wave_sr1(unsigned int src, bool bound_ctrl) [[hc]] {
@@ -2913,14 +2920,14 @@ inline float __amdgcn_wave_sr1(float src, bool bound_ctrl) [[hc]] {
 }
 
 /**
- * Shift the value of src to the left by one thread within a wavefront.  
- * 
+ * Shift the value of src to the left by one thread within a wavefront.
+ *
  * @param[in] src variable being shifted
  * @param[in] bound_ctrl When set to true, a zero will be shifted into thread 63; otherwise, the original value will be returned for thread 63
- * @return value of src being shifted into from the neighboring lane 
- * 
+ * @return value of src being shifted into from the neighboring lane
+ *
  */
-extern "C" int __amdgcn_wave_sl1(int src, bool bound_ctrl) [[hc]];  
+extern "C" int __amdgcn_wave_sl1(int src, bool bound_ctrl) [[hc]];
 inline unsigned int __amdgcn_wave_sl1(unsigned int src, bool bound_ctrl) [[hc]] {
   __u tmp; tmp.u = src;
   tmp.i = __amdgcn_wave_sl1(tmp.i, bound_ctrl);
@@ -2934,11 +2941,11 @@ inline float __amdgcn_wave_sl1(float src, bool bound_ctrl) [[hc]] {
 
 
 /**
- * Rotate the value of src to the right by one thread within a wavefront.  
- * 
+ * Rotate the value of src to the right by one thread within a wavefront.
+ *
  * @param[in] src variable being rotated
- * @return value of src being rotated into from the neighboring lane 
- * 
+ * @return value of src being rotated into from the neighboring lane
+ *
  */
 extern "C" int __amdgcn_wave_rr1(int src) [[hc]];
 inline unsigned int __amdgcn_wave_rr1(unsigned int src) [[hc]] {
@@ -2953,11 +2960,11 @@ inline float __amdgcn_wave_rr1(float src) [[hc]] {
 }
 
 /**
- * Rotate the value of src to the left by one thread within a wavefront.  
- * 
+ * Rotate the value of src to the left by one thread within a wavefront.
+ *
  * @param[in] src variable being rotated
- * @return value of src being rotated into from the neighboring lane 
- * 
+ * @return value of src being rotated into from the neighboring lane
+ *
  */
 extern "C" int __amdgcn_wave_rl1(int src) [[hc]];
 inline unsigned int __amdgcn_wave_rl1(unsigned int src) [[hc]] {
@@ -2973,7 +2980,7 @@ inline float __amdgcn_wave_rl1(float src) [[hc]] {
 
 #endif
 
-/* definition to expand macro then apply to pragma message 
+/* definition to expand macro then apply to pragma message
 #define VALUE_TO_STRING(x) #x
 #define VALUE(x) VALUE_TO_STRING(x)
 #define VAR_NAME_VALUE(var) #var "="  VALUE(var)
@@ -2988,8 +2995,6 @@ inline int __shfl(int var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) __HC__
   return __amdgcn_ds_bpermute(index<<2, var);
 }
 
-#endif
-
 inline unsigned int __shfl(unsigned int var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
      __u tmp; tmp.u = var;
     tmp.i = __shfl(tmp.i, srcLane, width);
@@ -3002,6 +3007,8 @@ inline float __shfl(float var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) __
     tmp.i = __shfl(tmp.i, srcLane, width);
     return tmp.f;
 }
+
+#endif
 
 // FIXME: support half type
 /** @} */
@@ -3037,8 +3044,6 @@ inline int __shfl_up(int var, const unsigned int delta, const int width=__HSA_WA
   return __amdgcn_ds_bpermute(index<<2, var);
 }
 
-#endif
-
 inline unsigned int __shfl_up(unsigned int var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
     __u tmp; tmp.u = var;
     tmp.i = __shfl_up(tmp.i, delta, width);
@@ -3050,6 +3055,8 @@ inline float __shfl_up(float var, const unsigned int delta, const int width=__HS
     tmp.i = __shfl_up(tmp.i, delta, width);
     return tmp.f;
 }
+
+#endif
 
 // FIXME: support half type
 /** @} */
@@ -3086,8 +3093,6 @@ inline int __shfl_down(int var, const unsigned int delta, const int width=__HSA_
   return __amdgcn_ds_bpermute(index<<2, var);
 }
 
-#endif
-
 inline unsigned int __shfl_down(unsigned int var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
     __u tmp; tmp.u = var;
     tmp.i = __shfl_down(tmp.i, delta, width);
@@ -3100,6 +3105,7 @@ inline float __shfl_down(float var, const unsigned int delta, const int width=__
     return tmp.f;
 }
 
+#endif
 
 // FIXME: support half type
 /** @} */
@@ -3132,8 +3138,6 @@ inline int __shfl_xor(int var, int laneMask, int width=__HSA_WAVEFRONT_SIZE__) _
   return __amdgcn_ds_bpermute(index<<2, var);
 }
 
-#endif
-
 inline float __shfl_xor(float var, int laneMask, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
     __u tmp; tmp.f = var;
     tmp.i = __shfl_xor(tmp.i, laneMask, width);
@@ -3148,6 +3152,8 @@ inline unsigned int __shfl_xor(unsigned int var, int laneMask, int width=__HSA_W
     tmp.i = __shfl_xor(tmp.i, laneMask, width);
     return tmp.u;
 }
+
+#endif
 
 /**
  * Multiply two unsigned integers (x,y) but only the lower 24 bits will be used in the multiplication.
@@ -3251,7 +3257,7 @@ public:
      * @param[in] other An object of type tile_barrier from which to initialize
      *                  this.
      */
-    tile_barrier(const tile_barrier& other) __CPU__ __HC__ {}
+    tile_barrier(const tile_barrier&) __CPU__ __HC__ = default;
 
     /**
      * Blocks execution of all threads in the thread tile until all threads in
@@ -3368,7 +3374,8 @@ public:
      * @param[in] other An object of type tiled_index from which to initialize
      *                  this.
      */
-    tiled_index(const tiled_index& other) __CPU__ __HC__ : global(other.global), local(other.local), tile(other.tile), tile_origin(other.tile_origin), barrier(other.barrier), tile_dim(other.tile_dim) {}
+    tiled_index(const tiled_index&) [[cpu, hc]] = default;
+    tiled_index(tiled_index&&) [[cpu, hc]] = default;
 
     /**
      * An index of rank 1, 2, or 3 that represents the global index within an
@@ -3417,19 +3424,27 @@ public:
 
 private:
     tiled_index() __HC__
-        : global(index<3>(amp_get_global_id(2), amp_get_global_id(1), amp_get_global_id(0))),
-          local(index<3>(amp_get_local_id(2), amp_get_local_id(1), amp_get_local_id(0))),
-          tile(index<3>(amp_get_group_id(2), amp_get_group_id(1), amp_get_group_id(0))),
-          tile_origin(index<3>(amp_get_global_id(2) - amp_get_local_id(2),
-                               amp_get_global_id(1) - amp_get_local_id(1),
-                               amp_get_global_id(0) - amp_get_local_id(0))),
-          tile_dim(index<3>(amp_get_local_size(2), amp_get_local_size(1), amp_get_local_size(0)))
+        :
+        global(
+            amp_get_global_id(2), amp_get_global_id(1), amp_get_global_id(0)),
+        local(amp_get_local_id(2), amp_get_local_id(1), amp_get_local_id(0)),
+        tile(amp_get_group_id(2), amp_get_group_id(1), amp_get_group_id(0)),
+        tile_origin(
+            amp_get_global_id(2) - amp_get_local_id(2),
+            amp_get_global_id(1) - amp_get_local_id(1),
+            amp_get_global_id(0) - amp_get_local_id(0)),
+        tile_dim(
+            amp_get_local_size(2),
+            amp_get_local_size(1),
+            amp_get_local_size(0))
     {}
 
-    template<typename Kernel> friend
-        completion_future parallel_for_each(const accelerator_view&, const tiled_extent<N>&, const Kernel&);
+    template<typename Kernel>
     friend
-    struct Kalmar::Indexer;
+    completion_future parallel_for_each(
+        const accelerator_view&, const tiled_extent<N>&, const Kernel&);
+    friend
+    struct detail::Indexer;
 };
 
 
@@ -3454,7 +3469,7 @@ public:
      * @param[in] other An object of type tiled_index from which to initialize
      *                  this.
      */
-    tiled_index(const tiled_index& other) __CPU__ __HC__ : global(other.global), local(other.local), tile(other.tile), tile_origin(other.tile_origin), barrier(other.barrier), tile_dim(other.tile_dim) {}
+    tiled_index(const tiled_index& other) __CPU__ __HC__ = default;
 
     /**
      * An index of rank 1, 2, or 3 that represents the global index within an
@@ -3503,17 +3518,19 @@ public:
 
 private:
     tiled_index() __HC__
-        : global(index<1>(amp_get_global_id(0))),
-          local(index<1>(amp_get_local_id(0))),
-          tile(index<1>(amp_get_group_id(0))),
-          tile_origin(index<1>(amp_get_global_id(0) - amp_get_local_id(0))),
-          tile_dim(index<1>(amp_get_local_size(0)))
+        : global(amp_get_global_id(0)),
+          local(amp_get_local_id(0)),
+          tile(amp_get_group_id(0)),
+          tile_origin(amp_get_global_id(0) - amp_get_local_id(0)),
+          tile_dim(amp_get_local_size(0))
     {}
 
-    template<typename Kernel> friend
-        completion_future parallel_for_each(const accelerator_view&, const tiled_extent<1>&, const Kernel&);
+    template<typename Kernel>
     friend
-    struct Kalmar::Indexer;
+    completion_future parallel_for_each(
+        const accelerator_view&, const tiled_extent<1>&, const Kernel&);
+    friend
+    struct detail::Indexer;
 };
 
 /**
@@ -3537,7 +3554,7 @@ public:
      * @param[in] other An object of type tiled_index from which to initialize
      *                  this.
      */
-    tiled_index(const tiled_index& other) __CPU__ __HC__ : global(other.global), local(other.local), tile(other.tile), tile_origin(other.tile_origin), barrier(other.barrier), tile_dim(other.tile_dim) {}
+    tiled_index(const tiled_index& other) __CPU__ __HC__ = default;
 
     /**
      * An index of rank 1, 2, or 3 that represents the global index within an
@@ -3586,18 +3603,21 @@ public:
 
 private:
     tiled_index() __HC__
-        : global(index<2>(amp_get_global_id(1), amp_get_global_id(0))),
-          local(index<2>(amp_get_local_id(1), amp_get_local_id(0))),
-          tile(index<2>(amp_get_group_id(1), amp_get_group_id(0))),
-          tile_origin(index<2>(amp_get_global_id(1) - amp_get_local_id(1),
-                               amp_get_global_id(0) - amp_get_local_id(0))),
-          tile_dim(index<2>(amp_get_local_size(1), amp_get_local_size(0)))
+        : global(amp_get_global_id(1), amp_get_global_id(0)),
+          local(amp_get_local_id(1), amp_get_local_id(0)),
+          tile(amp_get_group_id(1), amp_get_group_id(0)),
+          tile_origin(
+              amp_get_global_id(1) - amp_get_local_id(1),
+              amp_get_global_id(0) - amp_get_local_id(0)),
+          tile_dim(amp_get_local_size(1), amp_get_local_size(0))
     {}
 
-    template<typename Kernel> friend
-        completion_future parallel_for_each(const accelerator_view&, const tiled_extent<2>&, const Kernel&);
+    template<typename Kernel>
     friend
-    struct Kalmar::Indexer;
+    completion_future parallel_for_each(
+        const accelerator_view&, const tiled_extent<2>&, const Kernel&);
+    friend
+    struct detail::Indexer;
 };
 
 // ------------------------------------------------------------------------
@@ -3648,14 +3668,14 @@ struct projection_helper<T, 1>
     //      T& operator[](int i) const __CPU__ __HC__;
     typedef T& result_type;
     static result_type project(array_view<T, 1>& now, int i) __CPU__ __HC__ {
-#if __KALMAR_ACCELERATOR__ != 1
+#if __HCC_ACCELERATOR__ != 1
         now.cache.get_cpu_access(true);
 #endif
         T *ptr = reinterpret_cast<T *>(now.cache.get() + i + now.offset + now.index_base[0]);
         return *ptr;
     }
     static result_type project(const array_view<T, 1>& now, int i) __CPU__ __HC__ {
-#if __KALMAR_ACCELERATOR__ != 1
+#if __HCC_ACCELERATOR__ != 1
         now.cache.get_cpu_access(true);
 #endif
         T *ptr = reinterpret_cast<T *>(now.cache.get() + i + now.offset + now.index_base[0]);
@@ -3709,14 +3729,14 @@ struct projection_helper<const T, 1>
     //      const T& operator[](int i) const __CPU__ __HC__;
     typedef const T& const_result_type;
     static const_result_type project(array_view<const T, 1>& now, int i) __CPU__ __HC__ {
-#if __KALMAR_ACCELERATOR__ != 1
+#if __HCC_ACCELERATOR__ != 1
         now.cache.get_cpu_access();
 #endif
         const T *ptr = reinterpret_cast<const T *>(now.cache.get() + i + now.offset + now.index_base[0]);
         return *ptr;
     }
     static const_result_type project(const array_view<const T, 1>& now, int i) __CPU__ __HC__ {
-#if __KALMAR_ACCELERATOR__ != 1
+#if __HCC_ACCELERATOR__ != 1
         now.cache.get_cpu_access();
 #endif
         const T *ptr = reinterpret_cast<const T *>(now.cache.get() + i + now.offset + now.index_base[0]);
@@ -3772,18 +3792,18 @@ struct array_projection_helper
     typedef array_view<T, N - 1> result_type;
     typedef array_view<const T, N - 1> const_result_type;
     static result_type project(array<T, N>& now, int stride) __CPU__ __HC__ {
-#if __KALMAR_ACCELERATOR__ != 1
+#if __HCC_ACCELERATOR__ != 1
         if( stride < 0)
-          throw runtime_exception("errorMsg_throw", 0);
+          throw runtime_exception{"errorMsg_throw", 0};
 #endif
         int comp[N - 1], i;
         for (i = N - 1; i > 0; --i)
             comp[i - 1] = now.extent[i];
         extent<N - 1> ext(comp);
         int offset = ext.size() * stride;
-#if __KALMAR_ACCELERATOR__ != 1
+#if __HCC_ACCELERATOR__ != 1
         if( offset >= now.extent.size())
-          throw runtime_exception("errorMsg_throw", 0);
+          throw runtime_exception{"errorMsg_throw", 0};
 #endif
         return result_type(now.m_device, ext, ext, index<N - 1>(), offset);
     }
@@ -3806,14 +3826,14 @@ struct array_projection_helper<T, 1>
     typedef T& result_type;
     typedef const T& const_result_type;
     static result_type project(array<T, 1>& now, int i) __CPU__ __HC__ {
-#if __KALMAR_ACCELERATOR__ != 1
+#if __HCC_ACCELERATOR__ != 1
         now.m_device.synchronize(true);
 #endif
         T *ptr = reinterpret_cast<T *>(now.m_device.get() + i);
         return *ptr;
     }
     static const_result_type project(const array<T, 1>& now, int i) __CPU__ __HC__ {
-#if __KALMAR_ACCELERATOR__ != 1
+#if __HCC_ACCELERATOR__ != 1
         now.m_device.synchronize();
 #endif
         const T *ptr = reinterpret_cast<const T *>(now.m_device.get() + i);
@@ -3824,11 +3844,11 @@ struct array_projection_helper<T, 1>
 template <int N>
 const extent<N>& check(const extent<N>& ext)
 {
-#if __KALMAR_ACCELERATOR__ != 1
+#if __HCC_ACCELERATOR__ != 1
     for (int i = 0; i < N; i++)
     {
         if(ext[i] <=0)
-            throw runtime_exception("errorMsg_throw", 0);
+            throw runtime_exception{"errorMsg_throw", 0};
     }
 #endif
     return ext;
@@ -3838,40 +3858,40 @@ const extent<N>& check(const extent<N>& ext)
 // forward declarations of copy routines used by array / array_view
 // ------------------------------------------------------------------------
 
-template <typename T, int N>
+template<typename T, int N>
 void copy(const array_view<const T, N>& src, const array_view<T, N>& dest);
 
-template <typename T, int N>
+template<typename T, int N>
 void copy(const array_view<T, N>& src, const array_view<T, N>& dest);
 
-template <typename T, int N>
+template<typename T, int N>
 void copy(const array<T, N>& src, const array_view<T, N>& dest);
 
-template <typename T, int N>
+template<typename T, int N>
 void copy(const array<T, N>& src, array<T, N>& dest);
 
-template <typename T, int N>
+template<typename T, int N>
 void copy(const array_view<const T, N>& src, array<T, N>& dest);
 
-template <typename T, int N>
+template<typename T, int N>
 void copy(const array_view<T, N>& src, array<T, N>& dest);
 
-template <typename InputIter, typename T, int N>
+template<typename InputIter, typename T, int N>
 void copy(InputIter srcBegin, InputIter srcEnd, const array_view<T, N>& dest);
 
-template <typename InputIter, typename T, int N>
+template<typename InputIter, typename T, int N>
 void copy(InputIter srcBegin, InputIter srcEnd, array<T, N>& dest);
 
-template <typename InputIter, typename T, int N>
+template<typename InputIter, typename T, int N>
 void copy(InputIter srcBegin, const array_view<T, N>& dest);
 
-template <typename InputIter, typename T, int N>
+template<typename InputIter, typename T, int N>
 void copy(InputIter srcBegin, array<T, N>& dest);
 
-template <typename OutputIter, typename T, int N>
+template<typename OutputIter, typename T, int N>
 void copy(const array_view<T, N> &src, OutputIter destBegin);
 
-template <typename OutputIter, typename T, int N>
+template<typename OutputIter, typename T, int N>
 void copy(const array<T, N> &src, OutputIter destBegin);
 
 // ------------------------------------------------------------------------
@@ -3887,18 +3907,100 @@ void copy(const array<T, N> &src, OutputIter destBegin);
  */
 template <typename T, int N = 1>
 class array {
-    static_assert(!std::is_const<T>::value, "array<const T> is not supported");
-public:
-#if __KALMAR_ACCELERATOR__ == 1
-    typedef Kalmar::_data<T> acc_buffer_t;
-#else
-    typedef Kalmar::_data_host<T> acc_buffer_t;
-#endif
+    static_assert(!std::is_const<T>{}, "array<const T> is not supported");
+    static_assert(
+        std::is_trivially_copyable<T>{},
+        "Only trivially copyable types are supported.");
+    static_assert(
+        std::is_trivially_destructible<T>{},
+        "Only trivially destructible types are supported.");
 
+    struct Deleter {
+        void operator()(T* ptr)
+        {   // TODO: this may throw in a dtor, which is bad.
+            if (hsa_memory_free(ptr) != HSA_STATUS_SUCCESS) {
+                throw std::runtime_error{"Failed to deallocate array memory."};
+            }
+        }
+    };
+    using Guarded_locked_ptr = std::pair<std::atomic_flag, array*>;
+
+    inline static constexpr std::size_t max_array_cnt_{65521u}; // Prime.
+    inline static std::array<Guarded_locked_ptr, max_array_cnt_> locked_ptrs_{};
+
+    accelerator_view owner_;
+    accelerator_view associate_;
+    extent<N> extent_;
+    access_type cpu_access_;
+    std::unique_ptr<T[], Deleter> data_;
+    std::size_t this_idx_{max_array_cnt_};
+
+    template<typename, int>
+    friend
+    struct projection_helper;
+    template<typename, int>
+    friend
+    struct array_projection_helper;
+
+    template <typename Q, int K>
+    friend
+    void copy(const array<Q, K>&, const array_view<Q, K>&);
+    template <typename Q, int K>
+    friend
+    void copy(const array_view<const Q, K>&, array<Q, K>&);
+
+    T* allocate_()
+    {
+        hsa_region_t* r{nullptr};
+        switch (cpu_access_) {
+        case access_type_none: case access_type_auto:
+            r = static_cast<hsa_region_t*>(owner_.get_hsa_am_region());
+            break;
+        default:
+            r = static_cast<hsa_region_t*>(owner_.get_hsa_am_system_region());
+        }
+
+        void* tmp{nullptr};
+
+        auto s = hsa_memory_allocate(*r, extent_.size() * sizeof(T), &tmp);
+        if (s != HSA_STATUS_SUCCESS) {
+            throw std::runtime_error{"Failed to allocate array storage."};
+        }
+
+        return static_cast<T*>(tmp);
+    }
+    std::size_t lock_this_()
+    {
+        const auto n = reinterpret_cast<std::uintptr_t>(this) % max_array_cnt_;
+        do {
+            while (locked_ptrs_[n].first.test_and_set());
+            // TODO: add backoff here.
+
+            auto s = hsa_amd_memory_lock(
+                this,
+                sizeof(*this),
+                static_cast<hsa_agent_t*>(owner_.get_hsa_agent()),
+                1,
+                reinterpret_cast<void**>(&locked_ptrs_[n].second));
+
+            if (s != HSA_STATUS_SUCCESS) {
+                throw std::runtime_error{"Failed to lock array address."};
+            }
+
+            return n;
+        } while (true); // TODO: add termination after a number of attempts.
+    }
+    array* this_() const [[hc]]
+    {
+        const auto n = reinterpret_cast<std::uintptr_t>(this) % max_array_cnt_;
+
+        return locked_ptrs_[n].second;
+    }
+public:
     /**
      * The rank of this array.
      */
-    static const int rank = N;
+    static constexpr int rank = N;
 
     /**
      * The element type of this array.
@@ -3909,7 +4011,7 @@ public:
      * There is no default constructor for array<T,N>.
      */
     array() = delete;
- 
+
     /**
      * Copy constructor. Constructs a new array<T,N> from the supplied argument
      * other. The new array is located on the same accelerator_view as the
@@ -3919,8 +4021,10 @@ public:
      *                  this new array.
      */
     array(const array& other)
-        : array(other.get_extent(), other.get_accelerator_view())
-    { copy(other, *this); }
+        : array{other.extent_, other.owner_, other.associate_}
+    {   // TODO: if both arrays resolve to the same slot this will deadlock.
+        copy(other, *this);
+    }
 
     /**
      * Move constructor. Constructs a new array<T,N> by moving from the
@@ -3930,8 +4034,26 @@ public:
      *                  this new array.
      */
     array(array&& other)
-        : m_device(other.m_device), extent(other.extent)
-    { other.m_device.reset(); }
+        :
+        owner_{std::move(other.owner_)},
+        associate_{std::move(other.associate_)},
+        extent_{std::move(other.extent_)},
+        cpu_access_{other.cpu_access_},
+        data_{std::move(other.data_)}
+    {
+        const auto n = reinterpret_cast<std::uintptr_t>(this) % max_array_cnt_;
+
+        if (n == other.this_idx_) {
+            if (hsa_amd_memory_unlock(&other) != HSA_STATUS_SUCCESS) {
+                throw std::runtime_error{
+                    "Failed to unlock locked array pointer."};
+            }
+
+            other.this_idx_ = max_array_cnt_;
+        }
+
+        this_idx_ = lock_this_();
+    }
 
     /**
      * Constructs a new array with the supplied extent, located on the default
@@ -3940,8 +4062,10 @@ public:
      *
      * @param[in] ext The extent in each dimension of this array.
      */
-    explicit array(const hc::extent<N>& ext)
-        : array(ext, accelerator(L"default").get_default_view()) {}
+    explicit
+    array(const hc::extent<N>& ext)
+        : array{ext, accelerator::get_auto_selection_view()}
+    {}
 
     /** @{ */
     /**
@@ -3950,12 +4074,15 @@ public:
      * @param[in] e0,e1,e2 The component values that will form the extent of
      *                     this array.
      */
-    explicit array(int e0)
-        : array(hc::extent<N>(e0)) { static_assert(N == 1, "illegal"); }
-    explicit array(int e0, int e1)
-        : array(hc::extent<N>(e0, e1)) {}
-    explicit array(int e0, int e1, int e2)
-        : array(hc::extent<N>(e0, e1, e2)) {}
+    explicit
+    array(int e0) : array{hc::extent<N>{e0}}
+    {
+        static_assert(N == 1, "illegal");
+    }
+    explicit
+    array(int e0, int e1) : array{hc::extent<N>{e0, e1}} {}
+    explicit
+    array(int e0, int e1, int e2) : array{hc::extent<N>{e0, e1, e2}} {}
 
     /** @} */
 
@@ -3973,12 +4100,14 @@ public:
      * @param[in] srcBegin A beginning iterator into the source container.
      * @param[in] srcEnd An ending iterator into the source container.
      */
-    template <typename InputIter>
-        array(const hc::extent<N>& ext, InputIter srcBegin)
-            : array(ext, srcBegin, accelerator(L"default").get_default_view()) {}
-    template <typename InputIter>
-        array(const hc::extent<N>& ext, InputIter srcBegin, InputIter srcEnd)
-            : array(ext, srcBegin, srcEnd, accelerator(L"default").get_default_view()) {}
+    template<typename InputIter>
+    array(const hc::extent<N>& ext, InputIter srcBegin)
+        : array{ext, srcBegin, accelerator::get_auto_selection_view()}
+    {}
+    template<typename InputIter>
+    array(const hc::extent<N>& ext, InputIter srcBegin, InputIter srcEnd)
+        : array{ext, srcBegin, srcEnd, accelerator::get_auto_selection_view()}
+    {}
 
     /** @} */
 
@@ -3989,27 +4118,31 @@ public:
      *
      * @param[in] e0,e1,e2 The component values that will form the extent of
      *                     this array.
-     * @param[in] srcBegin A beginning iterator into the source container. 
+     * @param[in] srcBegin A beginning iterator into the source container.
      * @param[in] srcEnd An ending iterator into the source container.
      */
-    template <typename InputIter>
-        array(int e0, InputIter srcBegin)
-            : array(hc::extent<N>(e0), srcBegin) {}
-    template <typename InputIter>
-        array(int e0, InputIter srcBegin, InputIter srcEnd)
-            : array(hc::extent<N>(e0), srcBegin, srcEnd) {}
-    template <typename InputIter>
-        array(int e0, int e1, InputIter srcBegin)
-            : array(hc::extent<N>(e0, e1), srcBegin) {}
-    template <typename InputIter>
-        array(int e0, int e1, InputIter srcBegin, InputIter srcEnd)
-            : array(hc::extent<N>(e0, e1), srcBegin, srcEnd) {}
-    template <typename InputIter>
-        array(int e0, int e1, int e2, InputIter srcBegin)
-            : array(hc::extent<N>(e0, e1, e2), srcBegin) {}
-    template <typename InputIter>
-        array(int e0, int e1, int e2, InputIter srcBegin, InputIter srcEnd)
-            : array(hc::extent<N>(e0, e1, e2), srcBegin, srcEnd) {}
+    template<typename InputIter>
+    array(int e0, InputIter srcBegin) : array{hc::extent<N>{e0}, srcBegin} {}
+    template<typename InputIter>
+    array(int e0, InputIter srcBegin, InputIter srcEnd)
+        : array{hc::extent<N>{e0}, srcBegin, srcEnd}
+    {}
+    template<typename InputIter>
+    array(int e0, int e1, InputIter srcBegin)
+        : array{hc::extent<N>{e0, e1}, srcBegin}
+    {}
+    template<typename InputIter>
+    array(int e0, int e1, InputIter srcBegin, InputIter srcEnd)
+        : array{hc::extent<N>{e0, e1}, srcBegin, srcEnd}
+    {}
+    template<typename InputIter>
+    array(int e0, int e1, int e2, InputIter srcBegin)
+        : array{hc::extent<N>{e0, e1, e2}, srcBegin}
+    {}
+    template<typename InputIter>
+    array(int e0, int e1, int e2, InputIter srcBegin, InputIter srcEnd)
+        : array{hc::extent<N>{e0, e1, e2}, srcBegin, srcEnd}
+    {}
 
     /** @} */
 
@@ -4024,9 +4157,12 @@ public:
      *                this array (and also to determine the extent of this
      *                array).
      */
-    explicit array(const array_view<const T, N>& src)
-        : array(src.get_extent(), accelerator(L"default").get_default_view())
-    { copy(src, *this); }
+    explicit
+    array(const array_view<const T, N>& src)
+        : array{src.get_extent(), accelerator::get_auto_selection_view()}
+    {
+        copy(src, *this);
+    }
 
     /**
      * Constructs a new array with the supplied extent, located on the
@@ -4050,26 +4186,52 @@ public:
      *               this array.
      * @param[in] access_type The type of CPU access desired for this array.
      */
-    array(const hc::extent<N>& ext, accelerator_view av, access_type cpu_access_type = access_type_auto)
-#if __KALMAR_ACCELERATOR__ == 1
-        : m_device(ext.size()), extent(ext) {}
-#else
-        : m_device(av.pQueue, av.pQueue, check(ext).size(), cpu_access_type), extent(ext) {}
-#endif
+    array(
+        const hc::extent<N>& ext,
+        accelerator_view av,
+        access_type cpu_access_type = access_type_auto)
+        :
+        owner_{std::move(av)},
+        associate_{owner_},
+        extent_{ext},
+        cpu_access_{cpu_access_type},
+        data_{allocate_(), Deleter{}},
+        this_idx_{lock_this_()}
+    {}
 
     /** @{ */
     /**
      * Constructs an array instance based on the given pointer on the device memory.
      */
-    explicit array(int e0, void* accelerator_pointer)
-        : array(hc::extent<N>(e0), accelerator(L"default").get_default_view(), accelerator_pointer) {}
-    explicit array(int e0, int e1, void* accelerator_pointer)
-        : array(hc::extent<N>(e0, e1), accelerator(L"default").get_default_view(), accelerator_pointer) {}
-    explicit array(int e0, int e1, int e2, void* accelerator_pointer)
-        : array(hc::extent<N>(e0, e1, e2), accelerator(L"default").get_default_view(), accelerator_pointer) {}
+    array(int e0, void* accelerator_pointer)
+        :
+        array{
+            hc::extent<N>{e0},
+            accelerator::get_auto_selection_view(),
+            static_cast<T*>(accelerator_pointer)}
+    {}
+    array(int e0, int e1, void* accelerator_pointer)
+        :
+        array{
+            hc::extent<N>{e0, e1},
+            accelerator::get_auto_selection_view(),
+            static_cast<T*>(accelerator_pointer)}
+    {}
+    array(int e0, int e1, int e2, void* accelerator_pointer)
+        :
+        array{
+            hc::extent<N>{e0, e1, e2},
+            accelerator::get_auto_selection_view(),
+            static_cast<T*>(accelerator_pointer)}
+    {}
 
-    explicit array(const hc::extent<N>& ext, void* accelerator_pointer)
-        : array(ext, accelerator(L"default").get_default_view(), accelerator_pointer) {}
+    array(const hc::extent<N>& ext, void* accelerator_pointer)
+        :
+        array{
+            ext,
+            accelerator::get_auto_selection_view(),
+            static_cast<T*>(accelerator_pointer)}
+    {}
     /** @} */
 
     /**
@@ -4081,17 +4243,24 @@ public:
      * @param[in] accelerator_pointer The pointer to the device memory.
      * @param[in] access_type The type of CPU access desired for this array.
      */
-    explicit array(const extent<N>& ext, accelerator_view av, void* accelerator_pointer, access_type cpu_access_type = access_type_auto)
-#if __KALMAR_ACCELERATOR__ == 1
-        : m_device(ext.size(), accelerator_pointer), extent(ext) {}
-#else
-        : m_device(av.pQueue, av.pQueue, check(ext).size(), accelerator_pointer, cpu_access_type), extent(ext) {}
-#endif
+    array(
+        const extent<N>& ext,
+        accelerator_view av,
+        void* accelerator_pointer,
+        access_type cpu_access_type = access_type_auto)
+        :
+        owner_{av},
+        associate_{owner_},
+        extent_{ext},
+        cpu_access_{cpu_access_type},
+        data_{static_cast<T*>(accelerator_pointer), Deleter{}},
+        this_idx_{lock_this_()}
+    {}
 
     /** @{ */
     /**
      * Equivalent to construction using
-     * "array(extent<N>(e0 [, e1 [, e2 ]]), av, cpu_access_type)".   
+     * "array(extent<N>(e0 [, e1 [, e2 ]]), av, cpu_access_type)".
      *
      * @param[in] e0,e1,e2 The component values that will form the extent of
      *                     this array.
@@ -4099,12 +4268,27 @@ public:
      *               this array.
      * @param[in] access_type The type of CPU access desired for this array.
      */
-    array(int e0, accelerator_view av, access_type cpu_access_type = access_type_auto)
-        : array(hc::extent<N>(e0), av, cpu_access_type) {}
-    array(int e0, int e1, accelerator_view av, access_type cpu_access_type = access_type_auto)
-        : array(hc::extent<N>(e0, e1), av, cpu_access_type) {}
-    array(int e0, int e1, int e2, accelerator_view av, access_type cpu_access_type = access_type_auto)
-        : array(hc::extent<N>(e0, e1, e2), av, cpu_access_type) {}
+    array(
+        int e0,
+        accelerator_view av,
+        access_type cpu_access_type = access_type_auto)
+        : array{hc::extent<N>{e0}, std::move(av), cpu_access_type}
+    {}
+    array(
+        int e0,
+        int e1,
+        accelerator_view av,
+        access_type cpu_access_type = access_type_auto)
+        : array{hc::extent<N>{e0, e1}, std::move(av), cpu_access_type}
+    {}
+    array(
+        int e0,
+        int e1,
+        int e2,
+        accelerator_view av,
+        access_type cpu_access_type = access_type_auto)
+        : array{hc::extent<N>{e0, e1, e2}, std::move(av), cpu_access_type}
+    {}
 
     /** @} */
 
@@ -4135,18 +4319,27 @@ public:
      *               location of this array.
      * @param[in] access_type The type of CPU access desired for this array.
      */
-    template <typename InputIter>
-        array(const hc::extent<N>& ext, InputIter srcBegin, accelerator_view av,
-              access_type cpu_access_type = access_type_auto)
-        : array(ext, av, cpu_access_type) { copy(srcBegin, *this); }
-    template <typename InputIter>
-        array(const hc::extent<N>& ext, InputIter srcBegin, InputIter srcEnd,
-              accelerator_view av, access_type cpu_access_type = access_type_auto)
-        : array(ext, av, cpu_access_type) {
-            if (ext.size() < std::distance(srcBegin, srcEnd))
-                throw runtime_exception("errorMsg_throw", 0);
-            copy(srcBegin, srcEnd, *this);
-        }
+    template<typename InputIter>
+    array(
+        const hc::extent<N>& ext,
+        InputIter srcBegin,
+        accelerator_view av,
+        access_type cpu_access_type = access_type_auto)
+        : array{ext, std::move(av), cpu_access_type}
+    {
+        copy(srcBegin, *this);
+    }
+    template<typename InputIter>
+    array(
+        const hc::extent<N>& ext,
+        InputIter srcBegin,
+        InputIter srcEnd,
+        accelerator_view av,
+        access_type cpu_access_type = access_type_auto)
+        : array{ext, std::move(av), cpu_access_type}
+    {
+        copy(srcBegin, srcEnd, *this);
+    }
 
     /** @} */
 
@@ -4159,7 +4352,7 @@ public:
      *
      * Users can optionally specify the type of CPU access desired for "this"
      * array thus requesting creation of an array that is accessible both on
-     * the specified accelerator_view "av" as well as the CPU (with the 
+     * the specified accelerator_view "av" as well as the CPU (with the
      * specified CPU access_type). If a value other than access_type_auto or
      * access_type_none is specified for the cpu_access_type parameter and the
      * accelerator corresponding to the accelerator_view “av” does not support
@@ -4176,8 +4369,14 @@ public:
      *               location of this array.
      * @param[in] access_type The type of CPU access desired for this array.
      */
-    array(const array_view<const T, N>& src, accelerator_view av, access_type cpu_access_type = access_type_auto)
-        : array(src.get_extent(), av, cpu_access_type) { copy(src, *this); }
+    array(
+        const array_view<const T, N>& src,
+        accelerator_view av,
+        access_type cpu_access_type = access_type_auto)
+        : array{src.get_extent(), std::move(av), cpu_access_type}
+    {
+        copy(src, *this);
+    }
 
     /** @{ */
     /**
@@ -4192,24 +4391,79 @@ public:
      *               location of this array.
      * @param[in] access_type The type of CPU access desired for this array.
      */
-    template <typename InputIter>
-        array(int e0, InputIter srcBegin, accelerator_view av, access_type cpu_access_type = access_type_auto)
-            : array(hc::extent<N>(e0), srcBegin, av, cpu_access_type) {}
-    template <typename InputIter>
-        array(int e0, InputIter srcBegin, InputIter srcEnd, accelerator_view av, access_type cpu_access_type = access_type_auto)
-            : array(hc::extent<N>(e0), srcBegin, srcEnd, av, cpu_access_type) {}
-    template <typename InputIter>
-        array(int e0, int e1, InputIter srcBegin, accelerator_view av, access_type cpu_access_type = access_type_auto)
-            : array(hc::extent<N>(e0, e1), srcBegin, av, cpu_access_type) {}
-    template <typename InputIter>
-        array(int e0, int e1, InputIter srcBegin, InputIter srcEnd, accelerator_view av, access_type cpu_access_type = access_type_auto)
-            : array(hc::extent<N>(e0, e1), srcBegin, srcEnd, av, cpu_access_type) {}
-    template <typename InputIter>
-        array(int e0, int e1, int e2, InputIter srcBegin, accelerator_view av, access_type cpu_access_type = access_type_auto)
-            : array(hc::extent<N>(e0, e1, e2), srcBegin, av, cpu_access_type) {}
-    template <typename InputIter>
-        array(int e0, int e1, int e2, InputIter srcBegin, InputIter srcEnd, accelerator_view av, access_type cpu_access_type = access_type_auto)
-            : array(hc::extent<N>(e0, e1, e2), srcBegin, srcEnd, av, cpu_access_type) {}
+    template<typename InputIter>
+    array(
+        int e0,
+        InputIter srcBegin,
+        accelerator_view av,
+        access_type cpu_access_type = access_type_auto)
+        : array{hc::extent<N>{e0}, srcBegin, std::move(av), cpu_access_type}
+    {}
+    template<typename InputIter>
+    array(
+        int e0,
+        InputIter srcBegin,
+        InputIter srcEnd,
+        accelerator_view av,
+        access_type cpu_access_type = access_type_auto)
+        :
+        array{
+            hc::extent<N>{e0}, srcBegin, srcEnd, std::move(av), cpu_access_type}
+    {}
+    template<typename InputIter>
+    array(
+        int e0,
+        int e1,
+        InputIter srcBegin,
+        accelerator_view av,
+        access_type cpu_access_type = access_type_auto)
+        : array{hc::extent<N>{e0, e1}, srcBegin, std::move(av), cpu_access_type}
+    {}
+    template<typename InputIter>
+    array(
+        int e0,
+        int e1,
+        InputIter srcBegin,
+        InputIter srcEnd,
+        accelerator_view av,
+        access_type cpu_access_type = access_type_auto)
+        :
+        array{
+            hc::extent<N>{e0, e1},
+            srcBegin,
+            srcEnd,
+            std::move(av),
+            cpu_access_type}
+    {}
+    template<typename InputIter>
+    array(
+        int e0,
+        int e1,
+        int e2,
+        InputIter srcBegin,
+        accelerator_view av,
+        access_type cpu_access_type = access_type_auto)
+        :
+        array{
+            hc::extent<N>{e0, e1, e2}, srcBegin, std::move(av), cpu_access_type}
+    {}
+    template<typename InputIter>
+    array(
+        int e0,
+        int e1,
+        int e2,
+        InputIter srcBegin,
+        InputIter srcEnd,
+        accelerator_view av,
+        access_type cpu_access_type = access_type_auto)
+        :
+        array{
+            hc::extent<N>{e0, e1, e2},
+            srcBegin,
+            srcEnd,
+            std::move(av),
+            cpu_access_type}
+    {}
 
     /** @} */
 
@@ -4225,16 +4479,22 @@ public:
      * @param[in] associated_av An accelerator_view object which specifies a
      *                          target device accelerator.
      */
-    array(const hc::extent<N>& ext, accelerator_view av, accelerator_view associated_av)
-#if __KALMAR_ACCELERATOR__ == 1
-        : m_device(ext.size()), extent(ext) {}
-#else
-        : m_device(av.pQueue, associated_av.pQueue, check(ext).size(), access_type_auto), extent(ext) {}
-#endif
+    array(
+        const hc::extent<N>& ext,
+        accelerator_view av,
+        accelerator_view associated_av)
+        :
+        owner_{std::move(av)},
+        associate_{std::move(associated_av)},
+        extent_{ext},
+        cpu_access_{access_type_auto},
+        data_{allocate_(), Deleter{}},
+        this_idx_{lock_this_()}
+    {}
 
     /** @{ */
     /**
-     * Equivalent to construction using 
+     * Equivalent to construction using
      * "array(extent<N>(e0 [, e1 [, e2 ]]), av, associated_av)".
      *
      * @param[in] e0,e1,e2 The component values that will form the extent of
@@ -4245,11 +4505,14 @@ public:
      *                          target device accelerator.
      */
     array(int e0, accelerator_view av, accelerator_view associated_av)
-        : array(hc::extent<N>(e0), av, associated_av) {}
+        : array{hc::extent<N>{e0}, std::move(av), associated_av}
+    {}
     array(int e0, int e1, accelerator_view av, accelerator_view associated_av)
-        : array(hc::extent<N>(e0, e1), av, associated_av) {}
+        : array{hc::extent<N>{e0, e1}, std::move(av), associated_av}
+    {}
     array(int e0, int e1, int e2, accelerator_view av, accelerator_view associated_av)
-        : array(hc::extent<N>(e0, e1, e2), av, associated_av) {}
+        : array{hc::extent<N>{e0, e1, e2}, std::move(av), associated_av}
+    {}
 
     /** @} */
 
@@ -4268,16 +4531,27 @@ public:
      * @param[in] associated_av An accelerator_view object which specifies a
      *                          target device accelerator.
      */
-    template <typename InputIter>
-        array(const hc::extent<N>& ext, InputIter srcBegin, accelerator_view av, accelerator_view associated_av)
-            : array(ext, av, associated_av) { copy(srcBegin, *this); }
-    template <typename InputIter>
-        array(const hc::extent<N>& ext, InputIter srcBegin, InputIter srcEnd, accelerator_view av, accelerator_view associated_av)
-            : array(ext, av, associated_av) {
-            if (ext.size() < std::distance(srcBegin, srcEnd))
-                throw runtime_exception("errorMsg_throw", 0);
-            copy(srcBegin, srcEnd, *this);
-        }
+    template<typename InputIter>
+    array(
+        const hc::extent<N>& ext,
+        InputIter srcBegin,
+        accelerator_view av,
+        accelerator_view associated_av)
+        : array{ext, std::move(av), std::move(associated_av)}
+    {
+        copy(srcBegin, *this);
+    }
+    template<typename InputIter>
+    array(
+        const hc::extent<N>& ext,
+        InputIter srcBegin,
+        InputIter srcEnd,
+        accelerator_view av,
+        accelerator_view associated_av)
+        : array{ext, std::move(av), associated_av}
+    {
+        copy(srcBegin, srcEnd, *this);
+    }
 
     /** @} */
 
@@ -4297,9 +4571,14 @@ public:
      * @param[in] associated_av An accelerator_view object which specifies a
      *                          target device accelerator.
      */
-    array(const array_view<const T, N>& src, accelerator_view av, accelerator_view associated_av)
-        : array(src.get_extent(), av, associated_av)
-    { copy(src, *this); }
+    array(
+        const array_view<const T, N>& src,
+        accelerator_view av,
+        accelerator_view associated_av)
+        : array{src.get_extent(), std::move(av), associated_av}
+    {
+        copy(src, *this);
+    }
 
     /** @{ */
     /**
@@ -4315,49 +4594,114 @@ public:
      * @param[in] associated_av An accelerator_view object which specifies a
      *                          target device accelerator.
      */
-    template <typename InputIter>
-        array(int e0, InputIter srcBegin, accelerator_view av, accelerator_view associated_av)
-            : array(hc::extent<N>(e0), srcBegin, av, associated_av) {}
-    template <typename InputIter>
-        array(int e0, InputIter srcBegin, InputIter srcEnd, accelerator_view av, accelerator_view associated_av)
-            : array(hc::extent<N>(e0), srcBegin, srcEnd, av, associated_av) {}
-    template <typename InputIter>
-        array(int e0, int e1, InputIter srcBegin, accelerator_view av, accelerator_view associated_av)
-            : array(hc::extent<N>(e0, e1), srcBegin, av, associated_av) {}
-    template <typename InputIter>
-        array(int e0, int e1, InputIter srcBegin, InputIter srcEnd, accelerator_view av, accelerator_view associated_av)
-            : array(hc::extent<N>(e0, e1), srcBegin, srcEnd, av, associated_av) {}
-    template <typename InputIter>
-        array(int e0, int e1, int e2, InputIter srcBegin, accelerator_view av, accelerator_view associated_av)
-            : array(hc::extent<N>(e0, e1, e2), srcBegin, av, associated_av) {}
-    template <typename InputIter>
-        array(int e0, int e1, int e2, InputIter srcBegin, InputIter srcEnd, accelerator_view av, accelerator_view associated_av)
-            : array(hc::extent<N>(e0, e1, e2), srcBegin, srcEnd, av, associated_av) {}
+    template<typename InputIter>
+    array(
+        int e0,
+        InputIter srcBegin,
+        accelerator_view av,
+        accelerator_view associated_av)
+        : array{hc::extent<N>{e0}, srcBegin, std::move(av), associated_av}
+    {}
+    template<typename InputIter>
+    array(
+        int e0,
+        InputIter srcBegin,
+        InputIter srcEnd,
+        accelerator_view av,
+        accelerator_view associated_av)
+        :
+        array{hc::extent<N>{e0}, srcBegin, srcEnd, std::move(av), associated_av}
+    {}
+    template<typename InputIter>
+    array(
+        int e0,
+        int e1,
+        InputIter srcBegin,
+        accelerator_view av,
+        accelerator_view associated_av)
+        : array{hc::extent<N>{e0, e1}, srcBegin, std::move(av), associated_av}
+    {}
+    template<typename InputIter>
+    array(
+        int e0,
+        int e1,
+        InputIter srcBegin,
+        InputIter srcEnd,
+        accelerator_view av,
+        accelerator_view associated_av)
+        :
+        array{
+            hc::extent<N>{e0, e1},
+            srcBegin,
+            srcEnd,
+            std::move(av),
+            associated_av}
+    {}
+    template<typename InputIter>
+    array(
+        int e0,
+        int e1,
+        int e2,
+        InputIter srcBegin,
+        accelerator_view av,
+        accelerator_view associated_av)
+        :
+        array{hc::extent<N>{e0, e1, e2}, srcBegin, std::move(av), associated_av}
+    {}
+    template<typename InputIter>
+    array(
+        int e0,
+        int e1,
+        int e2,
+        InputIter srcBegin,
+        InputIter srcEnd,
+        accelerator_view av,
+        accelerator_view associated_av)
+        :
+        array{
+            hc::extent<N>(e0, e1, e2),
+            srcBegin,
+            srcEnd,
+            std::move(av),
+            associated_av}
+    {}
 
     /** @} */
 
     /**
      * Access the extent that defines the shape of this array.
      */
-    hc::extent<N> get_extent() const __CPU__ __HC__ { return extent; }
+    hc::extent<N> get_extent() const __CPU__ __HC__
+    {
+        return extent_;
+    }
 
     /**
      * This property returns the accelerator_view representing the location
      * where this array has been allocated.
      */
-    accelerator_view get_accelerator_view() const { return m_device.get_av(); }
+    accelerator_view get_accelerator_view() const
+    {
+        return owner_;
+    }
 
     /**
      * This property returns the accelerator_view representing the preferred
      * target where this array can be copied.
      */
-    accelerator_view get_associated_accelerator_view() const { return m_device.get_stage(); }
+    accelerator_view get_associated_accelerator_view() const
+    {
+        return associate_;
+    }
 
     /**
      * This property returns the CPU "access_type" allowed for this array.
      */
-    access_type get_cpu_access_type() const { return m_device.get_access(); }
-  
+    access_type get_cpu_access_type() const
+    {
+        return cpu_access_;
+    }
+
     /**
      * Assigns the contents of the array "other" to this array, using a deep
      * copy.
@@ -4381,12 +4725,11 @@ public:
      *                  this array.
      * @return Returns *this.
      */
-    array& operator=(array&& other) {
-        if (this != &other) {
-            extent = other.extent;
-            m_device = other.m_device;
-            other.m_device.reset();
-        }
+    array& operator=(array&& other)
+    {   // TODO: potentially inefficient.
+        array tmp{std::move(other)};
+        std::swap(*this, tmp);
+
         return *this;
     }
 
@@ -4398,12 +4741,16 @@ public:
      *                this array.
      * @return Returns *this.
      */
-    array& operator=(const array_view<T,N>& src) {
-        array arr(src);
-        *this = std::move(arr);
+    array& operator=(const array_view<const T,N>& src)
+    {
+        using std::swap;
+
+        array tmp{src};
+        swap(*this, tmp);
+
         return *this;
     }
-  
+
     /**
      * Copies the contents of this array to the array given by "dest", as
      * if by calling "copy(*this, dest)".
@@ -4411,14 +4758,8 @@ public:
      * @param[out] dest An object of type array<T,N> to which to copy data
      *                  from this array.
      */
-    void copy_to(array& dest) const {
-#if __KALMAR_ACCELERATOR__ != 1
-        for(int i = 0 ; i < N ; i++)
-        {
-            if (dest.extent[i] < this->extent[i] )
-                throw runtime_exception("errorMsg_throw", 0);
-        }
-#endif
+    void copy_to(array& dest) const
+    {
         copy(*this, dest);
     }
 
@@ -4429,20 +4770,19 @@ public:
      * @param[out] dest An object of type array_view<T,N> to which to copy data
      *                  from this array.
      */
-    void copy_to(const array_view<T,N>& dest) const { copy(*this, dest); }
+    void copy_to(const array_view<T,N>& dest) const
+    {
+        copy(*this, dest);
+    }
 
     /**
      * Returns a pointer to the raw data underlying this array.
      *
-     * @return A (const) pointer to the first element in the linearized array.
+     * @return A (const) pointer to the first element in the linearised array.
      */
-    T* data() const __CPU__ __HC__ {
-#if __KALMAR_ACCELERATOR__ != 1
-        if (!m_device.get())
-            return nullptr;
-        m_device.synchronize(true);
-#endif
-        return reinterpret_cast<T*>(m_device.get());
+    T* data() const [[cpu, hc]]
+    {
+        return data_.get();
     }
 
     /**
@@ -4451,8 +4791,11 @@ public:
      * @return A (const) pointer to the first element in the array on the
      *         device memory.
      */
-    T* accelerator_pointer() const __CPU__ __HC__ {
-        return reinterpret_cast<T*>(m_device.get_device_pointer());
+    T* accelerator_pointer() const [[cpu, hc]]
+    {   // TODO: this is dumb, array is an owning owned container i.e. data_ IS
+        //       an accelerator pointer; it is NOT array_view, and this function
+        //       should be removed.
+        return data_.get();
     }
 
     /**
@@ -4463,9 +4806,9 @@ public:
      *         contained on the array.
      */
     operator std::vector<T>() const {
-        std::vector<T> vec(extent.size());
+        std::vector<T> vec(extent_.size());
         hc::copy(*this, vec.data());
-        return std::move(vec);
+        return vec;
     }
 
     /** @{ */
@@ -4479,16 +4822,38 @@ public:
      * @param[in] idx An object of type index<N> from that specifies the
      *                location of the element.
      */
-    T& operator[](const index<N>& idx) __CPU__ __HC__ {
-#ifndef __KALMAR_ACCELERATOR__
-        if (!m_device.get())
-            throw runtime_exception("The array is not accessible on CPU.", 0);
-        m_device.synchronize(true);
-#endif
-        T *ptr = reinterpret_cast<T*>(m_device.get());
-        return ptr[Kalmar::amp_helper<N, index<N>, hc::extent<N>>::flatten(idx, extent)];
+    T& operator[](const index<N>& idx) [[cpu]]
+    {   // TODO: simplify, this is a placeholder.
+        static const accelerator cpu{L"cpu"};
+
+        switch (cpu_access_) {
+        case access_type_none:
+            throw runtime_exception{"The array is not accessible on CPU.", 0};
+        case access_type_auto:
+            if (owner_.get_accelerator() != cpu) {
+                throw runtime_exception{
+                    "The array is not accessible on CPU.", 0};
+            }
+            break;
+        default:
+            break;
+        }
+
+        return data_[detail::amp_helper<
+            N, index<N>, hc::extent<N>>::flatten(idx, extent_)];
     }
-    T& operator()(const index<N>& idx) __CPU__ __HC__ {
+    T& operator[](const index<N>& idx) [[hc]]
+    {
+        return this_()->data_[detail::amp_helper<
+            N, index<N>, hc::extent<N>>::flatten(idx, this_()->extent_)];
+    }
+    template<int m = N, typename std::enable_if<m == 1>::type* = nullptr>
+    T& operator[](int i0) [[cpu, hc]]
+    {
+        return operator[](index<1>{i0});
+    }
+    T& operator()(const index<N>& idx) [[cpu, hc]]
+    {
         return (*this)[idx];
     }
 
@@ -4505,17 +4870,18 @@ public:
      * @param[in] idx An object of type index<N> from that specifies the
      *                location of the element.
      */
-    const T& operator[](const index<N>& idx) const __CPU__ __HC__ {
-#if __KALMAR_ACCELERATOR__ != 1
-        if (!m_device.get())
-            throw runtime_exception("The array is not accessible on CPU.", 0);
-        m_device.synchronize();
-#endif
-        T *ptr = reinterpret_cast<T*>(m_device.get());
-        return ptr[Kalmar::amp_helper<N, index<N>, hc::extent<N>>::flatten(idx, extent)];
+    const T& operator[](const index<N>& idx) const [[cpu, hc]]
+    {   // TODO: semi-ghastly, even though Scott Meyers approves of it.
+        return (*const_cast<array* const>(this))[idx];
     }
-    const T& operator()(const index<N>& idx) const __CPU__ __HC__ {
-        return (*this)[idx];
+    template<int m = N, typename std::enable_if<m == 1>::type* = nullptr>
+    const T& operator[](int i0) const [[cpu, hc]]
+    {
+        return operator[](index<m>{i0});
+    }
+    const T& operator()(const index<N>& idx) const [[cpu, hc]]
+    {
+        return operator[](idx);
     }
 
     /** @} */
@@ -4528,11 +4894,20 @@ public:
      * @param[in] i0,i1,i2 The component values that will form the index into
      *                     this array.
      */
-    T& operator()(int i0, int i1) __CPU__ __HC__ {
-        return (*this)[index<2>(i0, i1)];
+    template<int m = N, typename std::enable_if<m == 1>::type* = nullptr>
+    T& operator()(int i0) [[cpu, hc]]
+    {
+        return operator[](index<1>{i0});
     }
-    T& operator()(int i0, int i1, int i2) __CPU__ __HC__ {
-        return (*this)[index<3>(i0, i1, i2)];
+    template<int m = N, typename std::enable_if<m == 2>::type* = nullptr>
+    T& operator()(int i0, int i1) [[cpu, hc]]
+    {
+        return operator[](index<2>{i0, i1});
+    }
+    template<int m = N, typename std::enable_if<m == 3>::type* = nullptr>
+    T& operator()(int i0, int i1, int i2) [[cpu, hc]]
+    {
+        return operator[](index<3>{i0, i1, i2});
     }
 
     /** @} */
@@ -4545,11 +4920,20 @@ public:
      * @param[in] i0,i1,i2 The component values that will form the index into
      *                     this array.
      */
-    const T& operator()(int i0, int i1) const __CPU__ __HC__ {
-        return (*this)[index<2>(i0, i1)];
+    template<int m = N, typename std::enable_if<m == 1>::type* = nullptr>
+    const T& operator()(int i0) const [[cpu, hc]]
+    {
+        return (*const_cast<array* const>(this))(i0);
     }
-    const T& operator()(int i0, int i1, int i2) const __CPU__ __HC__ {
-        return (*this)[index<3>(i0, i1, i2)];
+    template<int m = N, typename std::enable_if<m == 2>::type* = nullptr>
+    const T& operator()(int i0, int i1) const [[cpu, hc]]
+    {
+        return (*const_cast<array* const>(this))(i0, i1);
+    }
+    template<int m = N, typename std::enable_if<m == 3>::type* = nullptr>
+    const T& operator()(int i0, int i1, int i2) const [[cpu, hc]]
+    {
+        return (*const_cast<array* const>(this))(i0, i1, i2);
     }
 
     /** @{ */
@@ -4569,22 +4953,35 @@ public:
      * @return Returns an array_view whose dimension is one lower than that of
      *         this array.
      */
-    typename array_projection_helper<T, N>::result_type
-        operator[] (int i) __CPU__ __HC__ {
-            return array_projection_helper<T, N>::project(*this, i);
-        }
-    typename array_projection_helper<T, N>::result_type
-        operator()(int i0) __CPU__ __HC__ {
-            return (*this)[i0];
-        }
-    typename array_projection_helper<T, N>::const_result_type
-        operator[] (int i) const __CPU__ __HC__ {
-            return array_projection_helper<T, N>::project(*this, i);
-        }
-    typename array_projection_helper<T, N>::const_result_type
-        operator()(int i0) const __CPU__ __HC__ {
-            return (*this)[i0];
-        }
+    template<int m = N, typename std::enable_if<(m > 1)>::type* = nullptr>
+    array_view<T, m - 1> operator[](int i0) [[cpu, hc]]
+    {
+        hc::extent<m - 1> tmp;
+        for (auto i = 1; i != m; ++i) tmp[i - 1] = extent_[i];
+
+        return array_view<T, m - 1>{tmp, data() + i0 * tmp.size()};
+    }
+
+    template<int m = N, typename std::enable_if<(m > 1)>::type* = nullptr>
+    array_view<const T, m - 1> operator[](int i0) const [[cpu, hc]]
+    {
+        hc::extent<m - 1> tmp;
+        for (auto i = 1; i != m; ++i) tmp[i - 1] = extent_[i];
+
+        return array_view<const T, m - 1>{tmp, data() + i0 * tmp.size()};
+    }
+
+    template<int m = N, typename std::enable_if<(m > 1)>::type* = nullptr>
+    array_view<T, m - 1> operator()(int i0) [[cpu, hc]]
+    {
+        return (*this)[i0];
+    }
+
+    template<int m = N, typename std::enable_if<(m > 1)>::type* = nullptr>
+    array_view<const T, m - 1> operator()(int i0) const [[cpu, hc]]
+    {
+        return (*this)[i0];
+    }
 
     /** @} */
 
@@ -4606,17 +5003,34 @@ public:
      * @return Returns a subsection of the source array at specified origin,
      *         and with the specified extent.
      */
-    array_view<T, N> section(const index<N>& origin, const hc::extent<N>& ext) __CPU__ __HC__ {
-#if __KALMAR_ACCELERATOR__ != 1
-        if ( !Kalmar::amp_helper<N, index<N>, hc::extent<N>>::contains(origin,  ext ,this->extent) )
-            throw runtime_exception("errorMsg_throw", 0);
-#endif
-        array_view<T, N> av(*this);
-        return av.section(origin, ext);
+    array_view<T, N> section(
+        const index<N>& origin, const hc::extent<N>& ext) [[cpu]]
+    {
+        if (extent_.size() < (ext + origin).size()) {
+            throw runtime_exception{"errorMsg_throw", 0};
+        }
+
+        return array_view<T, N>{*this}.section(origin, ext);
     }
-    array_view<const T, N> section(const index<N>& origin, const hc::extent<N>& ext) const __CPU__ __HC__ {
-        array_view<const T, N> av(*this);
-        return av.section(origin, ext);
+    array_view<T, N> section(
+        const index<N>& origin, const hc::extent<N>& ext) [[hc]]
+    {
+        return array_view<T, N>{*this}.section(origin, ext);
+    }
+
+    array_view<const T, N> section(
+        const index<N>& origin, const hc::extent<N>& ext) const [[cpu]]
+    {
+        if (extent_.size() < (ext + origin).size()) {
+            throw runtime_exception{"errorMsg_throw", 0};
+        }
+
+        return array_view<const T, N>{*this}.section(origin, ext);
+    }
+    array_view<const T, N> section(
+        const index<N>& origin, const hc::extent<N>& ext) const [[hc]]
+    {
+        return array_view<const T, N>{*this}.section(origin, ext);
     }
 
     /** @} */
@@ -4625,17 +5039,30 @@ public:
     /**
      * Equivalent to "section(idx, this->extent – idx)".
      */
-    array_view<T, N> section(const index<N>& idx) __CPU__ __HC__ {
-#if __KALMAR_ACCELERATOR__ != 1
-        if ( !Kalmar::amp_helper<N, index<N>, hc::extent<N>>::contains(idx, this->extent ) )
-            throw runtime_exception("errorMsg_throw", 0);
-#endif
-        array_view<T, N> av(*this);
-        return av.section(idx);
+    array_view<T, N> section(const index<N>& idx) [[cpu]]
+    {
+        if (!extent_.contains(idx)) {
+            throw runtime_exception{"errorMsg_throw", 0};
+        }
+
+        return array_view<T, N>{*this}.section(idx);
     }
-    array_view<const T, N> section(const index<N>& idx) const __CPU__ __HC__ {
-        array_view<const T, N> av(*this);
-        return av.section(idx);
+    array_view<T, N> section(const index<N>& idx) [[hc]]
+    {
+        return array_view<T, N>{*this}.section(idx);
+    }
+
+    array_view<const T, N> section(const index<N>& idx) const [[cpu]]
+    {
+        if (!extent_.contains(idx)) {
+            throw runtime_exception{"errorMsg_throw", 0};
+        }
+
+        return array_view<const T, N>{*this}.section(idx);
+    }
+    array_view<const T, N> section(const index<N>& idx) const [[hc]]
+    {
+        return array_view<const T, N>{*this}.section(idx);
     }
 
     /** @} */
@@ -4644,13 +5071,13 @@ public:
     /**
      * Equivalent to "section(index<N>(), ext)".
      */
-    array_view<T,N> section(const hc::extent<N>& ext) __CPU__ __HC__ {
-        array_view<T, N> av(*this);
-        return av.section(ext);
+    array_view<T, N> section(const hc::extent<N>& ext) [[cpu, hc]]
+    {
+        return array_view<T, N>{*this}.section(ext);
     }
-    array_view<const T,N> section(const hc::extent<N>& ext) const __CPU__ __HC__ {
-        array_view<const T, N> av(*this);
-        return av.section(ext);
+    array_view<const T, N> section(const hc::extent<N>& ext) const [[cpu, hc]]
+    {
+        return array_view<const T, N>{*this}.section(ext);
     }
 
     /** @} */
@@ -4658,36 +5085,53 @@ public:
     /** @{ */
     /**
      * Equivalent to
-     * "array<T,N>::section(index<N>(i0 [, i1 [, i2 ]]), extent<N>(e0 [, e1 [, e2 ]])) const".
+     * "array<T,N>::section(
+     *      index<N>(i0 [, i1 [, i2 ]]), extent<N>(e0 [, e1 [, e2 ]])) const".
      *
      * @param[in] i0,i1,i2 The component values that will form the origin of
      *                     the section
      * @param[in] e0,e1,e2 The component values that will form the extent of
      *                     the section
      */
-    array_view<T, 1> section(int i0, int e0) __CPU__ __HC__ {
-        static_assert(N == 1, "Rank must be 1");
-        return section(index<1>(i0), hc::extent<1>(e0));
+    array_view<T, 1> section(int i0, int e0) [[cpu, hc]]
+    {
+        static_assert(N == 1, "Rank must be 1.");
+
+        return section(index<1>{i0}, hc::extent<1>{e0});
     }
-    array_view<const T, 1> section(int i0, int e0) const __CPU__ __HC__ {
-        static_assert(N == 1, "Rank must be 1");
-        return section(index<1>(i0), hc::extent<1>(e0));
+    array_view<T, 2> section(int i0, int i1, int e0, int e1) [[cpu, hc]]
+    {
+        static_assert(N == 2, "Rank must be 2.");
+
+        return section(index<2>{i0, i1}, hc::extent<2>{e0, e1});
     }
-    array_view<T, 2> section(int i0, int i1, int e0, int e1) const __CPU__ __HC__ {
-        static_assert(N == 2, "Rank must be 2");
-        return section(index<2>(i0, i1), hc::extent<2>(e0, e1));
+    array_view<T, 3> section(
+        int i0, int i1, int i2, int e0, int e1, int e2) [[cpu, hc]]
+    {
+        static_assert(N == 3, "Rank must be 3.");
+
+        return section(index<3>{i0, i1, i2}, hc::extent<3>{e0, e1, e2});
     }
-    array_view<T, 2> section(int i0, int i1, int e0, int e1) __CPU__ __HC__ {
-        static_assert(N == 2, "Rank must be 2");
-        return section(index<2>(i0, i1), hc::extent<2>(e0, e1));
+
+    array_view<const T, 1> section(int i0, int e0) const [[cpu, hc]]
+    {
+        static_assert(N == 1, "Rank must be 1.");
+
+        return section(index<1>{i0}, hc::extent<1>{e0});
     }
-    array_view<T, 3> section(int i0, int i1, int i2, int e0, int e1, int e2) __CPU__ __HC__ {
-        static_assert(N == 3, "Rank must be 3");
-        return section(index<3>(i0, i1, i2), hc::extent<3>(e0, e1, e2));
+    array_view<const T, 2> section(
+        int i0, int i1, int e0, int e1) const [[cpu, hc]]
+    {
+        static_assert(N == 2, "Rank must be 2.");
+
+        return section(index<2>{i0, i1}, hc::extent<2>{e0, e1});
     }
-    array_view<const T, 3> section(int i0, int i1, int i2, int e0, int e1, int e2) const __CPU__ __HC__ {
-        static_assert(N == 3, "Rank must be 3");
-        return section(index<3>(i0, i1, i2), hc::extent<3>(e0, e1, e2));
+    array_view<const T, 3> section(
+        int i0, int i1, int i2, int e0, int e1, int e2) const [[cpu, hc]]
+    {
+        static_assert(N == 3, "Rank must be 3.");
+
+        return section(index<3>{i0, i1, i2}, hc::extent<3>{e0, e1, e2});
     }
 
     /** @} */
@@ -4713,30 +5157,43 @@ public:
      *         reinterpreted from T to ElementType, and the rank reduced from N
      *         to 1.
      */
-    template <typename ElementType>
-        array_view<ElementType, 1> reinterpret_as() __CPU__ __HC__ {
-#if __KALMAR_ACCELERATOR__ != 1
-            static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
-            static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
-            if( (extent.size() * sizeof(T)) % sizeof(ElementType))
-                throw runtime_exception("errorMsg_throw", 0);
-#endif
-            int size = extent.size() * sizeof(T) / sizeof(ElementType);
-            using buffer_type = typename array_view<ElementType, 1>::acc_buffer_t;
-            array_view<ElementType, 1> av(buffer_type(m_device), extent<1>(size), 0);
-            return av;
+    template<typename U>
+    array_view<U, 1> reinterpret_as() [[cpu]]
+    {
+        int size{extent_.size() / sizeof(U) * sizeof(T)};
+
+        if (size * sizeof(U) != extent_.size() * sizeof(T)) {
+            throw runtime_exception{"errorMsg_throw", 0};
         }
-    template <typename ElementType>
-        array_view<const ElementType, 1> reinterpret_as() const __CPU__ __HC__ {
-#if __KALMAR_ACCELERATOR__ != 1
-            static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
-            static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
-#endif
-            int size = extent.size() * sizeof(T) / sizeof(ElementType);
-            using buffer_type = typename array_view<ElementType, 1>::acc_buffer_t;
-            array_view<const ElementType, 1> av(buffer_type(m_device), extent<1>(size), 0);
-            return av;
+
+        return array_view<U, 1>{extent<1>{size}, data()};
+    }
+    template<typename U>
+    array_view<U, 1> reinterpret_as() [[hc]]
+    {
+        int size{extent_.size() / sizeof(U) * sizeof(T)};
+
+        return array_view<U, 1>{extent<1>{size}, data()};
+    }
+
+    template<typename U>
+    array_view<const U, 1> reinterpret_as() const [[cpu]]
+    {
+        int size{extent_.size() / sizeof(U) * sizeof(T)};
+
+        if (size * sizeof(U) != extent_.size() * sizeof(T)) {
+            throw runtime_exception{"errorMsg_throw", 0};
         }
+
+        return array_view<const U, 1>{extent<1>{size}, data()};
+    }
+    template<typename U>
+    array_view<const U, 1> reinterpret_as() const [[hc]]
+    {
+        int size{extent_.size() / sizeof(U) * sizeof(T)};
+
+        return array_view<const U, 1>{extent<1>{size}, data()};
+    }
 
     /** @} */
 
@@ -4753,45 +5210,52 @@ public:
      * @return Returns an array_view from this array<T,N> with the rank changed
      *         to K from N.
      */
-    template <int K> array_view<T, K>
-        view_as(const hc::extent<K>& viewExtent) __CPU__ __HC__ {
-#if __KALMAR_ACCELERATOR__ != 1
-            if( viewExtent.size() > extent.size())
-                throw runtime_exception("errorMsg_throw", 0);
-#endif
-            array_view<T, K> av(m_device, viewExtent, 0);
-            return av;
+    template<int m>
+    array_view<T, m> view_as(const hc::extent<m>& view_extent) [[cpu]]
+    {
+        if (extent_.size() < view_extent.size()) {
+            throw runtime_exception{"errorMsg_throw", 0};
         }
-    template <int K> array_view<const T, K>
-        view_as(const hc::extent<K>& viewExtent) const __CPU__ __HC__ {
-#if __KALMAR_ACCELERATOR__ != 1
-            if( viewExtent.size() > extent.size())
-                throw runtime_exception("errorMsg_throw", 0);
-#endif
-            const array_view<T, K> av(m_device, viewExtent, 0);
-            return av;
+
+        return array_view<T, m>{view_extent, data()};
+    }
+    template<int m>
+    array_view<T, m> view_as(const hc::extent<m>& view_extent) [[hc]]
+    {
+        return array_view<T, m>{view_extent, data()};
+    }
+
+    template<int m>
+    array_view<const T, m> view_as(
+        const hc::extent<m>& view_extent) const [[cpu]]
+    {
+        if (extent_.size() < view_extent.size()) {
+            throw runtime_exception{"errorMsg_throw", 0};
         }
+
+        return array_view<const T, m>{view_extent, data()};
+    }
+    template<int m>
+    array_view<const T, m> view_as(
+        const hc::extent<m>& view_extent) const [[hc]]
+    {
+        return array_view<const T, m>{view_extent, data()};
+    }
 
     /** @} */
 
-    ~array() = default;
+    ~array()
+    {
+        if (this_idx_ == max_array_cnt_) return;
 
-    // FIXME: functions below may be considered to move to private
-    const acc_buffer_t& internal() const __CPU__ __HC__ { return m_device; }
-    int get_offset() const __CPU__ __HC__ { return 0; }
-    index<N> get_index_base() const __CPU__ __HC__ { return index<N>(); }
-private:
-    template <typename K, int Q> friend struct projection_helper;
-    template <typename K, int Q> friend struct array_projection_helper;
-    acc_buffer_t m_device;
-    extent<N> extent;
+        if (hsa_amd_memory_unlock(this) != HSA_STATUS_SUCCESS) {
+            // TODO: this is very bad and temporary.
+            throw std::runtime_error{"Failed to unlock locked array pointer."};
+        }
 
-    template <typename Q, int K> friend
-        void copy(const array<Q, K>&, const array_view<Q, K>&);
-    template <typename Q, int K> friend
-        void copy(const array_view<const Q, K>&, array<Q, K>&);
+        locked_ptrs_[this_idx_].first.clear();
+    }
 };
-
 // ------------------------------------------------------------------------
 // array_view
 // ------------------------------------------------------------------------
@@ -4807,10 +5271,10 @@ class array_view
 {
 public:
     typedef typename std::remove_const<T>::type nc_T;
-#if __KALMAR_ACCELERATOR__ == 1
-    typedef Kalmar::_data<T> acc_buffer_t;
+#if __HCC_ACCELERATOR__ == 1
+    typedef detail::_data<T> acc_buffer_t;
 #else
-    typedef Kalmar::_data_host<T> acc_buffer_t;
+    typedef detail::_data_host<T> acc_buffer_t;
 #endif
 
     /**
@@ -4836,8 +5300,9 @@ public:
      * @param[in] src An array which contains the data that this array_view is
      *                bound to.
      */
-    array_view(hc::array<T, N>& src) __CPU__ __HC__
-        : cache(src.internal()), extent(src.get_extent()), extent_base(extent), index_base(), offset(0) {}
+    array_view(hc::array<T, N>& src) [[cpu, hc]]
+        : array_view{src.get_extent(), src.data()}
+    {}
 
     // FIXME: following interfaces were not implemented yet
     // template <typename Container>
@@ -4871,7 +5336,7 @@ public:
      * @param[in] ext The extent of this array_view.
      */
     array_view(const hc::extent<N>& ext, value_type* src) __CPU__ __HC__
-#if __KALMAR_ACCELERATOR__ == 1
+#if __HCC_ACCELERATOR__ == 1
         : cache((T *)(src)), extent(ext), extent_base(ext), offset(0) {}
 #else
         : cache(ext.size(), (T *)(src)), extent(ext), extent_base(ext), offset(0) {}
@@ -4896,7 +5361,7 @@ public:
      *
      * @param[in] e0,e1,e2 The component values that will form the extent of
      *                     this array_view.
-     * @param[in] src A template argument that must resolve to a contiguousi
+     * @param[in] src A template argument that must resolve to a contiguous
      *                container that supports .data() and .size() members (such
      *                as std::vector or std::array)
      */
@@ -4994,11 +5459,11 @@ public:
      *                 this array.
      */
     void copy_to(array<T,N>& dest) const {
-#if __KALMAR_ACCELERATOR__ != 1
+#if __HCC_ACCELERATOR__ != 1
         for(int i= 0 ;i< N;i++)
         {
           if (dest.get_extent()[i] < this->extent[i])
-              throw runtime_exception("errorMsg_throw", 0);
+              throw runtime_exception{"errorMsg_throw", 0};
         }
 #endif
         copy(*this, dest);
@@ -5026,11 +5491,11 @@ public:
      * source or any of its views are accessed on an accelerator_view through a
      *  parallel_for_each or a copy operation.
      *
-     * @return A pointer to the first element in the linearized array.
+     * @return A pointer to the first element in the linearised array.
      */
     T* data() const __CPU__ __HC__ {
 
-#if __KALMAR_ACCELERATOR__ != 1
+#if __HCC_ACCELERATOR__ != 1
         cache.get_cpu_access(true);
 #endif
         static_assert(N == 1, "data() is only permissible on array views of rank 1");
@@ -5140,10 +5605,8 @@ public:
      *                 synchronized for.
      */
     // FIXME: type parameter is not implemented
-    void synchronize_to(const accelerator_view& av) const {
-#if __KALMAR_ACCELERATOR__ != 1
+    void synchronize_to(const accelerator_view& av) const [[cpu]] {
         cache.sync_to(av.pQueue);
-#endif
     }
 
     /**
@@ -5172,7 +5635,7 @@ public:
      * not needed.
      */
     void discard_data() const {
-#if __KALMAR_ACCELERATOR__ != 1
+#if __HCC_ACCELERATOR__ != 1
         cache.discard();
 #endif
     }
@@ -5186,11 +5649,11 @@ public:
      *                the element.
      */
     T& operator[] (const index<N>& idx) const __CPU__ __HC__ {
-#if __KALMAR_ACCELERATOR__ != 1
+#if __HCC_ACCELERATOR__ != 1
         cache.get_cpu_access(true);
 #endif
         T *ptr = reinterpret_cast<T*>(cache.get() + offset);
-        return ptr[Kalmar::amp_helper<N, index<N>, hc::extent<N>>::flatten(idx + index_base, extent_base)];
+        return ptr[detail::amp_helper<N, index<N>, hc::extent<N>>::flatten(idx + index_base, extent_base)];
     }
 
     T& operator()(const index<N>& idx) const __CPU__ __HC__ {
@@ -5280,9 +5743,9 @@ public:
      */
     array_view<T, N> section(const index<N>& idx,
                              const hc::extent<N>& ext) const __CPU__ __HC__ {
-#if __KALMAR_ACCELERATOR__ != 1
-        if ( !Kalmar::amp_helper<N, index<N>, hc::extent<N>>::contains(idx, ext,this->extent ) )
-            throw runtime_exception("errorMsg_throw", 0);
+#if __HCC_ACCELERATOR__ != 1
+        if ( !detail::amp_helper<N, index<N>, hc::extent<N>>::contains(idx, ext,this->extent ) )
+            throw runtime_exception{"errorMsg_throw", 0};
 #endif
         array_view<T, N> av(cache, ext, extent_base, idx + index_base, offset);
         return av;
@@ -5293,7 +5756,7 @@ public:
      */
     array_view<T, N> section(const index<N>& idx) const __CPU__ __HC__ {
         hc::extent<N> ext(extent);
-        Kalmar::amp_helper<N, index<N>, hc::extent<N>>::minus(idx, ext);
+        detail::amp_helper<N, index<N>, hc::extent<N>>::minus(idx, ext);
         return section(idx, ext);
     }
 
@@ -5307,7 +5770,7 @@ public:
 
     /** @{ */
     /**
-     * Equivalent to 
+     * Equivalent to
      * "section(index<N>(i0 [, i1 [, i2 ]]), extent<N>(e0 [, e1 [, e2 ]]))".
      *
      * @param[in] i0,i1,i2 The component values that will form the origin of
@@ -5346,11 +5809,11 @@ public:
     template <typename ElementType>
         array_view<ElementType, N> reinterpret_as() const __CPU__ __HC__ {
             static_assert(N == 1, "reinterpret_as is only permissible on array views of rank 1");
-#if __KALMAR_ACCELERATOR__ != 1
+#if __HCC_ACCELERATOR__ != 1
             static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
             static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
             if ( (extent.size() * sizeof(T)) % sizeof(ElementType))
-                throw runtime_exception("errorMsg_throw", 0);
+                throw runtime_exception{"errorMsg_throw", 0};
 #endif
             int size = extent.size() * sizeof(T) / sizeof(ElementType);
             using buffer_type = typename array_view<ElementType, 1>::acc_buffer_t;
@@ -5371,9 +5834,9 @@ public:
     template <int K>
         array_view<T, K> view_as(hc::extent<K> viewExtent) const __CPU__ __HC__ {
             static_assert(N == 1, "view_as is only permissible on array views of rank 1");
-#if __KALMAR_ACCELERATOR__ != 1
+#if __HCC_ACCELERATOR__ != 1
             if ( viewExtent.size() > extent.size())
-                throw runtime_exception("errorMsg_throw", 0);
+                throw runtime_exception{"errorMsg_throw", 0};
 #endif
             array_view<T, K> av(cache, viewExtent, offset + index_base[0]);
             return av;
@@ -5389,24 +5852,30 @@ public:
     index<N> get_index_base() const __CPU__ __HC__ { return index_base; }
 
 private:
-    template <typename K, int Q> friend struct projection_helper;
-    template <typename K, int Q> friend struct array_projection_helper;
-    template <typename Q, int K> friend class array;
-    template <typename Q, int K> friend class array_view;
-  
-    template<typename Q, int K> friend
-        bool is_flat(const array_view<Q, K>&) noexcept;
-    template <typename Q, int K> friend
-        void copy(const array<Q, K>&, const array_view<Q, K>&);
-    template <typename InputIter, typename Q, int K> friend
-        void copy(InputIter, InputIter, const array_view<Q, K>&);
-    template <typename Q, int K> friend
-        void copy(const array_view<const Q, K>&, array<Q, K>&);
-    template <typename OutputIter, typename Q, int K> friend
-        void copy(const array_view<Q, K>&, OutputIter);
-    template <typename Q, int K> friend
-        void copy(const array_view<const Q, K>& src, const array_view<Q, K>& dest);
-  
+    template <typename, int> friend struct projection_helper;
+    template <typename, int> friend struct array_projection_helper;
+    template <typename, int> friend class array;
+    template <typename, int> friend class array_view;
+
+    template<typename Q, int K>
+    friend
+    bool is_flat(const array_view<Q, K>&) noexcept;
+    template <typename Q, int K>
+    friend
+    void copy(const array<Q, K>&, const array_view<Q, K>&);
+    template <typename InputIter, typename Q, int K>
+    friend
+    void copy(InputIter, InputIter, const array_view<Q, K>&);
+    template <typename Q, int K>
+    friend
+    void copy(const array_view<const Q, K>&, array<Q, K>&);
+    template <typename OutputIter, typename Q, int K>
+    friend
+    void copy(const array_view<Q, K>&, OutputIter);
+    template <typename Q, int K>
+    friend
+    void copy(const array_view<const Q, K>&, const array_view<Q, K>&);
+
     // used by view_as and reinterpret_as
     array_view(const acc_buffer_t& cache, const hc::extent<N>& ext,
                int offset) __CPU__ __HC__
@@ -5418,7 +5887,7 @@ private:
                const index<N>& idx_b, int off) __CPU__ __HC__
         : cache(cache), extent(ext_now), extent_base(ext_b), index_base(idx_b),
         offset(off) {}
-  
+
     acc_buffer_t cache;
     hc::extent<N> extent;
     hc::extent<N> extent_base;
@@ -5443,10 +5912,10 @@ class array_view<const T, N>
 public:
     typedef typename std::remove_const<T>::type nc_T;
 
-#if __KALMAR_ACCELERATOR__ == 1
-  typedef Kalmar::_data<nc_T> acc_buffer_t;
+#if __HCC_ACCELERATOR__ == 1
+  typedef detail::_data<nc_T> acc_buffer_t;
 #else
-  typedef Kalmar::_data_host<const T> acc_buffer_t;
+  typedef detail::_data_host<const T> acc_buffer_t;
 #endif
 
     /**
@@ -5507,7 +5976,7 @@ public:
      * @param[in] ext The extent of this array_view.
      */
     array_view(const hc::extent<N>& ext, const value_type* src) __CPU__ __HC__
-#if __KALMAR_ACCELERATOR__ == 1
+#if __HCC_ACCELERATOR__ == 1
         : cache((nc_T*)(src)), extent(ext), extent_base(ext), offset(0) {}
 #else
         : cache(ext.size(), src), extent(ext), extent_base(ext), offset(0) {}
@@ -5519,7 +5988,7 @@ public:
      *
      * @param[in] e0,e1,e2 The component values that will form the extent of
      *                     this array_view.
-     * @param[in] src A template argument that must resolve to a contiguousi
+     * @param[in] src A template argument that must resolve to a contiguous
      *                container that supports .data() and .size() members (such
      *                as std::vector or std::array)
      */
@@ -5603,7 +6072,7 @@ public:
         offset = other.offset;
         return *this;
     }
-  
+
     array_view& operator=(const array_view& other) __CPU__ __HC__ {
         if (this != &other) {
             cache = other.cache;
@@ -5648,10 +6117,10 @@ public:
      * source or any of its views are accessed on an accelerator_view through a
      *  parallel_for_each or a copy operation.
      *
-     * @return A const pointer to the first element in the linearized array.
+     * @return A const pointer to the first element in the linearised array.
      */
     const T* data() const __CPU__ __HC__ {
-#if __KALMAR_ACCELERATOR__ != 1
+#if __HCC_ACCELERATOR__ != 1
         cache.get_cpu_access();
 #endif
         static_assert(N == 1, "data() is only permissible on array views of rank 1");
@@ -5732,10 +6201,9 @@ public:
      * @param[in] av The target accelerator_view that "this" array_view is
      *               synchronized for access on.
      */
-    void synchronize_to(const accelerator_view& av) const {
-#if __KALMAR_ACCELERATOR__ != 1
+    void synchronize_to(const accelerator_view& av) const [[cpu]]
+    {
         cache.sync_to(av.pQueue);
-#endif
     }
 
     /**
@@ -5765,11 +6233,11 @@ public:
      *                the element.
      */
     const T& operator[](const index<N>& idx) const __CPU__ __HC__ {
-#if __KALMAR_ACCELERATOR__ != 1
+#if __HCC_ACCELERATOR__ != 1
         cache.get_cpu_access();
 #endif
         const T *ptr = reinterpret_cast<const T*>(cache.get() + offset);
-        return ptr[Kalmar::amp_helper<N, index<N>, hc::extent<N>>::flatten(idx + index_base, extent_base)];
+        return ptr[detail::amp_helper<N, index<N>, hc::extent<N>>::flatten(idx + index_base, extent_base)];
     }
     const T& operator()(const index<N>& idx) const __CPU__ __HC__ {
         return (*this)[idx];
@@ -5803,7 +6271,7 @@ public:
         static_assert(N == 1, "const T& array_view::operator()(int) is only permissible on array_view<T, 1>");
         return (*this)[index<1>(i0)];
     }
-  
+
     const T& operator()(int i0, int i1) const __CPU__ __HC__ {
         static_assert(N == 2, "const T& array_view::operator()(int,int) is only permissible on array_view<T, 2>");
         return (*this)[index<2>(i0, i1)];
@@ -5874,7 +6342,7 @@ public:
      */
     array_view<const T, N> section(const index<N>& idx) const __CPU__ __HC__ {
         hc::extent<N> ext(extent);
-        Kalmar::amp_helper<N, index<N>, hc::extent<N>>::minus(idx, ext);
+        detail::amp_helper<N, index<N>, hc::extent<N>>::minus(idx, ext);
         return section(idx, ext);
     }
 
@@ -5888,7 +6356,7 @@ public:
 
     /** @{ */
     /**
-     * Equivalent to 
+     * Equivalent to
      * "section(index<N>(i0 [, i1 [, i2 ]]), extent<N>(e0 [, e1 [, e2 ]]))".
      *
      * @param[in] i0,i1,i2 The component values that will form the origin of
@@ -5927,7 +6395,7 @@ public:
     template <typename ElementType>
         array_view<const ElementType, N> reinterpret_as() const __CPU__ __HC__ {
             static_assert(N == 1, "reinterpret_as is only permissible on array views of rank 1");
-#if __KALMAR_ACCELERATOR__ != 1
+#if __HCC_ACCELERATOR__ != 1
             static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
             static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
 #endif
@@ -5950,9 +6418,9 @@ public:
     template <int K>
         array_view<const T, K> view_as(hc::extent<K> viewExtent) const __CPU__ __HC__ {
             static_assert(N == 1, "view_as is only permissible on array views of rank 1");
-#if __KALMAR_ACCELERATOR__ != 1
+#if __HCC_ACCELERATOR__ != 1
             if ( viewExtent.size() > extent.size())
-                throw runtime_exception("errorMsg_throw", 0);
+                throw runtime_exception{"errorMsg_throw", 0};
 #endif
             array_view<const T, K> av(cache, viewExtent, offset + index_base[0]);
             return av;
@@ -5968,36 +6436,42 @@ public:
     index<N> get_index_base() const __CPU__ __HC__ { return index_base; }
 
 private:
-    template <typename K, int Q> friend struct projection_helper;
-    template <typename K, int Q> friend struct array_projection_helper;
-    template <typename Q, int K> friend class array;
-    template <typename Q, int K> friend class array_view;
-  
-    template<typename Q, int K> friend
-        bool is_flat(const array_view<Q, K>&) noexcept;
-    template <typename Q, int K> friend
-        void copy(const array<Q, K>&, const array_view<Q, K>&);
-    template <typename InputIter, typename Q, int K> friend
-        void copy(InputIter, InputIter, const array_view<Q, K>&);
-    template <typename Q, int K> friend
-        void copy(const array_view<const Q, K>&, array<Q, K>&);
-    template <typename OutputIter, typename Q, int K> friend
-        void copy(const array_view<Q, K>&, OutputIter);
-    template <typename Q, int K> friend
-        void copy(const array_view<const Q, K>& src, const array_view<Q, K>& dest);
-  
+    template <typename, int> friend struct projection_helper;
+    template <typename, int> friend struct array_projection_helper;
+    template <typename, int> friend class array;
+    template <typename, int> friend class array_view;
+
+    template<typename Q, int K>
+    friend
+    bool is_flat(const array_view<Q, K>&) noexcept;
+    template<typename Q, int K>
+    friend
+    void copy(const array<Q, K>&, const array_view<Q, K>&);
+    template<typename InputIter, typename Q, int K>
+    friend
+    void copy(InputIter, InputIter, const array_view<Q, K>&);
+    template<typename Q, int K>
+    friend
+    void copy(const array_view<const Q, K>&, array<Q, K>&);
+    template<typename OutputIter, typename Q, int K>
+    friend
+    void copy(const array_view<Q, K>&, OutputIter);
+    template<typename Q, int K>
+    friend
+    void copy(const array_view<const Q, K>&, const array_view<Q, K>&);
+
     // used by view_as and reinterpret_as
     array_view(const acc_buffer_t& cache, const hc::extent<N>& ext,
                int offset) __CPU__ __HC__
         : cache(cache), extent(ext), extent_base(ext), offset(offset) {}
-  
+
     // used by section and projection
     array_view(const acc_buffer_t& cache, const hc::extent<N>& ext_now,
                const hc::extent<N>& ext_b,
                const index<N>& idx_b, int off) __CPU__ __HC__
         : cache(cache), extent(ext_now), extent_base(ext_b), index_base(idx_b),
         offset(off) {}
-  
+
     acc_buffer_t cache;
     hc::extent<N> extent;
     hc::extent<N> extent_base;
@@ -6015,7 +6489,7 @@ static inline bool is_flat(const array_view<T, N>& av) noexcept {
 }
 
 template<typename T>
-static inline bool is_flat(const array_view<T, 1>& av) noexcept { return true; }
+static inline bool is_flat(const array_view<T, 1>&) noexcept { return true; }
 
 template <typename InputIter, typename T, int N, int dim>
 struct copy_input
@@ -6038,7 +6512,7 @@ template <typename InputIter, typename T, int N>
 struct copy_input<InputIter, T, N, N>
 {
     void operator()(InputIter& It, T* ptr, const extent<N>& ext,
-                    const extent<N>& base, const index<N>& idx)
+                    const extent<N>&, const index<N>& idx)
     {
         InputIter end = It;
         std::advance(end, ext[N - 1]);
@@ -6068,7 +6542,7 @@ template <typename OutputIter, typename T, int N>
 struct copy_output<OutputIter, T, N, N>
 {
     void operator()(const T* ptr, OutputIter& It, const extent<N>& ext,
-                    const extent<N>& base, const index<N>& idx)
+                    const extent<N>&, const index<N>& idx)
     {
         ptr += idx[N - 1];
         It = std::copy(ptr, ptr + ext[N - 1], It);
@@ -6104,8 +6578,8 @@ template <typename T, int N>
 struct copy_bidir<T, N, N>
 {
     void operator()(const T* src, T* dst, const extent<N>& ext,
-                    const extent<N>& base1, const index<N>& idx1,
-                    const extent<N>& base2, const index<N>& idx2)
+                    const extent<N>&, const index<N>& idx1,
+                    const extent<N>&, const index<N>& idx2)
     {
         src += idx1[N - 1];
         dst += idx2[N - 1];
@@ -6203,9 +6677,20 @@ struct do_copy<T*, T, 1>
  * @param[in] src An object of type array<T,N> to be copied from.
  * @param[out] dest An object of type array<T,N> to be copied to.
  */
-template <typename T, int N>
-void copy(const array<T, N>& src, array<T, N>& dest) {
-    src.internal().copy(dest.internal(), 0, 0, 0);
+template<typename T, int N>
+inline
+void copy(const array<T, N>& src, array<T, N>& dest)
+{
+    if (src.get_extent() != dest.get_extent()) {
+        throw std::logic_error{"Tried to copy arrays of mismatched extents."};
+    }
+
+    src.get_accelerator_view().wait(); // TODO: overly conservative, temporary.
+
+    auto s = hsa_memory_copy(
+        dest.data(), src.data(), src.get_extent().size() * sizeof(T));
+
+    if (s != HSA_STATUS_SUCCESS) throw std::runtime_error{"Array copy failed."};
 }
 
 /** @{ */
@@ -6393,20 +6878,41 @@ void copy(const array_view<const T, 1>& src, const array_view<T, 1>& dest) {
  * @param[in] srcEnd An interator to the end of a source container.
  * @param[out] dest An object of type array<T,N> to be copied to.
  */
-template <typename InputIter, typename T, int N>
-void copy(InputIter srcBegin, InputIter srcEnd, array<T, N>& dest) {
-#if __KALMAR_ACCELERATOR__ != 1
-    if( ( std::distance(srcBegin,srcEnd) <=0 )||( std::distance(srcBegin,srcEnd) < dest.get_extent().size() ))
-      throw runtime_exception("errorMsg_throw ,copy between different types", 0);
-#endif
-    do_copy<InputIter, T, N>()(srcBegin, srcEnd, dest);
+template<typename InputIter, typename T, int N>
+inline
+void copy(InputIter srcBegin, InputIter srcEnd, array<T, N>& dest)
+{
+    static_assert(
+        std::is_same<
+            typename std::iterator_traits<InputIter>::iterator_category,
+            std::random_access_iterator_tag>{},
+        "Only contiguous random access iterators supported.");
+    static_assert(
+        std::is_same<typename std::iterator_traits<InputIter>::value_type, T>{},
+        "Only same type copies supported.");
+
+    if (std::distance(srcBegin, srcEnd) != dest.get_extent().size()) {
+        throw std::logic_error{"Mismatched copy sizes."};
+    }
+
+    copy(srcBegin, dest);
 }
 
-template <typename InputIter, typename T, int N>
-void copy(InputIter srcBegin, array<T, N>& dest) {
-    InputIter srcEnd = srcBegin;
-    std::advance(srcEnd, dest.get_extent().size());
-    hc::copy(srcBegin, srcEnd, dest);
+template<typename InputIter, typename T, int N>
+inline
+void copy(InputIter srcBegin, array<T, N>& dest)
+{
+    static_assert(
+        std::is_same<
+            typename std::iterator_traits<InputIter>::iterator_category,
+            std::random_access_iterator_tag>{},
+        "Only contiguous random access iterators supported.");
+    static_assert(
+        std::is_same<typename std::iterator_traits<InputIter>::value_type, T>{},
+        "Only same type copies supported.");
+
+    hsa_memory_copy( // TODO: add to_address() and use it instead of &*.
+        dest.data(), &*srcBegin, dest.get_extent().size() * sizeof(T));
 }
 
 /** @} */
@@ -6459,9 +6965,27 @@ void copy(InputIter srcBegin, const array_view<T, N>& dest) {
  * @param[out] destBegin An output iterator addressing the position of the
  *                       first element in the destination container.
  */
-template <typename OutputIter, typename T, int N>
-void copy(const array<T, N> &src, OutputIter destBegin) {
-    do_copy<OutputIter, T, N>()(src, destBegin);
+template<typename OutputIter, typename T, int N>
+inline
+void copy(const array<T, N> &src, OutputIter destBegin)
+{
+    static_assert(
+        std::is_same<
+            typename std::iterator_traits<OutputIter>::iterator_category,
+            std::random_access_iterator_tag>{},
+        "Only contiguous random access iterators supported.");
+    static_assert(
+        std::is_same<
+            typename std::iterator_traits<OutputIter>::value_type, T>{},
+        "Only same type copies supported.");
+
+    src.get_accelerator_view().wait(); // TODO: conservative, temporary.
+
+    // TODO: must add to_address() and use instead of &*.
+    auto s = hsa_memory_copy(
+        &*destBegin, src.data(), src.get_extent().size() * sizeof(T));
+
+    if (s != HSA_STATUS_SUCCESS) throw std::runtime_error{"Array copy failed."};
 }
 
 /**
@@ -6505,10 +7029,11 @@ void copy(const array_view<T, N> &src, OutputIter destBegin) {
  * @param[in] src An object of type array<T,N> to be copied from.
  * @param[out] dest An object of type array<T,N> to be copied to.
  */
-template <typename T, int N>
-completion_future copy_async(const array<T, N>& src, array<T, N>& dest) {
-    std::future<void> fut = std::async(std::launch::deferred, [&]() mutable { copy(src, dest); });
-    return completion_future(fut.share());
+template<typename T, int N>
+inline
+completion_future copy_async(const array<T, N>& src, array<T, N>& dest)
+{
+    return completion_future{std::async([&]() { copy(src, dest); }).share()};
 }
 
 /**
@@ -6584,16 +7109,42 @@ completion_future copy_async(const array_view<T, N>& src, const array_view<T, N>
  * @param[in] srcEnd An interator to the end of a source container.
  * @param[out] dest An object of type array<T,N> to be copied to.
  */
-template <typename InputIter, typename T, int N>
-completion_future copy_async(InputIter srcBegin, InputIter srcEnd, array<T, N>& dest) {
-    std::future<void> fut = std::async(std::launch::deferred, [&, srcBegin, srcEnd]() mutable { copy(srcBegin, srcEnd, dest); });
-    return completion_future(fut.share());
+template<typename InputIter, typename T, int N>
+inline
+completion_future copy_async(
+    InputIter srcBegin, InputIter srcEnd, array<T, N>& dest)
+{
+    static_assert(
+        std::is_same<
+            typename std::iterator_traits<InputIter>::iterator_category,
+            std::random_access_iterator_tag>{},
+        "Only contiguous random access iterators supported.");
+    static_assert(
+        std::is_same<typename std::iterator_traits<InputIter>::value_type, T>{},
+        "Only same type copies supported.");
+
+    if (std::distance(srcBegin, srcEnd) != dest.get_extent().size()) {
+        throw std::logic_error{"Mismatched copy sizes."};
+    }
+
+    return copy_async(srcBegin, dest);
 }
 
-template <typename InputIter, typename T, int N>
-completion_future copy_async(InputIter srcBegin, array<T, N>& dest) {
-    std::future<void> fut = std::async(std::launch::deferred, [&, srcBegin]() mutable { copy(srcBegin, dest); });
-    return completion_future(fut.share());
+template<typename InputIter, typename T, int N>
+inline
+completion_future copy_async(InputIter srcBegin, array<T, N>& dest)
+{
+    static_assert(
+        std::is_same<
+            typename std::iterator_traits<InputIter>::iterator_category,
+            std::random_access_iterator_tag>{},
+        "Only contiguous random access iterators supported.");
+    static_assert(
+        std::is_same<typename std::iterator_traits<InputIter>::value_type, T>{},
+        "Only same type copies supported.");
+
+    return completion_future{
+        std::async([&, srcBegin]() { copy(srcBegin, dest); }).share()};
 }
 
 /** @} */
@@ -6636,10 +7187,22 @@ completion_future copy_async(InputIter srcBegin, const array_view<T, N>& dest) {
  * @param[out] destBegin An output iterator addressing the position of the
  *                       first element in the destination container.
  */
-template <typename OutputIter, typename T, int N>
-completion_future copy_async(const array<T, N>& src, OutputIter destBegin) {
-    std::future<void> fut = std::async(std::launch::deferred, [&, destBegin]() mutable { copy(src, destBegin); });
-    return completion_future(fut.share());
+template<typename OutputIter, typename T, int N>
+inline
+completion_future copy_async(const array<T, N>& src, OutputIter destBegin)
+{
+    static_assert(
+        std::is_same<
+            typename std::iterator_traits<OutputIter>::iterator_category,
+            std::random_access_iterator_tag>{},
+        "Only contiguous random access iterators supported.");
+    static_assert(
+        std::is_same<
+            typename std::iterator_traits<OutputIter>::value_type, T>{},
+        "Only same type copies supported.");
+
+    return completion_future{
+        std::async([&, destBegin]() { copy(src, destBegin); }).share()};
 }
 
 /**
@@ -6707,6 +7270,18 @@ completion_future parallel_for_each(
         accelerator::get_auto_selection_view(), compute_domain, f);
 }
 
+template<int n>
+inline
+void validate_compute_domain(const hc::extent<n>& compute_domain)
+{
+    std::size_t sz{1};
+    for (auto i = 0; i != n; ++i) {
+        sz *= compute_domain[i];
+
+        if (sz < 1) throw invalid_compute_domain{"Extent is not positive."};
+        if (sz > UINT_MAX) throw invalid_compute_domain{"Extent is too large."};
+    }
+}
 
 //ND parallel_for_each, nontiled
 template<typename Kernel, int n>
@@ -6720,11 +7295,40 @@ completion_future parallel_for_each(
 
     if (av.get_accelerator().get_device_path() == L"cpu") {
       throw hc::runtime_exception{
-          Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL};
+          detail::__errorMsg_UnsupportedAccelerator, E_FAIL};
     }
 
+    validate_compute_domain(compute_domain);
+
     return completion_future{
-        Kalmar::launch_kernel_async(av.pQueue, compute_domain, f)};
+        detail::launch_kernel_async(av.pQueue, compute_domain, f)};
+}
+
+template<int n>
+inline
+void validate_tiled_compute_domain(const tiled_extent<n>& compute_domain)
+{
+    validate_compute_domain(compute_domain);
+
+    size_t sz{1};
+    for (auto i = 0u; i != n; ++i) {
+        if (compute_domain.tile_dim[i] < 0) {
+            throw invalid_compute_domain{
+                "The extent of the tile must be positive."};
+        }
+
+        constexpr int max_tile_dim{1024}; // Should be read via the HSArt.
+        sz *= compute_domain.tile_dim[i];
+        if (max_tile_dim < sz) {
+            throw invalid_compute_domain{
+                "The extent of the tile exceeds the device limit"};
+        }
+
+        if (compute_domain[i] < compute_domain.tile_dim[i]) {
+            throw invalid_compute_domain{
+                "The extent of the tile exceeds the compute grid extent"};
+        }
+    }
 }
 
 //ND parallel_for_each, tiled
@@ -6738,11 +7342,13 @@ completion_future parallel_for_each(
 
     if (av.get_accelerator().get_device_path() == L"cpu") {
         throw hc::runtime_exception{
-            Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL};
+            detail::__errorMsg_UnsupportedAccelerator, E_FAIL};
     }
 
+    validate_tiled_compute_domain(compute_domain);
+
     return completion_future{
-        Kalmar::launch_kernel_with_dynamic_group_memory_async(
+        detail::launch_kernel_with_dynamic_group_memory_async(
             av.pQueue, compute_domain, f)};
 }
 } // namespace hc

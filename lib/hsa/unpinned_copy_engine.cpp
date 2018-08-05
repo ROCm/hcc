@@ -27,7 +27,7 @@ THE SOFTWARE.
 #include "unpinned_copy_engine.h"
 #include "hc_rt_debug.h"
 
-#define THROW_ERROR(err, hsaErr) { hc::print_backtrace(); throw (Kalmar::runtime_exception("HCC unpinned copy engine error", hsaErr)); }
+#define THROW_ERROR(err, hsaErr) { hc::print_backtrace(); throw (detail::runtime_exception("HCC unpinned copy engine error", hsaErr)); }
 
 void errorCheck(hsa_status_t hsa_error_code, int line_num, std::string str) {
   if ((hsa_error_code != HSA_STATUS_SUCCESS)&& (hsa_error_code != HSA_STATUS_INFO_BREAK))  {

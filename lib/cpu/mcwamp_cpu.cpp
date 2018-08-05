@@ -15,13 +15,13 @@
 #include <stdexcept>
 #include <vector>
 
-namespace Kalmar {
+namespace detail {
 
-class CPUFallbackQueue final : public KalmarQueue
+class CPUFallbackQueue final : public HCCQueue
 {
 public:
 
-  CPUFallbackQueue(KalmarDevice* pDev) : KalmarQueue(pDev) {}
+  CPUFallbackQueue(HCCDevice* pDev) : HCCQueue(pDev) {}
 
   void LaunchKernel(
       void*, std::size_t, const std::size_t*, const std::size_t*) override
@@ -29,7 +29,7 @@ public:
     throw std::runtime_error{"Unsupported."};
   }
   [[noreturn]]
-  std::shared_ptr<KalmarAsyncOp> LaunchKernelAsync(
+  std::shared_ptr<HCCAsyncOp> LaunchKernelAsync(
       void*,
       std::size_t,
       const std::size_t*,
@@ -47,7 +47,7 @@ public:
     throw std::runtime_error{"Unsupported."};
   }
   [[noreturn]]
-  std::shared_ptr<KalmarAsyncOp> LaunchKernelWithDynamicGroupMemoryAsync(
+  std::shared_ptr<HCCAsyncOp> LaunchKernelWithDynamicGroupMemoryAsync(
     void*,
     std::size_t,
     const std::size_t*,
@@ -79,12 +79,14 @@ public:
   void unmap(void* device, void* addr, size_t count, size_t offset, bool modify) override {}
 
   void Push(void *kernel, int idx, void* device, bool isConst) override {}
+
+  void wait(hcWaitMode = hcWaitModeBlocked) override {}
 };
 
-class CPUFallbackDevice final : public KalmarDevice
+class CPUFallbackDevice final : public HCCDevice
 {
 public:
-    CPUFallbackDevice() : KalmarDevice() {}
+    CPUFallbackDevice() : HCCDevice() {}
 
     std::wstring get_path() const override { return L"fallback"; }
     std::wstring get_description() const override { return L"CPU Fallback"; }
@@ -98,23 +100,29 @@ public:
     void* create(size_t count, struct rw_info* /* not used */) override {
         return kalmar_aligned_alloc(0x1000, count);
     }
-    void release(void *device, struct rw_info* /* not used */ ) override { 
+    void release(void *device, struct rw_info* /* not used */ ) override {
         kalmar_aligned_free(device);
     }
-    std::shared_ptr<KalmarQueue> createQueue(execute_order order = execute_in_order) override {
-        return std::shared_ptr<KalmarQueue>(new CPUFallbackQueue(this));
+    std::shared_ptr<HCCQueue> createQueue(
+        execute_order = execute_in_order) override
+    {
+        return std::shared_ptr<HCCQueue>(new CPUFallbackQueue(this));
     }
 
+    [[noreturn]]
     void* CreateKernel(
-        const char*, KalmarQueue*, const void* = nullptr, std::size_t = 0u)
+        const char*,
+        HCCQueue*,
+        std::unique_ptr<void, void (*)(void*)>,
+        std::size_t = 0u)
     {
-        return nullptr;
+        throw std::runtime_error{"Unsupported."};
     }
 };
 
 template <typename T> inline void deleter(T* ptr) { delete ptr; }
 
-class CPUContext final : public KalmarContext
+class CPUContext final : public HCCContext
 {
 public:
     CPUContext() { Devices.push_back(new CPUFallbackDevice); }
@@ -124,8 +132,8 @@ public:
 
 static CPUContext ctx;
 
-} // namespace Kalmar
+} // namespace detail
 
 extern "C" void *GetContextImpl() {
-  return &Kalmar::ctx;
+  return &detail::ctx;
 }

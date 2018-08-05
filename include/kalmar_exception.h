@@ -10,7 +10,7 @@
 #include <string>
 #include <exception>
 
-namespace Kalmar {
+namespace detail {
 
 #ifndef E_FAIL
 #define E_FAIL 0x80004005
@@ -59,5 +59,5 @@ public:
   HRESULT get_view_removed_reason() const throw() { return get_error_code(); }
 };
 
-} // namespace Kalmar
+} // namespace detail
 

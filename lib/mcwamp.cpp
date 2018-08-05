@@ -68,7 +68,7 @@ struct RuntimeImpl {
   bool isCPU;
 };
 
-namespace Kalmar {
+namespace detail {
 namespace CLAMP {
 
 ////////////////////////////////////////////////////////////
@@ -266,7 +266,7 @@ static inline uint64_t Read8byteIntegerFromBuffer(const char *data, size_t pos) 
 // Returns true if a compatible code object is found, and returns its size and
 // pointer to the code object. Returns false in case no compatible code object
 // is found.
-inline bool DetermineAndGetProgram(KalmarQueue* pQueue, size_t* kernel_size, void** kernel_source) {
+inline bool DetermineAndGetProgram(HCCQueue* pQueue, size_t* kernel_size, void** kernel_source) {
 
   bool FoundCompatibleKernel = false;
 
@@ -328,7 +328,7 @@ inline bool DetermineAndGetProgram(KalmarQueue* pQueue, size_t* kernel_size, voi
 
     // only check bundles with HCC triple prefix string
     if (Triple.compare(0, HCC_TRIPLE_PREFIX_LENGTH, HCC_TRIPLE_PREFIX) == 0) {
-      // use KalmarDevice::IsCompatibleKernel to check
+      // use HCCDevice::IsCompatibleKernel to check
       size_t SizeST = (size_t)Size;
       void *Content = (unsigned char *)data + Offset;
       if (pQueue->getDev()->IsCompatibleKernel((void*)SizeST, Content)) {
@@ -343,7 +343,7 @@ inline bool DetermineAndGetProgram(KalmarQueue* pQueue, size_t* kernel_size, voi
   return FoundCompatibleKernel;
 }
 
-void LoadInMemoryProgram(KalmarQueue* pQueue) {
+void LoadInMemoryProgram(HCCQueue* pQueue) {
   size_t kernel_size = 0;
   void* kernel_source = nullptr;
 
@@ -356,25 +356,26 @@ void LoadInMemoryProgram(KalmarQueue* pQueue) {
 // used in parallel_for_each.h
 void* CreateKernel(
   const char* name,
-  KalmarQueue* pQueue,
-  const void* callable,
+  HCCQueue* pQueue,
+  std::unique_ptr<void, void (*)(void*)> callable,
   std::size_t callable_size)
 {
   // TODO - should create a HSAQueue:: CreateKernel member function that creates and returns a dispatch.
-  return pQueue->getDev()->CreateKernel(name, pQueue, callable, callable_size);
+  return pQueue->getDev()->CreateKernel(
+    name, pQueue, std::move(callable), callable_size);
 }
 } // namespace CLAMP
 
-KalmarContext *getContext() {
-  return static_cast<KalmarContext*>(CLAMP::GetOrInitRuntime()->m_GetContextImpl());
+HCCContext *getContext() {
+  return static_cast<HCCContext*>(CLAMP::GetOrInitRuntime()->m_GetContextImpl());
 }
 
-// Kalmar runtime bootstrap logic
-class KalmarBootstrap {
+// detail runtime bootstrap logic
+class HCCBootstrap {
 private:
   RuntimeImpl* runtime;
 public:
-  KalmarBootstrap() : runtime(nullptr) {
+  HCCBootstrap() : runtime(nullptr) {
     bool to_init = true;
     char* lazyinit_env = getenv("HCC_LAZYINIT");
     if (lazyinit_env != nullptr) {
@@ -390,15 +391,15 @@ public:
       runtime = CLAMP::GetOrInitRuntime();
 
       // get context
-      KalmarContext* context = static_cast<KalmarContext*>(runtime->m_GetContextImpl());
+      HCCContext* context = static_cast<HCCContext*>(runtime->m_GetContextImpl());
 
-      const std::vector<KalmarDevice*> devices = context->getDevices();
+      const std::vector<HCCDevice*> devices = context->getDevices();
 
       // load kernels on the default queue for each device
       for (auto dev = devices.begin(); dev != devices.end(); dev++) {
 
         // get default queue on the device
-        std::shared_ptr<KalmarQueue> queue = (*dev)->get_default_queue();
+        std::shared_ptr<HCCQueue> queue = (*dev)->get_default_queue();
 
         // load kernels on the default queue for the device
         CLAMP::LoadInMemoryProgram(queue.get());
@@ -407,11 +408,11 @@ public:
   }
 };
 
-} // namespace Kalmar
+} // namespace detail
 
 extern "C" void __attribute__((constructor)) __hcc_shared_library_init() {
   // this would initialize kernels when the shared library get loaded
-  static Kalmar::KalmarBootstrap boot;
+  static detail::HCCBootstrap boot;
 }
 
 extern "C" void __attribute__((destructor)) __hcc_shared_library_fini() {

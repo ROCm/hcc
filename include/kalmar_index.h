@@ -10,7 +10,7 @@ namespace hc {
 template <int N> class extent;
 } // namespace hc
 
-namespace Kalmar {
+namespace detail {
 
 /** \cond HIDDEN_SYMBOLS */
 template <int...> struct __indices {};
@@ -206,7 +206,7 @@ struct amp_helper<1, _Tp1, _Tp2>
         return idx[0] >= 0 && ext[0] > 0 && (idx[0] + ext[0]) <= ext2[0] ;
     }
 
-    static int inline flatten(const _Tp1& idx, const _Tp2& ext) restrict(amp,cpu) {
+    static int inline flatten(const _Tp1& idx, const _Tp2&) restrict(amp,cpu) {
         return idx[0];
     }
     static void inline minus(const _Tp1& idx, _Tp2& ext) restrict(amp,cpu) {
@@ -448,17 +448,6 @@ private:
     template <int T> friend class hc::extent;
     template <int K, typename Q> friend struct index_helper;
     template <int K, typename Q1, typename Q2> friend struct amp_helper;
-
-public:
-    __attribute__((annotate("__cxxamp_opencl_index")))
-    void __cxxamp_opencl_index() restrict(amp, cpu)
-#if __KALMAR_ACCELERATOR__ == 1
-    {
-        index_helper<N, index<N>>::set(*this);
-    }
-#else
-    ;
-#endif
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -581,5 +570,5 @@ index<N> operator%(int value, const index<N>& idx) restrict(amp,cpu) {
 /** @} */
 
 
-} // namespace Kalmar
+} // namespace detail
 
