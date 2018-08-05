@@ -1850,7 +1850,7 @@ public:
               STATUS_CHECK(status, __LINE__);
               sync_copy(data, *static_cast<hsa_agent_t*>(getHostAgent()), ((char*)device) + offset, *agent, count);
             } else {
-              throw Kalmar::runtime_exception("host buffer allocation failed!", 0);
+              throw detail::runtime_exception("host buffer allocation failed!", 0);
             }
             return data;
         } else {
@@ -2952,7 +2952,7 @@ public:
                 }
             }
         } else {
-            throw Kalmar::runtime_exception("HSA executable NOT built yet!", 0);
+            throw detail::runtime_exception("HSA executable NOT built yet!", 0);
         }
 
         return symbol_ptr;
@@ -2977,7 +2977,7 @@ public:
                 STATUS_CHECK(status, __LINE__);
             }
         } else {
-            throw Kalmar::runtime_exception("HSA executable NOT built yet!", 0);
+            throw detail::runtime_exception("HSA executable NOT built yet!", 0);
         }
     }
 
@@ -2987,7 +2987,7 @@ public:
             unsigned long* symbol_ptr = (unsigned long*)getSymbolAddress(symbolName);
             memcpySymbol(symbol_ptr, hostptr, count, offset, kind);
         } else {
-            throw Kalmar::runtime_exception("HSA executable NOT built yet!", 0);
+            throw detail::runtime_exception("HSA executable NOT built yet!", 0);
         }
     }
 
@@ -4400,7 +4400,7 @@ hsa_status_t HSADispatch::setLaunchConfiguration(
     int dynamicGroupSize)
 {
     assert((0 < dims) && (dims <= 3));
-    DBOUT(DB_MISC, "static group segment size: " << kernel->static_group_segment_size
+    DBOUT(DB_MISC, "static group segment size: " << kernel_->static_group_segment_size
                    << " dynamic group segment size: " << dynamicGroupSize << "\n");
 
     // Set group dims
