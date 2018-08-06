@@ -37,7 +37,10 @@
 #include <cstdint>
 #include <future>
 #include <memory>
+#include <mutex>
+#include <tuple>
 #include <type_traits>
+#include <unordered_map>
 #include <utility>
 
 #ifndef __HC__
@@ -3416,7 +3419,8 @@ public:
      * an index<N>. The implicit conversion converts to the .global index
      * member.
      */
-    operator const index<3>() const __CPU__ __HC__ {
+    operator index<3>() const [[cpu, hc]]
+    {
         return global;
     }
 
@@ -3905,17 +3909,9 @@ void copy(const array<T, N> &src, OutputIter destBegin);
  * @tparam T The element type of this array
  * @tparam N The dimensionality of the array, defaults to 1 if elided.
  */
-template <typename T, int N = 1>
-class array {
-    static_assert(!std::is_const<T>{}, "array<const T> is not supported");
-    static_assert(
-        std::is_trivially_copyable<T>{},
-        "Only trivially copyable types are supported.");
-    static_assert(
-        std::is_trivially_destructible<T>{},
-        "Only trivially destructible types are supported.");
-
+struct array_base{
     struct Deleter {
+        template<typename T>
         void operator()(T* ptr)
         {   // TODO: this may throw in a dtor, which is bad.
             if (hsa_memory_free(ptr) != HSA_STATUS_SUCCESS) {
@@ -3923,10 +3919,20 @@ class array {
             }
         }
     };
-    using Guarded_locked_ptr = std::pair<std::atomic_flag, array*>;
+    using Guarded_locked_ptr = std::pair<std::atomic_flag, void*>;
 
     inline static constexpr std::size_t max_array_cnt_{65521u}; // Prime.
     inline static std::array<Guarded_locked_ptr, max_array_cnt_> locked_ptrs_{};
+};
+template <typename T, int N = 1>
+class array : private array_base {
+    static_assert(!std::is_const<T>{}, "array<const T> is not supported");
+    static_assert(
+        std::is_trivially_copyable<T>{},
+        "Only trivially copyable types are supported.");
+    static_assert(
+        std::is_trivially_destructible<T>{},
+        "Only trivially destructible types are supported.");
 
     accelerator_view owner_;
     accelerator_view associate_;
@@ -3990,11 +3996,11 @@ class array {
             return n;
         } while (true); // TODO: add termination after a number of attempts.
     }
-    array* this_() const [[hc]]
+    array* const this_() const [[hc]]
     {
         const auto n = reinterpret_cast<std::uintptr_t>(this) % max_array_cnt_;
 
-        return locked_ptrs_[n].second;
+        return static_cast<array* const>(locked_ptrs_[n].second);
     }
 public:
     /**
@@ -5266,17 +5272,74 @@ public:
  * over native CPU data. It exposes an indexing interface congruent to that of
  * array<T,N>.
  */
-template <typename T, int N = 1>
-class array_view
-{
-public:
-    typedef typename std::remove_const<T>::type nc_T;
-#if __HCC_ACCELERATOR__ == 1
-    typedef detail::_data<T> acc_buffer_t;
-#else
-    typedef detail::_data_host<T> acc_buffer_t;
-#endif
+struct array_view_base {
+    inline static constexpr std::size_t max_array_view_cnt_{65536};
 
+    inline static std::mutex mutex_; // TODO: use shared_mutex if C++17 feasible
+    inline static std::unordered_map<void*, std::shared_ptr<void>> cache_{};
+
+    static
+    const std::shared_ptr<void>& cache_for_(void* ptr, std::size_t byte_cnt)
+    {
+        std::lock_guard<std::mutex> lck{mutex_};
+
+        const auto it = cache_.find(ptr);
+
+        if (it != cache_.cend()) return it->second;
+
+        static const accelerator acc{};
+
+        void* tmp{nullptr};
+        auto s = hsa_memory_allocate(
+            *static_cast<hsa_region_t*>(acc.get_hsa_am_system_region()),
+            byte_cnt,
+            &tmp);
+
+        if (s != HSA_STATUS_SUCCESS) {
+            throw std::runtime_error{"Failed cache allocation for array_view."};
+        }
+
+        return cache_.emplace(
+            std::piecewise_construct,
+            std::make_tuple(ptr),
+            std::make_tuple(tmp, hsa_memory_free)).first->second;
+    }
+};
+
+template <typename T, int N = 1>
+class array_view : private array_view_base {
+    static_assert(
+        std::is_trivially_copyable<T>{},
+        "Only trivially copyable types are supported.");
+    static_assert(
+        std::is_trivially_destructible<T>{},
+        "Only trivially destructible types are supported.");
+
+    std::shared_ptr<void> data_;
+    accelerator_view owner_;
+    hc::extent<N> extent_;
+    T* base_ptr_;
+    void* source_;
+
+    template<typename, int> friend class array;
+    template<typename, int> friend class array_view;
+
+    template<typename Q, int K>
+    friend
+    void copy(const array<Q, K>&, const array_view<Q, K>&);
+    template<typename InputIter, typename Q, int K>
+    friend
+    void copy(InputIter, InputIter, const array_view<Q, K>&);
+    template<typename Q, int K>
+    friend
+    void copy(const array_view<const Q, K>&, array<Q, K>&);
+    template<typename OutputIter, typename Q, int K>
+    friend
+    void copy(const array_view<Q, K>&, OutputIter);
+    template<typename Q, int K>
+    friend
+    void copy(const array_view<const Q, K>&, const array_view<Q, K>&);
+public:
     /**
      * The rank of this array.
      */
@@ -5302,13 +5365,22 @@ public:
      */
     array_view(hc::array<T, N>& src) [[cpu, hc]]
         : array_view{src.get_extent(), src.data()}
-    {}
+    {   // TODO: refactor to pass owner directly to delegated to ctor.
+        owner_ = src.get_accelerator_view();
+    }
 
-    // FIXME: following interfaces were not implemented yet
-    // template <typename Container>
-    //     explicit array_view<T, 1>::array_view(Container& src);
-    // template <typename value_type, int Size>
-    //     explicit array_view<T, 1>::array_view(value_type (&src) [Size]) __CPU__ __HC__;
+    template<
+        typename Container,
+        typename std::enable_if<
+            N == 1 && __is_container<Container>::value>::type* = nullptr>
+    explicit
+    array_view(Container& src) : array_view{hc::extent<1>(src.size()), src}
+    {}
+    template<int m>
+    explicit
+    array_view(value_type (&src)[m]) [[cpu, hc]]
+        : array_view{hc::extent<1>{m}, src}
+    {}
 
     /**
      * Constructs an array_view which is bound to the data contained in the
@@ -5320,10 +5392,17 @@ public:
      *                as std::vector or std::array)
      * @param[in] extent The extent of this array_view.
      */
-    template <typename Container, class = typename std::enable_if<__is_container<Container>::value>::type>
-        array_view(const hc::extent<N>& extent, Container& src)
-            : array_view(extent, src.data())
-        { static_assert( std::is_same<decltype(src.data()), T*>::value, "container element type and array view element type must match"); }
+    template<   // TODO: redo the type predicates.
+        typename Container,
+        typename std::enable_if<
+            __is_container<Container>::value>::type* = nullptr>
+    array_view(const hc::extent<N>& extent, Container& src)
+        : array_view{extent, src.data()}
+    {
+        static_assert(
+            std::is_same<typename Container::value_type, T>::value,
+            "container element type and array view element type must match");
+    }
 
     /**
      * Constructs an array_view which is bound to the data contained in the
@@ -5335,12 +5414,17 @@ public:
      *                size of extent, the behavior is undefined.
      * @param[in] ext The extent of this array_view.
      */
-    array_view(const hc::extent<N>& ext, value_type* src) __CPU__ __HC__
-#if __HCC_ACCELERATOR__ == 1
-        : cache((T *)(src)), extent(ext), extent_base(ext), offset(0) {}
-#else
-        : cache(ext.size(), (T *)(src)), extent(ext), extent_base(ext), offset(0) {}
-#endif
+    array_view(const hc::extent<N>& ext, value_type* src) [[cpu]]
+        :
+        data_{cache_for_(src, ext.size() * sizeof(T))},
+        owner_{accelerator{L"cpu"}.get_default_view()},
+        extent_{ext},
+        base_ptr_{static_cast<T*>(data_.get())},
+        source_{src}
+    {}
+    array_view(const hc::extent<N>& ext, value_type* src) [[hc]]
+        : data_{nullptr, [](void*){}}, extent_{ext}, base_ptr_{src}
+    {}
 
     /**
      * Constructs an array_view which is not bound to a data source. The extent
@@ -5352,8 +5436,10 @@ public:
      *
      * @param[in] ext The extent of this array_view.
      */
-    explicit array_view(const hc::extent<N>& ext)
-        : cache(ext.size()), extent(ext), extent_base(ext), offset(0) {}
+    explicit
+    array_view(const hc::extent<N>& ext)
+        : array_view{ext, reinterpret_cast<value_type*>(this)}
+    {}
 
     /**
      * Equivalent to construction using
@@ -5365,15 +5451,27 @@ public:
      *                container that supports .data() and .size() members (such
      *                as std::vector or std::array)
      */
-    template <typename Container, class = typename std::enable_if<__is_container<Container>::value>::type>
-        array_view(int e0, Container& src)
-            : array_view(hc::extent<N>(e0), src) {}
-    template <typename Container, class = typename std::enable_if<__is_container<Container>::value>::type>
-        array_view(int e0, int e1, Container& src)
-            : array_view(hc::extent<N>(e0, e1), src) {}
-    template <typename Container, class = typename std::enable_if<__is_container<Container>::value>::type>
-        array_view(int e0, int e1, int e2, Container& src)
-            : array_view(hc::extent<N>(e0, e1, e2), src) {}
+    template<
+        typename Container,
+        typename std::enable_if<
+            N == 1 && __is_container<Container>::value>::type* = nullptr>
+    array_view(int e0, Container& src)
+        : array_view{hc::extent<N>{e0}, src}
+    {}
+    template<
+        typename Container,
+        typename std::enable_if<
+            N == 2 && __is_container<Container>::value>::type* = nullptr>
+    array_view(int e0, int e1, Container& src)
+        : array_view{hc::extent<N>{e0, e1}, src}
+    {}
+    template<
+        typename Container,
+        typename std::enable_if<
+            N == 3 && __is_container<Container>::value>::type* = nullptr>
+    array_view(int e0, int e1, int e2, Container& src)
+        : array_view{hc::extent<N>{e0, e1, e2}, src}
+    {}
 
     /**
      * Equivalent to construction using
@@ -5385,12 +5483,18 @@ public:
      *                to. If the number of elements pointed to is less than
      *                the size of extent, the behavior is undefined.
      */
-    array_view(int e0, value_type *src) __CPU__ __HC__
-        : array_view(hc::extent<N>(e0), src) {}
-    array_view(int e0, int e1, value_type *src) __CPU__ __HC__
-        : array_view(hc::extent<N>(e0, e1), src) {}
-    array_view(int e0, int e1, int e2, value_type *src) __CPU__ __HC__
-        : array_view(hc::extent<N>(e0, e1, e2), src) {}
+    template<int m = N, typename std::enable_if<m == 1>::type* = nullptr>
+    array_view(int e0, value_type *src) [[cpu, hc]]
+        : array_view{hc::extent<N>{e0}, src}
+    {}
+    template<int m = N, typename std::enable_if<m == 2>::type* = nullptr>
+    array_view(int e0, int e1, value_type *src) [[cpu, hc]]
+        : array_view{hc::extent<N>{e0, e1}, src}
+    {}
+    template<int m = N, typename std::enable_if<m == 3>::type* = nullptr>
+    array_view(int e0, int e1, int e2, value_type *src) [[cpu, hc]]
+        : array_view{hc::extent<N>{e0, e1, e2}, src}
+    {}
 
     /**
      * Equivalent to construction using
@@ -5399,11 +5503,17 @@ public:
      * @param[in] e0,e1,e2 The component values that will form the extent of
      *                     this array_view.
      */
-    explicit array_view(int e0) : array_view(hc::extent<N>(e0)) {}
-    explicit array_view(int e0, int e1)
-        : array_view(hc::extent<N>(e0, e1)) {}
-    explicit array_view(int e0, int e1, int e2)
-        : array_view(hc::extent<N>(e0, e1, e2)) {}
+    template<int m = N, typename std::enable_if<m == 1>::type* = nullptr>
+    explicit
+    array_view(int e0) : array_view{hc::extent<N>{e0}}
+    {}
+    template<int m = N, typename std::enable_if<m == 2>::type* = nullptr>
+    array_view(int e0, int e1) : array_view{hc::extent<N>{e0, e1}}
+    {}
+    template<int m = N, typename std::enable_if<m == 3>::type* = nullptr>
+    array_view(int e0, int e1, int e2)
+        : array_view{hc::extent<N>{e0, e1, e2}}
+    {}
 
     /**
      * Copy constructor. Constructs an array_view from the supplied argument
@@ -5413,13 +5523,35 @@ public:
      *                  array_view<const T,N> from which to initialize this
      *                  new array_view.
      */
-    array_view(const array_view& other) __CPU__ __HC__
-        : cache(other.cache), extent(other.extent), extent_base(other.extent_base), index_base(other.index_base), offset(other.offset) {}
+    array_view(const array_view& other) [[cpu, hc]] = default;
+
+    /**
+     * Move constructor. Constructs an array_view from the supplied argument
+     * other.
+     *
+     * @param[in] other An object of type array_view<T,N> or
+     *                  array_view<const T,N> from which to initialize this
+     *                  new array_view.
+     */
+    array_view(array_view&& other) [[cpu, hc]]
+        :
+        data_{std::move(other.data_)},
+        owner_{std::move(other.owner_)},
+        extent_{std::move(other.extent_)},
+        base_ptr_{other.base_ptr_},
+        source_{other.source_}
+    {
+        other.base_ptr_ = nullptr;
+        other.source_ = nullptr;
+    }
 
     /**
      * Access the extent that defines the shape of this array_view.
      */
-    hc::extent<N> get_extent() const __CPU__ __HC__ { return extent; }
+    hc::extent<N> get_extent() const [[cpu, hc]]
+    {
+        return extent_;
+    }
 
     /**
      * Access the accelerator_view where the data source of the array_view is
@@ -5430,7 +5562,10 @@ public:
      * data source underlying the array_view is an array, the method returns
      * the accelerator_view where the source array is located.
      */
-    accelerator_view get_source_accelerator_view() const { return cache.get_av(); }
+    accelerator_view get_source_accelerator_view() const
+    {
+        return owner_;
+    }
 
     /**
      * Assigns the contents of the array_view "other" to this array_view, using
@@ -5440,17 +5575,23 @@ public:
      *                  into this array.
      * @return Returns *this.
      */
-    array_view& operator=(const array_view& other) __CPU__ __HC__ {
-        if (this != &other) {
-            cache = other.cache;
-            extent = other.extent;
-            index_base = other.index_base;
-            extent_base = other.extent_base;
-            offset = other.offset;
-        }
+    array_view& operator=(const array_view& other) [[cpu, hc]] = default;
+
+    /**
+     * Moves the contents of the array_view "other" to this array_view, leaving
+     * "other" in a moved-from state.
+     *
+     * @param[in] other An object of type array_view<T,N> from which to move
+     *                  into this array.
+     * @return Returns *this.
+     */
+    array_view& operator=(array_view&& other)
+    {
+        using std::swap;
+        swap(*this, other);
+
         return *this;
     }
-
     /**
      * Copies the data referred to by this array_view to the array given by
      * "dest", as if by calling "copy(*this, dest)"
@@ -5458,14 +5599,8 @@ public:
      * @param[in] dest An object of type array <T,N> to which to copy data from
      *                 this array.
      */
-    void copy_to(array<T,N>& dest) const {
-#if __HCC_ACCELERATOR__ != 1
-        for(int i= 0 ;i< N;i++)
-        {
-          if (dest.get_extent()[i] < this->extent[i])
-              throw runtime_exception{"errorMsg_throw", 0};
-        }
-#endif
+    void copy_to(array<T, N>& dest) const
+    {
         copy(*this, dest);
     }
 
@@ -5476,7 +5611,10 @@ public:
      * @param[in] dest An object of type array_view<T,N> to which to copy data
      * from this array.
      */
-    void copy_to(const array_view& dest) const { copy(*this, dest); }
+    void copy_to(const array_view& dest) const
+    {
+        copy(*this, dest);
+    }
 
     /**
      * Returns a pointer to the first data element underlying this array_view.
@@ -5489,17 +5627,16 @@ public:
      * view is created without a data source, the pointer returned by data() in
      * CPU context is ephemeral and is invalidated when the original data
      * source or any of its views are accessed on an accelerator_view through a
-     *  parallel_for_each or a copy operation.
+     * parallel_for_each or a copy operation.
      *
      * @return A pointer to the first element in the linearised array.
      */
-    T* data() const __CPU__ __HC__ {
+    T* data() const [[cpu, hc]]
+    {
+        static_assert(
+            N == 1, "data() is only permissible on array views of rank 1");
 
-#if __HCC_ACCELERATOR__ != 1
-        cache.get_cpu_access(true);
-#endif
-        static_assert(N == 1, "data() is only permissible on array views of rank 1");
-        return reinterpret_cast<T*>(cache.get() + offset + index_base[0]);
+        return base_ptr_;
     }
 
     /**
@@ -5508,8 +5645,9 @@ public:
      * @return A (const) pointer to the first element in the array_view on the
      *         device memory.
      */
-    T* accelerator_pointer() const __CPU__ __HC__ {
-        return reinterpret_cast<T*>(cache.get_device_pointer() + offset + index_base[0]);
+    T* accelerator_pointer() const [[cpu, hc]] // TODO: this should also be removed.
+    {
+        return data();
     }
 
     /**
@@ -5517,7 +5655,18 @@ public:
      * memory has been modified outside the array_view interface. This will
      * render all cached information stale.
      */
-    void refresh() const { cache.refresh(); }
+    void refresh() const
+    {
+        static const auto cpu_av = accelerator{L"cpu"}.get_default_view();
+
+        if (owner_ == cpu_av) return;
+
+        auto s = hsa_memory_copy(
+            base_ptr_, source_, extent_.size() * sizeof(T));
+        if (s != HSA_STATUS_SUCCESS) {
+            throw std::runtime_error{"Failed to refresh cache for array_view."};
+        }
+    }
 
     /**
      * Calling this member function synchronizes any modifications made to the
@@ -5552,8 +5701,20 @@ public:
      *                 type of access on the data source that the array_view is
      *                 synchronized for.
      */
-    // FIXME: type parameter is not implemented
-    void synchronize() const { cache.get_cpu_access(); }
+    void synchronize(access_type type = access_type_read) const
+    {
+        static const auto cpu_av = accelerator{L"cpu"}.get_default_view();
+
+        if (owner_ == cpu_av) return;
+        if (type == access_type_none || type == access_type_write) return;
+
+        auto s = hsa_memory_copy(
+            source_, base_ptr_, extent_.size() * sizeof(T));
+
+        if (s == HSA_STATUS_SUCCESS) return;
+
+        throw std::runtime_error{"Failed to synchronise array_view."};
+    }
 
     /**
      * An asynchronous version of synchronize, which returns a completion
@@ -5565,10 +5726,13 @@ public:
      *         used to chain other operations to be executed after the
      *         completion of the asynchronous operation.
      */
-    // FIXME: type parameter is not implemented
-    completion_future synchronize_async() const {
-        std::future<void> fut = std::async([&]() mutable { synchronize(); });
-        return completion_future(fut.share());
+    completion_future synchronize_async(
+        access_type type = access_type_read) const
+    {
+        if (type == access_type_none || type == access_type_write) return {};
+
+        return completion_future{
+            std::async([this]() { synchronize(); }).share()};
     }
 
     /**
@@ -5604,9 +5768,10 @@ public:
      *                 type of access on the data source that the array_view is
      *                 synchronized for.
      */
-    // FIXME: type parameter is not implemented
-    void synchronize_to(const accelerator_view& av) const [[cpu]] {
-        cache.sync_to(av.pQueue);
+    void synchronize_to(
+        const accelerator_view& av, access_type type = access_type_read) const
+    {
+        if (av != owner_) synchronize(type);
     }
 
     /**
@@ -5624,8 +5789,13 @@ public:
      *         used to chain other operations to be executed after the
      *         completion of the asynchronous operation.
      */
-    // FIXME: this method is not implemented yet
-    completion_future synchronize_to_async(const accelerator_view& av) const;
+    completion_future synchronize_to_async(
+        const accelerator_view& av, access_type type = access_type_read) const
+    {
+        if (type == access_type_none || type == access_type_write) return {};
+
+        if (av != owner_) return synchronize_async(type);
+    }
 
     /**
      * Indicates to the runtime that it may discard the current logical
@@ -5634,10 +5804,9 @@ public:
      * accelerator_view, and its use is recommended if the existing content is
      * not needed.
      */
-    void discard_data() const {
-#if __HCC_ACCELERATOR__ != 1
-        cache.discard();
-#endif
+    void discard_data() const
+    {
+        // Since we use system coarse grained, this is a NOP.
     }
 
     /** @{ */
@@ -5648,16 +5817,26 @@ public:
      * @param[in] idx An object of type index<N> that specifies the location of
      *                the element.
      */
-    T& operator[] (const index<N>& idx) const __CPU__ __HC__ {
-#if __HCC_ACCELERATOR__ != 1
-        cache.get_cpu_access(true);
-#endif
-        T *ptr = reinterpret_cast<T*>(cache.get() + offset);
-        return ptr[detail::amp_helper<N, index<N>, hc::extent<N>>::flatten(idx + index_base, extent_base)];
+    T& operator[](const index<N>& idx) const [[cpu]]
+    {
+        return data()[detail::amp_helper<N, index<N>, hc::extent<N>>::
+            flatten(idx, extent_)];
+    }
+    T& operator[](const index<N>& idx) const [[hc]]
+    {
+        return data()[detail::amp_helper<N, index<N>, hc::extent<N>>::
+            flatten(idx, extent_)];
+    }
+    template<int m = N, typename std::enable_if<(m == 1)>::type* = nullptr>
+    T& operator[](int i0) const [[cpu]][[hc]]
+    {
+        return operator[](index<1>{i0});
     }
 
-    T& operator()(const index<N>& idx) const __CPU__ __HC__ {
-        return (*this)[idx];
+
+    T& operator()(const index<N>& idx) const [[cpu, hc]]
+    {
+        return operator[](idx);
     }
 
     /** @} */
@@ -5673,8 +5852,11 @@ public:
      * responsible to explicitly synchronize the array_view to the CPU before
      * calling this method. Failure to do so results in undefined behavior.
      */
-    // FIXME: this method is not implemented
-    T& get_ref(const index<N>& idx) const __CPU__ __HC__;
+    T& get_ref(const index<N>& idx) const [[cpu, hc]]
+    {
+        return base_ptr_[detail::amp_helper<N, index<N>, hc::extent<N>>::
+            flatten(idx, extent_)];
+    }
 
     /** @{ */
     /**
@@ -5684,13 +5866,32 @@ public:
      * @param[in] i0,i1,i2 The component values that will form the index into
      *                     this array.
      */
-    T& operator() (int i0, int i1) const __CPU__ __HC__ {
-        static_assert(N == 2, "T& array_view::operator()(int,int) is only permissible on array_view<T, 2>");
-        return (*this)[index<2>(i0, i1)];
+    T& operator()(int i0) const [[cpu, hc]]
+    {
+        static_assert(
+            N == 1,
+            "T& array_view::operator()(int) is only permissible on "
+                "array_view<T, 1>");
+
+        return operator[](index<1>{i0});
     }
-    T& operator() (int i0, int i1, int i2) const __CPU__ __HC__ {
-        static_assert(N == 3, "T& array_view::operator()(int,int, int) is only permissible on array_view<T, 3>");
-        return (*this)[index<3>(i0, i1, i2)];
+    T& operator()(int i0, int i1) const [[cpu, hc]]
+    {
+        static_assert(
+            N == 2,
+            "T& array_view::operator()(int, int) is only permissible on "
+                "array_view<T, 2>");
+
+        return operator[](index<2>{i0, i1});
+    }
+    T& operator()(int i0, int i1, int i2) const [[cpu, hc]]
+    {
+        static_assert(
+            N == 3,
+            "T& array_view::operator()(int, int, int) is only permissible on "
+                "array_view<T, 3>");
+
+        return operator[](index<3>{i0, i1, i2});
     }
 
     /** @} */
@@ -5714,13 +5915,24 @@ public:
      * @return Returns an array_view whose dimension is one lower than that of
      *         this array_view.
      */
-    typename projection_helper<T, N>::result_type
-        operator[] (int i) const __CPU__ __HC__ {
-            return projection_helper<T, N>::project(*this, i);
-        }
-    typename projection_helper<T, N>::result_type
-        operator() (int i0) const __CPU__ __HC__ { return (*this)[i0]; }
+    template<int m = N, typename std::enable_if<(m > 1)>::type* = nullptr>
+    array_view<T, N - 1> operator[](int i0) const [[cpu, hc]]
+    {
+        hc::extent<N - 1> ext;
+        for (auto i = 1; i != N; ++i) ext[i - 1] = extent_[i];
 
+        array_view<T, N - 1> tmp{ext, static_cast<T*>(source_)}; // TODO: this is incorrect.
+        tmp.base_ptr_ += i0 * ext.size();
+        tmp.source_ += i0 * ext.size();
+
+        return tmp;
+    }
+
+    template<int m = N, typename std::enable_if<(m > 1)>::type* = nullptr>
+    array_view<T, N - 1> operator()(int i0) const [[cpu, hc]]
+    {
+        return operator[](i0);
+    }
     /** @} */
 
     /**
@@ -5741,31 +5953,35 @@ public:
      * @return Returns a subsection of the source array at specified origin,
      *         and with the specified extent.
      */
-    array_view<T, N> section(const index<N>& idx,
-                             const hc::extent<N>& ext) const __CPU__ __HC__ {
-#if __HCC_ACCELERATOR__ != 1
-        if ( !detail::amp_helper<N, index<N>, hc::extent<N>>::contains(idx, ext,this->extent ) )
-            throw runtime_exception{"errorMsg_throw", 0};
-#endif
-        array_view<T, N> av(cache, ext, extent_base, idx + index_base, offset);
-        return av;
+    array_view<T, N> section(
+        const index<N>& idx, const hc::extent<N>& ext) const [[cpu]]
+    {
+        // if (!detail::amp_helper<N, index<N>, hc::extent<N>>::contains(idx, ext, extent_))
+        //     throw runtime_exception{"errorMsg_throw", 0};
+
+        // array_view<T, N> av(cache, ext, extent_base, idx + index_base, offset);
+
+        // return av;
+        return *this;
     }
 
     /**
      * Equivalent to "section(idx, this->extent – idx)".
      */
-    array_view<T, N> section(const index<N>& idx) const __CPU__ __HC__ {
-        hc::extent<N> ext(extent);
+    array_view<T, N> section(const index<N>& idx) const [[cpu, hc]]
+    {
+        hc::extent<N> ext{extent_};
         detail::amp_helper<N, index<N>, hc::extent<N>>::minus(idx, ext);
+
         return section(idx, ext);
     }
 
     /**
      * Equivalent to "section(index<N>(), ext)".
      */
-    array_view<T, N> section(const hc::extent<N>& ext) const __CPU__ __HC__ {
-        index<N> idx;
-        return section(idx, ext);
+    array_view<T, N> section(const hc::extent<N>& ext) const [[cpu, hc]]
+    {
+        return section(index<N>{}, ext);
     }
 
     /** @{ */
@@ -5778,19 +5994,26 @@ public:
      * @param[in] e0,e1,e2 The component values that will form the extent of
      *                     the section
      */
-    array_view<T, 1> section(int i0, int e0) const __CPU__ __HC__ {
-        static_assert(N == 1, "Rank must be 1");
-        return section(index<1>(i0), hc::extent<1>(e0));
+    array_view<T, 1> section(int i0, int e0) const [[cpu, hc]]
+    {
+        static_assert(N == 1, "Rank must be 1.");
+
+        return section(index<1>{i0}, hc::extent<1>{e0});
     }
 
-    array_view<T, 2> section(int i0, int i1, int e0, int e1) const __CPU__ __HC__ {
-        static_assert(N == 2, "Rank must be 2");
-        return section(index<2>(i0, i1), hc::extent<2>(e0, e1));
+    array_view<T, 2> section(int i0, int i1, int e0, int e1) const [[cpu, hc]]
+    {
+        static_assert(N == 2, "Rank must be 2.");
+
+        return section(index<2>{i0, i1}, hc::extent<2>{e0, e1});
     }
 
-    array_view<T, 3> section(int i0, int i1, int i2, int e0, int e1, int e2) const __CPU__ __HC__ {
-        static_assert(N == 3, "Rank must be 3");
-        return section(index<3>(i0, i1, i2), hc::extent<3>(e0, e1, e2));
+    array_view<T, 3> section(
+        int i0, int i1, int i2, int e0, int e1, int e2) const [[cpu, hc]]
+    {
+        static_assert(N == 3, "Rank must be 3.");
+
+        return section(index<3>{i0, i1, i2}, hc::extent<3>{e0, e1, e2});
     }
 
     /** @} */
@@ -5806,22 +6029,33 @@ public:
      * @return Returns an array_view from this array_view<T,1> with the element
      *         type reinterpreted from T to ElementType.
      */
-    template <typename ElementType>
-        array_view<ElementType, N> reinterpret_as() const __CPU__ __HC__ {
-            static_assert(N == 1, "reinterpret_as is only permissible on array views of rank 1");
-#if __HCC_ACCELERATOR__ != 1
-            static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
-            static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
-            if ( (extent.size() * sizeof(T)) % sizeof(ElementType))
-                throw runtime_exception{"errorMsg_throw", 0};
-#endif
-            int size = extent.size() * sizeof(T) / sizeof(ElementType);
-            using buffer_type = typename array_view<ElementType, 1>::acc_buffer_t;
-            array_view<ElementType, 1> av(buffer_type(cache),
-                                          extent<1>(size),
-                                          (offset + index_base[0])* sizeof(T) / sizeof(ElementType));
-            return av;
+    template<typename U>
+    array_view<U, 1> reinterpret_as() const [[cpu]]
+    {
+        static_assert(
+            N == 1,
+            "reinterpret_as is only permissible on array views of rank 1.");
+
+        hc::extent<1> tmp{extent_.size() / sizeof(U)};
+
+        if (extent_.size() * sizeof(T) != tmp.size() * sizeof(U)) {
+            throw runtime_exception{"errorMsg_throw", 0};
         }
+
+        if (source_) return array_view<U, 1>{tmp, source_};
+        return array_view<U, 1>{tmp};
+    }
+    template<typename U>
+    array_view<U, 1> reinterpret_as() const [[hc]]
+    {
+        static_assert(
+            N == 1,
+            "reinterpret_as is only permissible on array views of rank 1.");
+
+        hc::extent<1> tmp{extent_.size() / sizeof(U)};
+
+        return array_view<U, 1>{tmp, base_ptr_};
+    }
 
     /**
      * This member function is similar to "array<T,N>::view_as", although it
@@ -5831,68 +6065,37 @@ public:
      * @return Returns an array_view from this array_view<T,1> with the rank
      * changed to K from 1.
      */
-    template <int K>
-        array_view<T, K> view_as(hc::extent<K> viewExtent) const __CPU__ __HC__ {
-            static_assert(N == 1, "view_as is only permissible on array views of rank 1");
-#if __HCC_ACCELERATOR__ != 1
-            if ( viewExtent.size() > extent.size())
-                throw runtime_exception{"errorMsg_throw", 0};
-#endif
-            array_view<T, K> av(cache, viewExtent, offset + index_base[0]);
-            return av;
+    template<int m>
+    array_view<T, m> view_as(const hc::extent<m>& view_extent) const [[cpu]]
+    {
+        static_assert(
+            N == 1, "view_as is only permissible on array views of rank 1");
+
+        if (extent_.size() < view_extent.size()) {
+            throw runtime_exception{"errorMsg_throw", 0};
         }
 
-    ~array_view() __CPU__ __HC__ = default;
+        return array_view<T, m>{view_extent, source_};
+    }
+    template<int m>
+    array_view<T, m> view_as(const hc::extent<m>& view_extent) const [[hc]]
+    {
+        static_assert(
+            N == 1, "view_as is only permissible on array views of rank 1");
 
-    // FIXME: the following functions could be considered to move to private
-    const acc_buffer_t& internal() const __CPU__ __HC__ { return cache; }
+        return array_view<T, m>{view_extent, source_};
+    }
 
-    int get_offset() const __CPU__ __HC__ { return offset; }
+    ~array_view() [[cpu]][[hc]]
+    {
+        #if __HCC_ACCELERATOR__ != 1
+            synchronize(access_type_read_write);
 
-    index<N> get_index_base() const __CPU__ __HC__ { return index_base; }
+            std::lock_guard<std::mutex> lck{mutex_};
 
-private:
-    template <typename, int> friend struct projection_helper;
-    template <typename, int> friend struct array_projection_helper;
-    template <typename, int> friend class array;
-    template <typename, int> friend class array_view;
-
-    template<typename Q, int K>
-    friend
-    bool is_flat(const array_view<Q, K>&) noexcept;
-    template <typename Q, int K>
-    friend
-    void copy(const array<Q, K>&, const array_view<Q, K>&);
-    template <typename InputIter, typename Q, int K>
-    friend
-    void copy(InputIter, InputIter, const array_view<Q, K>&);
-    template <typename Q, int K>
-    friend
-    void copy(const array_view<const Q, K>&, array<Q, K>&);
-    template <typename OutputIter, typename Q, int K>
-    friend
-    void copy(const array_view<Q, K>&, OutputIter);
-    template <typename Q, int K>
-    friend
-    void copy(const array_view<const Q, K>&, const array_view<Q, K>&);
-
-    // used by view_as and reinterpret_as
-    array_view(const acc_buffer_t& cache, const hc::extent<N>& ext,
-               int offset) __CPU__ __HC__
-        : cache(cache), extent(ext), extent_base(ext), offset(offset) {}
-
-    // used by section and projection
-    array_view(const acc_buffer_t& cache, const hc::extent<N>& ext_now,
-               const hc::extent<N>& ext_b,
-               const index<N>& idx_b, int off) __CPU__ __HC__
-        : cache(cache), extent(ext_now), extent_base(ext_b), index_base(idx_b),
-        offset(off) {}
-
-    acc_buffer_t cache;
-    hc::extent<N> extent;
-    hc::extent<N> extent_base;
-    index<N> index_base;
-    int offset;
+            if (data_.use_count() == 2) cache_.erase(source_);
+        #endif
+    }
 };
 
 // ------------------------------------------------------------------------
