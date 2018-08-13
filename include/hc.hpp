@@ -4899,6 +4899,11 @@ public:
      */
     typename array_projection_helper<T, N>::result_type
         operator[] (int i) __CPU__ __HC__ {
+#if __KALMAR_ACCELERATOR__ != 1
+            if (!m_device.get())
+                throw runtime_exception("The array is not accessible on CPU.", 0);
+            m_device.synchronize();
+#endif
             return array_projection_helper<T, N>::project(*this, i);
         }
     typename array_projection_helper<T, N>::result_type
@@ -4907,6 +4912,11 @@ public:
         }
     typename array_projection_helper<T, N>::const_result_type
         operator[] (int i) const __CPU__ __HC__ {
+#if __KALMAR_ACCELERATOR__ != 1
+            if (!m_device.get())
+                throw runtime_exception("The array is not accessible on CPU.", 0);
+            m_device.synchronize();
+#endif
             return array_projection_helper<T, N>::project(*this, i);
         }
     typename array_projection_helper<T, N>::const_result_type
