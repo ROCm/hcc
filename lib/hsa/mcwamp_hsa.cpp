@@ -2348,6 +2348,22 @@ private:
         }
     };
 
+    access_type get_access_type(hsa_agent_t agent) {
+        /// Get the profile of the agent
+        hsa_status_t status = HSA_STATUS_SUCCESS;
+        hsa_profile_t agentProfile;
+        access_type at;
+        status = hsa_agent_get_info(agent, HSA_AGENT_INFO_PROFILE, &agentProfile);
+        STATUS_CHECK(status, __LINE__);
+        if (agentProfile == HSA_PROFILE_BASE) {
+            profile = hcAgentProfileBase;
+            at = access_type_none;
+        } else if (agentProfile == HSA_PROFILE_FULL) {
+            profile = hcAgentProfileFull;
+            at = access_type_read_write;
+        }
+        return at;
+    };
 
 public:
 
@@ -3729,7 +3745,8 @@ void HSAContext::ReadHccEnv()
 };
 
 
-HSADevice::HSADevice(hsa_agent_t a, hsa_agent_t host, int x_accSeqNum) : KalmarDevice(access_type_read_write),
+HSADevice::HSADevice(hsa_agent_t a, hsa_agent_t host, int x_accSeqNum) : 
+                               KalmarDevice(get_access_type(a)),
                                agent(a), programs(), max_tile_static_size(0),
                                queue_size(0), queues(), queues_mutex(),
                                rocrQueues(0/*empty*/), rocrQueuesMutex(),
@@ -3737,7 +3754,6 @@ HSADevice::HSADevice(hsa_agent_t a, hsa_agent_t host, int x_accSeqNum) : KalmarD
                                useCoarseGrainedRegion(false),
                                kernargPool(), kernargPoolFlag(), kernargCursor(0), kernargPoolMutex(),
                                executables(),
-                               profile(hcAgentProfileNone),
                                path(), description(), hostAgent(host),
                                versionMajor(0), versionMinor(0), accSeqNum(x_accSeqNum), queueSeqNums(0) {
     DBOUT(DB_INIT, "HSADevice::HSADevice()\n");
@@ -3852,17 +3868,6 @@ HSADevice::HSADevice(hsa_agent_t a, hsa_agent_t host, int x_accSeqNum) : KalmarD
     /// Get ISA associated with the agent
     status = hsa_agent_get_info(agent, HSA_AGENT_INFO_ISA, &agentISA);
     STATUS_CHECK(status, __LINE__);
-
-    /// Get the profile of the agent
-    hsa_profile_t agentProfile;
-    status = hsa_agent_get_info(agent, HSA_AGENT_INFO_PROFILE, &agentProfile);
-    STATUS_CHECK(status, __LINE__);
-
-    if (agentProfile == HSA_PROFILE_BASE) {
-        profile = hcAgentProfileBase;
-    } else if (agentProfile == HSA_PROFILE_FULL) {
-        profile = hcAgentProfileFull;
-    }
 
     //---
     this->copy_mode = static_cast<UnpinnedCopyEngine::CopyMode> (HCC_UNPINNED_COPY_MODE);
