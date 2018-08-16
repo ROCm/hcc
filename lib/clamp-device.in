@@ -138,6 +138,9 @@ if [ $AMDGPU_TARGET == "gfx700" ]; then
 elif [ $AMDGPU_TARGET == "gfx701" ]; then
   OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_701.amdgcn.bc"
   HCC_EXTRA_ARCH_FILE=$HCC_EXTRA_LIBRARIES_GFX701
+elif [ $AMDGPU_TARGET == "gfx702" ]; then
+  OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_702.amdgcn.bc"
+  HCC_EXTRA_ARCH_FILE=$HCC_EXTRA_LIBRARIES_GFX702
 elif [ $AMDGPU_TARGET == "gfx801" ]; then
   OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_801.amdgcn.bc"
   HCC_EXTRA_ARCH_FILE=$HCC_EXTRA_LIBRARIES_GFX801
@@ -150,8 +153,8 @@ elif [ $AMDGPU_TARGET == "gfx803" ]; then
 elif [ $AMDGPU_TARGET == "gfx900" ]; then
   OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_900.amdgcn.bc"
   HCC_EXTRA_ARCH_FILE=$HCC_EXTRA_LIBRARIES_GFX900
-elif [ $AMDGPU_TARGET == "gfx901" ]; then
-  OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_901.amdgcn.bc"
+elif [ $AMDGPU_TARGET == "gfx902" ]; then
+  OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_902.amdgcn.bc"
   HCC_EXTRA_ARCH_FILE=$HCC_EXTRA_LIBRARIES_GFX901
 elif [ $AMDGPU_TARGET == "gfx906" ]; then
   OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_906.amdgcn.bc"
@@ -195,7 +198,9 @@ fi
 
 # Optimization notes:
 #  -disable-simplify-libcalls:  prevents transforming loops into library calls such as memset, memcopy on GPU
-$OPT -mtriple amdgcn--amdhsa-amdgiz -mcpu=$AMDGPU_TARGET -amdgpu-internalize-symbols -disable-simplify-libcalls $KMOPTOPT -verify $2.selected.bc -o $2.opt.bc
+$OPT -mtriple amdgcn-amd-amdhsa -mcpu=$AMDGPU_TARGET \
+  -amdgpu-internalize-symbols -disable-simplify-libcalls $KMOPTOPT -verify \
+  $2.selected.bc -o $2.opt.bc
 
 # error handling for opt
 RETVAL=$?
@@ -218,9 +223,11 @@ if [ $KMDUMPLLVM == "1" ]; then
 fi
 
 if [ $KMTHINLTO == "1" ]; then
-  $LLC $KMOPTLLC -mtriple amdgcn--amdhsa-amdgiz -mcpu=$AMDGPU_TARGET -filetype=obj -o $2 $2.opt.bc
+  $LLC $KMOPTLLC -mtriple amdgcn-amd-amdhsa -mcpu=$AMDGPU_TARGET -filetype=obj \
+    -o $2 $2.opt.bc
 else
-  $LLC $KMOPTLLC -mtriple amdgcn--amdhsa-amdgiz -mcpu=$AMDGPU_TARGET -filetype=obj -o $2.isabin $2.opt.bc
+  $LLC $KMOPTLLC -mtriple amdgcn-amd-amdhsa -mcpu=$AMDGPU_TARGET \
+    -filetype=obj -o $2.isabin $2.opt.bc
 fi
 
 # error handling for llc
@@ -236,7 +243,8 @@ if [ $KMDUMPISA == "1" ]; then
   else
     cp $2.isabin ./dump-$AMDGPU_TARGET.isabin
   fi
-  $LLC $KMOPTLLC -mtriple amdgcn--amdhsa-amdgiz -mcpu=$AMDGPU_TARGET -filetype=asm -o $2.isa $2.opt.bc
+  $LLC $KMOPTLLC -mtriple amdgcn-amd-amdhsa -mcpu=$AMDGPU_TARGET -filetype=asm \
+    -o $2.isa $2.opt.bc
   mv $2.isa ${KMDUMPDIR}/dump-$AMDGPU_TARGET.isa
 fi
 
