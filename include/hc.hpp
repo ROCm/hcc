@@ -2410,7 +2410,9 @@ extern "C" inline unsigned int __bitextract_u32(unsigned int src0, unsigned int 
   return (src0 << (32 - src1 - src2)) >> (32 - src2);
 }
 
-extern "C" uint64_t __bitextract_u64(uint64_t src0, unsigned int src1, unsigned int src2) __HC__;
+extern "C" inline uint64_t __bitextract_u64(uint64_t src0, unsigned int src1, unsigned int src2) __HC__ {
+  return (src0 << (64 - src1 - src2)) >> (64 - src2);
+}
 
 extern "C" int __bitextract_s32(int src0, unsigned int src1, unsigned int src2) __HC__;
 
@@ -2423,7 +2425,9 @@ extern "C" int64_t __bitextract_s64(int64_t src0, unsigned int src1, unsigned in
  *
  * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/bit_string.htm">HSA PRM 5.7</a> for more detailed specification of these functions.
  */
-extern "C" unsigned int __bitinsert_u32(unsigned int src0, unsigned int src1, unsigned int src2, unsigned int src3) __HC__;
+extern "C" inline unsigned int __bitinsert_u32(unsigned int src0, unsigned int src1, unsigned int src2, unsigned int src3) __HC__ {
+  return (src0 & ~(((1 << src3) - 1) << src2)) | ((src1 & ((1 << src3) - 1)) << src2);
+}
 
 extern "C" uint64_t __bitinsert_u64(uint64_t src0, uint64_t src1, unsigned int src2, unsigned int src3) __HC__;
 
@@ -2462,9 +2466,13 @@ uint64_t __bitrev_b64(uint64_t src0) [[hc]] __asm("llvm.bitreverse.i64");
  *
  * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/bit_string.htm">HSA PRM 5.7</a> for more detailed specification of these functions.
  */
-extern "C" unsigned int __bitselect_b32(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
+extern "C" inline unsigned int __bitselect_b32(unsigned int src0, unsigned int src1, unsigned int src2) __HC__ {
+  return (src1 & src0) | (src2 & ~src0);
+}
 
-extern "C" uint64_t __bitselect_b64(uint64_t src0, uint64_t src1, uint64_t src2) __HC__;
+extern "C" inline uint64_t __bitselect_b64(uint64_t src0, uint64_t src1, uint64_t src2) __HC__ {
+  return (src1 & src0) | (src2 & ~src0);
+}
 /** @} */
 
 /**
