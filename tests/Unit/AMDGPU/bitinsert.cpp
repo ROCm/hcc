@@ -83,7 +83,7 @@ bool test_bitinsert_u32() {
 }
 
 // test __bitinsert_u64
-/*bool test_bitinsert_u64() {
+bool test_bitinsert_u64() {
   using namespace hc;
   bool ret = true;
 
@@ -129,14 +129,13 @@ bool test_bitinsert_u32() {
   }
 
   return ret;
-}*/
+}
 
 int main() {
   bool ret = true;
 
   ret &= test_bitinsert_u32();
-  // TODO: Fix bitinsert_u64
-  // ret &= test_bitinsert_u64();
+  ret &= test_bitinsert_u64();
 
 #if TEST_DEBUG
   std::cout << "ret: " << ret << std::endl;
