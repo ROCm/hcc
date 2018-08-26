@@ -78,7 +78,7 @@ int main() {
   }
  
   if (foo_handle && bar_handle) {
-    for (int i = 0; i < 16; ++i) {
+    for (int i = 1; i != 17; ++i) {
       ret &= (foo_handle(i) == i);
       ret &= (bar_handle(i * 2) == (i * 4));
     }

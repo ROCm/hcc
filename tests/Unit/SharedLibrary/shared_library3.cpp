@@ -60,7 +60,7 @@ extern "C" int bar(int);
 int main() {
   bool ret = true;
 
-  for (int i = 0; i < 16; ++i) {
+  for (int i = 1; i != 17; ++i) {
     ret &= (foo(i) == i);
     ret &= (bar(i * 2) == (i * 4));
   }

@@ -8,7 +8,7 @@
 
 // RUN: %cxxamp %s -o %t.out && %t.out
 
-int f(int &) restrict(amp) 
+int f(int &) [[hc]]
 {
     return 0;
 }

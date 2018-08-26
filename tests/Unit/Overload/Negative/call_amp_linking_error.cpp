@@ -4,15 +4,15 @@
 // Do not delete or add any line; it is referred to by absolute line number in the
 // FileCheck lines below
 //////////////////////////////////////////////////////////////////////////////////
-#include <amp.h>
-using namespace concurrency;
+#include <hc.hpp>
+using namespace hc;
 
-int f1() restrict(amp) {return 1;} 
-int f2() restrict(amp) {
+int f1() [[hc]] {return 1;} 
+int f2() [[hc]] {
   return f1();
 }
 
-int CPU_Func() restrict(cpu)
+int CPU_Func() [[cpu]]
 {
   return f2();
 }

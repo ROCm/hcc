@@ -36,7 +36,7 @@ bool test() {
   hc::extent<1> e(vecSize);
   hc::completion_future fut = hc::parallel_for_each(
     e,
-    [=](hc::index<1> idx) restrict(amp) {
+    [=](hc::index<1> idx) [[hc]] {
       for (int i = 0; i < LOOP_COUNT; ++i) 
         p_c[idx[0]] = p_a[idx[0]] + p_b[idx[0]];
 

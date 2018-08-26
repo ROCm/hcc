@@ -4,7 +4,7 @@
 // Do not delete or add any line; it is referred to by absolute line number in the
 // FileCheck lines below
 //////////////////////////////////////////////////////////////////////////////////
-#include <amp.h>
+#include <hc.hpp>
 
 int foo() restrict()
 {

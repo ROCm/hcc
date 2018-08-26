@@ -1,7 +1,6 @@
 
 // RUN: %hc %s -o %t.out && %t.out
 
-#include <amp.h>
 #include <hc.hpp>
 
 #include <iostream>
@@ -17,12 +16,14 @@ bool test1D() {
   std::vector<int> table2(grid_size);
   std::vector<int> table3(grid_size);
   std::vector<int> table4(grid_size);
-  Concurrency::array_view<int, 1> av1(grid_size, table1);
-  Concurrency::array_view<int, 1> av2(grid_size, table2);
-  Concurrency::array_view<int, 1> av3(grid_size, table3);
-  Concurrency::array_view<int, 1> av4(grid_size, table4);
+  hc::array_view<int, 1> av1(grid_size, table1);
+  hc::array_view<int, 1> av2(grid_size, table2);
+  hc::array_view<int, 1> av3(grid_size, table3);
+  hc::array_view<int, 1> av4(grid_size, table4);
 
-  Concurrency::parallel_for_each(Concurrency::extent<1>(grid_size).tile<tile_size>(), [=](Concurrency::tiled_index<tile_size>& idx) restrict(amp) {
+  hc::parallel_for_each(
+    hc::extent<1>(grid_size).tile(tile_size),
+    [=](hc::tiled_index<1>& idx) [[hc]] {
     av1(idx) = idx.global[0];
     av2(idx) = idx.local[0];
     av3(idx) = idx.tile[0];
@@ -41,7 +42,9 @@ bool test1D() {
   hc::array_view<int, 1> av7(grid_size, table7);
   hc::array_view<int, 1> av8(grid_size, table8);
 
-  hc::completion_future fut = hc::parallel_for_each(hc::tiled_extent<1>(grid_size, tile_size), [=](hc::tiled_index<1>& idx) restrict(amp) {
+  hc::completion_future fut = hc::parallel_for_each(
+    hc::tiled_extent<1>(grid_size, tile_size),
+    [=](hc::tiled_index<1>& idx) [[hc]] {
     av5(idx) = idx.global[0];
     av6(idx) = idx.local[0];
     av7(idx) = idx.tile[0];
@@ -113,16 +116,18 @@ bool test2D() {
   std::vector<int> table6(grid_size_0 * grid_size_1);
   std::vector<int> table7(grid_size_0 * grid_size_1);
   std::vector<int> table8(grid_size_0 * grid_size_1);
-  Concurrency::array_view<int, 2> av1(grid_size_0, grid_size_1, table1);
-  Concurrency::array_view<int, 2> av2(grid_size_0, grid_size_1, table2);
-  Concurrency::array_view<int, 2> av3(grid_size_0, grid_size_1, table3);
-  Concurrency::array_view<int, 2> av4(grid_size_0, grid_size_1, table4);
-  Concurrency::array_view<int, 2> av5(grid_size_0, grid_size_1, table5);
-  Concurrency::array_view<int, 2> av6(grid_size_0, grid_size_1, table6);
-  Concurrency::array_view<int, 2> av7(grid_size_0, grid_size_1, table7);
-  Concurrency::array_view<int, 2> av8(grid_size_0, grid_size_1, table8);
+  hc::array_view<int, 2> av1(grid_size_0, grid_size_1, table1);
+  hc::array_view<int, 2> av2(grid_size_0, grid_size_1, table2);
+  hc::array_view<int, 2> av3(grid_size_0, grid_size_1, table3);
+  hc::array_view<int, 2> av4(grid_size_0, grid_size_1, table4);
+  hc::array_view<int, 2> av5(grid_size_0, grid_size_1, table5);
+  hc::array_view<int, 2> av6(grid_size_0, grid_size_1, table6);
+  hc::array_view<int, 2> av7(grid_size_0, grid_size_1, table7);
+  hc::array_view<int, 2> av8(grid_size_0, grid_size_1, table8);
 
-  Concurrency::parallel_for_each(Concurrency::extent<2>(grid_size_0, grid_size_1).tile<tile_size_0, tile_size_1>(), [=](Concurrency::tiled_index<tile_size_0, tile_size_1>& idx) restrict(amp) {
+  hc::parallel_for_each(
+    hc::extent<2>(grid_size_0, grid_size_1).tile(tile_size_0, tile_size_1),
+    [=](hc::tiled_index<2>& idx) [[hc]] {
     av1(idx) = idx.global[0];
     av2(idx) = idx.global[1];
     av3(idx) = idx.local[0];
@@ -152,7 +157,9 @@ bool test2D() {
   hc::array_view<int, 2> av15(grid_size_0, grid_size_1, table15);
   hc::array_view<int, 2> av16(grid_size_0, grid_size_1, table16);
 
-  hc::completion_future fut = hc::parallel_for_each(hc::tiled_extent<2>(grid_size_0, grid_size_1, tile_size_0, tile_size_1), [=](hc::tiled_index<2>& idx) restrict(amp) {
+  hc::completion_future fut = hc::parallel_for_each(
+    hc::tiled_extent<2>(grid_size_0, grid_size_1, tile_size_0, tile_size_1),
+    [=](hc::tiled_index<2>& idx) [[hc]] {
     av9(idx) = idx.global[0];
     av10(idx) = idx.global[1];
     av11(idx) = idx.local[0];
@@ -222,7 +229,13 @@ bool test2D() {
 }
 
 /// test HC parallel_for_each interface
-template<size_t grid_size_0, size_t grid_size_1, size_t grid_size_2, size_t tile_size_0, size_t tile_size_1, size_t tile_size_2>
+template<
+  size_t grid_size_0,
+  size_t grid_size_1,
+  size_t grid_size_2,
+  size_t tile_size_0,
+  size_t tile_size_1,
+  size_t tile_size_2>
 bool test3D() {
 
   bool ret = true;
@@ -241,20 +254,23 @@ bool test3D() {
   std::vector<int> table10(grid_size_0 * grid_size_1 * grid_size_2);
   std::vector<int> table11(grid_size_0 * grid_size_1 * grid_size_2);
   std::vector<int> table12(grid_size_0 * grid_size_1 * grid_size_2);
-  Concurrency::array_view<int, 3> av1(grid_size_0, grid_size_1, grid_size_2, table1);
-  Concurrency::array_view<int, 3> av2(grid_size_0, grid_size_1, grid_size_2, table2);
-  Concurrency::array_view<int, 3> av3(grid_size_0, grid_size_1, grid_size_2, table3);
-  Concurrency::array_view<int, 3> av4(grid_size_0, grid_size_1, grid_size_2, table4);
-  Concurrency::array_view<int, 3> av5(grid_size_0, grid_size_1, grid_size_2, table5);
-  Concurrency::array_view<int, 3> av6(grid_size_0, grid_size_1, grid_size_2, table6);
-  Concurrency::array_view<int, 3> av7(grid_size_0, grid_size_1, grid_size_2, table7);
-  Concurrency::array_view<int, 3> av8(grid_size_0, grid_size_1, grid_size_2, table8);
-  Concurrency::array_view<int, 3> av9(grid_size_0, grid_size_1, grid_size_2, table9);
-  Concurrency::array_view<int, 3> av10(grid_size_0, grid_size_1, grid_size_2, table10);
-  Concurrency::array_view<int, 3> av11(grid_size_0, grid_size_1, grid_size_2, table11);
-  Concurrency::array_view<int, 3> av12(grid_size_0, grid_size_1, grid_size_2, table12);
+  hc::array_view<int, 3> av1(grid_size_0, grid_size_1, grid_size_2, table1);
+  hc::array_view<int, 3> av2(grid_size_0, grid_size_1, grid_size_2, table2);
+  hc::array_view<int, 3> av3(grid_size_0, grid_size_1, grid_size_2, table3);
+  hc::array_view<int, 3> av4(grid_size_0, grid_size_1, grid_size_2, table4);
+  hc::array_view<int, 3> av5(grid_size_0, grid_size_1, grid_size_2, table5);
+  hc::array_view<int, 3> av6(grid_size_0, grid_size_1, grid_size_2, table6);
+  hc::array_view<int, 3> av7(grid_size_0, grid_size_1, grid_size_2, table7);
+  hc::array_view<int, 3> av8(grid_size_0, grid_size_1, grid_size_2, table8);
+  hc::array_view<int, 3> av9(grid_size_0, grid_size_1, grid_size_2, table9);
+  hc::array_view<int, 3> av10(grid_size_0, grid_size_1, grid_size_2, table10);
+  hc::array_view<int, 3> av11(grid_size_0, grid_size_1, grid_size_2, table11);
+  hc::array_view<int, 3> av12(grid_size_0, grid_size_1, grid_size_2, table12);
 
-  Concurrency::parallel_for_each(Concurrency::extent<3>(grid_size_0, grid_size_1, grid_size_2).tile<tile_size_0, tile_size_1, tile_size_2>(), [=](Concurrency::tiled_index<tile_size_0, tile_size_1, tile_size_2>& idx) restrict(amp) {
+  hc::parallel_for_each(
+    hc::extent<3>(grid_size_0, grid_size_1, grid_size_2).tile(
+        tile_size_0, tile_size_1, tile_size_2),
+        [=](hc::tiled_index<3>& idx) [[hc]] {
     av1(idx) = idx.global[0];
     av2(idx) = idx.global[1];
     av3(idx) = idx.global[2];
@@ -296,7 +312,15 @@ bool test3D() {
   hc::array_view<int, 3> av23(grid_size_0, grid_size_1, grid_size_2, table23);
   hc::array_view<int, 3> av24(grid_size_0, grid_size_1, grid_size_2, table24);
 
-  hc::completion_future fut = hc::parallel_for_each(hc::tiled_extent<3>(grid_size_0, grid_size_1, grid_size_2, tile_size_0, tile_size_1, tile_size_2), [=](hc::tiled_index<3>& idx) restrict(amp) {
+  hc::completion_future fut = hc::parallel_for_each(
+    hc::tiled_extent<3>(
+      grid_size_0,
+      grid_size_1,
+      grid_size_2,
+      tile_size_0,
+      tile_size_1,
+      tile_size_2),
+      [=](hc::tiled_index<3>& idx) [[hc]] {
     av13(idx) = idx.global[0];
     av14(idx) = idx.global[1];
     av15(idx) = idx.global[2];

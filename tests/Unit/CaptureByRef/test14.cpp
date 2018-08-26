@@ -1,7 +1,7 @@
 
 // RUN: %hc %s -o %t.out && %t.out
 
-#include <amp.h>
+#include <hc.hpp>
 #include <iostream>
 #include <cstdlib>
 
@@ -15,14 +15,14 @@
 
 class Cell {
 public:
-  int get() restrict(cpu,amp) { return value; }
-  void set(int v) restrict(cpu,amp) { value = v; }
+  int get() [[cpu, hc]] { return value; }
+  void set(int v) [[cpu, hc]] { value = v; }
 private:
   int value;
 };
 
 bool test() {
-  using namespace Concurrency;
+  using namespace hc;
 
   Cell matrixA[VECTOR_SIZE][VECTOR_SIZE];
   Cell matrixB[VECTOR_SIZE][VECTOR_SIZE];
@@ -35,7 +35,7 @@ bool test() {
   }
 
   extent<2> ex(VECTOR_SIZE, VECTOR_SIZE);
-  parallel_for_each(ex, [&](index<2> idx) restrict(amp) {
+  parallel_for_each(ex, [&](index<2> idx) [[hc]] {
     // capture array type, and POD type by reference
     // use member function to access POD type
     int result = 0;

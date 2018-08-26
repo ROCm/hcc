@@ -1,6 +1,6 @@
 // RUN: %cxxamp %s -o %t.out && %t.out
-#include <amp.h>
-using namespace concurrency;
+#include <hc.hpp>
+using namespace hc;
 
 int foo() restrict(,)  // OK
 {
@@ -23,7 +23,7 @@ int foo2() restrict(,   ,,,   ,cpu,,,,)  // OK
 {
   return 0;
 }
-int fooCPU() restrict(cpu)  // OK
+int fooCPU() [[cpu]]  // OK
 {
   foo2();  // OK
   return 0;
@@ -32,7 +32,7 @@ int fooCPU() restrict(cpu)  // OK
 
 int main(void)
 {
-  parallel_for_each(extent<1>(1), [](index<1>) restrict(amp)
+  parallel_for_each(extent<1>(1), [](index<1>) [[hc]]
     {
         fooAMP();
     });

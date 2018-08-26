@@ -1,8 +1,8 @@
-// RUN: %hc %s -o %t.out -lhc_am -L/opt/rocm/lib -lhsa-runtime64 -DRUNMASK=0xff && HCC_SERIALIZE_KERNEL=0x3 HCC_SERIALIZE_COPY=0x3 %t.out
+// RUN: %hc %s -o %t.out -lhc_am -I/home/alexv/Programming/ROCR-Runtime/src/inc -L/home/alexv/Programming/ROCR-Runtime/src/build -lhsa-runtime64 -DRUNMASK=0xff && HCC_SERIALIZE_KERNEL=0x3 HCC_SERIALIZE_COPY=0x3 %t.out
 #include <hc.hpp>
 #include <hc_am.hpp>
 
-#include "/opt/rocm/include/hsa/hsa.h"
+#include <hsa/hsa.h>
 
 #include <algorithm>
 #include <cstddef>

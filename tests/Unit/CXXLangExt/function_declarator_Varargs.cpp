@@ -1,9 +1,9 @@
 
 // RUN: %hc %s -o %t.out && %t.out
 
-#include <amp.h>
+#include <hc.hpp>
 
-void NoEllipsisAllowed(int x, ...) restrict(amp) {}
+void NoEllipsisAllowed(int x, ...) [[hc]] {}
 
 int main()
 {

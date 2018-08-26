@@ -1,28 +1,25 @@
 
 // RUN: %hc %s -o %t.out && %t.out
 
-#include <amp.h>
+#include <hc.hpp>
 
 #include <iostream>
-
-// added for checking HSA profile
-#include <hc.hpp>
 
 // test C++AMP with fine-grained SVM
 // requires HSA Full Profile to operate successfully
 
 #define SIZE (16)
 
-using namespace concurrency;
+using namespace hc;
 
 // test supply a class with operator() to parallel_for_each
 class prog {
   int (&input)[SIZE];
 
 public:
-  prog(int (&t)[SIZE]) restrict(amp,cpu) : input(t) {}
+  prog(int (&t)[SIZE]) [[cpu, hc]] : input(t) {}
 
-  void operator() (index<1>& idx) restrict(amp) {
+  void operator()(index<1>& idx) const [[hc]] {
     input[idx[0]] = idx[0];
   }
 

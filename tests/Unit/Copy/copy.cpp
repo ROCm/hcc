@@ -1,12 +1,13 @@
 // RUN: %cxxamp %s -o %t.out && %t.out
-#include <amp.h>
-#include <stdlib.h>
-#include <iostream>
-#include <vector>
-#include <numeric>
-#include <math.h>
+#include <hc.hpp>
 
-using namespace concurrency;
+#include <cmath>
+#include <cstdlib>
+#include <iostream>
+#include <numeric>
+#include <vector>
+
+using namespace hc;
 
 #define T int
 #define INIT 50
@@ -34,7 +35,8 @@ int main(void) {
 
   // Run in a separate thread
   std::thread t([&]() {
-     parallel_for_each(gpu_av, dest.get_extent(), [=, &dest, &tgt](index<1> idx) restrict(amp) {
+     parallel_for_each(
+       gpu_av, dest.get_extent(), [=, &dest, &tgt](index<1> idx) [[hc]] {
      for(unsigned i = 0; i < vecSize; i++)
        for (unsigned j = 0; j < vecSize; j++)
          tgt[idx] = dest[i];
@@ -42,10 +44,11 @@ int main(void) {
     });
   t.join();
 
-  // At this point, the copying needs to wait for availability of dest in thread t
-  // otherwise, undefined behavior happens in PFE since dest[i] is not deterministic
+  // At this point, the copying needs to wait for availability of dest in thread
+  // t otherwise, undefined behavior happens in PFE since dest[i] is not
+  // deterministic.
   copy(src, dest);
-  
+
   // Verify tgt on CPU
   array_view<T> av(tgt);
   bool ret = true;

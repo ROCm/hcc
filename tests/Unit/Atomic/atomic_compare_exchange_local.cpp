@@ -1,9 +1,9 @@
 // RUN: %cxxamp %s -o %t.out && %t.out
-#include <amp.h>
+#include <hc.hpp>
 #include <stdlib.h>
 #include <iostream>
 
-using namespace concurrency;
+using namespace hc;
 
 int main(void) {
   const int vecSize = 100;
@@ -18,13 +18,12 @@ int main(void) {
   array_view<int, 2> av_a(e_a, va); 
 
   extent<2> compute_domain(e_a);
-  parallel_for_each(compute_domain.tile<tile_size, tile_size>(), [=] (tiled_index<tile_size, tile_size> tidx) restrict(amp,cpu) {
-    index<2> localIdx = tidx.local;
-    index<2> globalIdx = tidx.global;
+  parallel_for_each(
+    compute_domain.tile(tile_size, tile_size), [=](tiled_index<2> tidx) [[hc]] {
     int v = 0;
 
     tile_static int localA[tile_size][tile_size];
-    localA[localIdx[0]][localIdx[1]] = 0;
+    localA[tidx.local[0]][tidx.local[1]] = 0;
     tidx.barrier.wait();
 
     for(int i = 0; i < tile_size; i++) {
@@ -33,7 +32,7 @@ int main(void) {
       }
     }
     tidx.barrier.wait();
-    av_a[globalIdx[0]][globalIdx[1]] = localA[localIdx[0]][localIdx[1]];
+    av_a[tidx.global] = localA[tidx.local[0]][tidx.local[1]];
   });
 
   for(int i = 0; i < vecSize; ++i) {

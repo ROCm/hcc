@@ -1,14 +1,14 @@
 // RUN: %cxxamp %s -o %t.out && %t.out
-#include <amp.h>
+#include <hc.hpp>
 #include <amp_short_vectors.h>
 
-using namespace concurrency;
-using namespace concurrency::graphics;
+using namespace hc;
+using namespace hc::graphics;
 
 int main(void) {
   // Two-component Access
 
-  // double_2 get_Sxz() const restrict(cpu, amp);
+  // double_2 get_Sxz() const [[cpu, hc]];
   {
     double a = 1.2f, b = 3.4f, c = -5.6f;
     double_3 d(a, b, c);
@@ -25,7 +25,7 @@ int main(void) {
     assert(e == f);
   }
 
-  // void set_Sxz(double_2 v) restrict(cpu, amp);
+  // void set_Sxz(double_2 v) [[cpu, hc]];
   {
     double a = 1.2f, b = 3.4f, c = -5.6f;
     double_3 d(a, b, c), e(a, b, b);
@@ -44,7 +44,7 @@ int main(void) {
 
   // Three-component Access
 
-  // double_3 get_Sxyz() const restrict(cpu, amp);
+  // double_3 get_Sxyz() const [[cpu, hc]];
   {
     double a = -1.2f, b = 3.4f, c = -5.6f;
     double_3 d(a, b, c), e(a, b, c), f;
@@ -87,7 +87,7 @@ int main(void) {
     assert(e == f);
   }
 
-  // void set_Sxyz(double_3 v) restrict(cpu, amp);
+  // void set_Sxyz(double_3 v) [[cpu, hc]];
   {
     double a = -1.2f, b = 3.4f, c = -5.6f;
     double_3 d(a, b, c), e(a, b, c), f;

@@ -1,4 +1,4 @@
-// RUN: %hc %s -I/opt/rocm/hsa/include -L/opt/rocm/lib -lhsa-runtime64 -o %t.out && %t.out
+// RUN: %hc %s -I/home/alexv/Programming/ROCR-Runtime/src/inc -L/home/alexv/Programming/ROCR-Runtime/src/build -lhsa-runtime64 -o %t.out && %t.out
 
 #include <hc.hpp>
 

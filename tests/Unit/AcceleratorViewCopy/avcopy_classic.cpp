@@ -1,4 +1,4 @@
-// RUN: %hc %s -o %t.out -lhc_am -L/opt/rocm/lib -lhsa-runtime64 && %t.out
+// RUN: %hc %s -o %t.out -lhc_am -L/home/alexv/Programming/ROCR-Runtime/src/build -lhsa-runtime64 && %t.out
 //
 // Test "classic" GPU pattern of H2D copies, followed by Kernels, followed by
 // D2H.
@@ -6,8 +6,6 @@
 // relying on efficient GPU hardware dependencies.
 #include <hc.hpp>
 #include <hc_am.hpp>
-
-#include "/opt/rocm/include/hsa/hsa.h"
 
 #include <algorithm>
 #include <cassert>

@@ -1,18 +1,17 @@
 // RUN: %cxxamp %s -o %t.out && %t.out
-#include <iostream> 
-#include <amp.h> 
-using namespace concurrency; 
-int main() 
+#include <iostream>
+#include <hc.hpp>
+using namespace hc;
+int main()
 {
   int v[10] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
   extent<2> e(5, 2);
 
-  array_view<int, 2> av(e, v); 
+  array_view<int, 2> av(e, v);
   assert(av.get_extent() == e);
   // Testing tiled_index
-  parallel_for_each(av.get_extent().tile<1,2>(),
-    [=](tiled_index<1,2> idx) restrict(amp) { 
-    av[idx] -= 1; 
+  parallel_for_each(av.get_extent().tile(1, 2), [=](tiled_index<2> idx) [[hc]] {
+    av[idx] -= 1;
   });
   assert(av.get_extent() == e);
   for(unsigned int i = 0; i < av.get_extent()[0]; i++)

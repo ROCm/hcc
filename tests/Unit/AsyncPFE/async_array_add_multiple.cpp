@@ -44,7 +44,7 @@ bool test() {
 #define ASYNC_KERNEL_DISPATCH(x, y) \
   hc::parallel_for_each( \
     e, \
-    [=](hc::index<1> idx) restrict(amp) { \
+    [=](hc::index<1> idx) [[hc]] { \
       for (int i = 0; i < LOOP_COUNT; ++i) \
         p_c[idx[0] + vecSize/(x)*(y)] = p_a[idx[0] + vecSize/(x)*(y)] + p_b[idx[0] + vecSize/(x)*(y)]; \
   })

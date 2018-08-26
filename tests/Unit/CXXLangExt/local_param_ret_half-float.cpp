@@ -2,9 +2,9 @@
 // RUN: %hc -DTYPE="half float" %s -o %t.out && %t.out
 
 #include <iostream>
-#include <amp.h>
+#include <hc.hpp>
 
-TYPE func(TYPE arg) restrict(amp)
+TYPE func(TYPE arg) [[hc]]
 {
   TYPE local = arg;
   return local;
@@ -20,8 +20,8 @@ int main ()
   int *p_ans = &ans[0];
 
   parallel_for_each(
-    Concurrency::extent<1>(vecSize),
-    [=](Concurrency::index<1> idx) restrict(amp) {
+    hc::extent<1>(vecSize),
+    [=](hc::index<1> idx) [[hc]] {
 
     p_ans[idx[0]] = func((TYPE)idx[0]);
   });

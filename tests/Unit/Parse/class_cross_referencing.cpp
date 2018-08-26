@@ -1,19 +1,19 @@
 // RUN: %cxxamp %s -o %t.out && %t.out
-#include <amp.h>
+#include <hc.hpp>
 
 class unorm;
 class norm {
   float f;
 public:
-  norm(const unorm& other) restrict(cpu, amp);
+  norm(const unorm& other) [[cpu, hc]];
 };
 
 class unorm {
   float f;
 
 public:
-  unorm() restrict(cpu, amp) {}
-  unorm(const norm& other) restrict(cpu, amp) {}
+  unorm() [[cpu, hc]] {}
+  unorm(const norm& other) [[cpu, hc]] {}
 };
 
 int main(void)

@@ -1,9 +1,9 @@
 // RUN: %cxxamp %s -o %t.out && %t.out
-#include <amp.h>
-using namespace concurrency;
+#include <hc.hpp>
+using namespace hc;
 
 
-int fooCPU() restrict(cpu)
+int fooCPU() [[cpu]]
 {
   return 1;
 }
@@ -17,7 +17,7 @@ int main(void)
 {
   fooCPU();
   foo();
-  auto a_lambda = [] () restrict(cpu) {};
+  auto a_lambda = [] () [[cpu]] {};
   auto another_lambda = [] () {};
 
   return 0;

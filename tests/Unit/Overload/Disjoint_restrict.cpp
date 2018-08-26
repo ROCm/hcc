@@ -1,10 +1,11 @@
 // RUN: %cxxamp %s -o %t.out && %t.out
-#include <amp.h>
-#include <amp_math.h>
-#include <iostream>
-using namespace concurrency;
+#include <hc.hpp>
 
-int test() restrict(cpu,amp)
+#include <iostream>
+
+using namespace hc;
+
+int test() [[cpu, hc]]
 {
     int data[] = {1};
     for (int i = 0; i < 1; i++)
@@ -20,11 +21,11 @@ int test() restrict(cpu,amp)
 
 struct runall_result
 {
-	runall_result() restrict(cpu,amp)
+	runall_result() [[cpu, hc]]
 		: _exit_code(0)
 	{}
 
-	runall_result(int result) restrict(cpu,amp)
+	runall_result(int result) [[cpu, hc]]
 		: _exit_code(result)
 	{
 		verify_exit_code();
@@ -34,11 +35,11 @@ struct runall_result
 private:
 	int _exit_code;
 
-	void verify_exit_code() restrict(cpu);
-	void verify_exit_code() restrict(amp) {}
+	void verify_exit_code() [[cpu]];
+	void verify_exit_code() [[hc]] {}
 };
 
-void runall_result::verify_exit_code() restrict(cpu)
+void runall_result::verify_exit_code() [[cpu]]
 {
       if(_exit_code != 0)
       {
@@ -49,10 +50,9 @@ void runall_result::verify_exit_code() restrict(cpu)
 int main()
 {
 	runall_result gpu_result;
-	concurrency::array_view<runall_result> gpu_resultsv(1, &gpu_result);
+	array_view<runall_result> gpu_resultsv(1, &gpu_result);
 
-	concurrency::parallel_for_each(gpu_resultsv.get_extent(), [=](concurrency::index<1> idx) restrict(amp)
-	{
+	parallel_for_each(gpu_resultsv.get_extent(), [=](index<1> idx) [[hc]]	{
 		gpu_resultsv[idx] = test();
 	});
 }

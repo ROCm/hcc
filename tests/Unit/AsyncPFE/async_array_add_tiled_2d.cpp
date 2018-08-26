@@ -37,7 +37,7 @@ bool test() {
   hc::extent<2> e(dimSize, dimSize);
   hc::completion_future fut = hc::parallel_for_each(
     e.tile(4, 4),
-    [=](hc::tiled_index<2> idx) restrict(amp) {
+    [=](hc::tiled_index<2> idx) [[hc]] {
       int fidx = idx.global[0] * dimSize + idx.global[1];
       for (int i = 0; i < LOOP_COUNT; ++i) 
         p_c[fidx] = p_a[fidx] + p_b[fidx];

@@ -38,21 +38,21 @@ int main() {
   hc::accelerator_view accelerator_view = hc::accelerator().get_default_view();
 
   // do 3 kernel dispatches + 3 barriers
-  hc::parallel_for_each(hc::extent<1>(GRID_SIZE), [=](hc::index<1>& idx) restrict(amp) {
+  hc::parallel_for_each(hc::extent<1>(GRID_SIZE), [=](hc::index<1>& idx) [[hc]] {
     for (int i = 0; i < LOOP_COUNT; ++i)
       av3(idx) = av1(idx) + av2(idx);
   });
   
   accelerator_view.create_marker();
 
-  hc::parallel_for_each(hc::extent<1>(GRID_SIZE), [=](hc::index<1>& idx) restrict(amp) {
+  hc::parallel_for_each(hc::extent<1>(GRID_SIZE), [=](hc::index<1>& idx) [[hc]] {
     for (int i = 0; i < LOOP_COUNT; ++i)
       av4(idx) = av1(idx) + av2(idx);
   });
 
   accelerator_view.create_marker();
 
-  hc::parallel_for_each(hc::extent<1>(GRID_SIZE), [=](hc::index<1>& idx) restrict(amp) {
+  hc::parallel_for_each(hc::extent<1>(GRID_SIZE), [=](hc::index<1>& idx) [[hc]] {
     for (int i = 0; i < LOOP_COUNT; ++i)
       av5(idx) = av1(idx) + av2(idx);
   });

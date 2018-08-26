@@ -1,11 +1,11 @@
-#include <amp.h>
-#include <amp_math.h>
+#include <hc.hpp>
+#include <hc_math.hpp>
 #include <amp_short_vectors.h>
 
-using namespace Concurrency;
-using namespace Concurrency::graphics;
+using namespace hc;
+using namespace hc::graphics;
 
-extern Concurrency::array_view<float_2,1> *gbOutA;
+extern hc::array_view<float_2,1> *gbOutA;
 
 extern void add(const array_view<float,1> &gbIn,const array_view<float_2,1> &gbOut);
 

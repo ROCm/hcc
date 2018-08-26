@@ -1,40 +1,40 @@
 // RUN: %cxxamp %s -o %t.out && %t.out
-#include <amp.h>
-#include <amp_math.h>
+#include <hc.hpp>
+#include <hc_math.hpp>
 #include <amp_short_vectors.h>
 
-using namespace concurrency;
-using namespace concurrency::graphics;
+using namespace hc;
+using namespace hc::graphics;
 
 int main(void) {
   // Constructor
 
-  // norm() restrict(cpu, amp);
+  // norm() [[cpu, hc]];
   {
     norm a;
   }
 
-  // explicit norm(float v) restrict(cpu, amp);
+  // explicit norm(float v) [[cpu, hc]];
   {
     norm a(-2.0f), b(-1.0f), c(-0.5f), d(0.0f), e(0.5f), f(1.0f), g(2.0f);
     assert(a == b);
     assert(f == g);
   }
 
-  // explicit norm(unsigned int v) restrict(cpu, amp);
+  // explicit norm(unsigned int v) [[cpu, hc]];
   {
     norm a(0u), b(1u), c(2u);
     assert(b == c);
   }
 
-  // explicit norm(int v) restrict(cpu, amp);
+  // explicit norm(int v) [[cpu, hc]];
   {
     norm a(-2), b(-1), c(0), d(1), e(2);
     assert(a == b);
     assert(d == e);
   }
 
-  // explicit norm(double v) restrict(cpu, amp);
+  // explicit norm(double v) [[cpu, hc]];
   {
     double a = -2.0f, b = -1.0f, c = -0.5f, d = 0.0f, e = 0.5f, f = 1.0f, g = 2.0f;
     norm h(a), i(b), j(c), k(d), l(e), m(f), n(g);
@@ -42,35 +42,35 @@ int main(void) {
     assert(m == n);
   }
 
-  // norm(const norm& other) restrict(cpu, amp);
+  // norm(const norm& other) [[cpu, hc]];
   {
     norm a(-0.3f);
     norm b(a);
     assert(a == b);
   }
 
-  // norm(const unorm& other) restrict(cpu, amp);
+  // norm(const unorm& other) [[cpu, hc]];
   {
     unorm a(0.4f);
     norm b(a);
     assert(a == b);
   }
 
-  // norm& operator=(const norm& other) restrict(cpu, amp);
+  // norm& operator=(const norm& other) [[cpu, hc]];
   {
     norm a(0.8f), b;
     b = a;
     assert(a == b);
   }
 
-  // operator float(void) const restrict(cpu, amp);
+  // operator float(void) const [[cpu, hc]];
   {
     norm a(0.8f);
     float b = static_cast<float>(a);
     assert(b == 0.8f);
   }
 
-  // norm& operator+=(const norm& other) restrict(cpu, amp);
+  // norm& operator+=(const norm& other) [[cpu, hc]];
   {
     norm a(0.8f), b(0.4f);
     a += b;
@@ -78,7 +78,7 @@ int main(void) {
     assert(c == 1.0f);
   }
 
-  // norm& operator-=(const norm& other) restrict(cpu, amp);
+  // norm& operator-=(const norm& other) [[cpu, hc]];
   {
     norm a(0.8f);
     a -= a;
@@ -86,7 +86,7 @@ int main(void) {
     assert(b == 0.0f);
   }
 
-  // norm& operator*=(const norm& other) restrict(cpu, amp);
+  // norm& operator*=(const norm& other) [[cpu, hc]];
   {
     norm a(1.0f), b(2.0f);
     a *= b;
@@ -94,7 +94,7 @@ int main(void) {
     assert(c == 1.0f);
   }
 
-  // norm& operator/=(const norm& other) restrict(cpu, amp);
+  // norm& operator/=(const norm& other) [[cpu, hc]];
   {
     norm a(1.0f), b(-1.0f);
     a /= b;
@@ -102,7 +102,7 @@ int main(void) {
     assert(c == -1.0f);
   }
 
-  // norm& operator++() restrict(cpu, amp);
+  // norm& operator++() [[cpu, hc]];
   {
     norm a(0.5f);
     ++a;
@@ -110,7 +110,7 @@ int main(void) {
     assert(b == 1.0f);
   }
 
-  // norm& operator++(int) restrict(cpu, amp);
+  // norm& operator++(int) [[cpu, hc]];
   {
     norm a(0.5f);
     a++;
@@ -118,7 +118,7 @@ int main(void) {
     assert(b == 1.0f);
   }
 
-  // norm& operator--() restrict(cpu, amp);
+  // norm& operator--() [[cpu, hc]];
   {
     norm a(-0.5f);
     --a;
@@ -126,7 +126,7 @@ int main(void) {
     assert(b == -1.0f);
   }
 
-  // norm& operator--(int) restrict(cpu, amp);
+  // norm& operator--(int) [[cpu, hc]];
   {
     norm a(-0.5f);
     a--;
@@ -134,14 +134,14 @@ int main(void) {
     assert(b == -1.0f);
   }
 
-  // norm operator-() restrict(cpu, amp);
+  // norm operator-() [[cpu, hc]];
   {
     norm a(-2.0f);
     float b  = static_cast<float>(-a);
     assert(b == 1.0f);
   }
 
-  // norm operator+(const norm& lhs, const norm& rhs) restrict(cpu, amp);
+  // norm operator+(const norm& lhs, const norm& rhs) [[cpu, hc]];
   {
     norm a(0.5f), b(0.6f);
     norm c = a + b;
@@ -149,7 +149,7 @@ int main(void) {
     assert(d == 1.0f);
   }
 
-  // norm operator-(const norm& lhs, const norm& rhs) restrict(cpu, amp);
+  // norm operator-(const norm& lhs, const norm& rhs) [[cpu, hc]];
   {
     norm a(0.5f), b(0.5f);
     norm c = a - b;
@@ -157,7 +157,7 @@ int main(void) {
     assert(d == 0.0f);
   }
 
-  // norm operator*(const norm& lhs, const norm& rhs) restrict(cpu, amp);
+  // norm operator*(const norm& lhs, const norm& rhs) [[cpu, hc]];
   {
     norm a(1.0f), b(-1.0f);
     norm c = a * b;
@@ -165,7 +165,7 @@ int main(void) {
     assert(d == -1.0f);
   }
 
-  // norm operator/(const norm& lhs, const norm& rhs) restrict(cpu, amp);
+  // norm operator/(const norm& lhs, const norm& rhs) [[cpu, hc]];
   {
     norm a(1.0f), b(-1.0f);
     norm c = a / b;
@@ -173,38 +173,38 @@ int main(void) {
     assert(d == -1.0f);
   }
 
-  // bool operator==(const norm& lhs, const norm& rhs) restrict(cpu, amp);
+  // bool operator==(const norm& lhs, const norm& rhs) [[cpu, hc]];
   {
     norm a(0.5f), b(0.5f);
     assert(a == b);
   }
 
-  // bool operator!=(const norm& lhs, const norm& rhs) restrict(cpu, amp);
+  // bool operator!=(const norm& lhs, const norm& rhs) [[cpu, hc]];
   {
     norm a(0.5f), b(0.6f);
     assert(a != b);
   }
 
-  // bool operator>(const norm& lhs, const norm& rhs) restrict(cpu, amp);
+  // bool operator>(const norm& lhs, const norm& rhs) [[cpu, hc]];
   {
     norm a(0.6f), b(-0.7f);
     assert(a > b);
   }
 
-  // bool operator<(const norm& lhs, const norm& rhs) restrict(cpu, amp);
+  // bool operator<(const norm& lhs, const norm& rhs) [[cpu, hc]];
   {
     norm a(-0.6f), b(2.0f);
     assert(a < b);
   }
 
-  // bool operator>=(const norm& lhs, const norm& rhs) restrict(cpu, amp);
+  // bool operator>=(const norm& lhs, const norm& rhs) [[cpu, hc]];
   {
     norm a(0.6f), b(-0.4f), c(-0.4f);
     assert(a >= b);
     assert(b >= c);
   }
 
-  // bool operator<=(const norm& lhs, const norm& rhs) restrict(cpu, amp);
+  // bool operator<=(const norm& lhs, const norm& rhs) [[cpu, hc]];
   {
     norm a(0.6f), b(1.5f), c(2.0f);
     assert(a <= b);
@@ -258,7 +258,7 @@ int main(void) {
     }
     parallel_for_each(
       e,
-      [=](index<1> idx) restrict(amp) {
+      [=](index<1> idx) [[hc]] {
       gc[idx] = -ga[idx];
       gc[idx] += (ga[idx] + gb[idx]);
       gc[idx] -= (ga[idx] - gb[idx]);

@@ -8,7 +8,7 @@
 
 // RUN: %cxxamp %s -o %t.out && %t.out
 
-int f(float) restrict(amp,cpu)
+int f(float) [[cpu, hc]]
 {
     return 1;
 }

@@ -2,7 +2,7 @@
 // RUN: %hc %s -o %t.out && %t.out
 
 #include <iostream>
-#include <amp.h>
+#include <hc.hpp>
 
 class MyBaseClass
 {
@@ -12,7 +12,7 @@ class MyBaseClass
 
 class MyDerivedClass : virtual public MyBaseClass {};
 
-void VirtualBaseClassNotAllowed(int x) restrict(amp)
+void VirtualBaseClassNotAllowed(int x) [[hc]]
 {
 	MyDerivedClass obj;
 }

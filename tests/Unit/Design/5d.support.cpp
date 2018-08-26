@@ -1,6 +1,6 @@
 // RUN: %cxxamp %s -o %t.out && %t.out
-#include <amp.h>
-using namespace Concurrency;
+#include <hc.hpp>
+using namespace hc;
 
 template<typename _type, int _rank>
 bool test_array_rank(int extval = _rank)
@@ -12,7 +12,7 @@ bool test_array_rank(int extval = _rank)
     extent<_rank> e(data);
     array<_type, _rank> a1(e);
 
-    parallel_for_each(e, [&](index<_rank> idx) restrict(amp) {
+    parallel_for_each(e, [&](index<_rank> idx) [[hc]] {
         a1[idx] = 1;
     });
 

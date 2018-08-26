@@ -46,7 +46,7 @@ int main() {
       }
     });
 
-  } catch (Kalmar::runtime_exception e) {
+  } catch (detail::runtime_exception e) {
     std::string err_str = e.what();
     pass = err_str.find("The number of work items") != std::string::npos &&
     err_str.find("per work group exceeds the limit") != std::string::npos;

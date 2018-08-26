@@ -12,7 +12,7 @@ void f(const int & i)
 {
 }
 
-void f(int & i) restrict(amp,cpu)
+void f(int & i) [[cpu, hc]]
 {
     i = 1;
 }

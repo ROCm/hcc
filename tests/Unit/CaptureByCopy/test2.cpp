@@ -1,7 +1,7 @@
 
 // RUN: %hc %s -o %t.out && %t.out
 
-#include <amp.h>
+#include <hc.hpp>
 
 #include <atomic>
 #include <iostream>
@@ -16,14 +16,14 @@
 
 #define SIZE (128)
 
-using namespace concurrency;
+using namespace hc;
 
 template<typename _Tp>
 class user_functor {
 public:
-  user_functor() restrict(amp,cpu) {}
+  user_functor() [[cpu, hc]] {}
 
-  _Tp value(const _Tp& i) const restrict(amp,cpu) { return i + 1; }
+  _Tp value(const _Tp& i) const [[cpu, hc]] { return i + 1; }
 };
 
 // test get the result from the functor, store the value on stack and use it
@@ -40,7 +40,7 @@ bool test1(const user_functor<_Tp>& functor) {
   *accumulator = _Tp{};
 
   extent<1> ex(N);
-  parallel_for_each(ex, [=] (index<1>& idx) restrict(amp) {
+  parallel_for_each(ex, [=] (index<1>& idx) [[hc]] {
     _Tp t = functor.value(idx[0]);
     terms[idx[0]] = t;
     accumulator->fetch_add(t);
@@ -80,7 +80,7 @@ bool test2(const user_functor<_Tp>& functor) {
   *accumulator = _Tp{};
 
   extent<1> ex(N);
-  parallel_for_each(ex, [=] (index<1>& idx) restrict(amp) {
+  parallel_for_each(ex, [=] (index<1>& idx) [[hc]] {
     terms[idx[0]] = functor.value(idx[0]);
     accumulator->fetch_add(terms[idx[0]]);
   });
@@ -119,7 +119,7 @@ bool test3(const user_functor<_Tp>& functor) {
   *accumulator = _Tp{};
 
   extent<1> ex(SIZE);
-  parallel_for_each(ex, [=] (index<1>& idx) restrict(amp) {
+  parallel_for_each(ex, [=] (index<1>& idx) [[hc]] {
     _Tp t = idx[0] + 1;
     terms[idx[0]] = t;
     accumulator->fetch_add(t);

@@ -52,7 +52,7 @@ void test1D() {
   std::cout << "launch pfe1\n";
 #endif
 
-  hc::parallel_for_each(hc::extent<1>(grid_size), [=](hc::index<1>& idx) restrict(amp) {
+  hc::parallel_for_each(hc::extent<1>(grid_size), [=](hc::index<1>& idx) [[hc]] {
     // av3 = i * 2
     for (int i = 0; i < LOOP_COUNT; ++i)
       av3(idx) = av1(idx) + av2(idx);
@@ -68,7 +68,7 @@ void test1D() {
 
   // this kernel dispatch shall NOT implicitly wait for the previous one to complete
   // because the array_view written is NOT used by the previous kernels
-  hc::parallel_for_each(hc::extent<1>(grid_size), [=](hc::index<1>& idx) restrict(amp) {
+  hc::parallel_for_each(hc::extent<1>(grid_size), [=](hc::index<1>& idx) [[hc]] {
     // av4 = i * 2
     for (int i = 0; i < LOOP_COUNT; ++i)
       av4(idx) = av1(idx) + av2(idx);
@@ -84,7 +84,7 @@ void test1D() {
 
   // this kernel dispatch shall NOT implicitly wait for the previous one to complete
   // because the array_view written is NOT used by the previous kernels
-  hc::parallel_for_each(hc::extent<1>(grid_size), [=](hc::index<1>& idx) restrict(amp) {
+  hc::parallel_for_each(hc::extent<1>(grid_size), [=](hc::index<1>& idx) [[hc]] {
     // av5 = i * 2
     for (int i = 0; i < LOOP_COUNT; ++i)
       av5(idx) = av1(idx) + av2(idx);

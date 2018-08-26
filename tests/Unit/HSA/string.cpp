@@ -2,7 +2,7 @@
 // RUN: %hc %s -o %t.out && %t.out
 
 #include <iostream>
-#include <amp.h>
+#include <hc.hpp>
 
 // added for checking HSA profile
 #include <hc.hpp>
@@ -10,7 +10,7 @@
 // test C++AMP with fine-grained SVM
 // requires HSA Full Profile to operate successfully
 
-using namespace concurrency;
+using namespace hc;
 
 class List {
 public:
@@ -30,7 +30,7 @@ bool test() {
   int sum_cpu = 0;
 
   // test on GPU
-  parallel_for_each(extent<1>(1),[=,&l,&sum_gpu](index<1> i) restrict(amp) {
+  parallel_for_each(extent<1>(1),[=,&l,&sum_gpu](index<1> i) [[hc]] {
     for (int j = 0; j < 4; j++) {
       sum_gpu+=l.strings[j][0];
     }

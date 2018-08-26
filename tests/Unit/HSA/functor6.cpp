@@ -1,7 +1,7 @@
 
 // RUN: %hc %s -o %t.out && %t.out
 
-#include <amp.h>
+#include <hc.hpp>
 
 #include <iostream>
 
@@ -13,7 +13,7 @@
 
 #define SIZE (16)
 
-using namespace concurrency;
+using namespace hc;
 
 // test supply a class with operator() to parallel_for_each
 // the template class will call a separate template functor with a customized ctor
@@ -23,9 +23,9 @@ class user_functor {
 public:
   _Tp (&input)[N];
 
-  user_functor(_Tp (&t)[N]) restrict(amp,cpu) : input(t) {}
+  user_functor(_Tp (&t)[N]) [[cpu, hc]] : input(t) {}
 
-  void operator() (index<1>& idx) restrict(amp) {
+  void operator() (index<1>& idx) const [[hc]] {
     input[idx[0]] = idx[0];
   }
 };
@@ -35,10 +35,10 @@ class prog {
   _Tp& kernel;
 
 public:
-  prog(_Tp& f) restrict(amp,cpu) : kernel(f) {
+  prog(_Tp& f) [[cpu, hc]] : kernel(f) {
   }
 
-  void operator() (index<1>& idx) restrict(amp) {
+  void operator() (index<1>& idx) const [[hc]] {
     kernel(idx);
   }
 
