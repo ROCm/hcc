@@ -1,7 +1,6 @@
 #pragma once
 
-#ifndef _AMP_SHORT_VECTORS_H
-#define _AMP_SHORT_VECTORS_H
+#warning "C++AMP support is deprecated in ROCm 1.9 and will be removed in ROCm 2.0!"
 
 #include <cstddef>
 #include <type_traits>
@@ -24,5 +23,3 @@ namespace graphics
 
 } // namespace graphics
 } // namespace Concurrency
-
-#endif // _AMP_SHORT_VECTORS_H

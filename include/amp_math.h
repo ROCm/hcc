@@ -7,6 +7,8 @@
 
 #pragma once
 
+#warning "C++AMP support is deprecated in ROCm 1.9 and will be removed in ROCm 2.0!"
+
 #include "kalmar_math.h"
 
 namespace Concurrency {
