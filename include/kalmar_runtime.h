@@ -255,7 +255,7 @@ public:
   /// push device pointer to kernel argument list
   virtual void Push(void *kernel, int idx, void* device, bool modify) = 0;
 
-  virtual uint32_t GetGroupSegmentSize(void *kernel) { return 0; }
+  virtual uint32_t GetGroupSegmentSize(void*) = 0;
 
   HCCDevice* getDev() const { return pDev; }
   queuing_mode get_mode() const { return mode; }
@@ -292,25 +292,54 @@ public:
   virtual std::shared_ptr<HCCAsyncOp> EnqueueMarker(memory_scope) { return nullptr; }
 
   /// enqueue marker with prior dependency
-  virtual std::shared_ptr<HCCAsyncOp> EnqueueMarkerWithDependency(int count, std::shared_ptr <HCCAsyncOp> *depOps, memory_scope scope) { return nullptr; }
+  virtual
+  std::shared_ptr<HCCAsyncOp> EnqueueMarkerWithDependency(
+      int count, std::shared_ptr <HCCAsyncOp> *depOps, memory_scope scope) = 0;
 
-  virtual std::shared_ptr<HCCAsyncOp> detectStreamDeps(hcCommandKind commandKind, HCCAsyncOp *newCopyOp) { return nullptr; };
+  virtual
+  std::shared_ptr<HCCAsyncOp> detectStreamDeps(
+      hcCommandKind commandKind, HCCAsyncOp *newCopyOp) = 0;
 
 
   /// copy src to dst asynchronously
-  virtual std::shared_ptr<HCCAsyncOp> EnqueueAsyncCopy(const void* src, void* dst, size_t size_bytes) { return nullptr; }
-  virtual std::shared_ptr<HCCAsyncOp> EnqueueAsyncCopyExt(const void* src, void* dst, size_t size_bytes,
-                                                             hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo,
-                                                             const detail::HCCDevice *copyDevice) { return nullptr; };
+  virtual
+  std::shared_ptr<HCCAsyncOp> EnqueueAsyncCopy(
+      const void* src, void* dst, size_t size_bytes) = 0;
+  virtual
+  std::shared_ptr<HCCAsyncOp> EnqueueAsyncCopyExt(
+      const void* src,
+      void* dst,
+      size_t size_bytes,
+      hcCommandKind copyDir,
+      const hc::AmPointerInfo& srcInfo,
+      const hc::AmPointerInfo& dstInfo,
+      const detail::HCCDevice *copyDevice) = 0;
 
   // Copy src to dst synchronously
-  virtual void copy(const void *src, void *dst, size_t size_bytes) { }
+  virtual
+  void copy(const void *src, void *dst, size_t size_bytes) = 0;
 
   /// copy src to dst, with caller providing extended information about the pointers.
   //// TODO - remove me, this form is deprecated.
-  virtual void copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, bool forceUnpinnedCopy) { };
-  virtual void copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo,
-                        const detail::HCCDevice *copyDev, bool forceUnpinnedCopy) { };
+  virtual
+  void copy_ext(
+      const void* src,
+      void* dst,
+      size_t size_bytes,
+      hcCommandKind copyDir,
+      const hc::AmPointerInfo& srcInfo,
+      const hc::AmPointerInfo& dstInfo,
+      bool forceUnpinnedCopy) = 0;
+  virtual
+  void copy_ext(
+      const void* src,
+      void* dst,
+      size_t size_bytes,
+      hcCommandKind copyDir,
+      const hc::AmPointerInfo& srcInfo,
+      const hc::AmPointerInfo& dstInfo,
+      const detail::HCCDevice* copyDev,
+      bool forceUnpinnedCopy) = 0;
 
   /// cleanup internal resource
   /// this function is usually called by dtor of the implementation classes
@@ -318,14 +347,19 @@ public:
   /// resource clean up sequence
   virtual void dispose() {}
 
-  virtual void dispatch_hsa_kernel(const hsa_kernel_dispatch_packet_t *aql,
-                                   const void * args, size_t argsize,
-                                   hc::completion_future *cf, const char *kernel_name)  { };
+  virtual
+  void dispatch_hsa_kernel(
+      const hsa_kernel_dispatch_packet_t* aql,
+      void* args,
+      size_t argsize,
+      hc::completion_future* cf,
+      const char* kernel_name) = 0;
 
   /// set CU affinity of this queue.
   /// the setting is permanent until the queue is destroyed or another setting
   /// is called.
-  virtual bool set_cu_mask(const std::vector<bool>& cu_mask) { return false; };
+  virtual
+  bool set_cu_mask(const std::vector<bool>&) = 0;
 
 
   uint64_t assign_op_seq_num() { return ++opSeqNums; };
@@ -397,7 +431,8 @@ public:
     virtual void release(void* ptr, struct rw_info* key) = 0;
 
     /// build program
-    virtual void BuildProgram(void* size, void* source) {}
+    virtual
+    void BuildProgram(void* size, void* source) = 0;
 
     /// create kernel
     virtual
@@ -408,14 +443,18 @@ public:
         std::size_t callable_size = 0u) = 0;
 
     /// check if a given kernel is compatible with the device
-    virtual bool IsCompatibleKernel(void* size, void* source) { return true; }
+    virtual
+    bool IsCompatibleKernel(void* size, void* source) = 0;
 
     /// check the dimension information is correct
-    virtual bool check(size_t* size, size_t dim_ext) { return true; }
+    virtual
+    bool check(size_t* size, size_t dim_ext) = 0;
 
     /// create HCCQueue from current device
-    virtual std::shared_ptr<HCCQueue> createQueue(execute_order order = execute_in_order) = 0;
-    virtual ~HCCDevice() {}
+    virtual
+    std::shared_ptr<HCCQueue> createQueue(
+        execute_order order = execute_in_order) = 0;
+    virtual ~HCCDevice() = default;
 
     std::shared_ptr<HCCQueue> get_default_queue() {
 #if !TLS_QUEUE
@@ -439,13 +478,30 @@ public:
     virtual size_t GetMaxTileStaticSize() { return 0; }
 
     /// get all queues associated with this device
-    virtual std::vector< std::shared_ptr<HCCQueue> > get_all_queues() { return std::vector< std::shared_ptr<HCCQueue> >(); }
+    virtual
+    std::vector<std::shared_ptr<HCCQueue>> get_all_queues()
+    {
+        return std::vector< std::shared_ptr<HCCQueue> >();
+    }
 
-    virtual void memcpySymbol(const char* symbolName, void* hostptr, size_t count, size_t offset = 0, hcCommandKind kind = hcMemcpyHostToDevice) {}
+    virtual
+    void memcpySymbol(
+        const char* symbolName,
+        void* hostptr,
+        size_t count,
+        size_t offset = 0,
+        hcCommandKind kind = hcMemcpyHostToDevice) = 0;
 
-    virtual void memcpySymbol(void* symbolAddr, void* hostptr, size_t count, size_t offset = 0, hcCommandKind kind = hcMemcpyHostToDevice) {}
+    virtual
+    void memcpySymbol(
+        void* symbolAddr,
+        void* hostptr,
+        size_t count,
+        size_t offset = 0,
+        hcCommandKind kind = hcMemcpyHostToDevice) = 0;
 
-    virtual void* getSymbolAddress(const char* symbolName) { return nullptr; }
+    virtual
+    void* getSymbolAddress(const char* symbolName) = 0;
 
     /// get underlying native agent handle
     virtual void* getHSAAgent() { return nullptr; }
@@ -453,8 +509,10 @@ public:
     /// get the profile of the agent
     virtual hcAgentProfile getProfile() { return hcAgentProfileNone; }
 
-    /// check if @p other can access to this device's device memory, return true if so, false otherwise
-    virtual bool is_peer(const HCCDevice* other) {return false;}
+    /// check if @p other can access to this device's device memory, return true
+    /// if so, false otherwise
+    virtual
+    bool is_peer(const HCCDevice* other) = 0;
 
     /// get device's compute unit count
     virtual unsigned int get_compute_unit_count() {return 0;}
@@ -476,19 +534,112 @@ public:
           memmove(dst, (char*)device + offset, count);
   }
 
-  void write(void* device, const void* src, size_t count, size_t offset, bool blocking) override {
+  void write(
+      void* device,
+      const void* src,
+      size_t count,
+      size_t offset,
+      bool) override
+  {
       if (src != device)
           memmove((char*)device + offset, src, count);
   }
 
-  void copy(void* src, void* dst, size_t count, size_t src_offset, size_t dst_offset, bool blocking) override {
+  void copy(
+      void* src,
+      void* dst,
+      size_t count,
+      size_t src_offset,
+      size_t dst_offset,
+      bool) override {
       if (src != dst)
           memmove((char*)dst + dst_offset, (char*)src + src_offset, count);
   }
 
+  void* map(void* device, size_t, size_t offset, bool) override
+  {
+      return (char*)device + offset;
+  }
+
+  void unmap(void*, void*, size_t, size_t, bool) override {}
+
+  void Push(void*, int, void*, bool) override {}
+
+  void wait(hcWaitMode = hcWaitModeBlocked) override {}
+
+    void copy(const void*, void*, size_t) override
+  {
+      throw std::runtime_error{"Unsupported."};
+  }
+  void copy_ext(
+      const void*,
+      void*,
+      size_t,
+      hcCommandKind,
+      const hc::AmPointerInfo&,
+      const hc::AmPointerInfo&,
+      bool) override
+  {
+      throw std::runtime_error{"Unsupported."};
+  }
+  void copy_ext(
+      const void*,
+      void*,
+      size_t,
+      hcCommandKind,
+      const hc::AmPointerInfo&,
+      const hc::AmPointerInfo&,
+      const detail::HCCDevice*,
+      bool) override
+  {
+      throw std::runtime_error{"Unsupported."};
+  }
   [[noreturn]]
   void* CreateKernel(
       const char*, HCCQueue*, const void*, std::size_t) override
+  {
+      throw std::runtime_error{"Unsupported."};
+  }
+  [[noreturn]]
+  std::shared_ptr<HCCAsyncOp> detectStreamDeps(hcCommandKind, HCCAsyncOp*) override
+  {
+      throw std::runtime_error{"Unsupported."};
+  }
+  void dispatch_hsa_kernel(
+    const hsa_kernel_dispatch_packet_t*,
+    void*,
+    size_t,
+    hc::completion_future*,
+    const char*) override
+  {
+    throw std::runtime_error{"Unimplemented."};
+  }
+  [[noreturn]]
+  std::shared_ptr<HCCAsyncOp> EnqueueAsyncCopy(
+      const void*, void*, std::size_t) override
+  {
+      throw std::runtime_error{"Unsupported."};
+  }
+  [[noreturn]]
+  std::shared_ptr<HCCAsyncOp> EnqueueAsyncCopyExt(
+      const void*,
+      void*,
+      size_t,
+      hcCommandKind,
+      const hc::AmPointerInfo&,
+      const hc::AmPointerInfo&,
+      const detail::HCCDevice*) override
+  {
+      throw std::runtime_error{"Unsupported."};
+  }
+  [[noreturn]]
+  std::shared_ptr<HCCAsyncOp> EnqueueMarkerWithDependency(
+      int, std::shared_ptr<HCCAsyncOp>*, memory_scope) override
+  {
+      throw std::runtime_error{"Unsupported."};
+  }
+  [[noreturn]]
+  std::uint32_t GetGroupSegmentSize(void*) override
   {
       throw std::runtime_error{"Unsupported."};
   }
@@ -528,16 +679,11 @@ public:
   {
     throw std::runtime_error{"Unimplemented."};
   }
-
-  void* map(void* device, size_t count, size_t offset, bool modify) override {
-      return (char*)device + offset;
+  [[noreturn]]
+  bool set_cu_mask(const std::vector<bool>&) override
+  {
+      throw std::runtime_error{"Unimplemented."};
   }
-
-  void unmap(void* device, void* addr, size_t count, size_t offset, bool modify) override {}
-
-  void Push(void *kernel, int idx, void* device, bool modify) override {}
-
-  void wait(hcWaitMode = hcWaitModeBlocked) override {}
 };
 
 /// cpu accelerator
@@ -554,18 +700,60 @@ public:
     uint32_t get_version() const override { return 0; }
 
     std::shared_ptr<HCCQueue> createQueue(
-        execute_order order = execute_in_order) override
+        execute_order = execute_in_order) override
     {
         return std::shared_ptr<HCCQueue>(new CPUQueue(this));
     }
     void* create(size_t count, struct rw_info* /* not used */ ) override { return kalmar_aligned_alloc(0x1000, count); }
     void release(void* ptr, struct rw_info* /* not used */) override { kalmar_aligned_free(ptr); }
+
+    void BuildProgram(void*, void*) override
+    {
+        throw std::runtime_error{"Unsupported."};
+    }
+    [[noreturn]]
+    bool check(std::size_t*, std::size_t) override
+    {
+        throw std::runtime_error{"Unsupported."};
+    }
     [[noreturn]]
     void* CreateKernel(
         const char*,
         HCCQueue*,
         std::unique_ptr<void, void (*)(void*)>,
-        std::size_t = 0u)
+        std::size_t = 0u) override
+    {
+        throw std::runtime_error{"Unsupported."};
+    }
+    [[noreturn]]
+    void* getSymbolAddress(const char*) override
+    {
+        throw std::runtime_error{"Unsupported."};
+    }
+    [[noreturn]]
+    bool IsCompatibleKernel(void*, void*) override
+    {
+        throw std::runtime_error{"Unsupported."};
+    }
+    bool is_peer(const HCCDevice*) override
+    {
+        return true; // CPU is peer to all agents.
+    }
+    void memcpySymbol(
+        const char*,
+        void*,
+        size_t,
+        size_t = 0,
+        hcCommandKind = hcMemcpyHostToDevice) override
+    {
+        throw std::runtime_error{"Unsupported."};
+    }
+    void memcpySymbol(
+        void*,
+        void*,
+        size_t,
+        size_t = 0,
+        hcCommandKind = hcMemcpyHostToDevice) override
     {
         throw std::runtime_error{"Unsupported."};
     }
