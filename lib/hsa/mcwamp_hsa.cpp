@@ -26,6 +26,9 @@
 #include <utility>
 #include <vector>
 
+#include <unistd.h>
+#include <sys/syscall.h>
+
 #ifndef USE_LIBCXX
 #include <cxxabi.h>
 #endif
@@ -43,6 +46,9 @@
 #include "unpinned_copy_engine.h"
 #include "hc_rt_debug.h"
 #include "hc_printf.hpp"
+#include "hc_hsa_op_id.h"
+
+#include "activity_prof.h"
 
 #include <time.h>
 #include <iomanip>
@@ -153,7 +159,6 @@ double QUEUE_FLUSHING_FRAC;
    sstream <<  msg << "\n";\
    Kalmar::ctx.getHccProfileStream() << sstream.str();\
 }
-
 
 // Track a short thread-id, for debugging:
 std::atomic<int> s_lastShortTid(1);
@@ -689,9 +694,11 @@ struct HSAOpCoord
 };
 
 // Base class for the other HSA ops:
-class HSAOp : public Kalmar::KalmarAsyncOp {
+class HSAOp : public Kalmar::KalmarAsyncOp, protected activity_prof::ActivityProf<HSAOpCoord> {
 public:
-    HSAOp(Kalmar::KalmarQueue *queue, hc::hcCommandKind commandKind) ;
+    typedef activity_prof::ActivityProf<HSAOpCoord> ActivityProf;
+
+    HSAOp(hc::HSAOpId id, Kalmar::KalmarQueue *queue, hc::hcCommandKind commandKind);
 
     const HSAOpCoord opCoord() const { return _opCoord; };
     int asyncOpsIndex() const { return _asyncOpsIndex; };
@@ -900,7 +907,7 @@ public:
 
     // constructor with 1 prior dependency
     HSABarrier(Kalmar::KalmarQueue *queue, std::shared_ptr <Kalmar::KalmarAsyncOp> dependent_op) :
-        HSAOp(queue, Kalmar::hcCommandMarker),
+        HSAOp(hc::HSA_OP_ID_BARRIER, queue, Kalmar::hcCommandMarker),
         isDispatched(false),
         future(nullptr),
         _acquire_scope(hc::no_scope),
@@ -921,7 +928,7 @@ public:
 
     // constructor with at most 5 prior dependencies
     HSABarrier(Kalmar::KalmarQueue *queue, int count, std::shared_ptr <Kalmar::KalmarAsyncOp> *dependent_op_array) :
-        HSAOp(queue, Kalmar::hcCommandMarker),
+        HSAOp(hc::HSA_OP_ID_BARRIER, queue, Kalmar::hcCommandMarker),
         isDispatched(false),
         future(nullptr),
         _acquire_scope(hc::no_scope),
@@ -4234,7 +4241,7 @@ HSAQueue::dispatch_hsa_kernel(const hsa_kernel_dispatch_packet_t *aql,
 
 HSADispatch::HSADispatch(Kalmar::HSADevice* _device, Kalmar::KalmarQueue *queue, HSAKernel* _kernel,
                          const hsa_kernel_dispatch_packet_t *aql) :
-    HSAOp(queue, Kalmar::hcCommandKernel),
+    HSAOp(hc::HSA_OP_ID_DISPATCH, queue, Kalmar::hcCommandKernel),
     device(_device),
     kernel_name(nullptr),
     kernel(_kernel),
@@ -4591,6 +4598,7 @@ HSADispatch::dispose() {
         //LOG_PROFILE(this, start, end, "kernel", kname.c_str(), std::hex << "kernel="<< kernel << " " << (kernel? kernel->kernelCodeHandle:0x0) << " aql.kernel_object=" << aql.kernel_object << std::dec);
         LOG_PROFILE(this, start, end, "kernel", getKernelName(), "");
     }
+    ActivityProf::callback(getCommandKind(), getBeginTimestamp(), getEndTimestamp());
     Kalmar::ctx.releaseSignal(_signal, _signalIndex);
 
     if (future != nullptr) {
@@ -4948,6 +4956,7 @@ HSABarrier::dispose() {
         };
         LOG_PROFILE(this, start, end, "barrier", "depcnt=" + std::to_string(depCount) + ",acq=" + fenceToString(acqBits) + ",rel=" + fenceToString(relBits), depss.str())
     }
+    ActivityProf::callback(getCommandKind(), getBeginTimestamp(), getEndTimestamp());
     Kalmar::ctx.releaseSignal(_signal, _signalIndex);
 
     // Release referecne to our dependent ops:
@@ -4976,6 +4985,9 @@ HSABarrier::getEndTimestamp() override {
 }
 
 
+// Activity profiling instantiation
+ACTIVITY_PROF_INSTANCES(current, callbacks);
+
 // ----------------------------------------------------------------------
 // member function implementation of HSAOp
 // ----------------------------------------------------------------------
@@ -4984,8 +4996,9 @@ HSAOpCoord::HSAOpCoord(Kalmar::HSAQueue *queue) :
         _queueId(queue->getSeqNum())
         {}
 
-HSAOp::HSAOp(Kalmar::KalmarQueue *queue, hc::hcCommandKind commandKind) :
+HSAOp::HSAOp(hc::HSAOpId id, Kalmar::KalmarQueue *queue, hc::hcCommandKind commandKind) :
     KalmarAsyncOp(queue, commandKind),
+    ActivityProf(id, _opCoord),
     _opCoord(static_cast<Kalmar::HSAQueue*> (queue)),
     _asyncOpsIndex(-1),
 
@@ -4994,6 +5007,7 @@ HSAOp::HSAOp(Kalmar::KalmarQueue *queue, hc::hcCommandKind commandKind) :
 {
     _signal.handle=0;
     apiStartTick = Kalmar::ctx.getSystemTicks();
+    ActivityProf::initialize(activity_prof::current, activity_prof::callbacks);
 };
 
 Kalmar::HSAQueue *HSAOp::hsaQueue() const 
@@ -5017,7 +5031,7 @@ bool HSAOp::isReady() override {
 //
 // Copy mode will be set later on.
 // HSA signals would be waited in HSA_WAIT_STATE_ACTIVE by default for HSACopy instances
-HSACopy::HSACopy(Kalmar::KalmarQueue *queue, const void* src_, void* dst_, size_t sizeBytes_) : HSAOp(queue, Kalmar::hcCommandInvalid),
+HSACopy::HSACopy(Kalmar::KalmarQueue *queue, const void* src_, void* dst_, size_t sizeBytes_) : HSAOp(hc::HSA_OP_ID_COPY, queue, Kalmar::hcCommandInvalid),
     isSubmitted(false), isAsync(false), isSingleStepCopy(false), isPeerToPeer(false), future(nullptr), depAsyncOp(nullptr), copyDevice(nullptr), waitMode(HSA_WAIT_STATE_ACTIVE),
     src(src_), dst(dst_),
     sizeBytes(sizeBytes_)
@@ -5332,6 +5346,7 @@ HSACopy::dispose() {
 
             LOG_PROFILE(this, start, end, "copy", getCopyCommandString(),  "\t" << sizeBytes << " bytes;\t" << sizeBytes/1024.0/1024 << " MB;\t" << bw << " GB/s;");
         }
+        ActivityProf::callback(getCommandKind(), getBeginTimestamp(), getEndTimestamp(), sizeBytes);
         Kalmar::ctx.releaseSignal(_signal, _signalIndex);
     } else {
         if (HCC_PROFILE & HCC_PROFILE_TRACE) {
@@ -5340,6 +5355,7 @@ HSACopy::dispose() {
             double bw = (double)(sizeBytes)/(end-start) * (1000.0/1024.0) * (1000.0/1024.0);
             LOG_PROFILE(this, start, end, "copyslo", getCopyCommandString(),  "\t" << sizeBytes << " bytes;\t" << sizeBytes/1024.0/1024 << " MB;\t" << bw << " GB/s;");
         }
+        ActivityProf::callback(getCommandKind(), apiStartTick, Kalmar::ctx.getSystemTicks(), sizeBytes);
     }
 
     if (future != nullptr) {
@@ -5586,6 +5602,27 @@ std::ostream& operator<<(std::ostream& os, const HSAOp & op)
      os << op.opCoord()._queueId << "." ;
      os << op.getSeqNum();
     return os;
+}
+
+// Profiling routines
+
+extern "C" void SetActivityRecordImpl(unsigned long record_id) {
+    activity_prof::current.record_id = record_id;
+    activity_prof::current.device_id = -1;
+    activity_prof::current.queue_id = 0;
+}
+
+extern "C" void GetActivityCoordImpl(int* device_id, uint64_t* queue_id) {
+    *device_id = activity_prof::current.device_id;
+    *queue_id = activity_prof::current.queue_id;
+}
+
+extern "C" bool SetActivityCallbackImpl(unsigned op, void* callback, void* arg) {
+    return activity_prof::callbacks.set(op, reinterpret_cast<activity_prof::callback_fun_t>(callback), arg);
+}
+
+extern "C" const char* GetCmdNameImpl(unsigned id) {
+    return getHcCommandKindString(static_cast<Kalmar::hcCommandKind>(id));
 }
 
 // TODO;

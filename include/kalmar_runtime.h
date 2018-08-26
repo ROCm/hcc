@@ -2,6 +2,7 @@
 
 #include "hc_defines.h"
 #include "kalmar_aligned_alloc.h"
+#include "hc_prof_runtime.h"
 
 namespace hc {
 class AmPointerInfo;
