@@ -127,18 +127,20 @@ namespace hc2
         static
         int copy_kernel_sections_(dl_phdr_info* x, size_t, void* kernels)
         {
-            static constexpr const char kernel[] = ".kernel";
-
             auto out = static_cast<T*>(kernels);
 
             ELFIO::elfio tmp;
-            if (tmp.load(x->dlpi_name)) {
-                for (auto&& y : tmp.sections) {
-                    if (y->get_name() == kernel) {
-                        out->emplace_back(
-                            y->get_data(), y->get_data() + y->get_size());
-                    }
-                }
+
+            if (!tmp.load(x->dlpi_name)) return 0;
+
+            for (auto&& y : tmp.sections) {
+                static constexpr const char kernel[] = ".kernel";
+
+                if (y->get_name() != kernel) continue;
+
+                out->emplace_back(y->get_data(), y->get_data() + y->get_size());
+
+                return 0;
             }
 
             return 0;
