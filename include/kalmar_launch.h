@@ -20,6 +20,7 @@
 #include <stdexcept>
 #include <string>
 #include <typeinfo>
+#include <type_traits>
 #include <utility>
 
 namespace Concurrency
@@ -42,7 +43,7 @@ struct Indexer {
     operator index<n>() const [[hc]]
     {
         int tmp[n]{};
-        for (auto i = 0; i != n; ++i) tmp[i] = amp_get_global_id(i);
+        for (auto i = 0; i != n; ++i) tmp[n - i - 1] = amp_get_global_id(i);
 
         return index<n>{tmp};
     }
@@ -62,6 +63,20 @@ struct Indexer {
 
 template<typename Index, typename Kernel>
 struct Kernel_emitter {
+    // TODO: this validation should be done further above, in pfe itself, for
+    //       more clarity. It is also a placeholder.
+    static
+    std::false_type is_callable(...) [[cpu, hc]];
+    template<typename I, typename K>
+    static
+    auto is_callable(I* idx, const K* f) [[cpu, hc]]
+        -> decltype((*f)(*idx), std::true_type{});
+
+    static_assert(
+        decltype(is_callable(
+            std::declval<Index*>(), std::declval<const Kernel*>())){},
+        "Invalid Callable passed to parallel_for_each.");
+
     static
     __attribute__((used, annotate("__HCC_KERNEL__")))
     void entry_point(Kernel f) [[cpu]][[hc]]
@@ -183,7 +198,7 @@ void* make_registered_kernel(
 
     std::unique_ptr<void, void (*)(void*)> tmp{
         new Kernel{f}, [](void* p) { delete static_cast<Kernel*>(p); }};
-    void *kernel{CLAMP::CreateKernel(
+    void* kernel{CLAMP::CreateKernel(
         linker_name_for<K>(), q.get(), std::move(tmp), sizeof(Kernel))};
 
     return kernel;
@@ -246,8 +261,8 @@ std::shared_ptr<HCCAsyncOp> launch_kernel_async(
   const auto dims{dimensions(domain)};
 
   return q->LaunchKernelAsync(
-      make_registered_kernel<Domain>(q, f),
-      Domain::rank,
+        make_registered_kernel<Domain>(q, f),
+        Domain::rank,
         dims.first.data(),
         dims.second.data());
 }
