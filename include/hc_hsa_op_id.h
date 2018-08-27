@@ -24,12 +24,11 @@ namespace hc {
 
 // HCC Op IDs enumeration
 enum HSAOpId {
-    HSA_OP_ID_NOP = 0,
-    HSA_OP_ID_DISPATCH = 1,
-    HSA_OP_ID_COPY = 2,
-    HSA_OP_ID_BARRIER = 3,
-    HSA_OP_ID_NUM = 4,
-    HSA_OP_ID_ANY = 5
+    HSA_OP_ID_DISPATCH = 0,
+    HSA_OP_ID_COPY = 1,
+    HSA_OP_ID_BARRIER = 2,
+    HSA_OP_ID_NUM = 3,
+    HSA_OP_ID_ANY = 4
 };
 
 }; // namespace hc
