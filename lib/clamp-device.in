@@ -63,7 +63,7 @@ LLC=$BINDIR/llc
 LINK=$BINDIR/llvm-link
 LIB=$BINDIR/../lib
 LLD=$BINDIR/ld.lld
-
+OBJDUMP=$BINDIR/llvm-objdump
 
 ################
 # Determine the ROCm device libs path
@@ -236,8 +236,7 @@ if [ $KMDUMPISA == "1" ]; then
   else
     cp $2.isabin ./dump-$AMDGPU_TARGET.isabin
   fi
-  $LLC $KMOPTLLC -mtriple amdgcn--amdhsa-amdgiz -mcpu=$AMDGPU_TARGET -filetype=asm -o $2.isa $2.opt.bc
-  mv $2.isa ${KMDUMPDIR}/dump-$AMDGPU_TARGET.isa
+  $OBJDUMP -disassemble -t -all-headers -line-numbers -mcpu=$AMDGPU_TARGET ./dump-$AMDGPU_TARGET.isabin  >${KMDUMPDIR}/dump-$AMDGPU_TARGET.isa
 fi
 
 # ThinLTO does not performs LLD here inside clamp-device.in.

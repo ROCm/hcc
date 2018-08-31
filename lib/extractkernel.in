@@ -146,7 +146,7 @@ else {
       my $isa_file_name = "$input_file-$asic_target.isa";
 
       # use llvm-objdump to dump out GCN ISA
-      system("$llvm_objdump -disassemble -mcpu=$asic_target $hsaco_file_name > $isa_file_name") == 0 or die("Fail to disassemble AMDGPU ISA for target" . $asic_target);
+      system("$llvm_objdump -disassemble -t -all-headers -line-numbers -mcpu=$asic_target $hsaco_file_name > $isa_file_name") == 0 or die("Fail to disassemble AMDGPU ISA for target" . $asic_target);
       print("Generated GCN ISA for " . $asic_target . " at: " . $isa_file_name . "\n");
     }
   } else {
