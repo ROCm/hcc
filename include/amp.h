@@ -12,6 +12,8 @@
 
 #pragma once
 
+#warning "Please note that C++AMP support is deprecated, and will be removed in ROCm 2.0. Please switch to using HC."
+
 #include "hc_defines.h"
 #include "kalmar_exception.h"
 #include "kalmar_index.h"

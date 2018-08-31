@@ -3,6 +3,8 @@
 #ifndef _AMP_SHORT_VECTORS_H
 #define _AMP_SHORT_VECTORS_H
 
+#warning "Please note that C++AMP support is deprecated, and will be removed in ROCm 2.0. Please switch to using HC."
+
 #include <cstddef>
 #include <type_traits>
 #include "kalmar_serialize.h"
