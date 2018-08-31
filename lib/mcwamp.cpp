@@ -5,6 +5,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <hc.hpp>
 #include "hc_rt_debug.h"
 #include "mcwamp_impl.hpp"
 
@@ -14,15 +15,14 @@
 #include <cstddef>
 #include <tuple>
 
-#include <amp.h>
 #include <mutex>
 
 #include <dlfcn.h>
 
-namespace Concurrency {
+namespace hc {
 
-const wchar_t accelerator::cpu_accelerator[] = L"cpu";
-const wchar_t accelerator::default_accelerator[] = L"default";
+const wchar_t accelerator::cpu_accelerator[];
+const wchar_t accelerator::default_accelerator[];
 
 } // namespace Concurrency
 
@@ -448,12 +448,4 @@ static inline std::uint32_t __convert_float_to_half(float a) noexcept {
   v = e > 30 ? 0x7c00 : v;
   v = e == 143 ? i : v;
   return s | v;
-}
-
-extern "C" float __gnu_h2f_ieee(unsigned short h){
-  return __convert_half_to_float((std::uint32_t) h);
-}
-
-extern "C" unsigned short __gnu_f2h_ieee(float f){
-  return (unsigned short)__convert_float_to_half(f);
 }
