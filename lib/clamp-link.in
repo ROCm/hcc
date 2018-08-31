@@ -215,13 +215,7 @@ _thinlto_path() {
 _default_path() {
 
   # combine kernel sections together
-  $LINK "${LINK_KERNEL_ARGS[@]}"  -o $TEMP_DIR/combined.bc
-  ret=$?
-  if [ $ret != 0 ]; then
-    exit $ret
-  fi
-
-  $OPT -always-inline $TEMP_DIR/combined.bc -o $TEMP_DIR/kernel.bc
+  $LINK "${LINK_KERNEL_ARGS[@]}"  -o $TEMP_DIR/kernel.bc
   ret=$?
   if [ $ret != 0 ]; then
     exit $ret
