@@ -9,6 +9,8 @@
 #include "hc_rt_debug.h"
 #include "mcwamp_impl.hpp"
 
+#include <hc.hpp>
+
 #include <iostream>
 #include <string>
 #include <cassert>
@@ -24,7 +26,13 @@ namespace hc {
 const wchar_t accelerator::cpu_accelerator[];
 const wchar_t accelerator::default_accelerator[];
 
-} // namespace Concurrency
+// array_base
+const std::size_t array_base::max_array_cnt_;
+
+// array_view_base
+const std::size_t array_view_base::max_array_view_cnt_;
+
+} // namespace hc
 
 // weak symbols of kernel codes
 
@@ -393,16 +401,11 @@ public:
       // get context
       HCCContext* context = static_cast<HCCContext*>(runtime->m_GetContextImpl());
 
-      const std::vector<HCCDevice*> devices = context->getDevices();
-
       // load kernels on the default queue for each device
-      for (auto dev = devices.begin(); dev != devices.end(); dev++) {
+      for (auto&& device : context->getDevices()) {
+        if (device->get_path() == L"cpu") continue;
 
-        // get default queue on the device
-        std::shared_ptr<HCCQueue> queue = (*dev)->get_default_queue();
-
-        // load kernels on the default queue for the device
-        CLAMP::LoadInMemoryProgram(queue.get());
+        CLAMP::LoadInMemoryProgram(device->get_default_queue().get());
       }
     }
   }
