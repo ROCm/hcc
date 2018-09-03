@@ -157,8 +157,7 @@ void transpose_tiled_truncate_option_a(
           const array_view<const _value_type, 2>& data,
           const array_view<_value_type, 2>& data_transpose) {
   extent<2> e = data.get_extent();
-  tiled_extent<_tile_size, _tile_size> e_truncated(e.tile(_tile_size,
-                                                   _tile_size).truncate());
+  tiled_extent<2> e_truncated(e.tile(_tile_size, _tile_size).truncate());
 
   data_transpose.discard_data();
   parallel_for_each(e_truncated,
@@ -221,7 +220,7 @@ void transpose_tiled_truncate_option_b(
   // Transform matrix to be multiple of 16*16 and transpose.
   auto b  = data.section(index<2>(0,0), e_truncated);
   auto b_t = data_transpose.section(index<2>(0,0),
-                 transpose(static_cast<extent<2>>(e_truncated)));
+                 transpose(static_cast<const extent<2>&>(e_truncated)));
   transpose_tiled_even<_value_type, _tile_size>(b, b_t);
 
   // leftover processing
@@ -311,4 +310,3 @@ int main() {
 #endif
   return 0;
 }
-
