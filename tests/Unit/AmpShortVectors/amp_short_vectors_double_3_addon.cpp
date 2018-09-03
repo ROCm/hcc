@@ -1,9 +1,9 @@
 // RUN: %cxxamp %s -o %t.out && %t.out
 #include <hc.hpp>
-#include <amp_short_vectors.h>
+#include <hc_short_vector.hpp>
 
 using namespace hc;
-using namespace hc::graphics;
+using namespace hc::short_vector;
 
 int main(void) {
   // Two-component Access

@@ -97,7 +97,7 @@ template <typename ..._Tp>
 inline const ptrdiff_t coordinate_mul(const ptrdiff_t& t, const _Tp&... tail)
 {
     const ptrdiff_t ret =  t * coordinate_mul(tail...);
-#if __KALMAR_ACCELERATOR__ != 1
+#if __HCC_ACCELERATOR__ != 1
     assert(ret <= numeric_limits<ptrdiff_t>::max() && ret >= 0);
 #endif
     return ret;
@@ -223,19 +223,19 @@ public:
 
     offset(initializer_list<value_type> il) restrict(amp,cpu) : base_(il)
     { 
-#if __KALMAR_ACCELERATOR__ != 1
+#if __HCC_ACCELERATOR__ != 1
         assert(il.size() == N);
 #endif
     };
 
     reference       operator[](size_type n) restrict(amp,cpu) {
-#if __KALMAR_ACCELERATOR__ != 1
+#if __HCC_ACCELERATOR__ != 1
         assert(n < N);
 #endif
         return base_[n];
     }
     const_reference operator[](size_type n) const restrict(amp,cpu) {
-#if __KALMAR_ACCELERATOR__ != 1
+#if __HCC_ACCELERATOR__ != 1
         assert(n < N);
 #endif
         return base_[n];
@@ -300,7 +300,7 @@ private:
 
 public:
     void __cxxamp_opencl_index() restrict(amp, cpu)
-#if __KALMAR_ACCELERATOR__ == 1
+#if __HCC_ACCELERATOR__ == 1
     {
       offset_helper<N, offset<N>>::set(*this);
     }
@@ -505,7 +505,7 @@ class bounds {
 
     base base_;
     void check() const {
-#if __KALMAR_ACCELERATOR__ != 1
+#if __HCC_ACCELERATOR__ != 1
         assert(this->size() >= 0 && this->size() <= numeric_limits<ptrdiff_t>::max());
         assert(base_.all_pos());
 #endif
@@ -523,13 +523,13 @@ public:
 
     template <size_t K = N, class = typename enable_if<K == 1>::type>
     bounds(value_type v) restrict(amp,cpu) : base_(v) {
-#if __KALMAR_ACCELERATOR__ != 1
+#if __HCC_ACCELERATOR__ != 1
         assert(v >= 0 && v <= numeric_limits<ptrdiff_t>::max());
 #endif
     }
 
     bounds(initializer_list<value_type> il) restrict(amp,cpu) : base_(il) {
-#if __KALMAR_ACCELERATOR__ != 1
+#if __HCC_ACCELERATOR__ != 1
         assert(il.size() == N);
 #endif
         check();

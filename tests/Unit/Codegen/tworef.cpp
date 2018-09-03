@@ -1,4 +1,4 @@
-// RUN: %amp_device -D__KALMAR_ACCELERATOR__ -c -S -emit-llvm %s
+// RUN: %amp_device -D__HCC_ACCELERATOR__ -c -S -emit-llvm %s
 #include <hc.hpp>
 
 using namespace hc;

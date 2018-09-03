@@ -83,47 +83,61 @@ int main() {
 
   int errors = 0;
 
-  #if 0
   errors += run_tests<short1,1024>();
   errors += run_tests<short2,1024>();
   errors += run_tests<short4,1024>();
-  errors += run_tests<short8,1024>();
+  #if defined(EXTENDED_VECTOR_TYPES)
+    errors += run_tests<short8,1024>();
   #endif
 
   errors += run_tests<int1,1024>();
   errors += run_tests<int2,1024>();
   errors += run_tests<int4,1024>();
-  errors += run_tests<int8,1024>();
+  #if defined(EXTENDED_VECTOR_TYPES)
+    errors += run_tests<int8,1024>();
+  #endif
 
   errors += run_tests<uint1,1024>();
   errors += run_tests<uint2,1024>();
   errors += run_tests<uint4,1024>();
-  errors += run_tests<uint8,1024>();
+  #if defined(EXTENDED_VECTOR_TYPES)
+    errors += run_tests<uint8,1024>();
+  #endif
 
   errors += run_tests<long1,1024>();
   errors += run_tests<long2,1024>();
   errors += run_tests<long4,1024>();
-  errors += run_tests<long8,1024>();
+  #if defined(EXTENDED_VECTOR_TYPES)
+    errors += run_tests<long8,1024>();
+  #endif
 
   errors += run_tests<ulong1,1024>();
   errors += run_tests<ulong2,1024>();
   errors += run_tests<ulong4,1024>();
-  errors += run_tests<ulong8,1024>();
+  #if defined(EXTENDED_VECTOR_TYPES)
+    errors += run_tests<ulong8,1024>();
+  #endif
 
   errors += run_tests<half1,1024>();
   errors += run_tests<half2,1024>();
   errors += run_tests<half4,1024>();
-  errors += run_tests<half8,1024>();
+  #if defined(EXTENDED_VECTOR_TYPES)
+    errors += run_tests<half8,1024>();
+  #endif
 
   errors += run_tests<float1,1024>();
   errors += run_tests<float2,1024>();
   errors += run_tests<float4,1024>();
-  errors += run_tests<float8,1024>();
+  #if defined(EXTENDED_VECTOR_TYPES)
+    errors += run_tests<float8,1024>();
+  #endif
 
   errors += run_tests<double1,1024>();
   errors += run_tests<double2,1024>();
   errors += run_tests<double4,1024>();
-  errors += run_tests<double8,1024>();
+  #if defined(EXTENDED_VECTOR_TYPES)
+    errors += run_tests<double8,1024>();
+  #endif
 
   return errors;
 }

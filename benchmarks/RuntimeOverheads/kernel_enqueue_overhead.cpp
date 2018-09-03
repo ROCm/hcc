@@ -23,10 +23,7 @@ bool test1() {
     // launch kernel
     hc::extent<1> e(1024);
     clock_gettime(CLOCK_REALTIME, &begin);
-    hc::completion_future fut = hc::parallel_for_each(
-      e,
-      [=](hc::index<1> idx) restrict(amp) {
-    });
+    auto fut = hc::parallel_for_each(e, [=](hc::index<1> idx) [[hc]] {});
     clock_gettime(CLOCK_REALTIME, &end);
     time_spent_once = ((end.tv_sec - begin.tv_sec) * 1000 * 1000) + ((end.tv_nsec - begin.tv_nsec) / 1000);
     time_spent += time_spent_once;
@@ -77,11 +74,8 @@ bool test2() {
     // launch kernel
     hc::extent<1> e(vecSize);
     clock_gettime(CLOCK_REALTIME, &begin);
-    hc::completion_future fut = hc::parallel_for_each(
-      e,
-      [=](hc::index<1> idx) restrict(amp) {
-        p_c[idx[0]] = p_a[idx[0]] + p_b[idx[0]];
-  
+    auto fut = hc::parallel_for_each(e, [=](hc::index<1> idx) [[hc]] {
+      p_c[idx[0]] = p_a[idx[0]] + p_b[idx[0]];
     });
     clock_gettime(CLOCK_REALTIME, &end);
     time_spent_once = ((end.tv_sec - begin.tv_sec) * 1000 * 1000) + ((end.tv_nsec - begin.tv_nsec) / 1000);
@@ -104,10 +98,7 @@ bool test2() {
 void init() {
     // launch an empty kernel to initialize everything
     hc::extent<1> e(1024);
-    hc::completion_future fut = hc::parallel_for_each(
-      e,
-      [=](hc::index<1> idx) restrict(amp) {
-    });
+    auto fut = hc::parallel_for_each(e, [=](hc::index<1> idx) [[hc]] {});
     fut.wait();
 }
 

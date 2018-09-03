@@ -1,9 +1,9 @@
 #include <hc.hpp>
 #include <hc_math.hpp>
-#include <amp_short_vectors.h>
+#include <hc_short_vector.hpp>
 
 using namespace hc;
-using namespace hc::graphics;
+using namespace hc::short_vector;
 
 extern hc::array_view<float_2,1> *gbOutA;
 

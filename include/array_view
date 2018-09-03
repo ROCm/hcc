@@ -120,7 +120,7 @@ public:
     template <class Viewable>
         array_view(Viewable&& vw, bounds_type bounds)
         : data_(vw.data()), bnd_(bounds), stride_(get_stride(bounds)) { 
-#ifndef __KALMAR_ACCELERATOR__
+#ifndef __HCC_ACCELERATOR__
             assert(bnd_.size() <= vw.size());
 #endif
             static_assert(is_convertible<decltype(vw.size()), ptrdiff_t>::value, "illegal Viewable");
@@ -138,7 +138,7 @@ public:
     pointer     data() const noexcept { return data_; }
 
     reference operator[](const offset_type& idx) const {
-#ifndef __KALMAR_ACCELERATOR__
+#ifndef __HCC_ACCELERATOR__
         assert(bnd_.contains(idx));
 #endif
         VIEW_ACCESS(data_, idx, stride_, Rank);
@@ -148,7 +148,7 @@ public:
     template<size_t N = Rank, typename = typename enable_if<(N > 1)>::type>
     array_view<T, Rank - 1>
         operator[](ptrdiff_t slice) const {
-#ifndef __KALMAR_ACCELERATOR__
+#ifndef __HCC_ACCELERATOR__
             assert(slice < bnd_[0]);
 #endif
             std::bounds<Rank - 1> bnd;
@@ -159,7 +159,7 @@ public:
     strided_array_view<T, Rank>
         section(const offset_type& origin, const bounds_type& section_bnd) const {
             auto range = bnd_ - origin;
-#ifndef __KALMAR_ACCELERATOR__
+#ifndef __HCC_ACCELERATOR__
             for (auto i = 0; i < Rank; ++i)
                 assert(range[i] >= section_bnd[i]);
 #endif
@@ -224,7 +224,7 @@ public:
     offset_type  stride() const noexcept { return stride_; }
 
     reference operator[](const offset_type& idx) const {
-#ifndef __KALMAR_ACCELERATOR__
+#ifndef __HCC_ACCELERATOR__
         assert(bnd_.contains(idx));
 #endif
         VIEW_ACCESS(data_, idx, stride(), Rank);
@@ -233,7 +233,7 @@ public:
     template<size_t N = Rank, typename = typename enable_if<(N > 1)>::type>
     strided_array_view<T, Rank - 1>
         operator[](ptrdiff_t slice) const {
-#ifndef __KALMAR_ACCELERATOR__
+#ifndef __HCC_ACCELERATOR__
             assert(slice < bnd_[0]);
 #endif
             std::bounds<Rank - 1> bnd;
@@ -247,7 +247,7 @@ public:
     strided_array_view<T, Rank>
         section(const offset_type& origin, const bounds_type& section_bnd) const {
             auto range = bnd_ - origin;
-#ifndef __KALMAR_ACCELERATOR__
+#ifndef __HCC_ACCELERATOR__
             for (auto i = 0; i < Rank; ++i)
                 assert(range[i] >= section_bnd[i]);
 #endif

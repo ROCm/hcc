@@ -1,9 +1,9 @@
 // RUN: %cxxamp %s -o %t.out && %t.out
 #include <hc.hpp>
-#include <amp_short_vectors.h>
+#include <hc_short_vector.hpp>
 
 using namespace hc;
-using namespace hc::graphics;
+using namespace hc::short_vector;
 
 // type trait and helper function
 template<typename T, typename U> struct is_same
@@ -22,7 +22,7 @@ bool eqTypes() { return is_same<T, U>::result; }
 int main(void) {
 
   {
-    bool ret = eqTypes<short_vector<unsigned int, 1>::type, unsigned int>();
+    bool ret = eqTypes<short_vector<unsigned int, 1>::type, uint_1>();
     assert(ret);
   }
 
@@ -42,7 +42,7 @@ int main(void) {
   }
 
   {
-    bool ret = eqTypes<short_vector<int, 1>::type, int>();
+    bool ret = eqTypes<short_vector<int, 1>::type, int_1>();
     assert(ret);
   }
 
@@ -62,7 +62,7 @@ int main(void) {
   }
 
   {
-    bool ret = eqTypes<short_vector<float, 1>::type, float>();
+    bool ret = eqTypes<short_vector<float, 1>::type, float_1>();
     assert(ret);
   }
 
@@ -82,7 +82,7 @@ int main(void) {
   }
 
   {
-    bool ret = eqTypes<short_vector<unorm, 1>::type, unorm>();
+    bool ret = eqTypes<short_vector<unorm, 1>::type, unorm_1>();
     assert(ret);
   }
 
@@ -102,7 +102,7 @@ int main(void) {
   }
 
   {
-    bool ret = eqTypes<short_vector<norm, 1>::type, norm>();
+    bool ret = eqTypes<short_vector<norm, 1>::type, norm_1>();
     assert(ret);
   }
 
@@ -122,7 +122,7 @@ int main(void) {
   }
 
   {
-    bool ret = eqTypes<short_vector<double, 1>::type, double>();
+    bool ret = eqTypes<short_vector<double, 1>::type, double_1>();
     assert(ret);
   }
 

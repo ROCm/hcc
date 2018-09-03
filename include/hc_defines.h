@@ -39,7 +39,7 @@ extern "C" __attribute__((const,amp)) uint32_t amp_get_local_id(unsigned int n);
 extern "C" __attribute__((const,amp)) uint32_t amp_get_num_groups(unsigned int n);
 extern "C" __attribute__((const,amp)) uint32_t amp_get_group_id(unsigned int n);
 
-#if __KALMAR_ACCELERATOR__ == 2
+#if __HCC_ACCELERATOR__ == 2
 #define tile_static thread_local
 #else
 #define tile_static __attribute__((tile_static))

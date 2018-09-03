@@ -59,7 +59,7 @@ bool AMP_Func() [[hc]]
 #ifdef TEST_BOTH
 bool BOTH_CPU_AND_AMP() [[cpu, hc]]
 {
-#if __KALMAR_ACCELERATOR__
+#if __HCC_ACCELERATOR__
     if (callee() != 1)
 #else
     if (callee() != 2)

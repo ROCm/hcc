@@ -51,7 +51,7 @@ void generate_impl(ForwardIterator first, ForwardIterator last,
   auto first_ = utils::get_pointer(first);
   hc::array_view<_Ty> av(hc::extent<1>(N), first_);
   av.discard_data();
-  kernel_launch(N, [av, g](hc::index<1> idx) restrict(amp) {
+  kernel_launch(N, [av, g](hc::index<1> idx) [[hc]] {
     av(idx) = g();
   });
 }

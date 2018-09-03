@@ -1,7 +1,7 @@
 // RUN: %cxxamp %s -o %t.out && %t.out
 
-#ifndef __KALMAR_CC__
-#error __KALMAR_CC__ is not defined!
+#ifndef __HC_CC__
+  #error __HC_CC__ is not defined!
 #endif
 
 int main() {

@@ -1,9 +1,9 @@
 // RUN: %cxxamp %s -o %t.out && %t.out
 #include <hc.hpp>
-#include <amp_short_vectors.h>
+#include <hc_short_vector.hpp>
 
 using namespace hc;
-using namespace hc::graphics;
+using namespace hc::short_vector;
 
 // type trait and helper function
 template<typename T, typename U> struct is_same
@@ -16,42 +16,42 @@ template<typename T> struct is_same<T, T>
   static const bool result = true;
 };
 
-template<typename T, typename U> 
+template<typename T, typename U>
 bool eqTypes() { return is_same<T, U>::result; }
 
 int main(void) {
 
   {
-    bool ret1 = eqTypes<short_vector_traits<unsigned int>::value_type, 
+    bool ret1 = eqTypes<short_vector_traits<uint_1>::value_type,
                          unsigned int>();
-    bool ret2 = short_vector_traits<unsigned int>::size == 1;
+    bool ret2 = short_vector_traits<uint_1>::size == 1;
     assert(ret1 && ret2);
   }
 
   {
-    bool ret1 = eqTypes<short_vector_traits<uint_2>::value_type, 
+    bool ret1 = eqTypes<short_vector_traits<uint_2>::value_type,
                          unsigned int>();
     bool ret2 = short_vector_traits<uint_2>::size == 2;
     assert(ret1 && ret2);
   }
 
   {
-    bool ret1 = eqTypes<short_vector_traits<uint_3>::value_type, 
+    bool ret1 = eqTypes<short_vector_traits<uint_3>::value_type,
                          unsigned int>();
     bool ret2 = short_vector_traits<uint_3>::size == 3;
     assert(ret1 && ret2);
   }
 
   {
-    bool ret1 = eqTypes<short_vector_traits<uint_4>::value_type, 
+    bool ret1 = eqTypes<short_vector_traits<uint_4>::value_type,
                          unsigned int>();
     bool ret2 = short_vector_traits<uint_4>::size == 4;
     assert(ret1 && ret2);
   }
 
   {
-    bool ret1 = eqTypes<short_vector_traits<int>::value_type, int>();
-    bool ret2 = short_vector_traits<int>::size == 1;
+    bool ret1 = eqTypes<short_vector_traits<int_1>::value_type, int>();
+    bool ret2 = short_vector_traits<int_1>::size == 1;
     assert(ret1 && ret2);
   }
 
@@ -74,8 +74,8 @@ int main(void) {
   }
 
   {
-    bool ret1 = eqTypes<short_vector_traits<float>::value_type, float>();
-    bool ret2 = short_vector_traits<float>::size == 1;
+    bool ret1 = eqTypes<short_vector_traits<float_1>::value_type, float>();
+    bool ret2 = short_vector_traits<float_1>::size == 1;
     assert(ret1 && ret2);
   }
 
@@ -98,8 +98,8 @@ int main(void) {
   }
 
   {
-    bool ret1 = eqTypes<short_vector_traits<unorm>::value_type, unorm>();
-    bool ret2 = short_vector_traits<unorm>::size == 1;
+    bool ret1 = eqTypes<short_vector_traits<unorm_1>::value_type, unorm>();
+    bool ret2 = short_vector_traits<unorm_1>::size == 1;
     assert(ret1 && ret2);
   }
 
@@ -122,8 +122,8 @@ int main(void) {
   }
 
   {
-    bool ret1 = eqTypes<short_vector_traits<norm>::value_type, norm>();
-    bool ret2 = short_vector_traits<norm>::size == 1;
+    bool ret1 = eqTypes<short_vector_traits<norm_1>::value_type, norm>();
+    bool ret2 = short_vector_traits<norm_1>::size == 1;
     assert(ret1 && ret2);
   }
 
@@ -146,8 +146,8 @@ int main(void) {
   }
 
   {
-    bool ret1 = eqTypes<short_vector_traits<double>::value_type, double>();
-    bool ret2 = short_vector_traits<double>::size == 1;
+    bool ret1 = eqTypes<short_vector_traits<double_1>::value_type, double>();
+    bool ret2 = short_vector_traits<double_1>::size == 1;
     assert(ret1 && ret2);
   }
 

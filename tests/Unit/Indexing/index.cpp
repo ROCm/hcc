@@ -1,8 +1,8 @@
-// RUN: %amp_device -c -S -D__KALMAR_ACCELERATOR__ -emit-llvm %s -O -o -|%cppfilt|%FileCheck %s
+// RUN: %amp_device -c -S -D__HCC_ACCELERATOR__ -emit-llvm %s -O -o -|%cppfilt|%FileCheck %s
 // RUN: %gtest_amp %s -o %t && %t
 // Testing if an efficient (i.e. fully inlined version) of hc::index
 #include <hc.hpp>
-#ifndef __KALMAR_ACCELERATOR__ //Device mode compilation cannot have RTTI
+#ifndef __HCC_ACCELERATOR__ //Device mode compilation cannot have RTTI
 #include <gtest/gtest.h>
 #endif
 #define N0 10
@@ -18,7 +18,7 @@ int foo(int k) [[hc]]{
 //CHECK-NOT: load
 //CHECK: }
 
-#ifndef __KALMAR_ACCELERATOR__ //Device mode compilation cannot have RTTI
+#ifndef __HCC_ACCELERATOR__ //Device mode compilation cannot have RTTI
 // Test correctness
 TEST(ClassIndex, Index1D) {
   int n0 = N0;
