@@ -34,15 +34,15 @@ execute_process(COMMAND date +%y%W
 # get commit information
 execute_process(COMMAND git rev-parse --short HEAD
                 WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/..
-                OUTPUT_VARIABLE KALMAR_DRIVER_COMMIT
+                OUTPUT_VARIABLE HC_DRIVER_COMMIT
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
 execute_process(COMMAND git rev-parse --short HEAD
                 WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/../compiler/tools/clang
-                OUTPUT_VARIABLE KALMAR_COMPILER_COMMIT
+                OUTPUT_VARIABLE HC_COMPILER_COMMIT
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
 
 # set HCC version string
-set(HCC_VERSION_STRING "${HCC_VERSION_MAJOR}.${HCC_VERSION_MINOR}.${HCC_VERSION_PATCH}-${KALMAR_DRIVER_COMMIT}-${KALMAR_COMPILER_COMMIT}")
+set(HCC_VERSION_STRING "${HCC_VERSION_MAJOR}.${HCC_VERSION_MINOR}.${HCC_VERSION_PATCH}-${HC_DRIVER_COMMIT}-${HC_COMPILER_COMMIT}")
 
 # show HCC version string
 MESSAGE("========================================")
