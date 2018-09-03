@@ -11,7 +11,7 @@ bool test() {
   const int vecSize = 100;
 
   // Alloc & init input data
-  int init[vecSize];
+  T init[vecSize];
   for (int i = 0; i < vecSize; ++i) {
     init[i] = (i % 2 == 0) ? T(0) : T(1);
   }
