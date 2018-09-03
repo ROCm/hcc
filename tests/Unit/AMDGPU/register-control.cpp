@@ -11,16 +11,17 @@ int main() {
   using namespace hc;
   array<unsigned int, 1> table(GRID_SIZE);
   extent<1> ex(GRID_SIZE);
-  // CHECK-LABEL: define weak_odr amdgpu_kernel void @"_ZZ4mainEN3$_019__cxxamp_trampolineEPjii"
-  // CHECK-SAME:({{[^)]*}}){{[^#]*}}#[[ATTR0:[0-9]+]]
-  // CHECK: attributes #[[ATTR0]] = {{{.*}}"amdgpu-flat-work-group-size"="1,10" "amdgpu-max-work-group-dim"="10,1,1" "amdgpu-waves-per-eu"="5,6"
-  auto k = [&](index<1>& idx) [[hc]]
-                              [[hc_waves_per_eu(5,6)]]
-                              [[hc_flat_workgroup_size(1,10)]]
-                              [[hc_max_workgroup_dim(10,1,1)]]{
-    table(idx) = idx[0];
-  };
-  parallel_for_each(ex, k ).wait();
+  // CHECK-LABEL: define weak_odr amdgpu_kernel void {{.*Kernel_emitter.*}}"
+  // CHECK-SAME: {{[^#]*}}#[[ATTR0:[0-9]+]]
+  auto k = make_callable_with_AMDGPU_attributes<
+    Waves_per_eu<5, 6>,
+    Flat_workgroup_size<1, 10>
+    #if defined(NON_CLANG_ATTRIBUTES)
+      , Max_workgroup_dim<10, 1, 1>
+    #endif
+    >([&](index<1>& idx) [[hc]] { table(idx) = idx[0]; }
+  );
+  parallel_for_each(ex, k).wait();
 
   // verify result
   bool ret = true;
@@ -32,3 +33,4 @@ int main() {
   return !(ret == true);
 }
 
+// CHECK: attributes #[[ATTR0]] = {{{.*}}"amdgpu-flat-work-group-size"="1,10" "amdgpu-waves-per-eu"="5,6"
