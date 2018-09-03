@@ -5,8 +5,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <kalmar_runtime.h>
-#include <kalmar_aligned_alloc.h>
+#include <hc_runtime.h>
+#include <hc_aligned_alloc.h>
 
 #include <cstdlib>
 #include <cassert>
@@ -22,40 +22,6 @@ class CPUFallbackQueue final : public HCCQueue
 public:
 
   CPUFallbackQueue(HCCDevice* pDev) : HCCQueue(pDev) {}
-
-  void LaunchKernel(
-      void*, std::size_t, const std::size_t*, const std::size_t*) override
-  {
-    throw std::runtime_error{"Unsupported."};
-  }
-  [[noreturn]]
-  std::shared_ptr<HCCAsyncOp> LaunchKernelAsync(
-      void*,
-      std::size_t,
-      const std::size_t*,
-      const std::size_t*) override
-  {
-    throw std::runtime_error{"Unsupported."};
-  }
-  void LaunchKernelWithDynamicGroupMemory(
-      void*,
-      std::size_t,
-      const std::size_t*,
-      const std::size_t*,
-      std::size_t) override
-  {
-    throw std::runtime_error{"Unsupported."};
-  }
-  [[noreturn]]
-  std::shared_ptr<HCCAsyncOp> LaunchKernelWithDynamicGroupMemoryAsync(
-    void*,
-    std::size_t,
-    const std::size_t*,
-    const std::size_t*,
-    std::size_t) override
-  {
-    throw std::runtime_error{"Unimplemented."};
-  }
 
   void read(void* device, void* dst, size_t count, size_t offset) override {
       if (dst != device)
@@ -81,6 +47,124 @@ public:
   void Push(void *kernel, int idx, void* device, bool isConst) override {}
 
   void wait(hcWaitMode = hcWaitModeBlocked) override {}
+
+    void copy(const void*, void*, size_t) override
+  {
+      throw std::runtime_error{"Unsupported."};
+  }
+  void copy_ext(
+      const void*,
+      void*,
+      size_t,
+      hcCommandKind,
+      const hc::AmPointerInfo&,
+      const hc::AmPointerInfo&,
+      bool) override
+  {
+      throw std::runtime_error{"Unsupported."};
+  }
+  void copy_ext(
+      const void*,
+      void*,
+      size_t,
+      hcCommandKind,
+      const hc::AmPointerInfo&,
+      const hc::AmPointerInfo&,
+      const detail::HCCDevice*,
+      bool) override
+  {
+      throw std::runtime_error{"Unsupported."};
+  }
+  [[noreturn]]
+  void* CreateKernel(
+      const char*, HCCQueue*, const void*, std::size_t) override
+  {
+      throw std::runtime_error{"Unsupported."};
+  }
+  [[noreturn]]
+  std::shared_ptr<HCCAsyncOp> detectStreamDeps(hcCommandKind, HCCAsyncOp*) override
+  {
+      throw std::runtime_error{"Unsupported."};
+  }
+  void dispatch_hsa_kernel(
+    const hsa_kernel_dispatch_packet_t*,
+    void*,
+    size_t,
+    hc::completion_future*,
+    const char*) override
+  {
+    throw std::runtime_error{"Unimplemented."};
+  }
+  [[noreturn]]
+  std::shared_ptr<HCCAsyncOp> EnqueueAsyncCopy(
+      const void*, void*, std::size_t) override
+  {
+      throw std::runtime_error{"Unsupported."};
+  }
+  [[noreturn]]
+  std::shared_ptr<HCCAsyncOp> EnqueueAsyncCopyExt(
+      const void*,
+      void*,
+      size_t,
+      hcCommandKind,
+      const hc::AmPointerInfo&,
+      const hc::AmPointerInfo&,
+      const detail::HCCDevice*) override
+  {
+      throw std::runtime_error{"Unsupported."};
+  }
+  [[noreturn]]
+  std::shared_ptr<HCCAsyncOp> EnqueueMarkerWithDependency(
+      int, std::shared_ptr<HCCAsyncOp>*, memory_scope) override
+  {
+      throw std::runtime_error{"Unsupported."};
+  }
+  [[noreturn]]
+  std::uint32_t GetGroupSegmentSize(void*) override
+  {
+      throw std::runtime_error{"Unsupported."};
+  }
+  void LaunchKernel(
+      void*,
+      std::size_t,
+      const std::size_t*,
+      const std::size_t*) override
+  {
+    throw std::runtime_error{"Unsupported."};
+  }
+  [[noreturn]]
+  std::shared_ptr<HCCAsyncOp> LaunchKernelAsync(
+      void*,
+      std::size_t,
+      const std::size_t*,
+      const std::size_t*) override
+  {
+    throw std::runtime_error{"Unsupported."};
+  }
+  void LaunchKernelWithDynamicGroupMemory(
+    void*,
+    std::size_t,
+    const std::size_t*,
+    const std::size_t*,
+    std::size_t) override
+  {
+    throw std::runtime_error{"Unsupported."};
+  }
+  [[noreturn]]
+  std::shared_ptr<HCCAsyncOp> LaunchKernelWithDynamicGroupMemoryAsync(
+    void*,
+    std::size_t,
+    const std::size_t*,
+    const std::size_t*,
+    std::size_t) override
+  {
+    throw std::runtime_error{"Unimplemented."};
+  }
+  [[noreturn]]
+  bool set_cu_mask(const std::vector<bool>&) override
+  {
+      throw std::runtime_error{"Unimplemented."};
+  }
 };
 
 class CPUFallbackDevice final : public HCCDevice
@@ -98,10 +182,10 @@ public:
     uint32_t get_version() const override { return 0; }
 
     void* create(size_t count, struct rw_info* /* not used */) override {
-        return kalmar_aligned_alloc(0x1000, count);
+        return hc_aligned_alloc(0x1000, count);
     }
     void release(void *device, struct rw_info* /* not used */ ) override {
-        kalmar_aligned_free(device);
+        hc_aligned_free(device);
     }
     std::shared_ptr<HCCQueue> createQueue(
         execute_order = execute_in_order) override
@@ -109,12 +193,54 @@ public:
         return std::shared_ptr<HCCQueue>(new CPUFallbackQueue(this));
     }
 
+    void BuildProgram(void*, void*) override
+    {
+        throw std::runtime_error{"Unsupported."};
+    }
+    [[noreturn]]
+    bool check(std::size_t*, std::size_t) override
+    {
+        throw std::runtime_error{"Unsupported."};
+    }
     [[noreturn]]
     void* CreateKernel(
         const char*,
         HCCQueue*,
         std::unique_ptr<void, void (*)(void*)>,
-        std::size_t = 0u)
+        std::size_t = 0u) override
+    {
+        throw std::runtime_error{"Unsupported."};
+    }
+    [[noreturn]]
+    void* getSymbolAddress(const char*) override
+    {
+        throw std::runtime_error{"Unsupported."};
+    }
+    [[noreturn]]
+    bool IsCompatibleKernel(void*, void*) override
+    {
+        throw std::runtime_error{"Unsupported."};
+    }
+    [[noreturn]]
+    bool is_peer(const HCCDevice*) override
+    {
+        throw std::runtime_error{"Unsupported."};
+    }
+    void memcpySymbol(
+        const char*,
+        void*,
+        size_t,
+        size_t = 0,
+        hcCommandKind = hcMemcpyHostToDevice) override
+    {
+        throw std::runtime_error{"Unsupported."};
+    }
+    void memcpySymbol(
+        void*,
+        void*,
+        size_t,
+        size_t = 0,
+        hcCommandKind = hcMemcpyHostToDevice) override
     {
         throw std::runtime_error{"Unsupported."};
     }
