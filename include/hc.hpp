@@ -12,15 +12,16 @@
 
 #pragma once
 
-#include "atomics.hpp"
+#include "hc_atomics.hpp"
+#include "hc_callable_attributes.hpp"
 #include "hc_defines.h"
-#include "kalmar_exception.h"
-#include "kalmar_index.h"
-#include "kalmar_runtime.h"
-#include "kalmar_serialize.h"
-#include "kalmar_launch.h"
-#include "kalmar_buffer.h"
-#include "kalmar_math.h"
+#include "hc_exception.h"
+#include "hc_index.h"
+#include "hc_runtime.h"
+#include "hc_serialize.h"
+#include "hc_launch.h"
+#include "hc_buffer.h"
+#include "hc_math.h"
 
 #include "hcc_features.hpp"
 
@@ -42,6 +43,8 @@
 #include <type_traits>
 #include <unordered_map>
 #include <utility>
+
+#include <bitset>
 
 #ifndef __HC__
 #   define __HC__ [[hc]]
@@ -449,7 +452,8 @@ public:
      * Returns the maximum size of tile static area available on this
      * accelerator view.
      */
-    size_t get_max_tile_static_size() {
+    size_t get_max_tile_static_size() const
+    {
         return pQueue.get()->getDev()->GetMaxTileStaticSize();
     }
 
@@ -459,7 +463,8 @@ public:
      *
      * Care must be taken to use this API in a thread-safe manner,
      */
-    int get_pending_async_ops() {
+    int get_pending_async_ops() const
+    {
         return pQueue->getPendingAsyncOps();
     }
 
@@ -470,7 +475,8 @@ public:
      * As the accelerator completes work, the queue may become empty
      * after this function returns false;
      */
-    bool get_is_empty() {
+    bool get_is_empty() const
+    {
         return pQueue->isEmpty();
     }
 
@@ -480,7 +486,8 @@ public:
      * @return An opaque handle of the underlying HSA queue, if the accelerator
      *         view is based on HSA.  NULL if otherwise.
      */
-    void* get_hsa_queue() {
+    void* get_hsa_queue() const
+    {
         return pQueue->getHSAQueue();
     }
 
@@ -490,7 +497,8 @@ public:
      * @return An opaque handle of the underlying HSA agent, if the accelerator
      *         view is based on HSA.  NULL otherwise.
      */
-    void* get_hsa_agent() {
+    void* get_hsa_agent() const
+    {
         return pQueue->getHSAAgent();
     }
 
@@ -502,7 +510,8 @@ public:
      * @return An opaque handle of the region, if the accelerator is based
      *         on HSA.  NULL otherwise.
      */
-    void* get_hsa_am_region() {
+    void* get_hsa_am_region() const
+    {
         return pQueue->getHSAAMRegion();
     }
 
@@ -515,7 +524,8 @@ public:
      * @return An opaque handle of the region, if the accelerator is based
      *         on HSA.  NULL otherwise.
      */
-    void* get_hsa_am_system_region() {
+    void* get_hsa_am_system_region() const
+    {
         return pQueue->getHSAAMHostRegion();
     }
 
@@ -527,7 +537,8 @@ public:
      * @return An opaque handle of the region, if the accelerator is based
      *         on HSA.  NULL otherwise.
      */
-    void* get_hsa_am_finegrained_system_region() {
+    void* get_hsa_am_finegrained_system_region() const
+    {
         return pQueue->getHSACoherentAMHostRegion();
     }
 
@@ -538,14 +549,16 @@ public:
      * @return An opaque handle of the region, if the accelerator view is based
      *         on HSA.  NULL otherwise.
      */
-    void* get_hsa_kernarg_region() {
+    void* get_hsa_kernarg_region() const
+    {
         return pQueue->getHSAKernargRegion();
     }
 
     /**
      * Returns if the accelerator view is based on HSA.
      */
-    bool is_hsa_accelerator() {
+    bool is_hsa_accelerator() const
+    {
         return pQueue->hasHSAInterOp();
     }
 
@@ -1969,21 +1982,23 @@ extent<N> operator%(int value, const extent<N>& ext) __CPU__ __HC__ {
  *
  * @tparam N The dimension of the extent and the tile.
  */
-template <int N>
-class tiled_extent : public extent<N> {
+template<int n>
+class tiled_extent : public extent<n> {
+    std::uint32_t dynamic_group_segment_size_{};
 public:
-    static const int rank = N;
+    static constexpr int rank{n};
 
     /**
      * Tile size for each dimension.
      */
-    int tile_dim[N];
+    const int tile_dim[n]{};
 
+    // CREATORS
     /**
      * Default constructor. The origin and extent is default-constructed and
      * thus zero.
      */
-    tiled_extent() __CPU__ __HC__ : extent<N>(), tile_dim{0} {}
+    tiled_extent() [[cpu, hc]] = default;
 
     /**
      * Copy constructor. Constructs a new tiled_extent from the supplied
@@ -1992,299 +2007,148 @@ public:
      * @param[in] other An object of type tiled_extent from which to initialize
      *                  this new extent.
      */
-    tiled_extent(const tiled_extent& other) __CPU__ __HC__ : extent<N>(other) {
-      for (int i = 0; i < N; ++i) {
-        tile_dim[i] = other.tile_dim[i];
-      }
-    }
-};
-
-/**
- * Represents an extent subdivided into tiles.
- * Tile sizes can be specified at runtime.
- * This class is 1D specialization of tiled_extent.
- */
-template <>
-class tiled_extent<1> : public extent<1> {
-private:
-    /**
-     * Size of dynamic group segment.
-     */
-    unsigned int dynamic_group_segment_size;
-
-public:
-    static const int rank = 1;
-
-    /**
-     * Tile size for each dimension.
-     */
-    int tile_dim[1];
-
-    /**
-     * Default constructor. The origin and extent is default-constructed and
-     * thus zero.
-     */
-    tiled_extent() __CPU__ __HC__ : extent(0), dynamic_group_segment_size(0), tile_dim{0} {}
+    tiled_extent(const tiled_extent&) [[cpu, hc]] = default;
+    tiled_extent(tiled_extent&&) [[cpu, hc]] = default;
 
     /**
      * Construct an tiled extent with the size of extent and the size of tile
      * specified.
      *
-     * @param[in] e0 Size of extent.
-     * @param[in] t0 Size of tile.
+     * @param[in] e# Size of extent in the #th dimension.
+     * @param[in] t# Size of tile in the #th dimension.
      */
-    tiled_extent(int e0, int t0) __CPU__ __HC__ : extent(e0), dynamic_group_segment_size(0), tile_dim{t0} {}
+    template<int m = n, typename std::enable_if<m == 1>::type* = nullptr>
+    tiled_extent(int e0, int t0) [[cpu, hc]] : tiled_extent{e0, t0, 0u}
+    {}
+
+    template<int m = n, typename std::enable_if<m == 2>::type* = nullptr>
+    tiled_extent(int e0, int e1, int t0, int t1) [[cpu, hc]]
+        : tiled_extent{e0, e1, t0, t1, 0u}
+    {}
+
+    template<int m = n, typename std::enable_if<m == 3>::type* = nullptr>
+    tiled_extent(int e0, int e1, int e2, int t0, int t1, int t2) [[cpu, hc]]
+        : tiled_extent{e0, e1, e2, t0, t1, t2, 0u}
+    {}
 
     /**
      * Construct an tiled extent with the size of extent and the size of tile
      * specified.
      *
-     * @param[in] e0 Size of extent.
-     * @param[in] t0 Size of tile.
+     * @param[in] e# Size of extent in the #th dimension.
+     * @param[in] t# Size of tile in the #th dimension.
      * @param[in] size Size of dynamic group segment.
      */
-    tiled_extent(int e0, int t0, int size) __CPU__ __HC__ : extent(e0), dynamic_group_segment_size(size), tile_dim{t0} {}
+    template<int m = n, typename std::enable_if<m == 1>::type* = nullptr>
+    tiled_extent(int e0, int t0, std::uint32_t size) [[cpu, hc]]
+        : tiled_extent{hc::extent<n>{e0}, t0, size}
+    {}
 
-    /**
-     * Copy constructor. Constructs a new tiled_extent from the supplied
-     * argument "other".
-     *
-     * @param[in] other An object of type tiled_extent from which to initialize
-     *                  this new extent.
-     */
-    tiled_extent(const tiled_extent<1>& other) __CPU__ __HC__ : extent(other[0]), dynamic_group_segment_size(other.dynamic_group_segment_size), tile_dim{other.tile_dim[0]} {}
+    template<int m = n, typename std::enable_if<m == 2>::type* = nullptr>
+    tiled_extent(int e0, int e1, int t0, int t1, std::uint32_t size) [[cpu, hc]]
+        : tiled_extent{hc::extent<n>{e0, e1}, t0, t1, size}
+    {}
 
+    template<int m = n, typename std::enable_if<m == 3>::type* = nullptr>
+    tiled_extent(
+        int e0,
+        int e1,
+        int e2,
+        int t0,
+        int t1,
+        int t2,
+        std::uint32_t size) [[cpu, hc]]
+        : tiled_extent{hc::extent<n>{e0, e1, e2}, t0, t1, t2, size}
+    {}
 
     /**
      * Constructs a tiled_extent<N> with the extent "ext".
      *
      * @param[in] ext The extent of this tiled_extent
-     * @param[in] t0 Size of tile.
+     * @param[in] ts... Size of tile in dimensions....
      */
-    tiled_extent(const extent<1>& ext, int t0) __CPU__ __HC__ : extent(ext), dynamic_group_segment_size(0), tile_dim{t0} {}
+    template<   // TODO: tighten constraint.
+        typename... Ts,
+        typename std::enable_if<sizeof...(Ts) == n>::type* = nullptr>
+    tiled_extent(const extent<n>& ext, Ts... ts) [[cpu, hc]]
+        : tiled_extent{ext, ts..., 0u}
+    {}
 
     /**
      * Constructs a tiled_extent<N> with the extent "ext".
      *
      * @param[in] ext The extent of this tiled_extent
-     * @param[in] t0 Size of tile.
+     * @param[in] t# Size of tile in the #th dimension.
      * @param[in] size Size of dynamic group segment
      */
-    tiled_extent(const extent<1>& ext, int t0, int size) __CPU__ __HC__ : extent(ext), dynamic_group_segment_size(size), tile_dim{t0} {}
+    template<int m = n, typename std::enable_if<m == 1>::type* = nullptr>
+    tiled_extent(
+        const hc::extent<n>& ext, int t0, std::uint32_t size) [[cpu, hc]]
+        : extent<n>{ext}, dynamic_group_segment_size_{size}, tile_dim{t0}
+    {}
 
-    /**
-     * Set the size of dynamic group segment. The function should be called
-     * in host code, prior to a kernel is dispatched.
-     *
-     * @param[in] size The amount of dynamic group segment needed.
-     */
-    void set_dynamic_group_segment_size(unsigned int size) __CPU__ {
-        dynamic_group_segment_size = size;
+    template<int m = n, typename std::enable_if<m == 2>::type* = nullptr>
+    tiled_extent(
+        const hc::extent<n>& ext,
+        int t0,
+        int t1,
+        std::uint32_t size) [[cpu, hc]]
+        : extent<n>{ext}, dynamic_group_segment_size_{size}, tile_dim{t0, t1}
+    {}
+
+    template<int m = n, typename std::enable_if<m == 3>::type* = nullptr>
+    tiled_extent(
+        const hc::extent<n>& ext,
+        int t0,
+        int t1,
+        int t2,
+        std::uint32_t size) [[cpu, hc]]
+        :
+        extent<n>{ext}, dynamic_group_segment_size_{size}, tile_dim{t0, t1, t2}
+    {}
+
+    // MANIPULATORS
+    void set_dynamic_group_segment_size(std::uint32_t size) noexcept [[cpu]]
+    {
+        dynamic_group_segment_size_ = size;
     }
 
+    // ACCESSORS
     /**
      * Return the size of dynamic group segment in bytes.
      */
-    unsigned int get_dynamic_group_segment_size() const __CPU__ {
-        return dynamic_group_segment_size;
-    }
-};
-
-/**
- * Represents an extent subdivided into tiles.
- * Tile sizes can be specified at runtime.
- * This class is 2D specialization of tiled_extent.
- */
-template <>
-class tiled_extent<2> : public extent<2> {
-private:
-    /**
-     * Size of dynamic group segment.
-     */
-    unsigned int dynamic_group_segment_size;
-
-public:
-    static const int rank = 2;
-
-    /**
-     * Tile size for each dimension.
-     */
-    int tile_dim[2];
-
-    /**
-     * Default constructor. The origin and extent is default-constructed and
-     * thus zero.
-     */
-    tiled_extent() __CPU__ __HC__ : extent(0, 0), dynamic_group_segment_size(0), tile_dim{0, 0} {}
-
-    /**
-     * Construct an tiled extent with the size of extent and the size of tile
-     * specified.
-     *
-     * @param[in] e0 Size of extent in the 1st dimension.
-     * @param[in] e1 Size of extent in the 2nd dimension.
-     * @param[in] t0 Size of tile in the 1st dimension.
-     * @param[in] t1 Size of tile in the 2nd dimension.
-     */
-    tiled_extent(int e0, int e1, int t0, int t1) __CPU__ __HC__ : extent(e0, e1), dynamic_group_segment_size(0), tile_dim{t0, t1} {}
-
-    /**
-     * Construct an tiled extent with the size of extent and the size of tile
-     * specified.
-     *
-     * @param[in] e0 Size of extent in the 1st dimension.
-     * @param[in] e1 Size of extent in the 2nd dimension.
-     * @param[in] t0 Size of tile in the 1st dimension.
-     * @param[in] t1 Size of tile in the 2nd dimension.
-     * @param[in] size Size of dynamic group segment.
-     */
-    tiled_extent(int e0, int e1, int t0, int t1, int size) __CPU__ __HC__ : extent(e0, e1), dynamic_group_segment_size(size), tile_dim{t0, t1} {}
-
-    /**
-     * Copy constructor. Constructs a new tiled_extent from the supplied
-     * argument "other".
-     *
-     * @param[in] other An object of type tiled_extent from which to initialize
-     *                  this new extent.
-     */
-    tiled_extent(const tiled_extent<2>& other) __CPU__ __HC__ : extent(other[0], other[1]), dynamic_group_segment_size(other.dynamic_group_segment_size), tile_dim{other.tile_dim[0], other.tile_dim[1]} {}
-
-    /**
-     * Constructs a tiled_extent<N> with the extent "ext".
-     *
-     * @param[in] ext The extent of this tiled_extent
-     * @param[in] t0 Size of tile in the 1st dimension.
-     * @param[in] t1 Size of tile in the 2nd dimension.
-     */
-    tiled_extent(const extent<2>& ext, int t0, int t1) __CPU__ __HC__ : extent(ext), dynamic_group_segment_size(0), tile_dim{t0, t1} {}
-
-    /**
-     * Constructs a tiled_extent<N> with the extent "ext".
-     *
-     * @param[in] ext The extent of this tiled_extent
-     * @param[in] t0 Size of tile in the 1st dimension.
-     * @param[in] t1 Size of tile in the 2nd dimension.
-     * @param[in] size Size of dynamic group segment.
-     */
-    tiled_extent(const extent<2>& ext, int t0, int t1, int size) __CPU__ __HC__ : extent(ext), dynamic_group_segment_size(size), tile_dim{t0, t1} {}
-
-    /**
-     * Set the size of dynamic group segment. The function should be called
-     * in host code, prior to a kernel is dispatched.
-     *
-     * @param[in] size The amount of dynamic group segment needed.
-     */
-    void set_dynamic_group_segment_size(unsigned int size) __CPU__ {
-        dynamic_group_segment_size = size;
+    std::uint32_t get_dynamic_group_segment_size() const noexcept [[cpu]]
+    {
+        return dynamic_group_segment_size_;
     }
 
-    /**
-     * Return the size of dynamic group segment in bytes.
-     */
-    unsigned int get_dynamic_group_segment_size() const __CPU__ {
-        return dynamic_group_segment_size;
-    }
-};
+    tiled_extent pad() const noexcept [[cpu, hc]]
+    {
+        static const auto round_up_to_next_multiple = [=](int x, int y) {
+            x = x + y - 1;
+            return x - x % y;
+        };
 
-/**
- * Represents an extent subdivided into tiles.
- * Tile sizes can be specified at runtime.
- * This class is 3D specialization of tiled_extent.
- */
-template <>
-class tiled_extent<3> : public extent<3> {
-private:
-    /**
-     * Size of dynamic group segment.
-     */
-    unsigned int dynamic_group_segment_size;
+        tiled_extent tmp{*this};
+        for (auto i = 0; i != n; ++i) {
+            tmp[i] = round_up_to_next_multiple(tmp[i], tile_dim[i]);
+        }
 
-public:
-    static const int rank = 3;
-
-    /**
-     * Tile size for each dimension.
-     */
-    int tile_dim[3];
-
-    /**
-     * Default constructor. The origin and extent is default-constructed and
-     * thus zero.
-     */
-    tiled_extent() __CPU__ __HC__ : extent(0, 0, 0), dynamic_group_segment_size(0), tile_dim{0, 0, 0} {}
-
-    /**
-     * Construct an tiled extent with the size of extent and the size of tile
-     * specified.
-     *
-     * @param[in] e0 Size of extent in the 1st dimension.
-     * @param[in] e1 Size of extent in the 2nd dimension.
-     * @param[in] e2 Size of extent in the 3rd dimension.
-     * @param[in] t0 Size of tile in the 1st dimension.
-     * @param[in] t1 Size of tile in the 2nd dimension.
-     * @param[in] t2 Size of tile in the 3rd dimension.
-     */
-    tiled_extent(int e0, int e1, int e2, int t0, int t1, int t2) __CPU__ __HC__ : extent(e0, e1, e2), dynamic_group_segment_size(0), tile_dim{t0, t1, t2} {}
-
-    /**
-     * Construct an tiled extent with the size of extent and the size of tile
-     * specified.
-     *
-     * @param[in] e0 Size of extent in the 1st dimension.
-     * @param[in] e1 Size of extent in the 2nd dimension.
-     * @param[in] e2 Size of extent in the 3rd dimension.
-     * @param[in] t0 Size of tile in the 1st dimension.
-     * @param[in] t1 Size of tile in the 2nd dimension.
-     * @param[in] t2 Size of tile in the 3rd dimension.
-     * @param[in] size Size of dynamic group segment.
-     */
-    tiled_extent(int e0, int e1, int e2, int t0, int t1, int t2, int size) __CPU__ __HC__ : extent(e0, e1, e2), dynamic_group_segment_size(size), tile_dim{t0, t1, t2} {}
-
-    /**
-     * Copy constructor. Constructs a new tiled_extent from the supplied
-     * argument "other".
-     *
-     * @param[in] other An object of type tiled_extent from which to initialize
-     *                  this new extent.
-     */
-    tiled_extent(const tiled_extent<3>& other) __CPU__ __HC__ : extent(other[0], other[1], other[2]), dynamic_group_segment_size(other.dynamic_group_segment_size), tile_dim{other.tile_dim[0], other.tile_dim[1], other.tile_dim[2]} {}
-
-    /**
-     * Constructs a tiled_extent<N> with the extent "ext".
-     *
-     * @param[in] ext The extent of this tiled_extent
-     * @param[in] t0 Size of tile in the 1st dimension.
-     * @param[in] t1 Size of tile in the 2nd dimension.
-     * @param[in] t2 Size of tile in the 3rd dimension.
-     */
-    tiled_extent(const extent<3>& ext, int t0, int t1, int t2) __CPU__ __HC__ : extent(ext), dynamic_group_segment_size(0), tile_dim{t0, t1, t2} {}
-
-    /**
-     * Constructs a tiled_extent<N> with the extent "ext".
-     *
-     * @param[in] ext The extent of this tiled_extent
-     * @param[in] t0 Size of tile in the 1st dimension.
-     * @param[in] t1 Size of tile in the 2nd dimension.
-     * @param[in] t2 Size of tile in the 3rd dimension.
-     * @param[in] size Size of dynamic group segment.
-     */
-    tiled_extent(const extent<3>& ext, int t0, int t1, int t2, int size) __CPU__ __HC__ : extent(ext), dynamic_group_segment_size(size), tile_dim{t0, t1, t2} {}
-
-    /**
-     * Set the size of dynamic group segment. The function should be called
-     * in host code, prior to a kernel is dispatched.
-     *
-     * @param[in] size The amount of dynamic group segment needed.
-     */
-    void set_dynamic_group_segment_size(unsigned int size) __CPU__ {
-        dynamic_group_segment_size = size;
+        return tmp;
     }
 
-    /**
-     * Return the size of dynamic group segment in bytes.
-     */
-    unsigned int get_dynamic_group_segment_size() const __CPU__ {
-        return dynamic_group_segment_size;
+    tiled_extent truncate() const noexcept [[cpu, hc]]
+    {
+        static const auto round_down_to_previous_multiple = [=](int x, int y) {
+            return x - x % y;
+        };
+
+        tiled_extent tmp{*this};
+        for (auto i = 0; i != n; ++i) {
+            tmp[i] = round_down_to_previous_multiple(tmp[i], tile_dim[i]);
+        }
+
+        return tmp;
     }
 };
 
@@ -3367,16 +3231,60 @@ void tile_static_memory_fence(const tile_barrier&) __HC__;
  * Represents a set of related indices subdivided into 1-, 2-, or 3-dimensional
  * tiles.
  *
- * @tparam N Tile dimension.
+ * @tparam n Tile dimension.
  */
-template <int N=3>
+template<int n>
 class tiled_index {
+    friend struct detail::Indexer;
+
+    template<typename Kernel>
+    friend
+    completion_future parallel_for_each(
+        const accelerator_view&, const tiled_extent<n>&, const Kernel&);
+
+    // TODO: convert to using the hc_ flavoured functions.
+    template<int m = n, typename std::enable_if<m == 1>::type* = nullptr>
+    tiled_index() [[hc]]
+        : global{amp_get_global_id(0)},
+          local{amp_get_local_id(0)},
+          tile{amp_get_group_id(0)},
+          tile_origin{amp_get_global_id(0) - amp_get_local_id(0)},
+          tile_dim{amp_get_local_size(0)}
+    {}
+
+    template<int m = n, typename std::enable_if<m == 2>::type* = nullptr>
+    tiled_index() [[hc]]
+        : global{amp_get_global_id(1), amp_get_global_id(0)},
+          local{amp_get_local_id(1), amp_get_local_id(0)},
+          tile{amp_get_group_id(1), amp_get_group_id(0)},
+          tile_origin{
+              amp_get_global_id(1) - amp_get_local_id(1),
+              amp_get_global_id(0) - amp_get_local_id(0)},
+          tile_dim{amp_get_local_size(1), amp_get_local_size(0)}
+    {}
+
+    template<int m = n, typename std::enable_if<m == 3>::type* = nullptr>
+    tiled_index() [[hc]]
+        :
+        global{
+            amp_get_global_id(2), amp_get_global_id(1), amp_get_global_id(0)},
+        local{amp_get_local_id(2), amp_get_local_id(1), amp_get_local_id(0)},
+        tile{amp_get_group_id(2), amp_get_group_id(1), amp_get_group_id(0)},
+        tile_origin{
+            amp_get_global_id(2) - amp_get_local_id(2),
+            amp_get_global_id(1) - amp_get_local_id(1),
+            amp_get_global_id(0) - amp_get_local_id(0)},
+        tile_dim{
+            amp_get_local_size(2),
+            amp_get_local_size(1),
+            amp_get_local_size(0)}
+    {}
 public:
     /**
      * A static member of tiled_index that contains the rank of this tiled
      * extent, and is either 1, 2, or 3 depending on the specialization used.
      */
-    static const int rank = 3;
+    static constexpr int rank{n};
 
     /**
      * Copy constructor. Constructs a new tiled_index from the supplied
@@ -3392,25 +3300,25 @@ public:
      * An index of rank 1, 2, or 3 that represents the global index within an
      * extent.
      */
-    const index<3> global;
+    const index<n> global;
 
     /**
      * An index of rank 1, 2, or 3 that represents the relative index within
      * the current tile of a tiled extent.
      */
-    const index<3> local;
+    const index<n> local;
 
     /**
      * An index of rank 1, 2, or 3 that represents the coordinates of the
      * current tile of a tiled extent.
      */
-    const index<3> tile;
+    const index<n> tile;
 
     /**
      * An index of rank 1, 2, or 3 that represents the global coordinates of
      * the origin of the current tile within a tiled extent.
      */
-    const index<3> tile_origin;
+    const index<n> tile_origin;
 
     /**
      * An object which represents a barrier within the current tile of threads.
@@ -3420,340 +3328,19 @@ public:
     /**
      * An index of rank 1, 2, 3 that represents the size of the tile.
      */
-    const index<3> tile_dim;
+    const index<n> tile_dim;
 
     /**
      * Implicit conversion operator that converts a tiled_index<N> into
      * an index<N>. The implicit conversion converts to the .global index
      * member.
      */
-    operator index<3>() const [[cpu, hc]]
+    operator index<n>() const [[cpu, hc]]
     {
         return global;
     }
 
-    tiled_index(const index<3>& g) __CPU__ __HC__ : global(g) {}
-
-private:
-    tiled_index() __HC__
-        :
-        global(
-            amp_get_global_id(2), amp_get_global_id(1), amp_get_global_id(0)),
-        local(amp_get_local_id(2), amp_get_local_id(1), amp_get_local_id(0)),
-        tile(amp_get_group_id(2), amp_get_group_id(1), amp_get_group_id(0)),
-        tile_origin(
-            amp_get_global_id(2) - amp_get_local_id(2),
-            amp_get_global_id(1) - amp_get_local_id(1),
-            amp_get_global_id(0) - amp_get_local_id(0)),
-        tile_dim(
-            amp_get_local_size(2),
-            amp_get_local_size(1),
-            amp_get_local_size(0))
-    {}
-
-    template<typename Kernel>
-    friend
-    completion_future parallel_for_each(
-        const accelerator_view&, const tiled_extent<N>&, const Kernel&);
-    friend
-    struct detail::Indexer;
-};
-
-
-/**
- * Represents a set of related indices subdivided into 1-, 2-, or 3-dimensional
- * tiles.
- * This class is 1D specialization of tiled_index.
- */
-template<>
-class tiled_index<1> {
-public:
-    /**
-     * A static member of tiled_index that contains the rank of this tiled
-     * extent, and is either 1, 2, or 3 depending on the specialization used.
-     */
-    static const int rank = 1;
-
-    /**
-     * Copy constructor. Constructs a new tiled_index from the supplied
-     * argument "other".
-     *
-     * @param[in] other An object of type tiled_index from which to initialize
-     *                  this.
-     */
-    tiled_index(const tiled_index& other) __CPU__ __HC__ = default;
-
-    /**
-     * An index of rank 1, 2, or 3 that represents the global index within an
-     * extent.
-     */
-    const index<1> global;
-
-    /**
-     * An index of rank 1, 2, or 3 that represents the relative index within
-     * the current tile of a tiled extent.
-     */
-    const index<1> local;
-
-    /**
-     * An index of rank 1, 2, or 3 that represents the coordinates of the
-     * current tile of a tiled extent.
-     */
-    const index<1> tile;
-
-    /**
-     * An index of rank 1, 2, or 3 that represents the global coordinates of
-     * the origin of the current tile within a tiled extent.
-     */
-    const index<1> tile_origin;
-
-    /**
-     * An object which represents a barrier within the current tile of threads.
-     */
-    const tile_barrier barrier;
-
-    /**
-     * An index of rank 1, 2, 3 that represents the size of the tile.
-     */
-    const index<1> tile_dim;
-
-    /**
-     * Implicit conversion operator that converts a tiled_index<N> into
-     * an index<N>. The implicit conversion converts to the .global index
-     * member.
-     */
-    operator const index<1>() const __CPU__ __HC__ {
-        return global;
-    }
-
-    tiled_index(const index<1>& g) __CPU__ __HC__ : global(g) {}
-
-private:
-    tiled_index() __HC__
-        : global(amp_get_global_id(0)),
-          local(amp_get_local_id(0)),
-          tile(amp_get_group_id(0)),
-          tile_origin(amp_get_global_id(0) - amp_get_local_id(0)),
-          tile_dim(amp_get_local_size(0))
-    {}
-
-    template<typename Kernel>
-    friend
-    completion_future parallel_for_each(
-        const accelerator_view&, const tiled_extent<1>&, const Kernel&);
-    friend
-    struct detail::Indexer;
-};
-
-/**
- * Represents a set of related indices subdivided into 1-, 2-, or 3-dimensional
- * tiles.
- * This class is 2D specialization of tiled_index.
- */
-template<>
-class tiled_index<2> {
-public:
-    /**
-     * A static member of tiled_index that contains the rank of this tiled
-     * extent, and is either 1, 2, or 3 depending on the specialization used.
-     */
-    static const int rank = 2;
-
-    /**
-     * Copy constructor. Constructs a new tiled_index from the supplied
-     * argument "other".
-     *
-     * @param[in] other An object of type tiled_index from which to initialize
-     *                  this.
-     */
-    tiled_index(const tiled_index& other) __CPU__ __HC__ = default;
-
-    /**
-     * An index of rank 1, 2, or 3 that represents the global index within an
-     * extent.
-     */
-    const index<2> global;
-
-    /**
-     * An index of rank 1, 2, or 3 that represents the relative index within
-     * the current tile of a tiled extent.
-     */
-    const index<2> local;
-
-    /**
-     * An index of rank 1, 2, or 3 that represents the coordinates of the
-     * current tile of a tiled extent.
-     */
-    const index<2> tile;
-
-    /**
-     * An index of rank 1, 2, or 3 that represents the global coordinates of
-     * the origin of the current tile within a tiled extent.
-     */
-    const index<2> tile_origin;
-
-    /**
-     * An object which represents a barrier within the current tile of threads.
-     */
-    const tile_barrier barrier;
-
-    /**
-     * An index of rank 1, 2, 3 that represents the size of the tile.
-     */
-    const index<2> tile_dim;
-
-    /**
-     * Implicit conversion operator that converts a tiled_index<N> into
-     * an index<N>. The implicit conversion converts to the .global index
-     * member.
-     */
-    operator const index<2>() const __CPU__ __HC__ {
-      return global;
-    }
-
-    tiled_index(const index<2>& g) __CPU__ __HC__ : global(g) {}
-
-private:
-    tiled_index() __HC__
-        : global(amp_get_global_id(1), amp_get_global_id(0)),
-          local(amp_get_local_id(1), amp_get_local_id(0)),
-          tile(amp_get_group_id(1), amp_get_group_id(0)),
-          tile_origin(
-              amp_get_global_id(1) - amp_get_local_id(1),
-              amp_get_global_id(0) - amp_get_local_id(0)),
-          tile_dim(amp_get_local_size(1), amp_get_local_size(0))
-    {}
-
-    template<typename Kernel>
-    friend
-    completion_future parallel_for_each(
-        const accelerator_view&, const tiled_extent<2>&, const Kernel&);
-    friend
-    struct detail::Indexer;
-};
-
-// ------------------------------------------------------------------------
-// utility helper classes for array_view
-// ------------------------------------------------------------------------
-
-template <typename T, int N>
-struct projection_helper
-{
-    // array_view<T,N>, where N>1
-    //    array_view<T,N-1> operator[](int i) const __CPU__ __HC__
-    static_assert(N > 1, "projection_helper is only supported on array_view with a rank of 2 or higher");
-    typedef array_view<T, N - 1> result_type;
-    static result_type project(array_view<T, N>& now, int stride) __CPU__ __HC__ {
-        int ext[N - 1], i, idx[N - 1], ext_o[N - 1];
-        for (i = N - 1; i > 0; --i) {
-            ext_o[i - 1] = now.extent[i];
-            ext[i - 1] = now.extent_base[i];
-            idx[i - 1] = now.index_base[i];
-        }
-        stride += now.index_base[0];
-        extent<N - 1> ext_now(ext_o);
-        extent<N - 1> ext_base(ext);
-        index<N - 1> idx_base(idx);
-        return result_type (now.cache, ext_now, ext_base, idx_base,
-                            now.offset + ext_base.size() * stride);
-    }
-    static result_type project(const array_view<T, N>& now, int stride) __CPU__ __HC__ {
-        int ext[N - 1], i, idx[N - 1], ext_o[N - 1];
-        for (i = N - 1; i > 0; --i) {
-            ext_o[i - 1] = now.extent[i];
-            ext[i - 1] = now.extent_base[i];
-            idx[i - 1] = now.index_base[i];
-        }
-        stride += now.index_base[0];
-        extent<N - 1> ext_now(ext_o);
-        extent<N - 1> ext_base(ext);
-        index<N - 1> idx_base(idx);
-        return result_type (now.cache, ext_now, ext_base, idx_base,
-                            now.offset + ext_base.size() * stride);
-    }
-};
-
-template <typename T>
-struct projection_helper<T, 1>
-{
-    // array_view<T,1>
-    //      T& operator[](int i) const __CPU__ __HC__;
-    typedef T& result_type;
-    static result_type project(array_view<T, 1>& now, int i) __CPU__ __HC__ {
-#if __HCC_ACCELERATOR__ != 1
-        now.cache.get_cpu_access(true);
-#endif
-        T *ptr = reinterpret_cast<T *>(now.cache.get() + i + now.offset + now.index_base[0]);
-        return *ptr;
-    }
-    static result_type project(const array_view<T, 1>& now, int i) __CPU__ __HC__ {
-#if __HCC_ACCELERATOR__ != 1
-        now.cache.get_cpu_access(true);
-#endif
-        T *ptr = reinterpret_cast<T *>(now.cache.get() + i + now.offset + now.index_base[0]);
-        return *ptr;
-    }
-};
-
-template <typename T, int N>
-struct projection_helper<const T, N>
-{
-    // array_view<T,N>, where N>1
-    //    array_view<const T,N-1> operator[](int i) const __CPU__ __HC__;
-    static_assert(N > 1, "projection_helper is only supported on array_view with a rank of 2 or higher");
-    typedef array_view<const T, N - 1> const_result_type;
-    static const_result_type project(array_view<const T, N>& now, int stride) __CPU__ __HC__ {
-        int ext[N - 1], i, idx[N - 1], ext_o[N - 1];
-        for (i = N - 1; i > 0; --i) {
-            ext_o[i - 1] = now.extent[i];
-            ext[i - 1] = now.extent_base[i];
-            idx[i - 1] = now.index_base[i];
-        }
-        stride += now.index_base[0];
-        extent<N - 1> ext_now(ext_o);
-        extent<N - 1> ext_base(ext);
-        index<N - 1> idx_base(idx);
-        auto ret = const_result_type (now.cache, ext_now, ext_base, idx_base,
-                                      now.offset + ext_base.size() * stride);
-        return ret;
-    }
-    static const_result_type project(const array_view<const T, N>& now, int stride) __CPU__ __HC__ {
-        int ext[N - 1], i, idx[N - 1], ext_o[N - 1];
-        for (i = N - 1; i > 0; --i) {
-            ext_o[i - 1] = now.extent[i];
-            ext[i - 1] = now.extent_base[i];
-            idx[i - 1] = now.index_base[i];
-        }
-        stride += now.index_base[0];
-        extent<N - 1> ext_now(ext_o);
-        extent<N - 1> ext_base(ext);
-        index<N - 1> idx_base(idx);
-        auto ret = const_result_type (now.cache, ext_now, ext_base, idx_base,
-                                      now.offset + ext_base.size() * stride);
-        return ret;
-    }
-};
-
-template <typename T>
-struct projection_helper<const T, 1>
-{
-    // array_view<const T,1>
-    //      const T& operator[](int i) const __CPU__ __HC__;
-    typedef const T& const_result_type;
-    static const_result_type project(array_view<const T, 1>& now, int i) __CPU__ __HC__ {
-#if __HCC_ACCELERATOR__ != 1
-        now.cache.get_cpu_access();
-#endif
-        const T *ptr = reinterpret_cast<const T *>(now.cache.get() + i + now.offset + now.index_base[0]);
-        return *ptr;
-    }
-    static const_result_type project(const array_view<const T, 1>& now, int i) __CPU__ __HC__ {
-#if __HCC_ACCELERATOR__ != 1
-        now.cache.get_cpu_access();
-#endif
-        const T *ptr = reinterpret_cast<const T *>(now.cache.get() + i + now.offset + now.index_base[0]);
-        return *ptr;
-    }
+    tiled_index(const index<n>& g) [[cpu, hc]] : global{g} {}
 };
 
 // ------------------------------------------------------------------------
@@ -3841,7 +3428,7 @@ void copy(const array<T, N> &src, OutputIter destBegin);
  * @tparam T The element type of this array
  * @tparam N The dimensionality of the array, defaults to 1 if elided.
  */
-struct array_base{
+struct array_base {
     struct Deleter {
         template<typename T>
         void operator()(T* ptr)
@@ -3851,11 +3438,13 @@ struct array_base{
             }
         }
     };
-    using Guarded_locked_ptr = std::pair<std::atomic_flag, void*>;
+    using Guarded_locked_ptr = std::pair<
+        std::atomic_flag, std::pair<const void*, void*>>;
 
-    inline static constexpr std::size_t max_array_cnt_{65521u}; // Prime.
+    static constexpr std::size_t max_array_cnt_{65536u}; // Prime.
     inline static std::array<Guarded_locked_ptr, max_array_cnt_> locked_ptrs_{};
 };
+
 template <typename T, int N = 1>
 class array : private array_base {
     static_assert(!std::is_const<T>{}, "array<const T> is not supported");
@@ -3907,32 +3496,86 @@ class array : private array_base {
 
         return static_cast<T*>(tmp);
     }
+    static
+    constexpr
+    std::uint64_t make_bitmask(
+        std::uint8_t first, std::uint8_t last) noexcept [[cpu, hc]]
+    {
+        return (first == last) ?
+            0u : ((UINT64_MAX >> (64u - (first - last))) << last);
+    }
+
+    static
+    std::uint32_t k_r_hash(const void* ptr) [[cpu, hc]]
+    {
+        static constexpr auto byte_offset_bits = 2u;
+        static constexpr auto set_bits = 10u;
+        static constexpr auto tag_bits =
+            sizeof(std::uintptr_t) * CHAR_BIT - set_bits - byte_offset_bits;
+
+        static const auto byte_offset = [](const void* p) {
+            constexpr auto mask = make_bitmask(byte_offset_bits, 0u);
+
+            return reinterpret_cast<std::uintptr_t>(p) & mask;
+        };
+        static const auto set = [](const void* p) {
+            constexpr auto mask =
+                make_bitmask(set_bits + byte_offset_bits, byte_offset_bits);
+
+            return (reinterpret_cast<std::uintptr_t>(p) & mask) >>
+                byte_offset_bits;
+        };
+        static const auto tag = [](const void* p) {
+            constexpr auto mask = make_bitmask(
+                tag_bits + set_bits + byte_offset_bits,
+                set_bits + byte_offset_bits);
+
+            return (reinterpret_cast<std::uintptr_t>(p) & mask) >>
+                (set_bits + byte_offset_bits);
+        };
+
+        return set(ptr) * (max_array_cnt_ / 1024);
+    }
     std::size_t lock_this_()
     {
-        const auto n = reinterpret_cast<std::uintptr_t>(this) % max_array_cnt_;
+        const auto n = k_r_hash(this);
         do {
-            while (locked_ptrs_[n].first.test_and_set());
-            // TODO: add backoff here.
+            auto idx = 0;
+            do {
+                idx = 0;
+                while (idx != max_array_cnt_ / 1024) {
+                    if (!locked_ptrs_[n + idx].first.test_and_set()) break;
+                    ++idx;
+                }
+            } while (idx == max_array_cnt_ / 1024);
 
             auto s = hsa_amd_memory_lock(
                 this,
                 sizeof(*this),
                 static_cast<hsa_agent_t*>(owner_.get_hsa_agent()),
                 1,
-                reinterpret_cast<void**>(&locked_ptrs_[n].second));
+                reinterpret_cast<void**>(&locked_ptrs_[n + idx].second.second));
 
             if (s != HSA_STATUS_SUCCESS) {
                 throw std::runtime_error{"Failed to lock array address."};
             }
 
-            return n;
+            locked_ptrs_[n + idx].second.first = this;
+
+            return n + idx;
         } while (true); // TODO: add termination after a number of attempts.
     }
     array* const this_() const [[hc]]
     {
-        const auto n = reinterpret_cast<std::uintptr_t>(this) % max_array_cnt_;
+        const auto n = k_r_hash(this);//reinterpret_cast<std::uintptr_t>(this) % max_array_cnt_;
 
-        return static_cast<array* const>(locked_ptrs_[n].second);
+        for (auto i = 0; i != max_array_cnt_ / 1024; ++i) {
+            if (locked_ptrs_[n + i].second.first != this) continue;
+
+            return static_cast<array* const>(locked_ptrs_[n + i].second.second);
+        }
+
+        return nullptr;
     }
 public:
     /**
@@ -3979,16 +3622,16 @@ public:
         cpu_access_{other.cpu_access_},
         data_{std::move(other.data_)}
     {
-        const auto n = reinterpret_cast<std::uintptr_t>(this) % max_array_cnt_;
+        // const auto n = //reinterpret_cast<std::uintptr_t>(this) % max_array_cnt_;
 
-        if (n == other.this_idx_) {
-            if (hsa_amd_memory_unlock(&other) != HSA_STATUS_SUCCESS) {
-                throw std::runtime_error{
-                    "Failed to unlock locked array pointer."};
-            }
+        // if (n == other.this_idx_) {
+        //     if (hsa_amd_memory_unlock(&other) != HSA_STATUS_SUCCESS) {
+        //         throw std::runtime_error{
+        //             "Failed to unlock locked array pointer."};
+        //     }
 
-            other.this_idx_ = max_array_cnt_;
-        }
+        //     other.this_idx_ = max_array_cnt_;
+        // }
 
         this_idx_ = lock_this_();
     }
@@ -5220,7 +4863,7 @@ public:
  * array<T,N>.
  */
 struct array_view_base {
-    inline static constexpr std::size_t max_array_view_cnt_{65536};
+    static constexpr std::size_t max_array_view_cnt_{65536};
 
     inline static std::array< // TODO: this is a placeholder, and most dubious.
         std::pair<
@@ -5612,7 +5255,12 @@ public:
         source_{other.source_},
         writers_for_this_{other.writers_for_this_}
     {
-        ++writers_[writers_for_this_].first;
+        if (writers_for_this_ == max_array_view_cnt_) return;
+
+        // N.B.: this is coupled with make_registered_kernel, and relies on it
+        //       copying the user provided Callable. It causes a spurious
+        //       writer registration that inserts a needless wait; TODO - fix.
+        captured_.push_back(writers_for_this_);
     }
 
     array_view(const array_view& other) [[hc]]
@@ -6933,9 +6581,7 @@ completion_future parallel_for_each(
 
     validate_compute_domain(compute_domain);
 
-        using B = array_view_base;
-
-    static const auto one_copy = [](Kernel){};
+    using B = array_view_base;
 
     auto first = B::captured_.size();
     auto g = f;
@@ -7013,8 +6659,6 @@ completion_future parallel_for_each(
     validate_tiled_compute_domain(compute_domain);
 
     using B = array_view_base;
-
-    static const auto one_copy = [](Kernel){};
 
     auto first = B::captured_.size();
     auto g = f;
