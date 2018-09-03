@@ -34,17 +34,17 @@ bool test() {
   e.set_dynamic_group_segment_size(DYNAMIC_GROUP_SEGMENT_SIZE);
 
   hc::completion_future fut = hc::parallel_for_each(
-    e, 
-    [=](hc::index<1> idx) __HC__ {
+    e,
+    [=](hc::tiled_index<1> idx) __HC__ {
       // create a tile_static array
       tile_static int group[groupSize];
-      group[idx[0]] = 0;
+      group[idx.local[0]] = 0;
 
       // av_a stores the size of group segment
       av_a(idx) = hc::get_group_segment_size();
 
       // av_b stores the size of static group segment
-      av_b(idx) = hc::get_static_group_segment_size() + group[idx[0]]; // use group__HC__ so it won't be optimized away
+      av_b(idx) = hc::get_static_group_segment_size() + group[(idx.global[0]+64)%groupSize]; // use group__HC__ so it won't be optimized away
   });
 
   // create a barrier packet

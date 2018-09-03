@@ -338,6 +338,7 @@ install(PROGRAMS $<TARGET_FILE:llvm-as>
                  $<TARGET_FILE:llvm-lto>
                  $<TARGET_FILE:llvm-objdump>
                  $<TARGET_FILE:llvm-mc>
+                 $<TARGET_FILE:llvm-split>
                  $<TARGET_FILE:opt>
                  $<TARGET_FILE:llc>
         DESTINATION bin
