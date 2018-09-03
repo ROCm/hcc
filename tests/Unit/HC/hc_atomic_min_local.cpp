@@ -54,7 +54,9 @@ int main() {
 
   ret &= test<unsigned int>();
   ret &= test<int>();
-  ret &= test<uint64_t>();
+  #if defined(EXTENDED_ATOMICS)
+    ret &= test<uint64_t>();
+  #endif
 
   return !(ret == true);
 }
