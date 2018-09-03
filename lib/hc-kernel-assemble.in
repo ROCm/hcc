@@ -88,20 +88,20 @@ if [ -f "$2" ]; then
   mv "$2" "$TEMP_DIR/$BASENAME.tmp.o"
 fi
 
-$LLVM_DIS "$KERNEL_INPUT" -o "$TEMP_NAME.ll"
+cp $KERNEL_INPUT "$TEMP_NAME.bc"
 if [ $KMDUMPLLVM == "1" ]; then
+  $LLVM_DIS "$TEMP_NAME.bc" -o "$TEMP_NAME.ll"
   cp "$TEMP_NAME.ll" ./dump.kernel_input.ll
 fi
-$OPT -load $LIBPATH/LLVMDirectFuncCall.so -redirect < "$TEMP_NAME.ll" 2>"$TEMP_NAME.kernel_redirect.ll" >/dev/null
+$OPT -load $LIBPATH/LLVMDirectFuncCall.so -redirect < "$TEMP_NAME.bc" 2>"$TEMP_NAME.kernel_redirect.bc" >/dev/null
 if [ $KMDUMPLLVM == "1" ]; then
-  cp "$TEMP_NAME.kernel_redirect.ll" ./dump.kernel_redirect.ll
+  cp "$TEMP_NAME.kernel_redirect.bc" ./dump.kernel_redirect.bc
 fi
-if [[ -s "$TEMP_NAME.kernel_redirect.ll" ]]; then
-  $OPT -load $LIBPATH/LLVMWrapperGen.so -gensrc < "$TEMP_NAME.ll" 2>"$TEMP_NAME.camp.cpp" >/dev/null
+if [[ -s "$TEMP_NAME.kernel_redirect.bc" ]]; then
+  $OPT -load $LIBPATH/LLVMWrapperGen.so -gensrc < "$TEMP_NAME.bc" 2>"$TEMP_NAME.camp.cpp" >/dev/null
   if [ $KMDUMPLLVM == "1" ]; then
     cp "$TEMP_NAME.camp.cpp" ./dump.kernel_camp.cpp
   fi
-  $LLVM_AS "$TEMP_NAME.kernel_redirect.ll" -o "$TEMP_NAME.kernel_redirect.bc"
   $CLANG $CXXFLAGS "$TEMP_NAME.camp.cpp" $CO "$TEMP_NAME.camp.s" -emit-llvm
   $CLANG $CXXFLAGS "$TEMP_NAME.camp.cpp" $CO "$TEMP_NAME.camp.o"
   objcopy -R .kernel "$TEMP_NAME.camp.o"

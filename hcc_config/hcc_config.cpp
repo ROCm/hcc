@@ -158,9 +158,6 @@ void ldflags(void) {
 #endif
     std::cout << " -ldl -lm -lpthread";
 
-    // backtrace support
-    std::cout << " -lunwind";
-
     if (const char *p = getenv("TEST_CPU"))
         if (p == std::string("ON"))
         std::cout << " -lmcwamp_atomic";

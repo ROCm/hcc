@@ -79,7 +79,7 @@ do
   fi
 done
 if [ ! -f "$ROCM_LIB/ocml.amdgcn.bc" ]; then
-  echo "ROCm Device Libs is missing"
+  echo "ROCm Device Libs file ocml.amdgcn.bc is missing from "$ROCM_LIB
   exit 1
 fi
 

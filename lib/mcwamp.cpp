@@ -265,8 +265,8 @@ static inline uint64_t Read8byteIntegerFromBuffer(const char *data, size_t pos) 
 
 #define OFFLOAD_BUNDLER_MAGIC_STR "__CLANG_OFFLOAD_BUNDLE__"
 #define OFFLOAD_BUNDLER_MAGIC_STR_LENGTH (24)
-#define HCC_TRIPLE_PREFIX "hcc-amdgcn--amdhsa-"
-#define HCC_TRIPLE_PREFIX_LENGTH (19)
+#define HCC_TRIPLE_PREFIX "hcc-amdgcn-amd-amdhsa--"
+#define HCC_TRIPLE_PREFIX_LENGTH (23)
 
 // Try determine a compatible code object within kernel bundle for a queue
 // Returns true if a compatible code object is found, and returns its size and

@@ -105,6 +105,8 @@ long int HCC_D2H_PININPLACE_THRESHOLD = 1024;
 // Default GPU device
 unsigned int HCC_DEFAULT_GPU = 0;
 
+unsigned int HCC_ENABLE_PRINTF = 0;
+
 // Chicken bits:
 int HCC_SERIALIZE_KERNEL = 0;
 int HCC_SERIALIZE_COPY = 0;
@@ -1219,7 +1221,17 @@ private:
     // ROCR queue associated with this HSAQueue instance.
     RocrQueue    *rocrQueue;
 
-    std::mutex   qmutex;  // Protect structures for this KalmarQueue.  Currently just the hsaQueue.
+
+    // NOTE: Changed to recursive mutex since recursive locking may occur
+    // within the same thread. In HSAQueue dtor, the call to dispose() will
+    // lock the queue and then it will call wait().  In wait(), if it occurs
+    // that a system scope release is needed, it would enqueue a system scope
+    // marker, which will eventually turning it into enqueuing an HSABarrier
+    // into the current queue. The recursive locking happens when HSABarrier
+    // tries to lock the queue to insert a new packet.
+    // Step through the runtime code with the unit test HC/execute_order.cpp
+    // for details
+    std::recursive_mutex   qmutex;  // Protect structures for this KalmarQueue.  Currently just the hsaQueue.
 
 
     bool         drainingQueue_;  // mode that we are draining queue, used to allow barrier ops to be enqueued.
@@ -1971,7 +1983,7 @@ public:
 
 
         {
-            std::lock_guard<std::mutex> (this->qmutex);
+            std::lock_guard<std::recursive_mutex> l(this->qmutex);
 
 
             this->cu_arrays.clear();
@@ -2311,7 +2323,7 @@ public:
                 if (rq->_hccQueue != thief)  {
                     auto victimHccQueue = rq->_hccQueue;
                     // victimHccQueue==nullptr should be detected by above loop.
-                    std::lock_guard<std::mutex> (victimHccQueue->qmutex);
+                    std::lock_guard<std::recursive_mutex> l(victimHccQueue->qmutex);
                     if (victimHccQueue->isEmpty()) {
                         DBOUT(DB_LOCK, " ptr:" << this << " lock_guard...\n");
 
@@ -2334,32 +2346,37 @@ public:
         }
     };
 
+
+private:
+
+    // NOTE: removeRocrQueue should only be called from HSAQueue::dispose
+    // since there's an assumption on a specific locking sequence
+    friend void HSAQueue::dispose();
     void removeRocrQueue(RocrQueue *rocrQueue) {
 
         // queues already locked:
         size_t hccSize = queues.size();
 
-        {
-            std::lock_guard<std::mutex> (this->rocrQueuesMutex);
+        // rocrQueuesMutex has already been acquired in HSAQueue::dispose
 
-            // a perf optimization to keep the HSA queue if we have more HCC queues that might want it.
-            // This defers expensive queue deallocation if an hccQueue that holds an hwQueue is destroyed -
-            // keep the hwqueue around until the number of hccQueues drops below the number of hwQueues
-            // we have already allocated.
-            auto rqSize = rocrQueues.size();
-            if (hccSize < rqSize)  {
-                auto iter = std::find(rocrQueues.begin(), rocrQueues.end(), rocrQueue);
-                assert (iter != rocrQueues.end());
-                // Remove the pointer from the list:
-                rocrQueues.erase(iter);
-                DBOUT(DB_QUEUE, "removeRocrQueue-hard: rocrQueue=" << rocrQueue << " hccQueues/rocrQueues=" << hccSize << "/" << rqSize << "\n")
-                delete rocrQueue; // this will delete the HSA HW queue.
-            } else {
-                DBOUT(DB_QUEUE, "removeRocrQueue-soft: rocrQueue=" << rocrQueue << " keep hwQUeue, set _hccQueue link to nullptr" << " hccQueues/rocrQueues=" << hccSize << "/" << rqSize << "\n");
-                rocrQueue->_hccQueue = nullptr; // mark it as available.
-            }
+        // a perf optimization to keep the HSA queue if we have more HCC queues that might want it.
+        // This defers expensive queue deallocation if an hccQueue that holds an hwQueue is destroyed -
+        // keep the hwqueue around until the number of hccQueues drops below the number of hwQueues
+        // we have already allocated.
+        auto rqSize = rocrQueues.size();
+        if (hccSize < rqSize) {
+            auto iter = std::find(rocrQueues.begin(), rocrQueues.end(), rocrQueue);
+            assert(iter != rocrQueues.end());
+            // Remove the pointer from the list:
+            rocrQueues.erase(iter);
+            DBOUT(DB_QUEUE, "removeRocrQueue-hard: rocrQueue=" << rocrQueue << " hccQueues/rocrQueues=" << hccSize << "/" << rqSize << "\n")
+            delete rocrQueue; // this will delete the HSA HW queue.
         }
-
+        else {
+            DBOUT(DB_QUEUE, "removeRocrQueue-soft: rocrQueue=" << rocrQueue << " keep hwQUeue, set _hccQueue link to nullptr"
+                                                               << " hccQueues/rocrQueues=" << hccSize << "/" << rqSize << "\n");
+            rocrQueue->_hccQueue = nullptr; // mark it as available.
+        }
     };
 
 
@@ -3205,8 +3222,8 @@ private:
 
             // Define the global symbol hc::printf_buffer with the actual address
             status = hsa_executable_agent_global_variable_define(hsaExecutable, agent
-                                                            , "_ZN2hc13printf_bufferE"
-                                                            , hc::printf_buffer_locked_va);
+                                                              , "_ZN2hc13printf_bufferE"
+                                                              , hc::printf_buffer_locked_va);
             STATUS_CHECK(status, __LINE__);
 
             elfio reader;
@@ -3557,15 +3574,16 @@ public:
           return;
 
         // deallocate the printf buffer
-        if (hc::printf_buffer != nullptr) {
+        if (HCC_ENABLE_PRINTF &&
+            hc::printf_buffer != nullptr) {
            // do a final flush
            flushPrintfBuffer();
 
            hc::deletePrintfBuffer(hc::printf_buffer);
-           status = hsa_amd_memory_unlock(&hc::printf_buffer);
-           STATUS_CHECK(status, __LINE__);
-           hc::printf_buffer_locked_va = nullptr;
         }
+        status = hsa_amd_memory_unlock(&hc::printf_buffer);
+        STATUS_CHECK(status, __LINE__);
+        hc::printf_buffer_locked_va = nullptr;
 
         // destroy all KalmarDevices associated with this context
         for (auto dev : Devices)
@@ -3612,19 +3630,20 @@ public:
 
     void initPrintfBuffer() override {
 
-        if (hc::printf_buffer != nullptr) {
-          // Check whether the printf buffer is still valid
-          // because it may have been annihilated by HIP's hipDeviceReset().
-          // Re-allocate the printf buffer if that happens.
-          hc::AmPointerInfo info;
-          am_status_t status = am_memtracker_getinfo(&info, hc::printf_buffer);
-          if (status != AM_SUCCESS) {
-            hc::printf_buffer = nullptr;
+        if (HCC_ENABLE_PRINTF) { 
+          if (hc::printf_buffer != nullptr) {
+            // Check whether the printf buffer is still valid
+            // because it may have been annihilated by HIP's hipDeviceReset().
+            // Re-allocate the printf buffer if that happens.
+            hc::AmPointerInfo info;
+            am_status_t status = am_memtracker_getinfo(&info, hc::printf_buffer);
+            if (status != AM_SUCCESS) {
+              hc::printf_buffer = nullptr;
+            }
           }
-        }
-
-        if (hc::printf_buffer == nullptr) {
-          hc::printf_buffer = hc::createPrintfBuffer(hc::default_printf_buffer_size);
+          if (hc::printf_buffer == nullptr) {
+            hc::printf_buffer = hc::createPrintfBuffer(hc::default_printf_buffer_size);
+          }
         }
 
         // pinned hc::printf_buffer so that the GPUs could access it
@@ -3638,6 +3657,9 @@ public:
     }
 
     void flushPrintfBuffer() override {
+
+      if (!HCC_ENABLE_PRINTF)  return;
+
       hc::processPrintfBuffer(hc::printf_buffer);
     }
 
@@ -3694,6 +3716,9 @@ void HSAContext::ReadHccEnv()
 
     // Change the default GPU
     GET_ENV_INT (HCC_DEFAULT_GPU, "Change the default GPU (Default is device 0)");
+
+    // Enable printf support
+    GET_ENV_INT (HCC_ENABLE_PRINTF, "Enable hc::printf");
 
     GET_ENV_INT    (HCC_PROFILE,         "Enable HCC kernel and data profiling.  1=summary, 2=trace");
     GET_ENV_INT    (HCC_PROFILE_VERBOSE, "Bitmark to control profile verbosity and format. 0x1=default, 0x2=show begin/end, 0x4=show barrier");
@@ -3939,7 +3964,7 @@ HSAQueue::HSAQueue(KalmarDevice* pDev, hsa_agent_t agent, execute_order order) :
         // Protect the HSA queue we can steal it.
         DBOUT(DB_LOCK, " ptr:" << this << " create lock_guard...\n");
 
-        std::lock_guard<std::mutex> (this->qmutex);
+        std::lock_guard<std::recursive_mutex> l(this->qmutex);
 
         auto device = static_cast<Kalmar::HSADevice*>(this->getDev());
         device->createOrstealRocrQueue(this);
@@ -3960,7 +3985,13 @@ void HSAQueue::dispose() override {
     {
         DBOUT(DB_LOCK, " ptr:" << this << " dispose lock_guard...\n");
 
-        std::lock_guard<std::mutex> (this->qmutex);
+        Kalmar::HSADevice* device = static_cast<Kalmar::HSADevice*>(getDev());
+
+        // NOTE: needs to acquire rocrQueuesMutex and then the qumtex in this
+        // sequence in order to avoid potential deadlock with other threads
+        // executing createOrstealRocrQueue at the same time
+        std::lock_guard<std::mutex> rl(device->rocrQueuesMutex);
+        std::lock_guard<std::recursive_mutex> l(this->qmutex);
 
         // wait on all existing kernel dispatches and barriers to complete
         wait();
@@ -3979,10 +4010,7 @@ void HSAQueue::dispose() override {
         }
         kernelBufferMap.clear();
 
-
-        Kalmar::HSADevice* device = static_cast<Kalmar::HSADevice*>(getDev());
         if (this->rocrQueue != nullptr) {
-
             device->removeRocrQueue(rocrQueue);
             rocrQueue = nullptr;
         }
@@ -4630,6 +4658,11 @@ HSADispatch::setLaunchConfiguration(const int dims, size_t *globalDims, size_t *
           std::stringstream msg;
           msg << "The extent of the tile (" << localDims[i] 
               << ") exceeds the device limit (" << workgroup_max_dim[i] << ").";
+          throw Kalmar::runtime_exception(msg.str().c_str(), -1);
+        } else if (localDims[i] > globalDims[i]) {
+          std::stringstream msg;
+          msg << "The extent of the tile (" << localDims[i] 
+              << ") exceeds the compute grid extent (" << globalDims[i] << ").";
           throw Kalmar::runtime_exception(msg.str().c_str(), -1);
         }
         workgroup_size[i] = localDims[i];
