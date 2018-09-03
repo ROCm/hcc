@@ -1,4 +1,4 @@
-// RUN: %cxxamp -Werror %s -o %t.out && %t.out
+// RUN: %cxxamp %s -o %t.out && %t.out
 #include <stdlib.h>
 #include <iostream>
 #include <functional>
