@@ -21,13 +21,13 @@ int main() {
   accelerator_view av_any_order = acc.create_view(execute_any_order);
 
   // test dispatch a kernel to av
-  parallel_for_each(av, extent<1>(1), []() [[hc]] {});
+  parallel_for_each(av, extent<1>(1), [](index<1>) [[hc]] {});
 
   // test dispatch a kernel to av_in_order
-  parallel_for_each(av_in_order, extent<1>(1), []() [[hc]] {});
+  parallel_for_each(av_in_order, extent<1>(1), [](index<1>) [[hc]] {});
 
   // test dispatch a kernel to av_any_order
-  parallel_for_each(av_any_order, extent<1>(1), []() [[hc]] {});
+  parallel_for_each(av_any_order, extent<1>(1), [](index<1>) [[hc]] {});
 
   return 0;
 }
