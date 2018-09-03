@@ -6,8 +6,8 @@
 
 // detail Runtime implementation (HSA version)
 
-#include "kalmar_runtime.h"
-#include "kalmar_aligned_alloc.h"
+#include "hc_aligned_alloc.h"
+#include "hc_runtime.h"
 
 #include "hc_am_internal.hpp"
 #include "unpinned_copy_engine.h"
@@ -47,8 +47,8 @@
     #include <cxxabi.h>
 #endif
 
-#ifndef KALMAR_DEBUG
-    #define KALMAR_DEBUG (0)
+#ifndef HC_DEBUG
+    #define HC_DEBUG (0)
 #endif
 
 #define CHECK_OLDER_COMPLETE 0
@@ -111,7 +111,7 @@ int HCC_SERIALIZE_COPY = 0;
 int HCC_FORCE_COMPLETION_FUTURE = 0;
 int HCC_FORCE_CROSS_QUEUE_FLUSH=0;
 
-int HCC_OPT_FLUSH=1;
+int HCC_OPT_FLUSH=0;
 
 
 unsigned HCC_DB = 0;
@@ -974,14 +974,27 @@ public:
 }; // end of HSABarrier
 
 class HSADispatch : public HSAOp {
+    struct Unlocker {
+        void* host_ptr_;
+
+        void operator()(void*) const {
+            if (!host_ptr_) return;
+
+            auto s = hsa_amd_memory_unlock(host_ptr_);
+
+            if (s == HSA_STATUS_SUCCESS) return;
+
+            throw std::runtime_error{"Failed to unlock locked callable."};
+        }
+    };
+
     detail::HSADevice* device_{nullptr};
 
     const char* kernel_name_{nullptr};
     const HSAKernel* kernel_{nullptr};
 
     std::unique_ptr<void, void (*)(void*)> callable_{nullptr, [](void*){}};
-    std::unique_ptr<void, decltype(hsa_amd_memory_unlock)*> kernargMemory_{
-        nullptr, hsa_amd_memory_unlock};
+    std::unique_ptr<void, Unlocker> kernargMemory_{nullptr, Unlocker{nullptr}};
 
     hsa_kernel_dispatch_packet_t aql_{};
     bool isDispatched_{false};
@@ -1036,6 +1049,8 @@ public:
         const hsa_kernel_dispatch_packet_t* aql = nullptr)
         : HSADispatch{device, queue, kernel, aql}
     {
+        if (callable_size == 0) return;
+
         callable_ = std::move(callable);
 
         void* tmp{nullptr};
@@ -1044,7 +1059,8 @@ public:
 
         STATUS_CHECK(r, __LINE__);
 
-        kernargMemory_.reset(tmp);
+        kernargMemory_ =
+            decltype(kernargMemory_){tmp, Unlocker{callable_.get()}};
     }
 
     void overrideAcquireFenceIfNeeded();
@@ -1913,6 +1929,11 @@ public:
     void releaseLockedRocrQueue();
 
 
+    [[noreturn]]
+    std::uint32_t GetGroupSegmentSize(void*) override
+    {
+        throw std::runtime_error{"Unsupported."};
+    }
     void* getHSAAgent() override;
 
     void* getHostAgent() override;
@@ -2474,9 +2495,11 @@ public:
         return access;
     }
 
-
-
-
+    [[noreturn]]
+    bool check(std::size_t*, std::size_t) override
+    {
+        throw std::runtime_error{"Unsupported."};
+    }
 
     HSADevice(hsa_agent_t a, hsa_agent_t host, int x_accSeqNum);
 
@@ -2572,7 +2595,7 @@ public:
             STATUS_CHECK(status, __LINE__);
         } else {
             DBOUT(DB_INIT, "create( <count> " << count << ", <key> " << key << "): use host memory allocator\n");
-            data = kalmar_aligned_alloc(0x1000, count);
+            data = hc_aligned_alloc(0x1000, count);
         }
         return data;
     }
@@ -2585,7 +2608,7 @@ public:
             STATUS_CHECK(status, __LINE__);
         } else {
             DBOUT(DB_INIT, "release(" << ptr << "," << key << "): use host memory deallocator\n");
-            kalmar_aligned_free(ptr);
+            hc_aligned_free(ptr);
         }
     }
 
@@ -4009,7 +4032,16 @@ HSAQueue::dispatch_hsa_kernel(
 
     detail::HSADevice* device = static_cast<detail::HSADevice*>(this->getDev());
 
-    std::shared_ptr<HSADispatch> sp_dispatch = std::make_shared<HSADispatch>(device, this/*queue*/, nullptr, aql);
+    std::unique_ptr<char> tmp{new char[argSize]};
+    std::memcpy(tmp.get(), args, argSize * sizeof(char));
+    std::shared_ptr<HSADispatch> sp_dispatch = std::make_shared<HSADispatch>(
+        device,
+        this/*queue*/,
+        nullptr,
+        std::unique_ptr<void, void (*)(void*)>{
+            tmp.release(), [](void* p) { delete static_cast<char*>(p); }},
+        argSize,
+        aql);
     if (HCC_OPT_FLUSH) {
         sp_dispatch->overrideAcquireFenceIfNeeded();
     }
@@ -4056,7 +4088,7 @@ HSADispatch::HSADispatch(
     isDispatched_{false},
     waitMode_{HSA_WAIT_STATE_BLOCKED},
     future_{},
-    kernargMemory_{nullptr, hsa_amd_memory_unlock}
+    kernargMemory_{nullptr, Unlocker{nullptr}}
 {}
 
 static std::ostream& PrintHeader(std::ostream& os, uint16_t h)
@@ -4345,7 +4377,7 @@ hsa_status_t HSADispatch::dispatchKernelAsync(
 
     // dynamically allocate a std::shared_future<void> object
     future_.reset(new std::shared_future<void>{
-        std::async(std::launch::deferred, [&] { waitComplete(); }).share()});
+        std::async([this] { waitComplete(); }).share()});
 
     if (HCC_SERIALIZE_KERNEL & 0x2) {
         status = waitComplete();
@@ -4518,14 +4550,15 @@ hsa_status_t HSADispatch::setLaunchConfiguration(
     aql_.group_segment_size   = kernel->static_group_segment_size + dynamicGroupSize;
     aql_.private_segment_size = kernel->private_segment_size;
 
-    // Set global dims:
-    aql_.grid_size_x = globalDims[0];
-    aql_.grid_size_y = (dims > 1 ) ? globalDims[1] : 1;
-    aql_.grid_size_z = (dims > 2 ) ? globalDims[2] : 1;
+    // Set global dims (note that we follow the HC convention of most
+    // significant to least significant dimension):
+    aql_.grid_size_x = globalDims[dims - 1];
+    aql_.grid_size_y = (dims > 1 ) ? globalDims[dims - 2] : 1;
+    aql_.grid_size_z = (dims > 2 ) ? globalDims[dims - 3] : 1;
 
-    aql_.workgroup_size_x = workgroup_size[0];
-    aql_.workgroup_size_y = workgroup_size[1];
-    aql_.workgroup_size_z = workgroup_size[2];
+    aql_.workgroup_size_x = workgroup_size[dims - 1];
+    aql_.workgroup_size_y = (dims > 1) ? workgroup_size[dims - 2] : 1;
+    aql_.workgroup_size_z = (dims > 2) ? workgroup_size[dims - 3] : 1;
 
     aql_.setup = dims << HSA_KERNEL_DISPATCH_PACKET_SETUP_DIMENSIONS;
 
