@@ -363,7 +363,7 @@ float reduction_tiled_3(const std::vector<float>& source)
             {
                 av_dst[tidx.tile] = tile_data[0];
             }
-        }).wait();
+        }));
 
         // Update the sequence length, swap source with destination.
         element_count /= _tile_size;
@@ -398,7 +398,7 @@ float reduction_tiled_4(const std::vector<float>& source)
     // Using arrays as temporary memory.
     array<float, 1> arr_1(element_count, source.begin());
     array<float, 1> arr_2((element_count / _tile_size) ? (element_count / _tile_size) : 1);
-    
+
     // array_views may be swapped after each iteration.
     array_view<float, 1> av_src(arr_1);
     array_view<float, 1> av_dst(arr_2);
