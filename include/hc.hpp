@@ -46,14 +46,6 @@
 
 #include <bitset>
 
-#ifndef __HC__
-#   define __HC__ [[hc]]
-#endif
-
-#ifndef __CPU__
-#   define __CPU__ [[cpu]]
-#endif
-
 typedef struct hsa_kernel_dispatch_packet_s hsa_kernel_dispatch_packet_t;
 
 /**
@@ -140,523 +132,8 @@ inline uint64_t get_tick_frequency() {
  * or create_view member functions on an accelerator object.
  */
 class accelerator_view {
-public:
-    accelerator_view() = delete;
-    /**
-     * Copy-constructs an accelerator_view object. This function does a shallow
-     * copy with the newly created accelerator_view object pointing to the same
-     * underlying view as the "other" parameter.
-     *
-     * @param[in] other The accelerator_view object to be copied.
-     */
-    accelerator_view(const accelerator_view&) = default;
-
-    /**
-     * Assigns an accelerator_view object to "this" accelerator_view object and
-     * returns a reference to "this" object. This function does a shallow
-     * assignment with the newly created accelerator_view object pointing to
-     * the same underlying view as the passed accelerator_view parameter.
-     *
-     * @param[in] other The accelerator_view object to be assigned from.
-     * @return A reference to "this" accelerator_view object.
-     */
-    accelerator_view& operator=(const accelerator_view&) = default;
-
-    /**
-     * Returns the queuing mode that this accelerator_view was created with.
-     * See "Queuing Mode".
-     *
-     * @return The queuing mode.
-     */
-    queuing_mode get_queuing_mode() const { return pQueue->get_mode(); }
-
-    /**
-     * Returns the execution order of this accelerator_view.
-     */
-    execute_order get_execute_order() const { return pQueue->get_execute_order(); }
-
-    /**
-     * Returns a boolean value indicating whether the accelerator view when
-     * passed to a parallel_for_each would result in automatic selection of an
-     * appropriate execution target by the runtime. In other words, this is the
-     * accelerator view that will be automatically selected if
-     * parallel_for_each is invoked without explicitly specifying an
-     * accelerator view.
-     *
-     * @return A boolean value indicating if the accelerator_view is the auto
-     *         selection accelerator_view.
-     */
-    // FIXME: dummy implementation now
-    bool get_is_auto_selection() { return false; }
-
-    /**
-     * Returns a 32-bit unsigned integer representing the version number of
-     * this accelerator view. The format of the integer is major.minor, where
-     * the major version number is in the high-order 16 bits, and the minor
-     * version number is in the low-order bits.
-     *
-     * The version of the accelerator view is usually the same as that of the
-     * parent accelerator.
-     */
-    unsigned int get_version() const;
-
-    /**
-     * Returns the accelerator that this accelerator_view has been created on.
-     */
-    accelerator get_accelerator() const;
-
-    /**
-     * Returns a boolean value indicating whether the accelerator_view supports
-     * debugging through extensive error reporting.
-     *
-     * The is_debug property of the accelerator view is usually same as that of
-     * the parent accelerator.
-     */
-    // FIXME: dummy implementation now
-    bool get_is_debug() const { return 0; }
-
-    /**
-     * Performs a blocking wait for completion of all commands submitted to the
-     * accelerator view prior to calling wait().
-     *
-     * @param waitMode[in] An optional parameter to specify the wait mode. By
-     *                     default it would be hcWaitModeBlocked.
-     *                     hcWaitModeActive would be used to reduce latency with
-     *                     the expense of using one CPU core for active waiting.
-     */
-    void wait(hcWaitMode waitMode = hcWaitModeBlocked) {
-      pQueue->wait(waitMode);
-      detail::getContext()->flushPrintfBuffer();
-    }
-
-    /**
-     * Sends the queued up commands in the accelerator_view to the device for
-     * execution.
-     *
-     * An accelerator_view internally maintains a buffer of commands such as
-     * data transfers between the host memory and device buffers, and kernel
-     * invocations (parallel_for_each calls). This member function sends the
-     * commands to the device for processing. Normally, these commands
-     * to the GPU automatically whenever the runtime determines that they need
-     * to be, such as when the command buffer is full or when waiting for
-     * transfer of data from the device buffers to host memory. The flush
-     * member function will send the commands manually to the device.
-     *
-     * Calling this member function incurs an overhead and must be used with
-     * discretion. A typical use of this member function would be when the CPU
-     * waits for an arbitrary amount of time and would like to force the
-     * execution of queued device commands in the meantime. It can also be used
-     * to ensure that resources on the accelerator are reclaimed after all
-     * references to them have been removed.
-     *
-     * Because flush operates asynchronously, it can return either before or
-     * after the device finishes executing the buffered commands, the
-     * commands will eventually always complete.
-     *
-     * If the queuing_mode is queuing_mode_immediate, this function has no effect.
-     *
-     * @return None
-     */
-    void flush() { pQueue->flush(); }
-
-    /**
-     * This command inserts a marker event into the accelerator_view's command
-     * queue. This marker is returned as a completion_future object. When all
-     * commands that were submitted prior to the marker event creation have
-     * completed, the future is ready.
-     *
-     * Regardless of the accelerator_view's execute_order (execute_any_order, execute_in_order),
-     * the marker always ensures older commands complete before the returned completion_future
-     * is marked ready.   Thus, markers provide a mechanism to enforce order between
-     * commands in an execute_any_order accelerator_view.
-     *
-     * fence_scope controls the scope of the acquire and release fences applied after the marker executes.  Options are:
-     *   - no_scope : No fence operation is performed.
-     *   - accelerator_scope: Memory is acquired from and released to the accelerator scope where the marker executes.
-     *   - system_scope: Memory is acquired from and released to system scope (all accelerators including CPUs)
-     *
-     * @return A future which can be waited on, and will block until the
-     *         current batch of commands has completed.
-     */
-    completion_future create_marker(memory_scope fence_scope=system_scope) const;
-
-    /**
-     * This command inserts a marker event into the accelerator_view's command
-     * queue with a prior dependent asynchronous event.
-     *
-     * This marker is returned as a completion_future object. When its
-     * dependent event and all commands submitted prior to the marker event
-     * creation have been completed, the future is ready.
-     *
-     * Regardless of the accelerator_view's execute_order (execute_any_order, execute_in_order),
-     * the marker always ensures older commands complete before the returned completion_future
-     * is marked ready.   Thus, markers provide a mechanism to enforce order between
-     * commands in an execute_any_order accelerator_view.
-     *
-     * fence_scope controls the scope of the acquire and release fences applied after the marker executes.  Options are:
-     *   - no_scope : No fence operation is performed.
-     *   - accelerator_scope: Memory is acquired from and released to the accelerator scope where the marker executes.
-     *   - system_scope: Memory is acquired from and released to system scope (all accelerators including CPUs)
-     *
-     * dependent_futures may be recorded in another queue or another accelerator.  If in another accelerator,
-     * the runtime performs cross-accelerator synchronisation.
-     *
-     * @return A future which can be waited on, and will block until the
-     *         current batch of commands, plus the dependent event have
-     *         been completed.
-     */
-    completion_future create_blocking_marker(completion_future& dependent_future, memory_scope fence_scope=system_scope) const;
-
-    /**
-     * This command inserts a marker event into the accelerator_view's command
-     * queue with arbitrary number of dependent asynchronous events.
-     *
-     * This marker is returned as a completion_future object. When its
-     * dependent events and all commands submitted prior to the marker event
-     * creation have been completed, the completion_future is ready.
-     *
-     * Regardless of the accelerator_view's execute_order (execute_any_order, execute_in_order),
-     * the marker always ensures older commands complete before the returned completion_future
-     * is marked ready.   Thus, markers provide a mechanism to enforce order between
-     * commands in an execute_any_order accelerator_view.
-     *
-     * fence_scope controls the scope of the acquire and release fences applied after the marker executes.  Options are:
-     *   - no_scope : No fence operation is performed.
-     *   - accelerator_scope: Memory is acquired from and released to the accelerator scope where the marker executes.
-     *   - system_scope: Memory is acquired from and released to system scope (all accelerators including CPUs)
-     *
-     * @return A future which can be waited on, and will block until the
-     *         current batch of commands, plus the dependent event have
-     *         been completed.
-     */
-    completion_future create_blocking_marker(std::initializer_list<completion_future> dependent_future_list, memory_scope fence_scope=system_scope) const;
-
-
-    /**
-     * This command inserts a marker event into the accelerator_view's command
-     * queue with arbitrary number of dependent asynchronous events.
-     *
-     * This marker is returned as a completion_future object. When its
-     * dependent events and all commands submitted prior to the marker event
-     * creation have been completed, the completion_future is ready.
-     *
-     * Regardless of the accelerator_view's execute_order (execute_any_order, execute_in_order),
-     * the marker always ensures older commands complete before the returned completion_future
-     * is marked ready.   Thus, markers provide a mechanism to enforce order between
-     * commands in an execute_any_order accelerator_view.
-     *
-     * @return A future which can be waited on, and will block until the
-     *         current batch of commands, plus the dependent event have
-     *         been completed.
-     */
-    template<typename InputIterator>
-    completion_future create_blocking_marker(InputIterator first, InputIterator last, memory_scope scope) const;
-
-    /**
-     * Copies size_bytes bytes from src to dst.
-     * Src and dst must not overlap.
-     * Note the src is the first parameter and dst is second, following C++ convention.
-     * The copy command will execute after any commands already inserted into the accelerator_view finish.
-     * This is a synchronous copy command, and the copy operation complete before this call returns.
-     */
-    void copy(const void *src, void *dst, size_t size_bytes) {
-        pQueue->copy(src, dst, size_bytes);
-    }
-
-
-    /**
-     * Copies size_bytes bytes from src to dst.
-     * Src and dst must not overlap.
-     * Note the src is the first parameter and dst is second, following C++ convention.
-     * The copy command will execute after any commands already inserted into the accelerator_view finish.
-     * This is a synchronous copy command, and the copy operation complete before this call returns.
-     * The copy_ext flavor allows caller to provide additional information about each pointer, which can improve performance by eliminating replicated lookups.
-     * This interface is intended for language runtimes such as HIP.
-
-     @p copyDir : Specify direction of copy.  Must be hcMemcpyHostToHost, hcMemcpyHostToDevice, hcMemcpyDeviceToHost, or hcMemcpyDeviceToDevice.
-     @p forceUnpinnedCopy : Force copy to be performed with host involvement rather than with accelerator copy engines.
-     */
-    void copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, const hc::accelerator *copyAcc, bool forceUnpinnedCopy);
-
-
-    // TODO - this form is deprecated, provided for use with older HIP runtimes.
-    void copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, bool forceUnpinnedCopy) ;
-
-    /**
-     * Copies size_bytes bytes from src to dst.
-     * Src and dst must not overlap.
-     * Note the src is the first parameter and dst is second, following C++ convention.
-     * This is an asynchronous copy command, and this call may return before the copy operation completes.
-     * If the source or dest is host memory, the memory must be pinned or a runtime exception will be thrown.
-     * Pinned memory can be created with am_alloc with flag=amHostPinned flag.
-     *
-     * The copy command will be implicitly ordered with respect to commands previously enqueued to this accelerator_view:
-     * - If the accelerator_view execute_order is execute_in_order (the default), then the copy will execute after all previously sent commands finish execution.
-     * - If the accelerator_view execute_order is execute_any_order, then the copy will start after all previously send commands start but can execute in any order.
-     *
-     *
-     */
-    completion_future copy_async(const void *src, void *dst, size_t size_bytes);
-
-    /**
-     * Copies size_bytes bytes from src to dst.
-     * Src and dst must not overlap.
-     * Note the src is the first parameter and dst is second, following C++ convention.
-     * This is an asynchronous copy command, and this call may return before the copy operation completes.
-     * If the source or dest is host memory, the memory must be pinned or a runtime exception will be thrown.
-     * Pinned memory can be created with am_alloc with flag=amHostPinned flag.
-     *
-     * The copy command will be implicitly ordered with respect to commands previously enqueued to this accelerator_view:
-     * - If the accelerator_view execute_order is execute_in_order (the default), then the copy will execute after all previously sent commands finish execution.
-     * - If the accelerator_view execute_order is execute_any_order, then the copy will start after all previously send commands start but can execute in any order.
-     *   The copyAcc determines where the copy is executed and does not affect the ordering.
-     *
-     * The copy_async_ext flavor allows caller to provide additional information about each pointer, which can improve performance by eliminating replicated lookups,
-     * and also allow control over which device performs the copy.
-     * This interface is intended for language runtimes such as HIP.
-     *
-     *  @p copyDir : Specify direction of copy.  Must be hcMemcpyHostToHost, hcMemcpyHostToDevice, hcMemcpyDeviceToHost, or hcMemcpyDeviceToDevice.
-     *  @p copyAcc : Specify which accelerator performs the copy operation.  The specified accelerator must have access to the source and dest pointers - either
-     *               because the memory is allocated on those devices or because the accelerator has peer access to the memory.
-     *               If copyAcc is nullptr, then the copy will be performed by the host.  In this case, the host accelerator must have access to both pointers.
-     *               The copy operation will be performed by the specified engine but is not synchronized with respect to any operations on that device.
-     *
-     */
-    completion_future copy_async_ext(const void *src, void *dst, size_t size_bytes,
-                                     hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo,
-                                     const hc::accelerator *copyAcc);
-
-    /**
-     * Compares "this" accelerator_view with the passed accelerator_view object
-     * to determine if they represent the same underlying object.
-     *
-     * @param[in] other The accelerator_view object to be compared against.
-     * @return A boolean value indicating whether the passed accelerator_view
-     *         object is same as "this" accelerator_view.
-     */
-    bool operator==(const accelerator_view& other) const {
-        return pQueue == other.pQueue;
-    }
-
-    /**
-     * Compares "this" accelerator_view with the passed accelerator_view object
-     * to determine if they represent different underlying objects.
-     *
-     * @param[in] other The accelerator_view object to be compared against.
-     * @return A boolean value indicating whether the passed accelerator_view
-     *         object is different from "this" accelerator_view.
-     */
-    bool operator!=(const accelerator_view& other) const { return !(*this == other); }
-
-    /**
-     * Returns the maximum size of tile static area available on this
-     * accelerator view.
-     */
-    size_t get_max_tile_static_size() const
-    {
-        return pQueue.get()->getDev()->GetMaxTileStaticSize();
-    }
-
-    /**
-     * Returns the number of pending asynchronous operations on this
-     * accelerator view.
-     *
-     * Care must be taken to use this API in a thread-safe manner,
-     */
-    int get_pending_async_ops() const
-    {
-        return pQueue->getPendingAsyncOps();
-    }
-
-    /**
-     * Returns true if the accelerator_view is currently empty.
-     *
-     * Care must be taken to use this API in a thread-safe manner.
-     * As the accelerator completes work, the queue may become empty
-     * after this function returns false;
-     */
-    bool get_is_empty() const
-    {
-        return pQueue->isEmpty();
-    }
-
-    /**
-     * Returns an opaque handle which points to the underlying HSA queue.
-     *
-     * @return An opaque handle of the underlying HSA queue, if the accelerator
-     *         view is based on HSA.  NULL if otherwise.
-     */
-    void* get_hsa_queue() const
-    {
-        return pQueue->getHSAQueue();
-    }
-
-    /**
-     * Returns an opaque handle which points to the underlying HSA agent.
-     *
-     * @return An opaque handle of the underlying HSA agent, if the accelerator
-     *         view is based on HSA.  NULL otherwise.
-     */
-    void* get_hsa_agent() const
-    {
-        return pQueue->getHSAAgent();
-    }
-
-    /**
-     * Returns an opaque handle which points to the AM region on the HSA agent.
-     * This region can be used to allocate accelerator memory which is accessible from the
-     * specified accelerator.
-     *
-     * @return An opaque handle of the region, if the accelerator is based
-     *         on HSA.  NULL otherwise.
-     */
-    void* get_hsa_am_region() const
-    {
-        return pQueue->getHSAAMRegion();
-    }
-
-
-    /**
-     * Returns an opaque handle which points to the AM system region on the HSA agent.
-     * This region can be used to allocate system memory which is accessible from the
-     * specified accelerator.
-     *
-     * @return An opaque handle of the region, if the accelerator is based
-     *         on HSA.  NULL otherwise.
-     */
-    void* get_hsa_am_system_region() const
-    {
-        return pQueue->getHSAAMHostRegion();
-    }
-
-    /**
-     * Returns an opaque handle which points to the AM system region on the HSA agent.
-     * This region can be used to allocate finegrained system memory which is accessible from the
-     * specified accelerator.
-     *
-     * @return An opaque handle of the region, if the accelerator is based
-     *         on HSA.  NULL otherwise.
-     */
-    void* get_hsa_am_finegrained_system_region() const
-    {
-        return pQueue->getHSACoherentAMHostRegion();
-    }
-
-    /**
-     * Returns an opaque handle which points to the Kernarg region on the HSA
-     * agent.
-     *
-     * @return An opaque handle of the region, if the accelerator view is based
-     *         on HSA.  NULL otherwise.
-     */
-    void* get_hsa_kernarg_region() const
-    {
-        return pQueue->getHSAKernargRegion();
-    }
-
-    /**
-     * Returns if the accelerator view is based on HSA.
-     */
-    bool is_hsa_accelerator() const
-    {
-        return pQueue->hasHSAInterOp();
-    }
-
-    /**
-     * Dispatch a kernel into the accelerator_view.
-     *
-     * This function is intended to provide a gateway to dispatch code objects, with
-     * some assistance from HCC.  Kernels are specified in the standard code object
-     * format, and can be created from a variety of compiler tools including the
-     * assembler, offline cl compilers, or other tools.    The caller also
-     * specifies the execution configuration and kernel arguments.    HCC
-     * will copy the kernel arguments into an appropriate segment and insert
-     * the packet into the queue.   HCC will also automatically handle signal
-     * and kernarg allocation and deallocation for the command.
-     *
-     *  The kernel is dispatched asynchronously, and thus this API may return before the
-     *  kernel finishes executing.
-
-     *  Kernels dispatched with this API may be interleaved with other copy and kernel
-     *  commands generated from copy or parallel_for_each commands.
-     *  The kernel honors the execute_order associated with the accelerator_view.
-     *  Specifically, if execute_order is execute_in_order, then the kernel
-     *  will wait for older data and kernel commands in the same queue before
-     *  beginning execution.  If execute_order is execute_any_order, then the
-     *  kernel may begin executing without regards to the state of older kernels.
-     *  This call honors the packer barrier bit (1 << HSA_PACKET_HEADER_BARRIER)
-     *  if set in the aql.header field.  If set, this provides the same synchronization
-     *  behavior as execute_in_order for the command generated by this API.
-     *
-     * @p aql is an HSA-format "AQL" packet. The following fields must
-     * be set by the caller:
-     *  aql.kernel_object
-     *  aql.group_segment_size : includes static + dynamic group size
-     *  aql.private_segment_size
-     *  aql.grid_size_x, aql.grid_size_y, aql.grid_size_z
-     *  aql.group_size_x, aql.group_size_y, aql.group_size_z
-     *  aql.setup :  The 2 bits at HSA_KERNEL_DISPATCH_PACKET_SETUP_DIMENSIONS.
-     *  aql.header :  Must specify the desired memory fence operations, and barrier bit (if desired.).  A typical conservative setting would be:
-    aql.header = (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
-                 (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE) |
-                 (1 << HSA_PACKET_HEADER_BARRIER);
-
-     * The following fields are ignored.  The API will will set up these fields before dispatching the AQL packet:
-     *  aql.completion_signal
-     *  aql.kernarg
-     *
-     * @p args : Pointer to kernel arguments with the size and alignment expected by the kernel.  The args are copied and then passed directly to the kernel.   After this function returns, the args memory may be deallocated.
-     * @p argSz : Size of the arguments.
-     * @p cf : Written with a completion_future that can be used to track the status
-     *          of the dispatch.  May be NULL, in which case no completion_future is
-     *          returned and the caller must use other synchronization techniques
-     *          such as calling accelerator_view::wait() or waiting on a younger command
-     *          in the same queue.
-     * @p kernel_name : Optionally specify the name of the kernel for debug and profiling.
-     * May be null.  If specified, the caller is responsible for ensuring the memory for the name remains allocated until the kernel completes.
-     *
-     *
-     * The dispatch_hsa_kernel call will perform the following operations:
-     *    - Efficiently allocate a kernarg region and copy the arguments.
-     *    - Efficiently allocate a signal, if required.
-     *    - Dispatch the command into the queue and flush it to the GPU.
-     *    - Kernargs and signals are automatically reclaimed by the HCC runtime.
-     */
-    void dispatch_hsa_kernel(
-        const hsa_kernel_dispatch_packet_t* aql,
-        void* args,
-        size_t argsize,
-        hc::completion_future* cf = nullptr,
-        const char* kernel_name = nullptr)
-    {
-        pQueue->dispatch_hsa_kernel(aql, args, argsize, cf, kernel_name);
-    }
-
-    /**
-     * Set a CU affinity to specific command queues.
-     * The setting is permanent until the queue is destroyed or CU affinity is
-     * set again. This setting is "atomic", it won't affect the dispatch in flight.
-     *
-     * @param cu_mask a bool vector to indicate what CUs you want to use. True
-     *        represents using the cu. The first 32 elements represents the first
-     *        32 CUs, and so on. If its size is greater than physical CU number,
-     *        the extra elements are ignored.
-     *        It is user's responsibility to make sure the input is meaningful.
-     *
-     * @return true if operations succeeds or false if not.
-     *
-     */
-     bool set_cu_mask(const std::vector<bool>& cu_mask) {
-        // If it is HSA based accelerator view, set cu mask, otherwise, return;
-        if(is_hsa_accelerator()) {
-            return pQueue->set_cu_mask(cu_mask);
-        }
-        return false;
-     }
-
-private:
-    accelerator_view(std::shared_ptr<detail::HCCQueue> pQueue) : pQueue(pQueue) {}
-    std::shared_ptr<detail::HCCQueue> pQueue;
+    std::shared_ptr<detail::HCCQueue> queue_;
+    mutable std::forward_list<completion_future> pending_tasks_; // TODO: spec fault.
 
     friend class accelerator;
     template <typename, int> friend class array;
@@ -701,6 +178,632 @@ private:
     friend
     completion_future parallel_for_each(
         const accelerator_view&, const tiled_extent<n>&, const Kernel&);
+
+    // IMPLEMENTATION - CREATORS
+    explicit
+    accelerator_view(std::shared_ptr<detail::HCCQueue> queue)
+        : queue_{std::move(queue)}
+    {}
+
+    // IMPLEMENTATION - MANIPULATORS
+    void add_pending_task_(const completion_future& task) const
+    {
+        pending_tasks_.push_front(task);
+    }
+    // TODO: reorder completion_future to allow for inline definition or move to
+    //       .cpp (the latter may be preferable).
+    void wait_for_all_pending_tasks_();
+public:
+    accelerator_view() = delete;
+    /**
+     * Copy-constructs an accelerator_view object. This function does a shallow
+     * copy with the newly created accelerator_view object pointing to the same
+     * underlying view as the "other" parameter.
+     *
+     * @param[in] other The accelerator_view object to be copied.
+     */
+    accelerator_view(const accelerator_view& other)
+        : queue_{other.queue_}, pending_tasks_{} // N.B. pending tasks not copied.
+    {}
+    accelerator_view(accelerator_view&&) = default;
+
+    ~accelerator_view()
+    {
+        wait_for_all_pending_tasks_();
+    }
+    /**
+     * Assigns an accelerator_view object to "this" accelerator_view object and
+     * returns a reference to "this" object. This function does a shallow
+     * assignment with the newly created accelerator_view object pointing to
+     * the same underlying view as the passed accelerator_view parameter.
+     *
+     * @param[in] other The accelerator_view object to be assigned from.
+     * @return A reference to "this" accelerator_view object.
+     */
+    accelerator_view& operator=(const accelerator_view&) = default;
+    accelerator_view& operator=(accelerator_view&) = default;
+
+    /**
+     * Returns the queuing mode that this accelerator_view was created with.
+     * See "Queuing Mode".
+     *
+     * @return The queuing mode.
+     */
+    queuing_mode get_queuing_mode() const
+    {
+        return queue_->get_mode();
+    }
+
+    /**
+     * Returns the execution order of this accelerator_view.
+     */
+    execute_order get_execute_order() const noexcept
+    {
+        return queue_->get_execute_order();
+    }
+
+    /**
+     * Returns a boolean value indicating whether the accelerator view when
+     * passed to a parallel_for_each would result in automatic selection of an
+     * appropriate execution target by the runtime. In other words, this is the
+     * accelerator view that will be automatically selected if
+     * parallel_for_each is invoked without explicitly specifying an
+     * accelerator view.
+     *
+     * @return A boolean value indicating if the accelerator_view is the auto
+     *         selection accelerator_view.
+     */
+    bool get_is_auto_selection() const noexcept
+    {   // FIXME: dummy implementation now
+        return false;
+    }
+
+    /**
+     * Returns a 32-bit unsigned integer representing the version number of
+     * this accelerator view. The format of the integer is major.minor, where
+     * the major version number is in the high-order 16 bits, and the minor
+     * version number is in the low-order bits.
+     *
+     * The version of the accelerator view is usually the same as that of the
+     * parent accelerator.
+     */
+    unsigned int get_version() const;
+
+    /**
+     * Returns the accelerator that this accelerator_view has been created on.
+     */
+    accelerator get_accelerator() const;
+
+    /**
+     * Returns a boolean value indicating whether the accelerator_view supports
+     * debugging through extensive error reporting.
+     *
+     * The is_debug property of the accelerator view is usually same as that of
+     * the parent accelerator.
+     */
+    bool get_is_debug() const noexcept
+    {   // FIXME: dummy implementation now
+        return false;
+    }
+
+    /**
+     * Performs a blocking wait for completion of all commands submitted to the
+     * accelerator view prior to calling wait().
+     *
+     * @param waitMode[in] An optional parameter to specify the wait mode. By
+     *                     default it would be hcWaitModeBlocked.
+     *                     hcWaitModeActive would be used to reduce latency with
+     *                     the expense of using one CPU core for active waiting.
+     */
+    void wait(hcWaitMode waitMode = hcWaitModeBlocked)
+    {
+        queue_->wait(waitMode);
+
+        detail::getContext()->flushPrintfBuffer();
+    }
+
+    /**
+     * Sends the queued up commands in the accelerator_view to the device for
+     * execution.
+     *
+     * An accelerator_view internally maintains a buffer of commands such as
+     * data transfers between the host memory and device buffers, and kernel
+     * invocations (parallel_for_each calls). This member function sends the
+     * commands to the device for processing. Normally, these commands
+     * to the GPU automatically whenever the runtime determines that they need
+     * to be, such as when the command buffer is full or when waiting for
+     * transfer of data from the device buffers to host memory. The flush
+     * member function will send the commands manually to the device.
+     *
+     * Calling this member function incurs an overhead and must be used with
+     * discretion. A typical use of this member function would be when the CPU
+     * waits for an arbitrary amount of time and would like to force the
+     * execution of queued device commands in the meantime. It can also be used
+     * to ensure that resources on the accelerator are reclaimed after all
+     * references to them have been removed.
+     *
+     * Because flush operates asynchronously, it can return either before or
+     * after the device finishes executing the buffered commands, the
+     * commands will eventually always complete.
+     *
+     * If the queuing_mode is queuing_mode_immediate, this function has no
+     * effect.
+     *
+     * @return None
+     */
+    void flush()
+    {
+        queue_->flush();
+    }
+
+    /**
+     * This command inserts a marker event into the accelerator_view's command
+     * queue. This marker is returned as a completion_future object. When all
+     * commands that were submitted prior to the marker event creation have
+     * completed, the future is ready.
+     *
+     * Regardless of the accelerator_view's execute_order (execute_any_order,
+     * execute_in_order), the marker always ensures older commands complete
+     * before the returned completion_future is marked ready. Thus, markers
+     * provide a mechanism to enforce order between commands in an
+     * execute_any_order accelerator_view.
+     *
+     * fence_scope controls the scope of the acquire and release fences applied
+     * after the marker executes.  Options are:
+     *   - no_scope : No fence operation is performed.
+     *   - accelerator_scope: Memory is acquired from and released to the
+     *     accelerator scope where the marker executes.
+     *   - system_scope: Memory is acquired from and released to system scope
+     *     (all accelerators including CPUs)
+     *
+     * @return A future which can be waited on, and will block until the
+     *         current batch of commands has completed.
+     */
+    completion_future create_marker(
+        memory_scope fence_scope=system_scope) const;
+
+    /**
+     * This command inserts a marker event into the accelerator_view's command
+     * queue with a prior dependent asynchronous event.
+     *
+     * This marker is returned as a completion_future object. When its
+     * dependent event and all commands submitted prior to the marker event
+     * creation have been completed, the future is ready.
+     *
+     * Regardless of the accelerator_view's execute_order (execute_any_order,
+     * execute_in_order), the marker always ensures older commands complete
+     * before the returned completion_future is marked ready. Thus, markers
+     * provide a mechanism to enforce order between commands in an
+     * execute_any_order accelerator_view.
+     *
+     * fence_scope controls the scope of the acquire and release fences applied
+     * after the marker executes.  Options are:
+     *   - no_scope : No fence operation is performed.
+     *   - accelerator_scope: Memory is acquired from and released to the
+     *     accelerator scope where the marker executes.
+     *   - system_scope: Memory is acquired from and released to system scope
+     *     (all accelerators including CPUs)
+     *
+     * dependent_futures may be recorded in another queue or another
+     * accelerator.  If in another accelerator, the runtime performs
+     * cross-accelerator synchronisation.
+     *
+     * @return A future which can be waited on, and will block until the
+     *         current batch of commands, plus the dependent event have
+     *         been completed.
+     */
+    completion_future create_blocking_marker(
+        completion_future& dependent_future,
+        memory_scope fence_scope=system_scope) const;
+
+    /**
+     * This command inserts a marker event into the accelerator_view's command
+     * queue with arbitrary number of dependent asynchronous events.
+     *
+     * This marker is returned as a completion_future object. When its
+     * dependent events and all commands submitted prior to the marker event
+     * creation have been completed, the completion_future is ready.
+     *
+     * Regardless of the accelerator_view's execute_order (execute_any_order,
+     * execute_in_order), the marker always ensures older commands complete
+     * before the returned completion_future is marked ready. Thus, markers
+     * provide a mechanism to enforce order between commands in an
+     * execute_any_order accelerator_view.
+     *
+     * fence_scope controls the scope of the acquire and release fences applied
+     * after the marker executes.  Options are:
+     *   - no_scope : No fence operation is performed.
+     *   - accelerator_scope: Memory is acquired from and released to the
+     *     accelerator scope where the marker executes.
+     *   - system_scope: Memory is acquired from and released to system scope
+     *     (all accelerators including CPUs)
+     *
+     * @return A future which can be waited on, and will block until the
+     *         current batch of commands, plus the dependent event have
+     *         been completed.
+     */
+    completion_future create_blocking_marker(
+        std::initializer_list<completion_future> dependent_future_list,
+        memory_scope fence_scope=system_scope) const;
+
+    /**
+     * This command inserts a marker event into the accelerator_view's command
+     * queue with arbitrary number of dependent asynchronous events.
+     *
+     * This marker is returned as a completion_future object. When its
+     * dependent events and all commands submitted prior to the marker event
+     * creation have been completed, the completion_future is ready.
+     *
+     * Regardless of the accelerator_view's execute_order (execute_any_order,
+     * execute_in_order), the marker always ensures older commands complete
+     * before the returned completion_future is marked ready. Thus, markers
+     * provide a mechanism to enforce order between commands in an
+     * execute_any_order accelerator_view.
+     *
+     * @return A future which can be waited on, and will block until the
+     *         current batch of commands, plus the dependent event have
+     *         been completed.
+     */
+    template<typename InputIterator>
+    completion_future create_blocking_marker(
+        InputIterator first,InputIterator last, memory_scope scope) const;
+
+    /**
+     * Copies size_bytes bytes from src to dst.
+     * Src and dst must not overlap.
+     * Note the src is the first parameter and dst is second, following C++
+     * convention. The copy command will execute after any commands already
+     * inserted into the accelerator_view finish. This is a synchronous copy
+     * command, and the copy operation complete before this call returns.
+     */
+    void copy(const void* src, void* dst, std::size_t size_bytes)
+    {
+        queue_->copy(src, dst, size_bytes);
+    }
+
+    /**
+     * Copies size_bytes bytes from src to dst.
+     * Src and dst must not overlap.
+     * Note the src is the first parameter and dst is second, following C++
+     * convention. The copy command will execute after any commands already
+     * inserted into the accelerator_view finish. This is a synchronous copy
+     * command, and the copy operation complete before this call returns. The
+     * copy_ext flavor allows caller to provide additional information about
+     * each pointer, which can improve performance by eliminating replicated
+     * lookups. This interface is intended for language runtimes such as HIP.
+
+     @p copyDir : Specify direction of copy.  Must be hcMemcpyHostToHost,
+                  hcMemcpyHostToDevice, hcMemcpyDeviceToHost, or
+                  hcMemcpyDeviceToDevice.
+     @p forceUnpinnedCopy : Force copy to be performed with host involvement
+                            rather than with accelerator copy engines.
+     */
+    void copy_ext(
+        const void* src,
+        void* dst,
+        std::size_t size_bytes,
+        hcCommandKind copyDir,
+        const hc::AmPointerInfo& srcInfo,
+        const hc::AmPointerInfo& dstInfo,
+        const hc::accelerator* copyAcc,
+        bool forceUnpinnedCopy);
+
+    // TODO - this form is deprecated, provided for use with older HIP runtimes.
+    [[deprecated]]
+    void copy_ext(
+        const void* src,
+        void* dst,
+        std::size_t size_bytes,
+        hcCommandKind copyDir,
+        const hc::AmPointerInfo& srcInfo,
+        const hc::AmPointerInfo& dstInfo,
+        bool forceUnpinnedCopy);
+
+    /**
+     * Copies size_bytes bytes from src to dst.
+     * Src and dst must not overlap.
+     * Note the src is the first parameter and dst is second, following C++
+     * convention. This is an asynchronous copy command, and this call may
+     * return before the copy operation completes. If the source or dest is host
+     * memory, the memory must be pinned or a runtime exception will be thrown.
+     * Pinned memory can be created with am_alloc with flag=amHostPinned flag.
+     *
+     * The copy command will be implicitly ordered with respect to commands
+     * previously enqueued to this accelerator_view:
+     * - If the accelerator_view execute_order is execute_in_order
+     *   (the default), then the copy will execute after all previously sent
+     *   commands finish execution.
+     * - If the accelerator_view execute_order is execute_any_order, then the
+     *   copy will start after all previously send commands start but can
+     *   execute in any order.
+     */
+    completion_future copy_async(
+        const void* src, void* dst, std::size_t size_bytes);
+
+    /**
+     * Copies size_bytes bytes from src to dst.
+     * Src and dst must not overlap.
+     * Note the src is the first parameter and dst is second, following C++
+     * convention. This is an asynchronous copy command, and this call may
+     * return before the copy operation completes. If the source or dest is host
+     * memory, the memory must be pinned or a runtime exception will be thrown.
+     * Pinned memory can be created with am_alloc with flag = amHostPinned flag.
+     *
+     * The copy command will be implicitly ordered with respect to commands
+     * previously enqueued to this accelerator_view:
+     * - If the accelerator_view execute_order is execute_in_order
+     *   (the default), then the copy will execute after all previously sent
+     *   commands finish execution.
+     * - If the accelerator_view execute_order is execute_any_order, then the
+     *   copy will start after all previously send commands start but can
+     *   execute in any order. The copyAcc determines where the copy is executed
+     *   and does not affect the ordering.
+     *
+     * The copy_async_ext flavor allows caller to provide additional information
+     * about each pointer, which can improve performance by eliminating
+     * replicated lookups, and also allow control over which device performs the
+     * copy. This interface is intended for language runtimes such as HIP.
+     *
+     *  @p copyDir : Specify direction of copy. Must be hcMemcpyHostToHost,
+     *               hcMemcpyHostToDevice, hcMemcpyDeviceToHost, or
+     *               hcMemcpyDeviceToDevice.
+     *  @p copyAcc : Specify which accelerator performs the copy operation. The
+     *               specified accelerator must have access to the source and
+     *               dest pointers - either because the memory is allocated on
+     *               those devices or because the accelerator has peer access to
+     *               the memory. If copyAcc is nullptr, then the copy will be
+     *               performed by the host. In this case, the host accelerator
+     *               must have access to both pointers. The copy operation will
+     *               be performed by the specified engine but is not
+     *               synchronized with respect to any operations on that device.
+     */
+    completion_future copy_async_ext(
+        const void* src,
+        void* dst,
+        std::size_t size_bytes,
+        hcCommandKind copyDir,
+        const hc::AmPointerInfo& srcInfo,
+        const hc::AmPointerInfo& dstInfo,
+        const hc::accelerator* copyAcc);
+
+    /**
+     * Compares "this" accelerator_view with the passed accelerator_view object
+     * to determine if they represent the same underlying object.
+     *
+     * @param[in] other The accelerator_view object to be compared against.
+     * @return A boolean value indicating whether the passed accelerator_view
+     *         object is same as "this" accelerator_view.
+     */
+    bool operator==(const accelerator_view& other) const
+    {
+        return queue_ == other.queue_;
+    }
+
+    /**
+     * Compares "this" accelerator_view with the passed accelerator_view object
+     * to determine if they represent different underlying objects.
+     *
+     * @param[in] other The accelerator_view object to be compared against.
+     * @return A boolean value indicating whether the passed accelerator_view
+     *         object is different from "this" accelerator_view.
+     */
+    bool operator!=(const accelerator_view& other) const
+    {
+        return !(*this == other);
+    }
+
+    /**
+     * Returns the maximum size of tile static area available on this
+     * accelerator view.
+     */
+    size_t get_max_tile_static_size() const
+    {
+        return queue_.get()->getDev()->GetMaxTileStaticSize();
+    }
+
+    /**
+     * Returns the number of pending asynchronous operations on this
+     * accelerator view.
+     *
+     * Care must be taken to use this API in a thread-safe manner,
+     */
+    int get_pending_async_ops() const
+    {
+        return queue_->getPendingAsyncOps();
+    }
+
+    /**
+     * Returns true if the accelerator_view is currently empty.
+     *
+     * Care must be taken to use this API in a thread-safe manner.
+     * As the accelerator completes work, the queue may become empty
+     * after this function returns false;
+     */
+    bool get_is_empty() const
+    {
+        return queue_->isEmpty();
+    }
+
+    /**
+     * Returns an opaque handle which points to the underlying HSA queue.
+     *
+     * @return An opaque handle of the underlying HSA queue, if the accelerator
+     *         view is based on HSA.  NULL if otherwise.
+     */
+    void* get_hsa_queue() const
+    {
+        return queue_->getHSAQueue();
+    }
+
+    /**
+     * Returns an opaque handle which points to the underlying HSA agent.
+     *
+     * @return An opaque handle of the underlying HSA agent, if the accelerator
+     *         view is based on HSA.  NULL otherwise.
+     */
+    void* get_hsa_agent() const
+    {
+        return queue_->getHSAAgent();
+    }
+
+    /**
+     * Returns an opaque handle which points to the AM region on the HSA agent.
+     * This region can be used to allocate accelerator memory which is
+     * accessible from the specified accelerator.
+     *
+     * @return An opaque handle of the region, if the accelerator is based
+     *         on HSA.  NULL otherwise.
+     */
+    void* get_hsa_am_region() const
+    {
+        return queue_->getHSAAMRegion();
+    }
+
+
+    /**
+     * Returns an opaque handle which points to the AM system region on the HSA
+     * agent. This region can be used to allocate system memory which is
+     * accessible from the specified accelerator.
+     *
+     * @return An opaque handle of the region, if the accelerator is based
+     *         on HSA.  NULL otherwise.
+     */
+    void* get_hsa_am_system_region() const
+    {
+        return queue_->getHSAAMHostRegion();
+    }
+
+    /**
+     * Returns an opaque handle which points to the AM system region on the HSA
+     * agent. This region can be used to allocate finegrained system memory
+     * which is accessible from the specified accelerator.
+     *
+     * @return An opaque handle of the region, if the accelerator is based
+     *         on HSA.  NULL otherwise.
+     */
+    void* get_hsa_am_finegrained_system_region() const
+    {
+        return queue_->getHSACoherentAMHostRegion();
+    }
+
+    /**
+     * Returns an opaque handle which points to the Kernarg region on the HSA
+     * agent.
+     *
+     * @return An opaque handle of the region, if the accelerator view is based
+     *         on HSA.  NULL otherwise.
+     */
+    void* get_hsa_kernarg_region() const
+    {
+        return queue_->getHSAKernargRegion();
+    }
+
+    /**
+     * Returns if the accelerator view is based on HSA.
+     */
+    bool is_hsa_accelerator() const
+    {
+        return queue_->hasHSAInterOp();
+    }
+
+    /**
+     * Dispatch a kernel into the accelerator_view.
+     *
+     * This function is intended to provide a gateway to dispatch code objects,
+     * with some assistance from HCC. Kernels are specified in the standard code
+     * object format, and can be created from a variety of compiler tools
+     * including the assembler, offline cl compilers, or other tools. The caller
+     * also specifies the execution configuration and kernel arguments. HCC will
+     * copy the kernel arguments into an appropriate segment and insert the
+     * packet into the queue. HCC will also automatically handle signal and
+     * kernarg allocation and deallocation for the command.
+     *
+     * The kernel is dispatched asynchronously, and thus this API may return
+     * before the kernel finishes executing.
+
+     * Kernels dispatched with this API may be interleaved with other copy and
+     * kernel commands generated from copy or parallel_for_each commands. The
+     * kernel honors the execute_order associated with the accelerator_view.
+     * Specifically, if execute_order is execute_in_order, then the kernel
+     * will wait for older data and kernel commands in the same queue before
+     * beginning execution.  If execute_order is execute_any_order, then the
+     * kernel may begin executing without regards to the state of older kernels.
+     * This call honors the packer barrier bit (1 << HSA_PACKET_HEADER_BARRIER)
+     * if set in the aql.header field.  If set, this provides the same
+     * synchronization behavior as execute_in_order for the command generated by
+     * this API.
+     *
+     * @p aql is an HSA-format "AQL" packet. The following fields must
+     * be set by the caller:
+     *  aql.kernel_object
+     *  aql.group_segment_size : includes static + dynamic group size
+     *  aql.private_segment_size
+     *  aql.grid_size_x, aql.grid_size_y, aql.grid_size_z
+     *  aql.group_size_x, aql.group_size_y, aql.group_size_z
+     *  aql.setup: The 2 bits at HSA_KERNEL_DISPATCH_PACKET_SETUP_DIMENSIONS.
+     *  aql.header: Must specify the desired memory fence operations, and
+     *              barrier bit (if desired.). A typical conservative setting
+     *              would be:
+    aql.header = (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
+                 (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE) |
+                 (1 << HSA_PACKET_HEADER_BARRIER);
+
+     * The following fields are ignored. The API will will set up these fields
+     * before dispatching the AQL packet:
+     *  aql.completion_signal
+     *  aql.kernarg
+     *
+     * @p args : Pointer to kernel arguments with the size and alignment
+     *           expected by the kernel. The args are copied and then passed
+     *           directly to the kernel. After this function returns, the args
+     *           memory may be deallocated.
+     * @p argSz : Size of the arguments.
+     * @p cf : Written with a completion_future that can be used to track the
+     *         status of the dispatch. May be NULL, in which case no
+     *         completion_future is returned and the caller must use other
+     *         synchronization techniques such as calling
+     *         accelerator_view::wait() or waiting on a younger command in the
+     *         same queue.
+     * @p kernel_name: Optionally specify the name of the kernel for debug and
+     *                 profiling. May be null. If specified, the caller is
+     *                 responsible for ensuring the memory for the name remains
+     *                 allocated until the kernel completes.
+     *
+     * The dispatch_hsa_kernel call will perform the following operations:
+     *    - Efficiently allocate a kernarg region and copy the arguments.
+     *    - Efficiently allocate a signal, if required.
+     *    - Dispatch the command into the queue and flush it to the GPU.
+     *    - Kernargs and signals are automatically reclaimed by the HCC runtime.
+     */
+    void dispatch_hsa_kernel(
+        const hsa_kernel_dispatch_packet_t* aql,
+        void* args,
+        size_t argsize,
+        hc::completion_future* cf = nullptr,
+        const char* kernel_name = nullptr)
+    {
+        queue_->dispatch_hsa_kernel(aql, args, argsize, cf, kernel_name);
+    }
+
+    /**
+     * Set a CU affinity to specific command queues.
+     * The setting is permanent until the queue is destroyed or CU affinity is
+     * set again. This setting is "atomic", it won't affect the dispatch in
+     * flight.
+     *
+     * @param cu_mask a bool vector to indicate what CUs you want to use. True
+     *        represents using the cu. The first 32 elements represents the
+     *        first 32 CUs, and so on. If its size is greater than physical CU
+     *        number, the extra elements are ignored.
+     *        It is user's responsibility to make sure the input is meaningful.
+     *
+     * @return true if operations succeeds or false if not.
+     */
+    bool set_cu_mask(const std::vector<bool>& cu_mask)
+    {   // If it is HSA based accelerator view, set cu mask, otherwise, return;
+        if (!is_hsa_accelerator()) return false;
+        return queue_->set_cu_mask(cu_mask);
+     }
 };
 
 // ------------------------------------------------------------------------
@@ -712,8 +815,7 @@ private:
  * this type can be created by enumerating the available devices, or
  * getting the default device.
  */
-class accelerator
-{
+class accelerator {
 public:
     static constexpr const wchar_t cpu_accelerator[]{L"cpu"};
     static constexpr const wchar_t default_accelerator[]{L"default"};
@@ -739,14 +841,17 @@ public:
      * 1. accelerator::default_accelerator (or L"default"), which represents the
      *    path of the fastest accelerator available, as chosen by the runtime.
      * 2. accelerator::cpu_accelerator (or L"cpu"), which represents the CPU.
-     *    Note that parallel_for_each shall not be invoked over this accelerator.
+     *    Note that parallel_for_each shall not be invoked over this
+     *    accelerator.
      * 3. A valid device path that uniquely identifies a hardware accelerator
      *    available on the host system.
      *
      * @param[in] path The device path of this accelerator.
      */
-    explicit accelerator(const std::wstring& path)
-        : pDev(detail::getContext()->getDevice(path)) {}
+    explicit
+    accelerator(const std::wstring& path)
+        : pDev(detail::getContext()->getDevice(path))
+    {}
 
     /**
      * Copy constructs an accelerator object. This function does a shallow copy
@@ -755,7 +860,8 @@ public:
      *
      * @param[in] other The accelerator object to be copied.
      */
-    accelerator(const accelerator& other) : pDev(other.pDev) {}
+    accelerator(const accelerator&) = default;
+    accelerator(accelerator&&) = default;
 
     /**
      * Returns a std::vector of accelerator objects (in no specific
@@ -764,11 +870,14 @@ public:
      *
      * @return A vector of accelerators.
      */
-    static std::vector<accelerator> get_all() {
-        auto Devices = detail::getContext()->getDevices();
+    static
+    std::vector<accelerator> get_all()
+    {
+        static auto all = detail::getContext()->getDevices();
+
         std::vector<accelerator> ret;
-        for(auto&& i : Devices)
-          ret.push_back(i);
+        for(auto&& device : all) ret.push_back(device);
+
         return ret;
     }
 
@@ -785,7 +894,9 @@ public:
      *         default has already been set for this process, this value will be
      *         false, and the function will have no effect.
      */
-    static bool set_default(const std::wstring& path) {
+    static
+    bool set_default(const std::wstring& path)
+    {
         return detail::getContext()->set_default(path);
     }
 
@@ -798,14 +909,17 @@ public:
      * invocation without an accelerator_view argument.
      *
      * For all other purposes, the accelerator_view returned by
-     * get_auto_selection_view() behaves the same as the default accelerator_view
-     * of the default accelerator (aka accelerator().get_default_view() ).
+     * get_auto_selection_view() behaves the same as the default
+     * accelerator_view of the default accelerator
+     * (aka accelerator().get_default_view()).
      *
      * @return An accelerator_view than can be used to indicate auto selection
      *         of the target for a parallel_for_each execution.
      */
-    static accelerator_view get_auto_selection_view() {
-        return detail::getContext()->auto_select();
+    static
+    accelerator_view get_auto_selection_view()
+    {
+        return accelerator_view{detail::getContext()->auto_select()};
     }
 
     /**
@@ -817,18 +931,21 @@ public:
      * @param other The accelerator object to be assigned from.
      * @return A reference to "this" accelerator object.
      */
-    accelerator& operator=(const accelerator& other) {
-        pDev = other.pDev;
-        return *this;
-    }
+    accelerator& operator=(const accelerator&) = default;
+    accelerator& operator=(accelerator&&) = default;
 
     /**
      * Returns the default accelerator_view associated with the accelerator.
-     * The queuing_mode of the default accelerator_view is queuing_mode_automatic.
+     * The queuing_mode of the default accelerator_view is
+     * queuing_mode_automatic.
      *
-     * @return The default accelerator_view object associated with the accelerator.
+     * @return The default accelerator_view object associated with the
+     * accelerator.
      */
-    accelerator_view get_default_view() const { return pDev->get_default_queue(); }
+    accelerator_view get_default_view() const
+    {
+        return accelerator_view{pDev->get_default_queue()};
+    }
 
     /**
      * Creates and returns a new accelerator view on the accelerator with the
@@ -838,10 +955,13 @@ public:
      *                  See "Queuing Mode". The default value would be
      *                  queueing_mode_automatic if not specified.
      */
-    accelerator_view create_view(execute_order order = execute_in_order, queuing_mode mode = queuing_mode_automatic) {
+    accelerator_view create_view(
+        execute_order order = execute_in_order,
+        queuing_mode mode = queuing_mode_automatic)
+    {
         auto pQueue = pDev->createQueue(order);
         pQueue->set_mode(mode);
-        return pQueue;
+        return accelerator_view{pQueue};
     }
 
     /**
@@ -852,7 +972,10 @@ public:
      * @return A boolean value indicating whether the passed accelerator
      *         object is same as "this" accelerator.
      */
-    bool operator==(const accelerator& other) const { return pDev == other.pDev; }
+    bool operator==(const accelerator& other) const
+    {
+        return pDev == other.pDev;
+    }
 
     /**
      * Compares "this" accelerator with the passed accelerator object to
@@ -862,7 +985,10 @@ public:
      * @return A boolean value indicating whether the passed accelerator
      *         object is different from "this" accelerator.
      */
-    bool operator!=(const accelerator& other) const { return !(*this == other); }
+    bool operator!=(const accelerator& other) const
+    {
+        return !(*this == other);
+    }
 
     /**
      * Sets the default_cpu_access_type for this accelerator.
@@ -882,8 +1008,10 @@ public:
      * @return A boolean value indicating if the default cpu access_type for the
      *         accelerator was successfully set.
      */
-    bool set_default_cpu_access_type(access_type type) {
+    bool set_default_cpu_access_type(access_type type)
+    {
         pDev->set_access(type);
+
         return true;
     }
 
@@ -892,12 +1020,18 @@ public:
      * "Device Instance Path" property for the device in Device Manager, or one
      * of the predefined path constants cpu_accelerator.
      */
-    std::wstring get_device_path() const { return pDev->get_path(); }
+    std::wstring get_device_path() const
+    {
+        return pDev->get_path();
+    }
 
     /**
      * Returns a short textual description of the accelerator device.
      */
-    std::wstring get_description() const { return pDev->get_description(); }
+    std::wstring get_description() const
+    {
+        return pDev->get_description();
+    }
 
     /**
      * Returns a 32-bit unsigned integer representing the version number of this
@@ -905,7 +1039,10 @@ public:
      * version number is in the high-order 16 bits, and the minor version number
      * is in the low-order bits.
      */
-    unsigned int get_version() const { return pDev->get_version(); }
+    unsigned int get_version() const
+    {
+        return pDev->get_version();
+    }
 
     /**
      * This property indicates that the accelerator may be shared by (and thus
@@ -914,22 +1051,30 @@ public:
      * property to false should such interference not be applicable for a
      * particular accelerator.
      */
-    // FIXME: dummy implementation now
-    bool get_has_display() const { return false; }
+    bool get_has_display() const
+    {   // FIXME: dummy implementation now
+        return false;
+    }
 
     /**
      * Returns the amount of dedicated memory (in KB) on an accelerator device.
      * There is no guarantee that this amount of memory is actually available to
      * use.
      */
-    size_t get_dedicated_memory() const { return pDev->get_mem(); }
+    size_t get_dedicated_memory() const
+    {
+        return pDev->get_mem();
+    }
 
     /**
      * Returns a Boolean value indicating whether this accelerator supports
      * double-precision (double) computations. When this returns true,
      * supports_limited_double_precision also returns true.
      */
-    bool get_supports_double_precision() const { return pDev->is_double(); }
+    bool get_supports_double_precision() const
+    {
+        return pDev->is_double();
+    }
 
     /**
      * Returns a boolean value indicating whether the accelerator has limited
@@ -937,86 +1082,106 @@ public:
      * functions, int to double, double to int conversions) for a
      * parallel_for_each kernel.
      */
-    bool get_supports_limited_double_precision() const { return pDev->is_lim_double(); }
+    bool get_supports_limited_double_precision() const
+    {
+        return pDev->is_lim_double();
+    }
 
     /**
      * Returns a boolean value indicating whether the accelerator supports
      * debugging.
      */
-    // FIXME: dummy implementation now
-    bool get_is_debug() const { return false; }
+    bool get_is_debug() const
+    {   // FIXME: dummy implementation now
+        return false;
+    }
 
     /**
      * Returns a boolean value indicating whether the accelerator is emulated.
-     * This is true, for example, with the reference, WARP, and CPU accelerators.
+     * This is true, for example, with the reference, and CPU accelerators.
      */
-    bool get_is_emulated() const { return pDev->is_emulated(); }
+    bool get_is_emulated() const
+    {
+        return pDev->is_emulated();
+    }
 
     /**
-     * Returns a boolean value indicating whether the accelerator supports memory
-     * accessible both by the accelerator and the CPU.
+     * Returns a boolean value indicating whether the accelerator supports
+     * memory accessible both by the accelerator and the CPU.
      */
-    bool get_supports_cpu_shared_memory() const { return pDev->is_unified(); }
+    bool get_supports_cpu_shared_memory() const
+    {
+        return pDev->is_unified();
+    }
 
     /**
      * Get the default cpu access_type for buffers created on this accelerator
      */
-    access_type get_default_cpu_access_type() const { return pDev->get_access(); }
+    access_type get_default_cpu_access_type() const
+    {
+        return pDev->get_access();
+    }
 
 
     /**
      * Returns the maximum size of tile static area available on this
      * accelerator.
      */
-    size_t get_max_tile_static_size() {
+    size_t get_max_tile_static_size() const
+    {
       return get_default_view().get_max_tile_static_size();
     }
 
     /**
-     * Returns a vector of all accelerator_view associated with this accelerator.
+     * Returns a vector of all accelerator_view associated with this
+     * accelerator.
      */
-    std::vector<accelerator_view> get_all_views() {
+    std::vector<accelerator_view> get_all_views() const
+    {
         std::vector<accelerator_view> result;
-        std::vector< std::shared_ptr<detail::HCCQueue> > queues = pDev->get_all_queues();
-        for (auto q : queues) {
-            result.push_back(q);
+        for (auto&& q : pDev->get_all_queues()) {
+            result.push_back(accelerator_view{q});
         }
+
         return result;
     }
 
     /**
      * Returns an opaque handle which points to the AM region on the HSA agent.
-     * This region can be used to allocate accelerator memory which is accessible from the
-     * specified accelerator.
+     * This region can be used to allocate accelerator memory which is
+     * accessible from the specified accelerator.
      *
      * @return An opaque handle of the region, if the accelerator is based
      *         on HSA.  NULL otherwise.
      */
-    void* get_hsa_am_region() const {
+    void* get_hsa_am_region() const
+    {
         return get_default_view().get_hsa_am_region();
     }
 
     /**
-     * Returns an opaque handle which points to the AM system region on the HSA agent.
-     * This region can be used to allocate system memory which is accessible from the
-     * specified accelerator.
+     * Returns an opaque handle which points to the AM system region on the HSA
+     * agent. This region can be used to allocate system memory which is
+     * accessible from the specified accelerator.
      *
      * @return An opaque handle of the region, if the accelerator is based
      *         on HSA.  NULL otherwise.
      */
-    void* get_hsa_am_system_region() const {
+    void* get_hsa_am_system_region() const
+    {
         return get_default_view().get_hsa_am_system_region();
     }
 
     /**
-     * Returns an opaque handle which points to the AM system region on the HSA agent.
-     * This region can be used to allocate finegrained system memory which is accessible from the
-     * specified accelerator.
+     * Returns an opaque handle which points to the AM system region on the HSA
+     * agent. This region can be used to allocate finegrained system memory
+     * which is accessible from the specified accelerator.
      *
      * @return An opaque handle of the region, if the accelerator is based
      *         on HSA.  NULL otherwise.
      */
-    void* get_hsa_am_finegrained_system_region() const {
+    void* get_hsa_am_finegrained_system_region() const
+    {
         return get_default_view().get_hsa_am_finegrained_system_region();
     }
 
@@ -1027,14 +1192,16 @@ public:
      * @return An opaque handle of the region, if the accelerator is based
      *         on HSA.  NULL otherwise.
      */
-    void* get_hsa_kernarg_region() const {
+    void* get_hsa_kernarg_region() const
+    {
         return get_default_view().get_hsa_kernarg_region();
     }
 
     /**
      * Returns if the accelerator is based on HSA.
      */
-    bool is_hsa_accelerator() const {
+    bool is_hsa_accelerator() const
+    {
         return get_default_view().is_hsa_accelerator();
     }
 
@@ -1044,19 +1211,33 @@ public:
      * - hcAgentProfileBase in case the accelerator is of HSA Base Profile.
      * - hcAgentProfileFull in case the accelerator is of HSA Full Profile.
      */
-    hcAgentProfile get_profile() const {
+    hcAgentProfile get_profile() const
+    {
         return pDev->getProfile();
     }
 
-    void memcpy_symbol(const char* symbolName, void* hostptr, size_t count, size_t offset = 0, hcCommandKind kind = hcMemcpyHostToDevice) {
+    void memcpy_symbol(
+        const char* symbolName,
+        void* hostptr,
+        std::size_t count,
+        std::size_t offset = 0,
+        hcCommandKind kind = hcMemcpyHostToDevice)
+    {
         pDev->memcpySymbol(symbolName, hostptr, count, offset, kind);
     }
 
-    void memcpy_symbol(void* symbolAddr, void* hostptr, size_t count, size_t offset = 0, hcCommandKind kind = hcMemcpyHostToDevice) {
+    void memcpy_symbol(
+        void* symbolAddr,
+        void* hostptr,
+        std::size_t count,
+        std::size_t offset = 0,
+        hcCommandKind kind = hcMemcpyHostToDevice)
+    {
         pDev->memcpySymbol(symbolAddr, hostptr, count, offset, kind);
     }
 
-    void* get_symbol_address(const char* symbolName) {
+    void* get_symbol_address(const char* symbolName) const
+    {
         return pDev->getSymbolAddress(symbolName);
     }
 
@@ -1066,24 +1247,26 @@ public:
      * @return An opaque handle of the underlying HSA agent, if the accelerator
      *         is based on HSA.  NULL otherwise.
      */
-    void* get_hsa_agent() const {
+    void* get_hsa_agent() const
+    {
         return pDev->getHSAAgent();
     }
 
     /**
      * Check if @p other is peer of this accelerator.
      *
-     * @return true if other can access this accelerator's device memory pool or false if not.
-     * The accelerator is not its own peer.
+     * @return true if other can access this accelerator's device memory pool or
+     * false if not. The accelerator is not its own peer.
      */
-    bool get_is_peer(const accelerator& other) const {
+    bool get_is_peer(const accelerator& other) const
+    {
         return pDev->is_peer(other.pDev);
     }
 
     /**
-     * Return a std::vector of this accelerator's peers. peer is other accelerator which can access this
-     * accelerator's device memory using map_to_peer family of APIs.
-     *
+     * Return a std::vector of this accelerator's peers. peer is other
+     * accelerator which can access this accelerator's device memory using
+     * map_to_peer family of APIs.
      */
     std::vector<accelerator> get_peers() const
     {   // TODO: remove / optimise.
@@ -1097,38 +1280,51 @@ public:
 
     /**
      * Return the compute unit count of the accelerator.
-     *
      */
-    unsigned int get_cu_count() const {
+    unsigned int get_cu_count() const
+    {
         return pDev->get_compute_unit_count();
     }
 
     /**
      * Return the unique integer sequence-number for the accelerator.
-     * Sequence-numbers are assigned in monotonically increasing order starting with 0.
+     * Sequence-numbers are assigned in monotonically increasing order starting
+     * with 0.
      */
-    int get_seqnum() const {
+    int get_seqnum() const
+    {
         return pDev->get_seqnum();
     }
 
 
     /**
-     * Return true if the accelerator's memory can be mapped into the CPU's address space,
-     * and the CPU is allowed to access the memory directly with CPU memory operations.
-     * Typically this is enabled with "large BAR" or "resizeable BAR" address mapping.
-     *
+     * Return true if the accelerator's memory can be mapped into the CPU's
+     * address space, and the CPU is allowed to access the memory directly with
+     * CPU memory operations. Typically this is enabled with "large BAR" or
+     * "resizeable BAR" address mapping.
      */
-    bool has_cpu_accessible_am() {
+    bool has_cpu_accessible_am() const
+    {
         return pDev->has_cpu_accessible_am();
-    };
+    }
 
-    detail::HCCDevice *get_dev_ptr() const { return pDev; };
+    detail::HCCDevice* get_dev_ptr() const
+    {
+        return pDev;
+    }
 
 private:
     accelerator(detail::HCCDevice* pDev) : pDev(pDev) {}
     friend class accelerator_view;
     detail::HCCDevice* pDev;
 };
+
+
+inline
+accelerator accelerator_view::get_accelerator() const
+{
+    return queue_->getDev();
+}
 
 // ------------------------------------------------------------------------
 // completion_future
@@ -1244,14 +1440,18 @@ public:
         detail::getContext()->flushPrintfBuffer();
     }
 
-    template <class _Rep, class _Period>
-    std::future_status wait_for(const std::chrono::duration<_Rep, _Period>& _Rel_time) const {
-        return __amp_future.wait_for(_Rel_time);
+    template<typename Rep, typename Period>
+    std::future_status wait_for(
+        const std::chrono::duration<Rep, Period>& rel_time) const
+    {
+        return __amp_future.wait_for(rel_time);
     }
 
-    template <class _Clock, class _Duration>
-    std::future_status wait_until(const std::chrono::time_point<_Clock, _Duration>& _Abs_time) const {
-        return __amp_future.wait_until(_Abs_time);
+    template <class Clock, class Duration>
+    std::future_status wait_until(
+        const std::chrono::time_point<Clock, Duration>& abs_time) const
+    {
+        return __amp_future.wait_until(abs_time);
     }
 
     /** @} */
@@ -1261,7 +1461,8 @@ public:
      * shared_future<void> object corresponding to this completion_future
      * object and refers to the same asynchronous operation.
      */
-    operator std::shared_future<void>() const {
+    operator std::shared_future<void>() const
+    {
         return __amp_future;
     }
 
@@ -1269,7 +1470,8 @@ public:
      * This method enables specification of a completion callback func which is
      * executed upon completion of the asynchronous operation associated with
      * this completion_future object. The completion callback func should have
-     * an operator() that is valid when invoked with non arguments, i.e., "func()".
+     * an operator() that is valid when invoked with non arguments, i.e.,
+     * "func()".
      */
     // FIXME: notice we removed const from the signature here
     //        the original signature in the specification should be
@@ -1280,10 +1482,11 @@ public:
     {   // TODO: this should be completely redone, it is inefficient and odd.
         // could only assign once
         if (__thread_then == nullptr) {
-            // spawn a new thread to wait on the future and then execute the callback functor
-            __thread_then = new std::thread([&]() __CPU__ {
-            this->wait();
-            if(this->valid()) func();
+            // spawn a new thread to wait on the future and then execute the
+            // callback functor
+            __thread_then = new std::thread([&]() {
+                this->wait();
+                if (this->valid()) func();
             });
         }
     }
@@ -1292,10 +1495,10 @@ public:
      * Get the native handle for the asynchronous operation encapsulated in
      * this completion_future object. The method is mostly used for debugging
      * purpose.
-     * Applications should retain the parent completion_future to ensure
-     * the native handle is not deallocated by the HCC runtime.  The completion_future
-     * pointer to the native handle is reference counted, so a copy of
-     * the completion_future is sufficient to retain the native_handle.
+     * Applications should retain the parent completion_future to ensure the
+     * native handle is not deallocated by the HCC runtime. The
+     * completion_future pointer to the native handle is reference counted, so a
+     * copy of the completion_future is sufficient to retain the native_handle.
      */
     void* get_native_handle() const {
       if (__asyncOp != nullptr) {
@@ -1375,7 +1578,8 @@ public:
 
 
     /**
-     * @return reference count for the completion future.  Primarily used for debug purposes.
+     * @return reference count for the completion future.  Primarily used for
+     * debug purposes.
      */
     int get_use_count() const { return __asyncOp.use_count(); };
 
@@ -1408,29 +1612,48 @@ private:
         const accelerator_view&, const tiled_extent<n>&, const Kernel&);
 
     // copy_async
-    template <typename T, int N> friend
-        completion_future copy_async(const array_view<const T, N>& src, const array_view<T, N>& dest);
-    template <typename T, int N> friend
-        completion_future copy_async(const array<T, N>& src, array<T, N>& dest);
-    template <typename T, int N> friend
-        completion_future copy_async(const array<T, N>& src, const array_view<T, N>& dest);
-    template <typename T, int N> friend
-        completion_future copy_async(const array_view<T, N>& src, const array_view<T, N>& dest);
-    template <typename T, int N> friend
-        completion_future copy_async(const array_view<const T, N>& src, array<T, N>& dest);
+    template<typename T, int N>
+    friend
+    completion_future copy_async(
+        const array_view<const T, N>& src, const array_view<T, N>& dest);
+    template<typename T, int N>
+    friend
+    completion_future copy_async(const array<T, N>& src, array<T, N>& dest);
+    template<typename T, int N>
+    friend
+    completion_future copy_async(
+        const array<T, N>& src, const array_view<T, N>& dest);
+    template<typename T, int N>
+    friend
+    completion_future copy_async(
+        const array_view<T, N>& src, const array_view<T, N>& dest);
+    template<typename T, int N>
+    friend
+    completion_future copy_async(
+        const array_view<const T, N>& src, array<T, N>& dest);
 
-    template <typename InputIter, typename T, int N> friend
-        completion_future copy_async(InputIter srcBegin, InputIter srcEnd, array<T, N>& dest);
-    template <typename InputIter, typename T, int N> friend
-        completion_future copy_async(InputIter srcBegin, InputIter srcEnd, const array_view<T, N>& dest);
-    template <typename InputIter, typename T, int N> friend
-        completion_future copy_async(InputIter srcBegin, array<T, N>& dest);
-    template <typename InputIter, typename T, int N> friend
-        completion_future copy_async(InputIter srcBegin, const array_view<T, N>& dest);
-    template <typename OutputIter, typename T, int N> friend
-        completion_future copy_async(const array<T, N>& src, OutputIter destBegin);
-    template <typename OutputIter, typename T, int N> friend
-        completion_future copy_async(const array_view<T, N>& src, OutputIter destBegin);
+    template<typename InputIter, typename T, int N>
+    friend
+    completion_future copy_async(
+        InputIter srcBegin, InputIter srcEnd, array<T, N>& dest);
+    template<typename InputIter, typename T, int N>
+    friend
+    completion_future copy_async(
+        InputIter srcBegin, InputIter srcEnd, const array_view<T, N>& dest);
+    template<typename InputIter, typename T, int N>
+    friend
+    completion_future copy_async(InputIter srcBegin, array<T, N>& dest);
+    template<typename InputIter, typename T, int N>
+    friend
+    completion_future copy_async(
+        InputIter srcBegin, const array_view<T, N>& dest);
+    template<typename OutputIter, typename T, int N>
+    friend
+    completion_future copy_async(const array<T, N>& src, OutputIter destBegin);
+    template<typename OutputIter, typename T, int N>
+    friend
+    completion_future copy_async(
+        const array_view<T, N>& src, OutputIter destBegin);
 
     // array_view
     template <typename, int> friend class array_view;
@@ -1443,32 +1666,42 @@ private:
 // member function implementations
 // ------------------------------------------------------------------------
 
-inline accelerator
-accelerator_view::get_accelerator() const { return pQueue->getDev(); }
+inline
+void accelerator_view::wait_for_all_pending_tasks_()
+{
+    for (auto&& task : pending_tasks_) task.wait();
 
-inline completion_future
-accelerator_view::create_marker(memory_scope scope) const {
+    pending_tasks_.clear();
+}
+
+inline
+completion_future accelerator_view::create_marker(memory_scope scope) const
+{
     std::shared_ptr<detail::HCCAsyncOp> deps[1];
     // If necessary create an explicit dependency on previous command
-    // This is necessary for example if copy command is followed by marker - we need the marker to wait for the copy to complete.
-    std::shared_ptr<detail::HCCAsyncOp> depOp = pQueue->detectStreamDeps(hcCommandMarker, nullptr);
+    // This is necessary for example if copy command is followed by marker - we
+    // need the marker to wait for the copy to complete.
+    auto depOp = queue_->detectStreamDeps(hcCommandMarker, nullptr);
 
     int cnt = 0;
     if (depOp) {
         deps[cnt++] = depOp; // retrieve async op associated with completion_future
     }
 
-    return completion_future(pQueue->EnqueueMarkerWithDependency(cnt, deps, scope));
+    return completion_future{
+        queue_->EnqueueMarkerWithDependency(cnt, deps, scope)};
 }
 
-inline unsigned int accelerator_view::get_version() const { return get_accelerator().get_version(); }
-
-inline completion_future accelerator_view::create_blocking_marker(completion_future& dependent_future, memory_scope scope) const {
+inline
+completion_future accelerator_view::create_blocking_marker(
+    completion_future& dependent_future, memory_scope scope) const
+{
     std::shared_ptr<detail::HCCAsyncOp> deps[2];
 
     // If necessary create an explicit dependency on previous command
-    // This is necessary for example if copy command is followed by marker - we need the marker to wait for the copy to complete.
-    std::shared_ptr<detail::HCCAsyncOp> depOp = pQueue->detectStreamDeps(hcCommandMarker, nullptr);
+    // This is necessary for example if copy command is followed by marker - we
+    // need the marker to wait for the copy to complete.
+    auto depOp = queue_->detectStreamDeps(hcCommandMarker, nullptr);
 
     int cnt = 0;
     if (depOp) {
@@ -1479,75 +1712,129 @@ inline completion_future accelerator_view::create_blocking_marker(completion_fut
         deps[cnt++] = dependent_future.__asyncOp; // retrieve async op associated with completion_future
     }
 
-    return completion_future(pQueue->EnqueueMarkerWithDependency(cnt, deps, scope));
+    return completion_future{
+        queue_->EnqueueMarkerWithDependency(cnt, deps, scope)};
 }
 
 template<typename InputIterator>
-inline completion_future
-accelerator_view::create_blocking_marker(InputIterator first, InputIterator last, memory_scope scope) const {
+inline
+completion_future accelerator_view::create_blocking_marker(
+    InputIterator first, InputIterator last, memory_scope scope) const
+{
     std::shared_ptr<detail::HCCAsyncOp> deps[5]; // array of 5 pointers to the native handle of async ops. 5 is the max supported by barrier packet
     hc::completion_future lastMarker;
 
-
     // If necessary create an explicit dependency on previous command
-    // This is necessary for example if copy command is followed by marker - we need the marker to wait for the copy to complete.
-    std::shared_ptr<detail::HCCAsyncOp> depOp = pQueue->detectStreamDeps(hcCommandMarker, nullptr);
+    // This is necessary for example if copy command is followed by marker - we
+    // need the marker to wait for the copy to complete.
+    auto depOp = queue_->detectStreamDeps(hcCommandMarker, nullptr);
 
     int cnt = 0;
     if (depOp) {
         deps[cnt++] = depOp; // retrieve async op associated with completion_future
     }
 
-
     // loop through signals and group into sections of 5
     // every 5 signals goes into one barrier packet
     // since HC sets the barrier bit in each AND barrier packet, we know
     // the barriers will execute in-order
     for (auto iter = first; iter != last; ++iter) {
-        if (iter->__asyncOp) {
-            deps[cnt++] = iter->__asyncOp; // retrieve async op associated with completion_future
-            if (cnt == 5) {
-                lastMarker = completion_future(pQueue->EnqueueMarkerWithDependency(cnt, deps, hc::no_scope));
-                cnt = 0;
-            }
-        }
+        if (!iter->__asyncOp) continue;
+
+        deps[cnt++] = iter->__asyncOp; // retrieve async op associated with completion_future
+
+        if (cnt != 5) continue;
+
+        lastMarker = completion_future{
+            queue_->EnqueueMarkerWithDependency(cnt, deps, hc::no_scope)};
+        cnt = 0;
     }
 
-    if (cnt) {
-        lastMarker = completion_future(pQueue->EnqueueMarkerWithDependency(cnt, deps, scope));
-    }
+    if (cnt == 0) return lastMarker;
 
-    return lastMarker;
+    return completion_future{
+        queue_->EnqueueMarkerWithDependency(cnt, deps, scope)};
 }
 
-inline completion_future
-accelerator_view::create_blocking_marker(std::initializer_list<completion_future> dependent_future_list, memory_scope scope) const {
-    return create_blocking_marker(dependent_future_list.begin(), dependent_future_list.end(), scope);
-}
-
-
-inline void accelerator_view::copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, const hc::accelerator *copyAcc, bool forceUnpinnedCopy) {
-    pQueue->copy_ext(src, dst, size_bytes, copyDir, srcInfo, dstInfo, copyAcc ? copyAcc->pDev : nullptr, forceUnpinnedCopy);
-};
-
-inline void accelerator_view::copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, bool forceHostCopyEngine) {
-    pQueue->copy_ext(src, dst, size_bytes, copyDir, srcInfo, dstInfo, forceHostCopyEngine);
-};
-
-inline completion_future
-accelerator_view::copy_async(const void *src, void *dst, size_t size_bytes) {
-    return completion_future(pQueue->EnqueueAsyncCopy(src, dst, size_bytes));
-}
-
-inline completion_future
-accelerator_view::copy_async_ext(const void *src, void *dst, size_t size_bytes,
-                             hcCommandKind copyDir,
-                             const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo,
-                             const hc::accelerator *copyAcc)
+inline
+completion_future accelerator_view::create_blocking_marker(
+    std::initializer_list<completion_future> dependent_future_list,
+    memory_scope scope) const
 {
-    return completion_future(pQueue->EnqueueAsyncCopyExt(src, dst, size_bytes, copyDir, srcInfo, dstInfo, copyAcc ? copyAcc->pDev : nullptr));
-};
+    return create_blocking_marker(
+        dependent_future_list.begin(), dependent_future_list.end(), scope);
+}
 
+
+inline
+void accelerator_view::copy_ext(
+    const void* src,
+    void* dst,
+    std::size_t size_bytes,
+    hcCommandKind copyDir,
+    const hc::AmPointerInfo& srcInfo,
+    const hc::AmPointerInfo& dstInfo,
+    const hc::accelerator* copyAcc,
+    bool forceUnpinnedCopy)
+{
+    queue_->copy_ext(
+        src,
+        dst,
+        size_bytes,
+        copyDir,
+        srcInfo,
+        dstInfo,
+        copyAcc ? copyAcc->pDev : nullptr,
+        forceUnpinnedCopy);
+}
+
+inline
+void accelerator_view::copy_ext(
+    const void* src,
+    void* dst,
+    std::size_t size_bytes,
+    hcCommandKind copyDir,
+    const hc::AmPointerInfo& srcInfo,
+    const hc::AmPointerInfo& dstInfo,
+    bool forceHostCopyEngine)
+{
+    queue_->copy_ext(
+        src,
+        dst,
+        size_bytes,
+        copyDir,
+        srcInfo,
+        dstInfo,
+        forceHostCopyEngine);
+}
+
+inline
+completion_future accelerator_view::copy_async(
+    const void* src, void* dst, std::size_t size_bytes)
+{
+    return completion_future(queue_->EnqueueAsyncCopy(src, dst, size_bytes));
+}
+
+inline
+completion_future accelerator_view::copy_async_ext(
+    const void* src,
+    void* dst,
+    std::size_t size_bytes,
+    hcCommandKind copyDir,
+    const hc::AmPointerInfo& srcInfo,
+    const hc::AmPointerInfo& dstInfo,
+    const hc::accelerator* copyAcc)
+{
+    return completion_future{
+        queue_->EnqueueAsyncCopyExt(
+            src,
+            dst,
+            size_bytes,
+            copyDir,
+            srcInfo,
+            dstInfo,
+            copyAcc ? copyAcc->pDev : nullptr)};
+}
 
 // ------------------------------------------------------------------------
 // extent
@@ -1577,7 +1864,7 @@ public:
      * Default constructor. The value at each dimension is initialized to zero.
      * Thus, "extent<3> ix;" initializes the variable to the position (0,0,0).
      */
-    extent() __CPU__ __HC__ : base_() {
+    extent() [[cpu, hc]] : base_() {
       static_assert(N > 0, "Dimensionality must be positive");
     };
 
@@ -1587,26 +1874,30 @@ public:
      * @param other An object of type extent<N> from which to initialize this
      *              new extent.
      */
-    extent(const extent& other) __CPU__ __HC__
+    extent(const extent& other) [[cpu, hc]]
         : base_(other.base_) {}
 
     /** @{ */
     /**
-     * Constructs an extent<N> with the coordinate values provided by @f$e_{0..2}@f$.
-     * These are specialized constructors that are only valid when the rank of
-     * the extent @f$N \in \{1,2,3\}@f$. Invoking a specialized constructor
-     * whose argument @f$count \ne N@f$ will result in a compilation error.
+     * Constructs an extent<N> with the coordinate values provided by
+     * @f$e_{0..2}@f$. These are specialized constructors that are only valid
+     * when the rank of the extent @f$N \in \{1,2,3\}@f$. Invoking a specialized
+     * constructor whose argument @f$count \ne N@f$ will result in a compilation
+     * error.
      *
      * @param[in] e0 The component values of the extent vector.
      */
-    explicit extent(int e0) __CPU__ __HC__
+    explicit extent(int e0) [[cpu, hc]]
         : base_(e0) {}
 
     template <typename ..._Tp>
-        explicit extent(_Tp ... __t) __CPU__ __HC__
+        explicit extent(_Tp ... __t) [[cpu, hc]]
         : base_(__t...) {
-      static_assert(sizeof...(__t) <= 3, "Can only supply at most 3 individual coordinates in the constructor");
-      static_assert(sizeof...(__t) == N, "rank should be consistency");
+      static_assert(
+          sizeof...(__t) <= 3,
+          "Can only supply at most 3 individual coordinates in the "
+          "constructor.");
+      static_assert(sizeof...(__t) == N, "rank should be consistent.");
     }
 
     /** @} */
@@ -1619,7 +1910,7 @@ public:
      *
      * @param[in] components An array of N int values.
      */
-    explicit extent(const int components[]) __CPU__ __HC__
+    explicit extent(const int components[]) [[cpu, hc]]
         : base_(components) {}
 
     /**
@@ -1630,7 +1921,7 @@ public:
      *
      * @param[in] components An array of N int values.
      */
-    explicit extent(int components[]) __CPU__ __HC__
+    explicit extent(int components[]) [[cpu, hc]]
         : base_(components) {}
 
     /**
@@ -1640,7 +1931,7 @@ public:
      *                  this extent.
      * @return Returns *this.
      */
-    extent& operator=(const extent& other) __CPU__ __HC__ {
+    extent& operator=(const extent& other) [[cpu, hc]] {
         base_.operator=(other.base_);
         return *this;
     }
@@ -1652,10 +1943,10 @@ public:
      * @param[in] c The dimension axis whose coordinate is to be accessed.
      * @return A the component value at position c.
      */
-    int operator[] (unsigned int c) const __CPU__ __HC__ {
+    int operator[] (unsigned int c) const [[cpu, hc]] {
         return base_[c];
     }
-    int& operator[] (unsigned int c) __CPU__ __HC__ {
+    int& operator[] (unsigned int c) [[cpu, hc]] {
         return base_[c];
     }
 
@@ -1669,7 +1960,7 @@ public:
      * @return Returns true if the "idx" is contained within the space defined
      *         by this extent (with an assumed origin of zero).
      */
-    bool contains(const index<N>& idx) const __CPU__ __HC__ {
+    bool contains(const index<N>& idx) const [[cpu, hc]] {
         return detail::amp_helper<N, index<N>, extent<N>>::contains(idx, *this);
     }
 
@@ -1678,7 +1969,7 @@ public:
      * units of elements), which is computed as:
      * extent[0] * extent[1] ... * extent[N-1]
      */
-    unsigned int size() const __CPU__ __HC__ {
+    unsigned int size() const [[cpu, hc]] {
         return detail::index_helper<N, extent<N>>::count_size(*this);
     }
 
@@ -1707,7 +1998,8 @@ public:
      */
     tiled_extent<1> tile_with_dynamic(int t0, int dynamic_size) const;
     tiled_extent<2> tile_with_dynamic(int t0, int t1, int dynamic_size) const;
-    tiled_extent<3> tile_with_dynamic(int t0, int t1, int t2, int dynamic_size) const;
+    tiled_extent<3> tile_with_dynamic(
+        int t0, int t1, int t2, int dynamic_size) const;
 
     /** @} */
 
@@ -1721,10 +2013,10 @@ public:
      *
      * @param[in] other The right-hand extent<N> to be compared.
      */
-    bool operator==(const extent& other) const __CPU__ __HC__ {
+    bool operator==(const extent& other) const [[cpu, hc]] {
         return detail::index_helper<N, extent<N> >::equal(*this, other);
     }
-    bool operator!=(const extent& other) const __CPU__ __HC__ {
+    bool operator!=(const extent& other) const [[cpu, hc]] {
         return !(*this == other);
     }
 
@@ -1733,28 +2025,29 @@ public:
     /** @{ */
     /**
      * Adds (or subtracts) an object of type extent<N> from this extent to form
-     * a new extent. The result extent<N> is such that for a given operator @f$\oplus@f$,
+     * a new extent. The result extent<N> is such that for a given operator
+     * @f$\oplus@f$,
      * result[i] = this[i] @f$\oplus@f$ ext[i]
      *
      * @param[in] ext The right-hand extent<N> to be added or subtracted.
      */
-    extent& operator+=(const extent& __r) __CPU__ __HC__ {
+    extent& operator+=(const extent& __r) [[cpu, hc]] {
         base_.operator+=(__r.base_);
         return *this;
     }
-    extent& operator-=(const extent& __r) __CPU__ __HC__ {
+    extent& operator-=(const extent& __r) [[cpu, hc]] {
         base_.operator-=(__r.base_);
         return *this;
     }
-    extent& operator*=(const extent& __r) __CPU__ __HC__ {
+    extent& operator*=(const extent& __r) [[cpu, hc]] {
         base_.operator*=(__r.base_);
         return *this;
     }
-    extent& operator/=(const extent& __r) __CPU__ __HC__ {
+    extent& operator/=(const extent& __r) [[cpu, hc]] {
         base_.operator/=(__r.base_);
         return *this;
     }
-    extent& operator%=(const extent& __r) __CPU__ __HC__ {
+    extent& operator%=(const extent& __r) [[cpu, hc]] {
         base_.operator%=(__r.base_);
         return *this;
     }
@@ -1764,7 +2057,8 @@ public:
     /** @{ */
     /**
      * Adds (or subtracts) an object of type index<N> from this extent to form
-     * a new extent. The result extent<N> is such that for a given operator @f$\oplus@f$,
+     * a new extent. The result extent<N> is such that for a given operator
+     * @f$\oplus@f$,
      * result[i] = this[i] @f$\oplus@f$ idx[i]
      *
      * @param[in] idx The right-hand index<N> to be added or subtracted.
@@ -1803,23 +2097,23 @@ public:
      *
      * @param[in] value The right-hand int of the arithmetic operation.
      */
-    extent& operator+=(int value) __CPU__ __HC__ {
+    extent& operator+=(int value) [[cpu, hc]] {
         base_.operator+=(value);
         return *this;
     }
-    extent& operator-=(int value) __CPU__ __HC__ {
+    extent& operator-=(int value) [[cpu, hc]] {
         base_.operator-=(value);
         return *this;
     }
-    extent& operator*=(int value) __CPU__ __HC__ {
+    extent& operator*=(int value) [[cpu, hc]] {
         base_.operator*=(value);
         return *this;
     }
-    extent& operator/=(int value) __CPU__ __HC__ {
+    extent& operator/=(int value) [[cpu, hc]] {
         base_.operator/=(value);
         return *this;
     }
-    extent& operator%=(int value) __CPU__ __HC__ {
+    extent& operator%=(int value) [[cpu, hc]] {
         base_.operator%=(value);
         return *this;
     }
@@ -1834,20 +2128,20 @@ public:
      * For prefix increment and decrement, the return value is "*this".
      * Otherwise a new extent<N> is returned.
      */
-    extent& operator++() __CPU__ __HC__ {
+    extent& operator++() [[cpu, hc]] {
         base_.operator+=(1);
         return *this;
     }
-    extent operator++(int) __CPU__ __HC__ {
+    extent operator++(int) [[cpu, hc]] {
         extent ret = *this;
         base_.operator+=(1);
         return ret;
     }
-    extent& operator--() __CPU__ __HC__ {
+    extent& operator--() [[cpu, hc]] {
         base_.operator-=(1);
         return *this;
     }
-    extent operator--(int) __CPU__ __HC__ {
+    extent operator--(int) [[cpu, hc]] {
         extent ret = *this;
         base_.operator-=(1);
         return ret;
@@ -1879,13 +2173,13 @@ private:
 // FIXME: the signature is not entirely the same as defined in:
 //        C++AMP spec v1.2 #1253
 template <int N>
-extent<N> operator+(const extent<N>& lhs, const extent<N>& rhs) __CPU__ __HC__ {
+extent<N> operator+(const extent<N>& lhs, const extent<N>& rhs) [[cpu, hc]] {
     extent<N> __r = lhs;
     __r += rhs;
     return __r;
 }
 template <int N>
-extent<N> operator-(const extent<N>& lhs, const extent<N>& rhs) __CPU__ __HC__ {
+extent<N> operator-(const extent<N>& lhs, const extent<N>& rhs) [[cpu, hc]] {
     extent<N> __r = lhs;
     __r -= rhs;
     return __r;
@@ -1910,61 +2204,61 @@ extent<N> operator-(const extent<N>& lhs, const extent<N>& rhs) __CPU__ __HC__ {
 // FIXME: the signature is not entirely the same as defined in:
 //        C++AMP spec v1.2 #1259
 template <int N>
-extent<N> operator+(const extent<N>& ext, int value) __CPU__ __HC__ {
+extent<N> operator+(const extent<N>& ext, int value) [[cpu, hc]] {
     extent<N> __r = ext;
     __r += value;
     return __r;
 }
 template <int N>
-extent<N> operator+(int value, const extent<N>& ext) __CPU__ __HC__ {
+extent<N> operator+(int value, const extent<N>& ext) [[cpu, hc]] {
     extent<N> __r = ext;
     __r += value;
     return __r;
 }
 template <int N>
-extent<N> operator-(const extent<N>& ext, int value) __CPU__ __HC__ {
+extent<N> operator-(const extent<N>& ext, int value) [[cpu, hc]] {
     extent<N> __r = ext;
     __r -= value;
     return __r;
 }
 template <int N>
-extent<N> operator-(int value, const extent<N>& ext) __CPU__ __HC__ {
+extent<N> operator-(int value, const extent<N>& ext) [[cpu, hc]] {
     extent<N> __r(value);
     __r -= ext;
     return __r;
 }
 template <int N>
-extent<N> operator*(const extent<N>& ext, int value) __CPU__ __HC__ {
+extent<N> operator*(const extent<N>& ext, int value) [[cpu, hc]] {
     extent<N> __r = ext;
     __r *= value;
     return __r;
 }
 template <int N>
-extent<N> operator*(int value, const extent<N>& ext) __CPU__ __HC__ {
+extent<N> operator*(int value, const extent<N>& ext) [[cpu, hc]] {
     extent<N> __r = ext;
     __r *= value;
     return __r;
 }
 template <int N>
-extent<N> operator/(const extent<N>& ext, int value) __CPU__ __HC__ {
+extent<N> operator/(const extent<N>& ext, int value) [[cpu, hc]] {
     extent<N> __r = ext;
     __r /= value;
     return __r;
 }
 template <int N>
-extent<N> operator/(int value, const extent<N>& ext) __CPU__ __HC__ {
+extent<N> operator/(int value, const extent<N>& ext) [[cpu, hc]] {
     extent<N> __r(value);
     __r /= ext;
     return __r;
 }
 template <int N>
-extent<N> operator%(const extent<N>& ext, int value) __CPU__ __HC__ {
+extent<N> operator%(const extent<N>& ext, int value) [[cpu, hc]] {
     extent<N> __r = ext;
     __r %= value;
     return __r;
 }
 template <int N>
-extent<N> operator%(int value, const extent<N>& ext) __CPU__ __HC__ {
+extent<N> operator%(int value, const extent<N>& ext) [[cpu, hc]] {
     extent<N> __r(value);
     __r %= ext;
     return __r;
@@ -2158,22 +2452,28 @@ public:
 
 template <int N>
 inline
-tiled_extent<1> extent<N>::tile(int t0) const __CPU__ __HC__ {
-  static_assert(N == 1, "One-dimensional tile() method only available on extent<1>");
+tiled_extent<1> extent<N>::tile(int t0) const [[cpu, hc]]
+{
+  static_assert(
+      N == 1, "One-dimensional tile() method only available on extent<1>");
   return tiled_extent<1>(*this, t0);
 }
 
 template <int N>
 inline
-tiled_extent<2> extent<N>::tile(int t0, int t1) const __CPU__ __HC__ {
-  static_assert(N == 2, "Two-dimensional tile() method only available on extent<2>");
+tiled_extent<2> extent<N>::tile(int t0, int t1) const [[cpu, hc]]
+{
+  static_assert(
+      N == 2, "Two-dimensional tile() method only available on extent<2>");
   return tiled_extent<2>(*this, t0, t1);
 }
 
 template <int N>
 inline
-tiled_extent<3> extent<N>::tile(int t0, int t1, int t2) const __CPU__ __HC__ {
-  static_assert(N == 3, "Three-dimensional tile() method only available on extent<3>");
+tiled_extent<3> extent<N>::tile(int t0, int t1, int t2) const [[cpu, hc]]
+{
+  static_assert(
+      N == 3, "Three-dimensional tile() method only available on extent<3>");
   return tiled_extent<3>(*this, t0, t1, t2);
 }
 
@@ -2183,22 +2483,31 @@ tiled_extent<3> extent<N>::tile(int t0, int t1, int t2) const __CPU__ __HC__ {
 
 template <int N>
 inline
-tiled_extent<1> extent<N>::tile_with_dynamic(int t0, int dynamic_size) const __CPU__ __HC__ {
-  static_assert(N == 1, "One-dimensional tile() method only available on extent<1>");
+tiled_extent<1> extent<N>::tile_with_dynamic(
+    int t0, int dynamic_size) const [[cpu, hc]]
+{
+  static_assert(
+      N == 1, "One-dimensional tile() method only available on extent<1>");
   return tiled_extent<1>(*this, t0, dynamic_size);
 }
 
 template <int N>
 inline
-tiled_extent<2> extent<N>::tile_with_dynamic(int t0, int t1, int dynamic_size) const __CPU__ __HC__ {
-  static_assert(N == 2, "Two-dimensional tile() method only available on extent<2>");
+tiled_extent<2> extent<N>::tile_with_dynamic(
+    int t0, int t1, int dynamic_size) const [[cpu, hc]]
+{
+  static_assert(
+      N == 2, "Two-dimensional tile() method only available on extent<2>");
   return tiled_extent<2>(*this, t0, t1, dynamic_size);
 }
 
 template <int N>
 inline
-tiled_extent<3> extent<N>::tile_with_dynamic(int t0, int t1, int t2, int dynamic_size) const __CPU__ __HC__ {
-  static_assert(N == 3, "Three-dimensional tile() method only available on extent<3>");
+tiled_extent<3> extent<N>::tile_with_dynamic(
+    int t0, int t1, int t2, int dynamic_size) const [[cpu, hc]]
+{
+  static_assert(
+      N == 3, "Three-dimensional tile() method only available on extent<3>");
   return tiled_extent<3>(*this, t0, t1, t2, dynamic_size);
 }
 
@@ -2212,11 +2521,11 @@ tiled_extent<3> extent<N>::tile_with_dynamic(int t0, int t1, int t2, int dynamic
  * @return The size of a wavefront.
  */
 #define __HSA_WAVEFRONT_SIZE__ (64)
-extern "C" unsigned int __wavesize() __HC__;
+extern "C" unsigned int __wavesize() [[hc]];
 
 
 #if __hcc_backend__==HCC_BACKEND_AMDGPU
-extern "C" inline unsigned int __wavesize() __HC__ {
+extern "C" inline unsigned int __wavesize() [[hc]] {
   return __HSA_WAVEFRONT_SIZE__;
 }
 #endif
@@ -2227,7 +2536,7 @@ extern "C" inline unsigned int __wavesize() __HC__ {
  * @param[in] input An unsigned 32-bit integer.
  * @return Number of 1 bits in the input.
  */
-extern "C" inline unsigned int __popcount_u32_b32(unsigned int input) __HC__ {
+extern "C" inline unsigned int __popcount_u32_b32(unsigned int input) [[hc]] {
   return __builtin_popcount(input);
 }
 
@@ -2237,7 +2546,7 @@ extern "C" inline unsigned int __popcount_u32_b32(unsigned int input) __HC__ {
  * @param[in] input An unsigned 64-bit integer.
  * @return Number of 1 bits in the input.
  */
-extern "C" inline unsigned int __popcount_u32_b64(unsigned long long int input) __HC__ {
+extern "C" inline unsigned int __popcount_u32_b64(unsigned long long int input) [[hc]] {
   return __builtin_popcountl(input);
 }
 
@@ -2247,21 +2556,21 @@ extern "C" inline unsigned int __popcount_u32_b64(unsigned long long int input) 
  *
  * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/bit_string.htm">HSA PRM 5.7</a> for more detailed specification of these functions.
  */
-extern "C" inline unsigned int __bitextract_u32(unsigned int src0, unsigned int src1, unsigned int src2) __HC__ {
+extern "C" inline unsigned int __bitextract_u32(unsigned int src0, unsigned int src1, unsigned int src2) [[hc]] {
   uint32_t offset = src1 & 31;
   uint32_t width = src2 & 31;
   return width == 0 ? 0 : (src0 << (32 - offset - width)) >> (32 - width);
 }
 
-extern "C" inline uint64_t __bitextract_u64(uint64_t src0, unsigned int src1, unsigned int src2) __HC__ {
+extern "C" inline uint64_t __bitextract_u64(uint64_t src0, unsigned int src1, unsigned int src2) [[hc]] {
   uint64_t offset = src1 & 63;
   uint64_t width = src2 & 63;
   return width == 0 ? 0 : (src0 << (64 - offset - width)) >> (64 - width);
 }
 
-extern "C" int __bitextract_s32(int src0, unsigned int src1, unsigned int src2) __HC__;
+extern "C" int __bitextract_s32(int src0, unsigned int src1, unsigned int src2) [[hc]];
 
-extern "C" int64_t __bitextract_s64(int64_t src0, unsigned int src1, unsigned int src2) __HC__;
+extern "C" int64_t __bitextract_s64(int64_t src0, unsigned int src1, unsigned int src2) [[hc]];
 /** @} */
 
 /** @{ */
@@ -2270,23 +2579,23 @@ extern "C" int64_t __bitextract_s64(int64_t src0, unsigned int src1, unsigned in
  *
  * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/bit_string.htm">HSA PRM 5.7</a> for more detailed specification of these functions.
  */
-extern "C" inline unsigned int __bitinsert_u32(unsigned int src0, unsigned int src1, unsigned int src2, unsigned int src3) __HC__ {
+extern "C" inline unsigned int __bitinsert_u32(unsigned int src0, unsigned int src1, unsigned int src2, unsigned int src3) [[hc]] {
   uint32_t offset = src2 & 31;
   uint32_t width = src3 & 31;
   uint32_t mask = (1 << width) - 1;
   return ((src0 & ~(mask << offset)) | ((src1 & mask) << offset));
 }
 
-extern "C" inline uint64_t __bitinsert_u64(uint64_t src0, uint64_t src1, unsigned int src2, unsigned int src3) __HC__ {
+extern "C" inline uint64_t __bitinsert_u64(uint64_t src0, uint64_t src1, unsigned int src2, unsigned int src3) [[hc]] {
   uint64_t offset = src2 & 63;
   uint64_t width = src3 & 63;
   uint64_t mask = (1 << width) - 1;
   return ((src0 & ~(mask << offset)) | ((src1 & mask) << offset));
 }
 
-extern "C" int __bitinsert_s32(int src0, int src1, unsigned int src2, unsigned int src3) __HC__;
+extern "C" int __bitinsert_s32(int src0, int src1, unsigned int src2, unsigned int src3) [[hc]];
 
-extern "C" int64_t __bitinsert_s64(int64_t src0, int64_t src1, unsigned int src2, unsigned int src3) __HC__;
+extern "C" int64_t __bitinsert_s64(int64_t src0, int64_t src1, unsigned int src2, unsigned int src3) [[hc]];
 /** @} */
 
 /** @{ */
@@ -2295,9 +2604,9 @@ extern "C" int64_t __bitinsert_s64(int64_t src0, int64_t src1, unsigned int src2
  *
  * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/bit_string.htm">HSA PRM 5.7</a> for more detailed specification of these functions.
  */
-extern "C" unsigned int __bitmask_b32(unsigned int src0, unsigned int src1) __HC__;
+extern "C" unsigned int __bitmask_b32(unsigned int src0, unsigned int src1) [[hc]];
 
-extern "C" uint64_t __bitmask_b64(unsigned int src0, unsigned int src1) __HC__;
+extern "C" uint64_t __bitmask_b64(unsigned int src0, unsigned int src1) [[hc]];
 /** @} */
 
 /** @{ */
@@ -2319,11 +2628,11 @@ uint64_t __bitrev_b64(uint64_t src0) [[hc]] __asm("llvm.bitreverse.i64");
  *
  * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/bit_string.htm">HSA PRM 5.7</a> for more detailed specification of these functions.
  */
-extern "C" inline unsigned int __bitselect_b32(unsigned int src0, unsigned int src1, unsigned int src2) __HC__ {
+extern "C" inline unsigned int __bitselect_b32(unsigned int src0, unsigned int src1, unsigned int src2) [[hc]] {
   return (src1 & src0) | (src2 & ~src0);
 }
 
-extern "C" inline uint64_t __bitselect_b64(uint64_t src0, uint64_t src1, uint64_t src2) __HC__ {
+extern "C" inline uint64_t __bitselect_b64(uint64_t src0, uint64_t src1, uint64_t src2) [[hc]] {
   return (src1 & src0) | (src2 & ~src0);
 }
 /** @} */
@@ -2335,7 +2644,7 @@ extern "C" inline uint64_t __bitselect_b64(uint64_t src0, uint64_t src1, uint64_
  * @return Number of 0 bits until a 1 bit is found, counting start from the
  *         most significant bit. -1 if there is no 0 bit.
  */
-extern "C" inline unsigned int __firstbit_u32_u32(unsigned int input) __HC__ {
+extern "C" inline unsigned int __firstbit_u32_u32(unsigned int input) [[hc]] {
   return input == 0 ? -1 : __builtin_clz(input);
 }
 
@@ -2347,7 +2656,7 @@ extern "C" inline unsigned int __firstbit_u32_u32(unsigned int input) __HC__ {
  * @return Number of 0 bits until a 1 bit is found, counting start from the
  *         most significant bit. -1 if there is no 0 bit.
  */
-extern "C" inline unsigned int __firstbit_u32_u64(unsigned long long int input) __HC__ {
+extern "C" inline unsigned int __firstbit_u32_u64(unsigned long long int input) [[hc]] {
   return input == 0 ? -1 : __builtin_clzl(input);
 }
 
@@ -2360,7 +2669,7 @@ extern "C" inline unsigned int __firstbit_u32_u64(unsigned long long int input) 
  *         integer from the most significant bit.
  *         If no bits in the input are set, then dest is set to -1.
  */
-extern "C" inline unsigned int __firstbit_u32_s32(int input) __HC__ {
+extern "C" inline unsigned int __firstbit_u32_s32(int input) [[hc]] {
   if (input == 0) {
     return -1;
   }
@@ -2378,7 +2687,7 @@ extern "C" inline unsigned int __firstbit_u32_s32(int input) __HC__ {
  *         integer from the most significant bit.
  *         If no bits in the input are set, then dest is set to -1.
  */
-extern "C" inline unsigned int __firstbit_u32_s64(long long int input) __HC__ {
+extern "C" inline unsigned int __firstbit_u32_s64(long long int input) [[hc]] {
   if (input == 0) {
     return -1;
   }
@@ -2393,19 +2702,19 @@ extern "C" inline unsigned int __firstbit_u32_s64(long long int input) __HC__ {
  *
  * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/bit_string.htm">HSA PRM 5.7</a> for more detailed specification of these functions.
  */
-extern "C" inline unsigned int __lastbit_u32_u32(unsigned int input) __HC__ {
+extern "C" inline unsigned int __lastbit_u32_u32(unsigned int input) [[hc]] {
   return input == 0 ? -1 : __builtin_ctz(input);
 }
 
-extern "C" inline unsigned int __lastbit_u32_u64(unsigned long long int input) __HC__ {
+extern "C" inline unsigned int __lastbit_u32_u64(unsigned long long int input) [[hc]] {
   return input == 0 ? -1 : __builtin_ctzl(input);
 }
 
-extern "C" inline unsigned int __lastbit_u32_s32(int input) __HC__ {
+extern "C" inline unsigned int __lastbit_u32_s32(int input) [[hc]] {
   return __lastbit_u32_u32(input);
 }
 
-extern "C" inline unsigned int __lastbit_u32_s64(unsigned long long input) __HC__ {
+extern "C" inline unsigned int __lastbit_u32_s64(unsigned long long input) [[hc]] {
   return __lastbit_u32_u64(input);
 }
 /** @} */
@@ -2417,25 +2726,25 @@ extern "C" inline unsigned int __lastbit_u32_s64(unsigned long long input) __HC_
  *
  * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/packed_data.htm">HSA PRM 5.9</a> for more detailed specification of these functions.
  */
-extern "C" unsigned int __unpacklo_u8x4(unsigned int src0, unsigned int src1) __HC__;
+extern "C" unsigned int __unpacklo_u8x4(unsigned int src0, unsigned int src1) [[hc]];
 
-extern "C" uint64_t __unpacklo_u8x8(uint64_t src0, uint64_t src1) __HC__;
+extern "C" uint64_t __unpacklo_u8x8(uint64_t src0, uint64_t src1) [[hc]];
 
-extern "C" unsigned int __unpacklo_u16x2(unsigned int src0, unsigned int src1) __HC__;
+extern "C" unsigned int __unpacklo_u16x2(unsigned int src0, unsigned int src1) [[hc]];
 
-extern "C" uint64_t __unpacklo_u16x4(uint64_t src0, uint64_t src1) __HC__;
+extern "C" uint64_t __unpacklo_u16x4(uint64_t src0, uint64_t src1) [[hc]];
 
-extern "C" uint64_t __unpacklo_u32x2(uint64_t src0, uint64_t src1) __HC__;
+extern "C" uint64_t __unpacklo_u32x2(uint64_t src0, uint64_t src1) [[hc]];
 
-extern "C" int __unpacklo_s8x4(int src0, int src1) __HC__;
+extern "C" int __unpacklo_s8x4(int src0, int src1) [[hc]];
 
-extern "C" int64_t __unpacklo_s8x8(int64_t src0, int64_t src1) __HC__;
+extern "C" int64_t __unpacklo_s8x8(int64_t src0, int64_t src1) [[hc]];
 
-extern "C" int __unpacklo_s16x2(int src0, int src1) __HC__;
+extern "C" int __unpacklo_s16x2(int src0, int src1) [[hc]];
 
-extern "C" int64_t __unpacklo_s16x4(int64_t src0, int64_t src1) __HC__;
+extern "C" int64_t __unpacklo_s16x4(int64_t src0, int64_t src1) [[hc]];
 
-extern "C" int64_t __unpacklo_s32x2(int64_t src0, int64_t src1) __HC__;
+extern "C" int64_t __unpacklo_s32x2(int64_t src0, int64_t src1) [[hc]];
 /** @} */
 
 /** @{ */
@@ -2445,25 +2754,25 @@ extern "C" int64_t __unpacklo_s32x2(int64_t src0, int64_t src1) __HC__;
  *
  * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/packed_data.htm">HSA PRM 5.9</a> for more detailed specification of these functions.
  */
-extern "C" unsigned int __unpackhi_u8x4(unsigned int src0, unsigned int src1) __HC__;
+extern "C" unsigned int __unpackhi_u8x4(unsigned int src0, unsigned int src1) [[hc]];
 
-extern "C" uint64_t __unpackhi_u8x8(uint64_t src0, uint64_t src1) __HC__;
+extern "C" uint64_t __unpackhi_u8x8(uint64_t src0, uint64_t src1) [[hc]];
 
-extern "C" unsigned int __unpackhi_u16x2(unsigned int src0, unsigned int src1) __HC__;
+extern "C" unsigned int __unpackhi_u16x2(unsigned int src0, unsigned int src1) [[hc]];
 
-extern "C" uint64_t __unpackhi_u16x4(uint64_t src0, uint64_t src1) __HC__;
+extern "C" uint64_t __unpackhi_u16x4(uint64_t src0, uint64_t src1) [[hc]];
 
-extern "C" uint64_t __unpackhi_u32x2(uint64_t src0, uint64_t src1) __HC__;
+extern "C" uint64_t __unpackhi_u32x2(uint64_t src0, uint64_t src1) [[hc]];
 
-extern "C" int __unpackhi_s8x4(int src0, int src1) __HC__;
+extern "C" int __unpackhi_s8x4(int src0, int src1) [[hc]];
 
-extern "C" int64_t __unpackhi_s8x8(int64_t src0, int64_t src1) __HC__;
+extern "C" int64_t __unpackhi_s8x8(int64_t src0, int64_t src1) [[hc]];
 
-extern "C" int __unpackhi_s16x2(int src0, int src1) __HC__;
+extern "C" int __unpackhi_s16x2(int src0, int src1) [[hc]];
 
-extern "C" int64_t __unpackhi_s16x4(int64_t src0, int64_t src1) __HC__;
+extern "C" int64_t __unpackhi_s16x4(int64_t src0, int64_t src1) [[hc]];
 
-extern "C" int64_t __unpackhi_s32x2(int64_t src0, int64_t src1) __HC__;
+extern "C" int64_t __unpackhi_s32x2(int64_t src0, int64_t src1) [[hc]];
 /** @} */
 
 /** @{ */
@@ -2473,27 +2782,27 @@ extern "C" int64_t __unpackhi_s32x2(int64_t src0, int64_t src1) __HC__;
  *
  * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/packed_data.htm">HSA PRM 5.9</a> for more detailed specification of these functions.
  */
-extern "C" unsigned int __pack_u8x4_u32(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
+extern "C" unsigned int __pack_u8x4_u32(unsigned int src0, unsigned int src1, unsigned int src2) [[hc]];
 
-extern "C" uint64_t __pack_u8x8_u32(uint64_t src0, unsigned int src1, unsigned int src2) __HC__;
+extern "C" uint64_t __pack_u8x8_u32(uint64_t src0, unsigned int src1, unsigned int src2) [[hc]];
 
-extern "C" unsigned __pack_u16x2_u32(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
+extern "C" unsigned __pack_u16x2_u32(unsigned int src0, unsigned int src1, unsigned int src2) [[hc]];
 
-extern "C" uint64_t __pack_u16x4_u32(uint64_t src0, unsigned int src1, unsigned int src2) __HC__;
+extern "C" uint64_t __pack_u16x4_u32(uint64_t src0, unsigned int src1, unsigned int src2) [[hc]];
 
-extern "C" uint64_t __pack_u32x2_u32(uint64_t src0, unsigned int src1, unsigned int src2) __HC__;
+extern "C" uint64_t __pack_u32x2_u32(uint64_t src0, unsigned int src1, unsigned int src2) [[hc]];
 
-extern "C" int __pack_s8x4_s32(int src0, int src1, unsigned int src2) __HC__;
+extern "C" int __pack_s8x4_s32(int src0, int src1, unsigned int src2) [[hc]];
 
-extern "C" int64_t __pack_s8x8_s32(int64_t src0, int src1, unsigned int src2) __HC__;
+extern "C" int64_t __pack_s8x8_s32(int64_t src0, int src1, unsigned int src2) [[hc]];
 
-extern "C" int __pack_s16x2_s32(int src0, int src1, unsigned int src2) __HC__;
+extern "C" int __pack_s16x2_s32(int src0, int src1, unsigned int src2) [[hc]];
 
-extern "C" int64_t __pack_s16x4_s32(int64_t src0, int src1, unsigned int src2) __HC__;
+extern "C" int64_t __pack_s16x4_s32(int64_t src0, int src1, unsigned int src2) [[hc]];
 
-extern "C" int64_t __pack_s32x2_s32(int64_t src0, int src1, unsigned int src2) __HC__;
+extern "C" int64_t __pack_s32x2_s32(int64_t src0, int src1, unsigned int src2) [[hc]];
 
-extern "C" double __pack_f32x2_f32(double src0, float src1, unsigned int src2) __HC__;
+extern "C" double __pack_f32x2_f32(double src0, float src1, unsigned int src2) [[hc]];
 /** @} */
 
 /** @{ */
@@ -2502,27 +2811,27 @@ extern "C" double __pack_f32x2_f32(double src0, float src1, unsigned int src2) _
  *
  * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/packed_data.htm">HSA PRM 5.9</a> for more detailed specification of these functions.
  */
-extern "C" unsigned int __unpack_u32_u8x4(unsigned int src0, unsigned int src1) __HC__;
+extern "C" unsigned int __unpack_u32_u8x4(unsigned int src0, unsigned int src1) [[hc]];
 
-extern "C" unsigned int __unpack_u32_u8x8(uint64_t src0, unsigned int src1) __HC__;
+extern "C" unsigned int __unpack_u32_u8x8(uint64_t src0, unsigned int src1) [[hc]];
 
-extern "C" unsigned int __unpack_u32_u16x2(unsigned int src0, unsigned int src1) __HC__;
+extern "C" unsigned int __unpack_u32_u16x2(unsigned int src0, unsigned int src1) [[hc]];
 
-extern "C" unsigned int __unpack_u32_u16x4(uint64_t src0, unsigned int src1) __HC__;
+extern "C" unsigned int __unpack_u32_u16x4(uint64_t src0, unsigned int src1) [[hc]];
 
-extern "C" unsigned int __unpack_u32_u32x2(uint64_t src0, unsigned int src1) __HC__;
+extern "C" unsigned int __unpack_u32_u32x2(uint64_t src0, unsigned int src1) [[hc]];
 
-extern "C" int __unpack_s32_s8x4(int src0, unsigned int src1) __HC__;
+extern "C" int __unpack_s32_s8x4(int src0, unsigned int src1) [[hc]];
 
-extern "C" int __unpack_s32_s8x8(int64_t src0, unsigned int src1) __HC__;
+extern "C" int __unpack_s32_s8x8(int64_t src0, unsigned int src1) [[hc]];
 
-extern "C" int __unpack_s32_s16x2(int src0, unsigned int src1) __HC__;
+extern "C" int __unpack_s32_s16x2(int src0, unsigned int src1) [[hc]];
 
-extern "C" int __unpack_s32_s16x4(int64_t src0, unsigned int src1) __HC__;
+extern "C" int __unpack_s32_s16x4(int64_t src0, unsigned int src1) [[hc]];
 
-extern "C" int __unpack_s32_s3x2(int64_t src0, unsigned int src1) __HC__;
+extern "C" int __unpack_s32_s3x2(int64_t src0, unsigned int src1) [[hc]];
 
-extern "C" float __unpack_f32_f32x2(double src0, unsigned int src1) __HC__;
+extern "C" float __unpack_f32_f32x2(double src0, unsigned int src1) [[hc]];
 /** @} */
 
 /**
@@ -2530,14 +2839,14 @@ extern "C" float __unpack_f32_f32x2(double src0, unsigned int src1) __HC__;
  *
  * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/multimedia.htm">HSA PRM 5.15</a> for more detailed specification.
  */
-extern "C" unsigned int __bitalign_b32(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
+extern "C" unsigned int __bitalign_b32(unsigned int src0, unsigned int src1, unsigned int src2) [[hc]];
 
 /**
  * Align 32 bits within 64 bis of data on an arbitrary byte boundary
  *
  * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/multimedia.htm">HSA PRM 5.15</a> for more detailed specification.
  */
-extern "C" unsigned int __bytealign_b32(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
+extern "C" unsigned int __bytealign_b32(unsigned int src0, unsigned int src1, unsigned int src2) [[hc]];
 
 /**
  * Do linear interpolation and computes the unsigned 8-bit average of packed
@@ -2545,7 +2854,7 @@ extern "C" unsigned int __bytealign_b32(unsigned int src0, unsigned int src1, un
  *
  * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/multimedia.htm">HSA PRM 5.15</a> for more detailed specification.
  */
-extern "C" unsigned int __lerp_u8x4(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
+extern "C" unsigned int __lerp_u8x4(unsigned int src0, unsigned int src1, unsigned int src2) [[hc]];
 
 /**
  * Takes four floating-point number, convers them to
@@ -2553,14 +2862,14 @@ extern "C" unsigned int __lerp_u8x4(unsigned int src0, unsigned int src1, unsign
  *
  * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/multimedia.htm">HSA PRM 5.15</a> for more detailed specification.
  */
-extern "C" unsigned int __packcvt_u8x4_f32(float src0, float src1, float src2, float src3) __HC__;
+extern "C" unsigned int __packcvt_u8x4_f32(float src0, float src1, float src2, float src3) [[hc]];
 
 /**
  * Unpacks a single element from a packed u8x4 value and converts it to an f32.
  *
  * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/multimedia.htm">HSA PRM 5.15</a> for more detailed specification.
  */
-extern "C" float __unpackcvt_f32_u8x4(unsigned int src0, unsigned int src1) __HC__;
+extern "C" float __unpackcvt_f32_u8x4(unsigned int src0, unsigned int src1) [[hc]];
 
 /** @{ */
 /**
@@ -2569,11 +2878,11 @@ extern "C" float __unpackcvt_f32_u8x4(unsigned int src0, unsigned int src1) __HC
  *
  * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/multimedia.htm">HSA PRM 5.15</a> for more detailed specification.
  */
-extern "C" unsigned int __sad_u32_u32(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
+extern "C" unsigned int __sad_u32_u32(unsigned int src0, unsigned int src1, unsigned int src2) [[hc]];
 
-extern "C" unsigned int __sad_u32_u16x2(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
+extern "C" unsigned int __sad_u32_u16x2(unsigned int src0, unsigned int src1, unsigned int src2) [[hc]];
 
-extern "C" unsigned int __sad_u32_u8x4(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
+extern "C" unsigned int __sad_u32_u8x4(unsigned int src0, unsigned int src1, unsigned int src2) [[hc]];
 /** @} */
 
 /**
@@ -2582,19 +2891,19 @@ extern "C" unsigned int __sad_u32_u8x4(unsigned int src0, unsigned int src1, uns
  *
  * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/multimedia.htm">HSA PRM 5.15</a> for more detailed specification.
  */
-extern "C" unsigned int __sadhi_u16x2_u8x4(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
+extern "C" unsigned int __sadhi_u16x2_u8x4(unsigned int src0, unsigned int src1, unsigned int src2) [[hc]];
 
 /**
  * Get system timestamp
  */
-extern "C" uint64_t __clock_u64() __HC__;
+extern "C" uint64_t __clock_u64() [[hc]];
 
 /**
  * Get hardware cycle count
  *
  * Notice the return value of this function is implementation defined.
  */
-extern "C" uint64_t __cycle_u64() __HC__;
+extern "C" uint64_t __cycle_u64() [[hc]];
 
 /**
  * Get the count of the number of earlier (in flattened
@@ -2602,7 +2911,7 @@ extern "C" uint64_t __cycle_u64() __HC__;
  *
  * @return The result will be in the range 0 to WAVESIZE - 1.
  */
-extern "C" unsigned int __activelaneid_u32() __HC__;
+extern "C" unsigned int __activelaneid_u32() [[hc]];
 
 /**
  * Return a bit mask shows which active work-items in the
@@ -2616,7 +2925,7 @@ extern "C" unsigned int __activelaneid_u32() __HC__;
  * @param[in] input An unsigned 32-bit integer.
  * @return The bitmask calculated.
  */
-extern "C" uint64_t __activelanemask_v4_b64_b1(unsigned int input) __HC__;
+extern "C" uint64_t __activelanemask_v4_b64_b1(unsigned int input) [[hc]];
 
 /**
  * Count the number of active work-items in the current
@@ -2626,7 +2935,7 @@ extern "C" uint64_t __activelanemask_v4_b64_b1(unsigned int input) __HC__;
  * @return The number of active work-items in the current wavefront that have
  *         a non-zero input.
  */
-extern "C" inline unsigned int __activelanecount_u32_b1(unsigned int input) __HC__ {
+extern "C" inline unsigned int __activelanecount_u32_b1(unsigned int input) [[hc]] {
  return  __popcount_u32_b64(__activelanemask_v4_b64_b1(input));
 }
 
@@ -2639,8 +2948,8 @@ extern "C" inline unsigned int __activelanecount_u32_b1(unsigned int input) __HC
  * wavefront and return non-zero if and only if predicate evaluates to non-zero
  * for any of them.
  */
-extern "C" bool __ockl_wfany_i32(int) __HC__;
-extern "C" inline int __any(int predicate) __HC__ {
+extern "C" bool __ockl_wfany_i32(int) [[hc]];
+extern "C" inline int __any(int predicate) [[hc]] {
     return __ockl_wfany_i32(predicate);
 }
 
@@ -2649,8 +2958,8 @@ extern "C" inline int __any(int predicate) __HC__ {
  * wavefront and return non-zero if and only if predicate evaluates to non-zero
  * for all of them.
  */
-extern "C" bool __ockl_wfall_i32(int) __HC__;
-extern "C" inline int __all(int predicate) __HC__ {
+extern "C" bool __ockl_wfall_i32(int) [[hc]];
+extern "C" inline int __all(int predicate) [[hc]] {
     return __ockl_wfall_i32(predicate);
 }
 
@@ -2665,7 +2974,7 @@ extern "C" inline int __all(int predicate) __HC__ {
 #define ICMP_NE 33
 __attribute__((convergent))
 unsigned long long __llvm_amdgcn_icmp_i32(uint x, uint y, uint z) [[hc]] __asm("llvm.amdgcn.icmp.i32");
-extern "C" inline uint64_t __ballot(int predicate) __HC__ {
+extern "C" inline uint64_t __ballot(int predicate) [[hc]] {
     return __llvm_amdgcn_icmp_i32(predicate, 0, ICMP_NE);
 }
 
@@ -2864,20 +3173,20 @@ inline float __amdgcn_wave_rl1(float src) [[hc]] {
 
 #if __hcc_backend__==HCC_BACKEND_AMDGPU
 
-inline int __shfl(int var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
+inline int __shfl(int var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) [[hc]] {
   int self = __lane_id();
   int index = srcLane + (self & ~(width-1));
   return __amdgcn_ds_bpermute(index<<2, var);
 }
 
-inline unsigned int __shfl(unsigned int var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
+inline unsigned int __shfl(unsigned int var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) [[hc]] {
      __u tmp; tmp.u = var;
     tmp.i = __shfl(tmp.i, srcLane, width);
     return tmp.u;
 }
 
 
-inline float __shfl(float var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
+inline float __shfl(float var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) [[hc]] {
     __u tmp; tmp.f = var;
     tmp.i = __shfl(tmp.i, srcLane, width);
     return tmp.f;
@@ -2912,20 +3221,20 @@ inline float __shfl(float var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) __
 
 #if __hcc_backend__==HCC_BACKEND_AMDGPU
 
-inline int __shfl_up(int var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
+inline int __shfl_up(int var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) [[hc]] {
   int self = __lane_id();
   int index = self - delta;
   index = (index < (self & ~(width-1)))?self:index;
   return __amdgcn_ds_bpermute(index<<2, var);
 }
 
-inline unsigned int __shfl_up(unsigned int var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
+inline unsigned int __shfl_up(unsigned int var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) [[hc]] {
     __u tmp; tmp.u = var;
     tmp.i = __shfl_up(tmp.i, delta, width);
     return tmp.u;
 }
 
-inline float __shfl_up(float var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
+inline float __shfl_up(float var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) [[hc]] {
     __u tmp; tmp.f = var;
     tmp.i = __shfl_up(tmp.i, delta, width);
     return tmp.f;
@@ -2961,20 +3270,20 @@ inline float __shfl_up(float var, const unsigned int delta, const int width=__HS
 
 #if __hcc_backend__==HCC_BACKEND_AMDGPU
 
-inline int __shfl_down(int var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
+inline int __shfl_down(int var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) [[hc]] {
   int self = __lane_id();
   int index = self + delta;
   index = (int)((self&(width-1))+delta) >= width?self:index;
   return __amdgcn_ds_bpermute(index<<2, var);
 }
 
-inline unsigned int __shfl_down(unsigned int var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
+inline unsigned int __shfl_down(unsigned int var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) [[hc]] {
     __u tmp; tmp.u = var;
     tmp.i = __shfl_down(tmp.i, delta, width);
     return tmp.u;
 }
 
-inline float __shfl_down(float var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
+inline float __shfl_down(float var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) [[hc]] {
     __u tmp; tmp.f = var;
     tmp.i = __shfl_down(tmp.i, delta, width);
     return tmp.f;
@@ -3006,14 +3315,14 @@ inline float __shfl_down(float var, const unsigned int delta, const int width=__
 #if __hcc_backend__==HCC_BACKEND_AMDGPU
 
 
-inline int __shfl_xor(int var, int laneMask, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
+inline int __shfl_xor(int var, int laneMask, int width=__HSA_WAVEFRONT_SIZE__) [[hc]] {
   int self = __lane_id();
   int index = self^laneMask;
   index = index >= ((self+width)&~(width-1))?self:index;
   return __amdgcn_ds_bpermute(index<<2, var);
 }
 
-inline float __shfl_xor(float var, int laneMask, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
+inline float __shfl_xor(float var, int laneMask, int width=__HSA_WAVEFRONT_SIZE__) [[hc]] {
     __u tmp; tmp.f = var;
     tmp.i = __shfl_xor(tmp.i, laneMask, width);
     return tmp.f;
@@ -3022,7 +3331,7 @@ inline float __shfl_xor(float var, int laneMask, int width=__HSA_WAVEFRONT_SIZE_
 // FIXME: support half type
 /** @} */
 
-inline unsigned int __shfl_xor(unsigned int var, int laneMask, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
+inline unsigned int __shfl_xor(unsigned int var, int laneMask, int width=__HSA_WAVEFRONT_SIZE__) [[hc]] {
     __u tmp; tmp.u = var;
     tmp.i = __shfl_xor(tmp.i, laneMask, width);
     return tmp.u;
@@ -3078,7 +3387,7 @@ inline int __mad24(int x, int y, int z) [[hc]] {
   return __mul24(x,y) + z;
 }
 
-inline void abort() __HC__ {
+inline void abort() [[hc]] {
   __builtin_trap();
 }
 
@@ -3093,24 +3402,24 @@ inline void abort() __HC__ {
  * @return The size of group segment used by the kernel in bytes. The value
  *         includes both static group segment and dynamic group segment.
  */
-extern "C" unsigned int get_group_segment_size() __HC__;
+extern "C" unsigned int get_group_segment_size() [[hc]];
 
 /**
  * Fetch the size of static group segment
  *
  * @return The size of static group segment used by the kernel in bytes.
  */
-extern "C" unsigned int get_static_group_segment_size() __HC__;
+extern "C" unsigned int get_static_group_segment_size() [[hc]];
 
 /**
  * Fetch the address of the beginning of group segment.
  */
-extern "C" void* get_group_segment_base_pointer() __HC__;
+extern "C" void* get_group_segment_base_pointer() [[hc]];
 
 /**
  * Fetch the address of the beginning of dynamic group segment.
  */
-extern "C" void* get_dynamic_group_segment_base_pointer() __HC__;
+extern "C" void* get_dynamic_group_segment_base_pointer() [[hc]];
 
 // ------------------------------------------------------------------------
 // tiled_barrier
@@ -3132,7 +3441,7 @@ public:
      * @param[in] other An object of type tile_barrier from which to initialize
      *                  this.
      */
-    tile_barrier(const tile_barrier&) __CPU__ __HC__ = default;
+    tile_barrier(const tile_barrier&) [[cpu, hc]] = default;
 
     /**
      * Blocks execution of all threads in the thread tile until all threads in
@@ -3144,7 +3453,7 @@ public:
      * before hitting the barrier. This is identical to
      * wait_with_all_memory_fence().
      */
-    void wait() const __HC__ {
+    void wait() const [[hc]] {
         wait_with_all_memory_fence();
     }
 
@@ -3157,7 +3466,7 @@ public:
      * none of the memory operations occurring after the barrier are executed
      * before hitting the barrier. This is identical to wait().
      */
-    void wait_with_all_memory_fence() const __HC__ {
+    void wait_with_all_memory_fence() const [[hc]] {
         amp_barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
     }
 
@@ -3170,7 +3479,7 @@ public:
      * barrier has completed and none of the global memory operations occurring
      * after the barrier are executed before hitting the barrier.
      */
-    void wait_with_global_memory_fence() const __HC__ {
+    void wait_with_global_memory_fence() const [[hc]] {
         amp_barrier(CLK_GLOBAL_MEM_FENCE);
     }
 
@@ -3184,12 +3493,12 @@ public:
      * memory operations occurring after the barrier are executed before
      * hitting the barrier.
      */
-    void wait_with_tile_static_memory_fence() const __HC__ {
+    void wait_with_tile_static_memory_fence() const [[hc]] {
         amp_barrier(CLK_LOCAL_MEM_FENCE);
     }
 
 private:
-    tile_barrier() __HC__ = default;
+    tile_barrier() [[hc]] = default;
 
     template <int N> friend
         class tiled_index;
@@ -3205,7 +3514,7 @@ private:
  * is therefore permitted in divergent code.
  */
 // FIXME: this functions has not been implemented.
-void all_memory_fence(const tile_barrier&) __HC__;
+void all_memory_fence(const tile_barrier&) [[hc]];
 
 /**
  * Establishes a thread-tile scoped memory fence for global (but not
@@ -3213,7 +3522,7 @@ void all_memory_fence(const tile_barrier&) __HC__;
  * is therefore permitted in divergent code.
  */
 // FIXME: this functions has not been implemented.
-void global_memory_fence(const tile_barrier&) __HC__;
+void global_memory_fence(const tile_barrier&) [[hc]];
 
 /**
  * Establishes a thread-tile scoped memory fence for tile-static (but not
@@ -3221,7 +3530,7 @@ void global_memory_fence(const tile_barrier&) __HC__;
  * therefore permitted in divergent code.
  */
 // FIXME: this functions has not been implemented.
-void tile_static_memory_fence(const tile_barrier&) __HC__;
+void tile_static_memory_fence(const tile_barrier&) [[hc]];
 
 // ------------------------------------------------------------------------
 // tiled_index
@@ -4267,7 +4576,7 @@ public:
     /**
      * Access the extent that defines the shape of this array.
      */
-    hc::extent<N> get_extent() const __CPU__ __HC__
+    hc::extent<N> get_extent() const [[cpu, hc]]
     {
         return extent_;
     }
@@ -6583,34 +6892,31 @@ completion_future parallel_for_each(
 
     using B = array_view_base;
 
-    auto first = B::captured_.size();
+    B::captured_.clear();
     auto g = f;
-    auto last = B::captured_.size();
 
     decltype(B::writers_[B::captured_[0]].second.second) pre;
-    for (auto i = first; i != last; ++i) {
-        std::lock_guard<std::mutex> lck{
-            B::writers_[B::captured_[i]].second.first};
+    for (auto&& widx : B::captured_) {
+        std::lock_guard<std::mutex> lck{B::writers_[widx].second.first};
 
         pre.splice_after(
             pre.before_begin(),
-            std::move(B::writers_[B::captured_[i]].second.second));
+            std::move(B::writers_[widx].second.second),
+            B::writers_[widx].second.second.before_begin());
     }
 
     for (auto&& x : pre) if (x.valid()) x.wait();
 
     completion_future tmp{
-        detail::launch_kernel_async(av.pQueue, compute_domain, g)};
+        detail::launch_kernel_async(av.queue_, compute_domain, g)};
+    av.add_pending_task_(tmp);
 
-    while (first != last) {
-        std::lock_guard<std::mutex> lck{
-            B::writers_[B::captured_[first]].second.first};
+    for (auto&& widx : B::captured_) {
+        std::lock_guard<std::mutex> lck{B::writers_[widx].second.first};
 
-        B::writers_[B::captured_[first]].second.second.emplace_front(tmp);
-
-        ++first;
+        B::writers_[widx].second.second.emplace_front(tmp);
     }
-    B::captured_.clear();
+
 
     return tmp;
 }
@@ -6660,36 +6966,31 @@ completion_future parallel_for_each(
 
     using B = array_view_base;
 
-    auto first = B::captured_.size();
+    B::captured_.clear();
     auto g = f;
-    auto last = B::captured_.size();
 
     decltype(B::writers_[B::captured_[0]].second.second) pre;
-    for (auto i = first; i != last; ++i) {
-        std::lock_guard<std::mutex> lck{
-            B::writers_[B::captured_[i]].second.first};
+    for (auto&& widx : B::captured_) {
+        std::lock_guard<std::mutex> lck{B::writers_[widx].second.first};
 
         pre.splice_after(
             pre.before_begin(),
-            std::move(B::writers_[B::captured_[i]].second.second),
-            B::writers_[B::captured_[i]].second.second.before_begin());
+            std::move(B::writers_[widx].second.second),
+            B::writers_[widx].second.second.before_begin());
     }
 
     for (auto&& x : pre) if (x.valid()) x.wait();
 
     completion_future tmp{
         detail::launch_kernel_with_dynamic_group_memory_async(
-            av.pQueue, compute_domain, g)};
+            av.queue_, compute_domain, g)};
+    av.add_pending_task_(tmp);
 
-    while (first != last) {
-        std::lock_guard<std::mutex> lck{
-            B::writers_[B::captured_[first]].second.first};
+    for (auto&& widx : B::captured_) {
+        std::lock_guard<std::mutex> lck{B::writers_[widx].second.first};
 
-        B::writers_[B::captured_[first]].second.second.emplace_front(tmp);
-
-        ++first;
+        B::writers_[widx].second.second.emplace_front(tmp);
     }
-    B::captured_.clear();
 
     return tmp;
 }

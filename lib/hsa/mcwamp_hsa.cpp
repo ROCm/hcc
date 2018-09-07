@@ -67,7 +67,7 @@
 #define KERNARG_BUFFER_SIZE (512)
 
 // number of pre-allocated kernarg buffers in HSAContext
-// Not required but typically should be greater than HCC_SIGNAL_POOL_SIZE 
+// Not required but typically should be greater than HCC_SIGNAL_POOL_SIZE
 // (some kernels don't allocate signals but nearly all need kernargs)
 #define KERNARG_POOL_SIZE (1024)
 
@@ -1311,13 +1311,13 @@ public:
     bool nextKernelNeedsSysAcquire() const { return _nextKernelNeedsSysAcquire; };
     void setNextKernelNeedsSysAcquire(bool r) { _nextKernelNeedsSysAcquire = r; };
 
-    bool nextSyncNeedsSysRelease() const { 
+    bool nextSyncNeedsSysRelease() const {
       DBOUT( DB_CMD2, "  HSAQueue::nextSyncNeedsSysRelease(): " <<  _nextSyncNeedsSysRelease << "\n");
-      return _nextSyncNeedsSysRelease; 
+      return _nextSyncNeedsSysRelease;
     };
     void setNextSyncNeedsSysRelease(bool r) {
       DBOUT( DB_CMD2, "  HSAQueue::setNextSyncNeedsSysRelease(" <<  r << ")\n");
-      _nextSyncNeedsSysRelease = r; 
+      _nextSyncNeedsSysRelease = r;
     };
 
     uint64_t getSeqNum() const { return queueSeqNum; };
@@ -1435,8 +1435,8 @@ public:
 
             bool needDep = false;
             if  (newCommandKind != youngestCommandKind) {
-                DBOUT(DB_CMD2, "Set NeedDep (command type changed) " 
-                        << getHcCommandKindString(youngestCommandKind) 
+                DBOUT(DB_CMD2, "Set NeedDep (command type changed) "
+                        << getHcCommandKindString(youngestCommandKind)
                         << "  ->  " << getHcCommandKindString(newCommandKind) << "\n") ;
                 needDep = true;
             };
@@ -1506,7 +1506,7 @@ public:
     bool isEmpty() override {
         // Have to walk asyncOps since it can contain null pointers (if event is waited on and removed)
         // Also not all commands contain signals.
-        
+
         bool isEmpty = true;
 
         const auto& oldest = find_if(
@@ -1739,7 +1739,7 @@ public:
         // do read
         if (dst != device) {
             if (!getDev()->is_unified()) {
-                DBOUT(DB_COPY, "read(" << device << "," << dst << "," << count << "," << offset 
+                DBOUT(DB_COPY, "read(" << device << "," << dst << "," << count << "," << offset
                                 << "): use HSA memory copy\n");
                 hsa_status_t status = HSA_STATUS_SUCCESS;
                 // Make sure host memory is accessible to gpu
@@ -1765,7 +1765,7 @@ public:
                 // Unlock the host memory
                 status = hsa_amd_memory_unlock(dst);
             } else {
-                DBOUT(DB_COPY, "read(" << device << "," << dst << "," << count << "," << offset 
+                DBOUT(DB_COPY, "read(" << device << "," << dst << "," << count << "," << offset
                                 << "): use host memory copy\n");
                 memmove(dst, (char*)device + offset, count);
             }
@@ -1779,7 +1779,7 @@ public:
         // do write
         if (src != device) {
             if (!getDev()->is_unified()) {
-                DBOUT(DB_COPY, "write(" << device << "," << src << "," << count << "," << offset 
+                DBOUT(DB_COPY, "write(" << device << "," << src << "," << count << "," << offset
                                 << "," << blocking << "): use HSA memory copy\n");
                 hsa_status_t status = HSA_STATUS_SUCCESS;
                 // Make sure host memory is accessible to gpu
@@ -1800,7 +1800,7 @@ public:
                 // Unlock the host memory
                 status = hsa_amd_memory_unlock(const_cast<void*>(src));
             } else {
-                DBOUT(DB_COPY, "write(" << device << "," << src << "," << count << "," << offset 
+                DBOUT(DB_COPY, "write(" << device << "," << src << "," << count << "," << offset
                                 << "," << blocking << "): use host memory copy\n");
                 memmove((char*)device + offset, src, count);
             }
@@ -1818,7 +1818,7 @@ public:
         // do copy
         if (src != dst) {
             if (!getDev()->is_unified()) {
-                DBOUT(DB_COPY, "copy(" << src << "," << dst << "," << count << "," << src_offset 
+                DBOUT(DB_COPY, "copy(" << src << "," << dst << "," << count << "," << src_offset
                                << "," << dst_offset << "," << blocking << "): use HSA memory copy\n");
                 hsa_status_t status = HSA_STATUS_SUCCESS;
                 // FIXME: aftre p2p enabled, if this function is not expected to copy between two buffers from different device, then, delete allow_access API call.
@@ -1828,7 +1828,7 @@ public:
                 status = hsa_memory_copy((char*)dst + dst_offset, (char*)src + src_offset, count);
                 STATUS_CHECK(status, __LINE__);
             } else {
-                DBOUT(DB_COPY, "copy(" << src << "," << dst << "," << count << "," << src_offset 
+                DBOUT(DB_COPY, "copy(" << src << "," << dst << "," << count << "," << src_offset
                                << "," << dst_offset << "," << blocking << "): use host memory copy\n");
                 memmove((char*)dst + dst_offset, (char*)src + src_offset, count);
             }
@@ -1848,7 +1848,7 @@ public:
         if (!getDev()->is_unified()) {
             if (DBFLAG(DB_COPY)) {
                 DBWSTREAM << getDev()->get_path();
-                DBSTREAM << ": map( <device> " << device << ", <count> " << count << ", <offset> " << offset 
+                DBSTREAM << ": map( <device> " << device << ", <count> " << count << ", <offset> " << offset
                          << ", <modify> " << modify << "): use HSA memory map\n";
             }
             hsa_status_t status = HSA_STATUS_SUCCESS;
@@ -1872,7 +1872,7 @@ public:
         } else {
             if (DBFLAG(DB_COPY)) {
               DBWSTREAM << getDev()->get_path();
-              DBSTREAM << ": map( <device> " << device << ", <count> " << count << ", <offset> " << offset 
+              DBSTREAM << ": map( <device> " << device << ", <count> " << count << ", <offset> " << offset
                        << ", <modify> " << modify << "): use host memory map\n";
             }
             // for host memory we simply return the pointer plus offset
@@ -1888,7 +1888,7 @@ public:
         if (!getDev()->is_unified()) {
             if (DBFLAG(DB_COPY)) {
                 DBWSTREAM << getDev()->get_path();
-                DBSTREAM << ": unmap( <device> " << device << ", <addr> " << addr << ", <count> " << count 
+                DBSTREAM << ": unmap( <device> " << device << ", <addr> " << addr << ", <count> " << count
                          << ", <offset> " << offset << ", <modify> " << modify << "): use HSA memory unmap\n";
             }
             if (modify) {
@@ -1904,7 +1904,7 @@ public:
         } else {
             if (DBFLAG(DB_COPY)) {
                 DBWSTREAM << getDev()->get_path();
-                DBSTREAM << ": unmap( <device> " << device << ", <addr> " << addr << ", <count> " << count 
+                DBSTREAM << ": unmap( <device> " << device << ", <addr> " << addr << ", <count> " << count
                          << ", <offset> " << offset << ", <modify> " << modify <<"): use host memory unmap\n";
             }
             // for host memory there's nothing to be done
@@ -3446,7 +3446,7 @@ public:
 
     void initPrintfBuffer() override {
 
-        if (HCC_ENABLE_PRINTF) { 
+        if (HCC_ENABLE_PRINTF) {
           if (hc::printf_buffer != nullptr) {
             // Check whether the printf buffer is still valid
             // because it may have been annihilated by HIP's hipDeviceReset().
@@ -3531,7 +3531,7 @@ void HSAContext::ReadHccEnv()
     GET_ENV_INT (HCC_D2H_PININPLACE_THRESHOLD, "Min size (in KB) to use pin-in-place for D2H copy if ChooseBest algorithm selected");
 
     GET_ENV_INT (HCC_STAGING_BUFFER_SIZE, "Unpinned copy engine staging buffer size in KB");
-  
+
     // Change the default GPU
     GET_ENV_INT (HCC_DEFAULT_GPU, "Change the default GPU (Default is device 0)");
 
@@ -4802,9 +4802,9 @@ HSAOp::HSAOp(detail::HCCQueue *queue, hc::hcCommandKind commandKind) :
     apiStartTick = detail::ctx.getSystemTicks();
 };
 
-detail::HSAQueue *HSAOp::hsaQueue() const 
-{ 
-    return static_cast<detail::HSAQueue *> (this->getQueue()); 
+detail::HSAQueue *HSAOp::hsaQueue() const
+{
+    return static_cast<detail::HSAQueue *> (this->getQueue());
 };
 
 bool HSAOp::isReady() override {
@@ -5066,7 +5066,7 @@ HSACopy::enqueueAsyncCopyCommand(const detail::HSADevice *copyDevice, const hc::
         // We need to ensure the copy waits for preceding commands the HCC queue to complete, if those commands exist.
         // The copy has to be set so that it depends on the completion_signal of the youngest command in the queue.
         if (depAsyncOp || fenceScope != hc::no_scope) {
-        
+
             // Normally we can use the input signal to hsa_amd_memory_async_copy to ensure the copy waits for youngest op.
             // However, two cases require special handling:
             //    - the youngest op may not have a completion signal - this is optional for kernel launch commands.
