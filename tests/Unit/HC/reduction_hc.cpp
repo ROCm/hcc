@@ -72,7 +72,7 @@ float reduction_simple_1(const std::vector<float>& source)
     // back only the first element.
     array<float, 1> a(element_count, source.begin());
 
-    // Takes care of odd input elements – we could completely avoid tail sum
+    // Takes care of odd input elements ï¿½ we could completely avoid tail sum
     // if we would require source to have even number of elements.
     float tail_sum = (element_count % 2) ? source[element_count - 1] : 0;
     array_view<float, 1> av_tail_sum(1, &tail_sum);
@@ -161,7 +161,7 @@ float reduction_simple_2(const std::vector<float>& source)
 }
 
 //----------------------------------------------------------------------------
-// This is an implementation of the reduction algorithm which uses tiling and 
+// This is an implementation of the reduction algorithm which uses tiling and
 // the shared memory.
 //----------------------------------------------------------------------------
 template <unsigned _tile_size>
@@ -181,7 +181,7 @@ float reduction_tiled_1(const std::vector<float>& source)
     // Using arrays as temporary memory.
     array<float, 1> arr_1(element_count, source.begin());
     array<float, 1> arr_2((element_count / _tile_size) ? (element_count / _tile_size) : 1);
-    
+
     // array_views may be swapped after each iteration.
     array_view<float, 1> av_src(arr_1);
     array_view<float, 1> av_dst(arr_2);
@@ -191,8 +191,10 @@ float reduction_tiled_1(const std::vector<float>& source)
     // is evenly divisable to the number of threads in the tile.
     while ((element_count % _tile_size) == 0)
     {
-        parallel_for_each(extent<1>(element_count).tile(_tile_size),
-                          [=] (tiled_index<1> tidx) [[hc]] [[hc_flat_workgroup_size(_tile_size)]]
+        parallel_for_each(
+            extent<1>(element_count).tile(_tile_size),
+            make_callable_with_AMDGPU_attributes<
+                Flat_workgroup_size<_tile_size>>([=](tiled_index<1> tidx) [[hc]] {
         {
             // Use tile_static as a scratchpad memory.
             tile_static float tile_data[_tile_size];
@@ -208,7 +210,7 @@ float reduction_tiled_1(const std::vector<float>& source)
                 {
                     tile_data[local_idx] += tile_data[local_idx + s];
                 }
-                
+
                 tidx.barrier.wait();
             }
 
@@ -217,7 +219,7 @@ float reduction_tiled_1(const std::vector<float>& source)
             {
                 av_dst[tidx.tile] = tile_data[0];
             }
-        }).wait();
+        }));
 
         // Update the sequence length, swap source with destination.
         element_count /= _tile_size;
@@ -263,8 +265,10 @@ float reduction_tiled_2(const std::vector<float>& source)
     // is evenly divisable to the number of threads in the tile.
     while ((element_count % _tile_size) == 0)
     {
-        parallel_for_each(extent<1>(element_count).tile(_tile_size),
-                          [=] (tiled_index<1> tidx) [[hc]] [[hc_flat_workgroup_size(_tile_size)]]
+        parallel_for_each(
+            extent<1>(element_count).tile(_tile_size),
+            make_callable_with_AMDGPU_attributes<
+                Flat_workgroup_size<_tile_size>>([=](tiled_index<1> tidx) [[hc]] {
         {
             // Use tile_static as a scratchpad memory.
             tile_static float tile_data[_tile_size];
@@ -290,7 +294,7 @@ float reduction_tiled_2(const std::vector<float>& source)
             {
                 av_dst[tidx.tile] = tile_data[0];
             }
-        }).wait();
+        }));
 
         // Update the sequence length, swap source with destination.
         element_count /= _tile_size;
@@ -406,8 +410,10 @@ float reduction_tiled_4(const std::vector<float>& source)
     while (element_count >= _tile_size
         && (element_count % (_tile_size * 2)) == 0)
     {
-        parallel_for_each(extent<1>(element_count / 2).tile(_tile_size),
-                          [=] (tiled_index<1> tidx) [[hc]] [[hc_flat_workgroup_size(_tile_size)]]
+        parallel_for_each(
+            extent<1>(element_count / 2).tile(_tile_size),
+            make_callable_with_AMDGPU_attributes<
+                Flat_workgroup_size<_tile_size>>([=](tiled_index<1> tidx) [[hc]] {
         {
             // Use tile_static as a scratchpad memory.
             tile_static float tile_data[_tile_size];
@@ -436,7 +442,7 @@ float reduction_tiled_4(const std::vector<float>& source)
             {
                 av_dst[tidx.tile] = tile_data[0];
             }
-        }).wait();
+        }));
 
         // Update the sequence length, swap source with destination.
         element_count /= _tile_size * 2;
@@ -483,8 +489,10 @@ float reduction_cascade(const std::vector<float>& source)
     array<float, 1> a(element_count, source.begin());
     array<float, 1> a_partial_result(_tile_count);
 
-    parallel_for_each(extent<1>(_tile_count * _tile_size).tile(_tile_size),
-                     [=, &a, &a_partial_result] (tiled_index<1> tidx) [[hc]] [[hc_flat_workgroup_size(_tile_size)]]
+    parallel_for_each(
+        extent<1>(_tile_count * _tile_size).tile(_tile_size),
+        make_callable_with_AMDGPU_attributes<Flat_workgroup_size<_tile_size>>(
+            [=, &a, &a_partial_result](tiled_index<1> tidx) [[hc]] {
     {
         // Use tile_static as a scratchpad memory.
         tile_static float tile_data[_tile_size];
@@ -496,7 +504,7 @@ float reduction_cascade(const std::vector<float>& source)
         tile_data[local_idx] = 0;
         do
         {
-            tile_data[local_idx] += a[input_idx] + a[input_idx + _tile_size]; 
+            tile_data[local_idx] += a[input_idx] + a[input_idx + _tile_size];
             input_idx += stride;
         } while (input_idx < element_count);
 
@@ -518,7 +526,7 @@ float reduction_cascade(const std::vector<float>& source)
         {
             a_partial_result[tidx.tile[0]] = tile_data[0];
         }
-    }).wait();
+    }));
 
     // Reduce results from all tiles on the CPU.
     std::vector<float> v_partial_result(_tile_count);
