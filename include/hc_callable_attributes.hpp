@@ -21,10 +21,10 @@ namespace hc
     } // Namespace attr_impl.
 
 
-    template<unsigned int min_size = 42, unsigned int max_size = 43>
+    template<unsigned int min_size = 0, unsigned int max_size = 0>
     class Flat_workgroup_size : public attr_impl::Flat_wg_tag {
         static_assert(
-            min_size <= max_size,
+            max_size == 0 || min_size <= max_size,
             "Minimum workgroup size must not be greater than maximum size.");
 
         static constexpr Flat_workgroup_size* flat_workgroup_size_{};
