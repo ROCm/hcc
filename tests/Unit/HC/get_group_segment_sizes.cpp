@@ -35,7 +35,7 @@ bool test() {
 
   hc::completion_future fut = hc::parallel_for_each(
     e, 
-    [=](hc::index<1> idx) __HC__ {
+    [=](hc::index<1> idx) [[hc]] {
       // create a tile_static array
       tile_static volatile int group[groupSize];
       group[idx[0]] = 0;
@@ -44,7 +44,7 @@ bool test() {
       av_a(idx) = hc::get_group_segment_size();
 
       // av_b stores the size of static group segment
-      av_b(idx) = hc::get_static_group_segment_size() + group[idx[0]]; // use group__HC__ so it won't be optimized away
+      av_b(idx) = hc::get_static_group_segment_size() + group[idx[0]]; // use group[[hc]] so it won't be optimized away
   });
 
   // create a barrier packet

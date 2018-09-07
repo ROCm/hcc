@@ -54,7 +54,7 @@ bool test() {
 
   // execute a kernel to populate data on GPU
   hc::extent<1> e(N);
-  hc::parallel_for_each(e,[=](hc::index<1> idx)__HC__{
+  hc::parallel_for_each(e,[=](hc::index<1> idx)[[hc]]{
     a[idx[0]] = 5;
   });
 

@@ -22,7 +22,7 @@ bool test1D() {
 
   // 1D non-tiled
   extent<1> ex1d(0);
-  completion_future fut1 = parallel_for_each(ex1d, [&](index<1>& idx) __HC__ {
+  completion_future fut1 = parallel_for_each(ex1d, [&](index<1>& idx) [[hc]] {
     table[idx[0]] = 1;
   });
 
@@ -35,7 +35,7 @@ bool test1D() {
 
   // 1D tiled
   tiled_extent<1> tiled_ex1d = ex1d.tile(0);
-  completion_future fut2 = parallel_for_each(tiled_ex1d, [&](tiled_index<1>& idx) __HC__ {
+  completion_future fut2 = parallel_for_each(tiled_ex1d, [&](tiled_index<1>& idx) [[hc]] {
     table[idx.global[0]] = 1;
   });
 
@@ -47,7 +47,7 @@ bool test1D() {
   ret &= (std::count(std::begin(table), std::end(table), 0) == TABLE_X);
 
   // 1D non-tiled
-  completion_future fut3 = parallel_for_each(ex1d, [&](index<1>& idx) __HC__ {
+  completion_future fut3 = parallel_for_each(ex1d, [&](index<1>& idx) [[hc]] {
     table[idx[0]] = 1;
   });
 
@@ -59,7 +59,7 @@ bool test1D() {
   ret &= (std::count(std::begin(table), std::end(table), 0) == TABLE_X);
 
   // 1D tiled
-  completion_future fut4 = parallel_for_each(tiled_ex1d, [&](tiled_index<1>& idx) __HC__ {
+  completion_future fut4 = parallel_for_each(tiled_ex1d, [&](tiled_index<1>& idx) [[hc]] {
     table[idx.global[0]] = 1;
   });
 
@@ -83,7 +83,7 @@ bool test2D() {
 
   // 2D non-tiled
   extent<2> ex2d(0, 0);
-  completion_future fut1 = parallel_for_each(ex2d, [&](index<2>& idx) __HC__ {
+  completion_future fut1 = parallel_for_each(ex2d, [&](index<2>& idx) [[hc]] {
     table[idx[0] * TABLE_Y + idx[1]] = 1;
   });
 
@@ -96,7 +96,7 @@ bool test2D() {
 
   // 2D tiled
   tiled_extent<2> tiled_ex2d = ex2d.tile(0, 0);
-  completion_future fut2 = parallel_for_each(tiled_ex2d, [&](tiled_index<2>& idx) __HC__ {
+  completion_future fut2 = parallel_for_each(tiled_ex2d, [&](tiled_index<2>& idx) [[hc]] {
     table[idx.global[0] * TABLE_Y + idx.global[1]] = 1;
   });
 
@@ -108,7 +108,7 @@ bool test2D() {
   ret &= (std::count(std::begin(table), std::end(table), 0) == TABLE_X * TABLE_Y);
 
   // 2D non-tiled
-  completion_future fut3 = parallel_for_each(ex2d, [&](index<2>& idx) __HC__ {
+  completion_future fut3 = parallel_for_each(ex2d, [&](index<2>& idx) [[hc]] {
     table[idx[0] * TABLE_Y + idx[1]] = 1;
   });
 
@@ -120,7 +120,7 @@ bool test2D() {
   ret &= (std::count(std::begin(table), std::end(table), 0) == TABLE_X * TABLE_Y);
 
   // 2D tiled
-  completion_future fut4 = parallel_for_each(tiled_ex2d, [&](tiled_index<2>& idx) __HC__ {
+  completion_future fut4 = parallel_for_each(tiled_ex2d, [&](tiled_index<2>& idx) [[hc]] {
     table[idx.global[0] * TABLE_Y + idx.global[1]] = 1;
   });
 
@@ -144,7 +144,7 @@ bool test3D() {
 
   // 3D non-tiled
   extent<3> ex3d(0, 0, 0);
-  completion_future fut1 = parallel_for_each(ex3d, [&](index<3>& idx) __HC__ {
+  completion_future fut1 = parallel_for_each(ex3d, [&](index<3>& idx) [[hc]] {
     table[idx[0] * TABLE_X * TABLE_Y + idx[1] * TABLE_Y + idx[2]] = 1;
   });
 
@@ -157,7 +157,7 @@ bool test3D() {
 
   // 3D tiled
   tiled_extent<3> tiled_ex3d = ex3d.tile(0, 0, 0);
-  completion_future fut2 = parallel_for_each(tiled_ex3d, [&](tiled_index<3>& idx) __HC__ {
+  completion_future fut2 = parallel_for_each(tiled_ex3d, [&](tiled_index<3>& idx) [[hc]] {
     table[idx.global[0] * TABLE_X * TABLE_Y + idx.global[1] * TABLE_Y + idx.global[2]] = 1;
   });
 
@@ -169,7 +169,7 @@ bool test3D() {
   ret &= (std::count(std::begin(table), std::end(table), 0) == TABLE_X * TABLE_Y * TABLE_Z);
 
   // 2D non-tiled
-  completion_future fut3 = parallel_for_each(ex3d, [&](index<3>& idx) __HC__ {
+  completion_future fut3 = parallel_for_each(ex3d, [&](index<3>& idx) [[hc]] {
     table[idx[0] * TABLE_X * TABLE_Y + idx[1] * TABLE_Y + idx[2]] = 1;
   });
 
@@ -181,7 +181,7 @@ bool test3D() {
   ret &= (std::count(std::begin(table), std::end(table), 0) == TABLE_X * TABLE_Y * TABLE_Z);
 
   // 2D tiled
-  completion_future fut4 = parallel_for_each(tiled_ex3d, [&](tiled_index<3>& idx) __HC__ {
+  completion_future fut4 = parallel_for_each(tiled_ex3d, [&](tiled_index<3>& idx) [[hc]] {
     table[idx.global[0] * TABLE_X * TABLE_Y + idx.global[1] * TABLE_Y + idx.global[2]] = 1;
   });
 

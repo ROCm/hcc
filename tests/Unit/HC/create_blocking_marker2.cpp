@@ -44,35 +44,35 @@ bool test() {
   hc::extent<1> e(vecSize);
   hc::completion_future fut0 = hc::parallel_for_each(
     e,
-    [=](hc::index<1> idx) __HC__ {
+    [=](hc::index<1> idx) [[hc]] {
       for (int i = 0; i < LOOP_COUNT; ++i)
         table_c(idx) = table_a(idx) + table_b(idx);
   });
 
   hc::completion_future fut1 = hc::parallel_for_each(
     e,
-    [=](hc::index<1> idx) __HC__ {
+    [=](hc::index<1> idx) [[hc]] {
       for (int i = 0; i < LOOP_COUNT; ++i)
         table_d(idx) = table_a(idx) + table_b(idx);
   });
 
   hc::completion_future fut2 = hc::parallel_for_each(
     e,
-    [=](hc::index<1> idx) __HC__ {
+    [=](hc::index<1> idx) [[hc]] {
       for (int i = 0; i < LOOP_COUNT; ++i)
         table_e(idx) = table_a(idx) + table_b(idx);
   });
 
   hc::completion_future fut3 = hc::parallel_for_each(
     e,
-    [=](hc::index<1> idx) __HC__ {
+    [=](hc::index<1> idx) [[hc]] {
       for (int i = 0; i < LOOP_COUNT; ++i)
         table_f(idx) = table_a(idx) + table_b(idx);
   });
 
   hc::completion_future fut4 = hc::parallel_for_each(
     e,
-    [=](hc::index<1> idx) __HC__ {
+    [=](hc::index<1> idx) [[hc]] {
       for (int i = 0; i < LOOP_COUNT; ++i)
         table_g(idx) = table_a(idx) + table_b(idx);
   });

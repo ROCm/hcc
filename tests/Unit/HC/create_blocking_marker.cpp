@@ -40,7 +40,7 @@ bool test() {
   hc::extent<1> e(vecSize);
   hc::completion_future fut = hc::parallel_for_each(
     e,
-    [=](hc::index<1> idx) __HC__ {
+    [=](hc::index<1> idx) [[hc]] {
       for (int i = 0; i < LOOP_COUNT; ++i)
         table_c(idx) = table_a(idx) + table_b(idx);
   });
@@ -126,7 +126,7 @@ bool test() {
      
       cf_pfe  = hc::parallel_for_each(av,
         e,
-        [=](hc::index<1> idx) __HC__ {
+        [=](hc::index<1> idx) [[hc]] {
           for (int i = 0; i < LOOP_COUNT; ++i)
             table_c(idx) = table_a(idx) + table_b(idx);
       });
@@ -150,13 +150,13 @@ bool test() {
       // Two kernels sent to different PFE, then wait on all three
       cf_pfe  = hc::parallel_for_each(av,
         e,
-        [=](hc::index<1> idx) __HC__ {
+        [=](hc::index<1> idx) [[hc]] {
           for (int i = 0; i < LOOP_COUNT; ++i)
             table_c(idx) = table_a(idx) + table_b(idx);
       });
       cf_pfe2  = hc::parallel_for_each(av2,
         e,
-        [=](hc::index<1> idx) __HC__ {
+        [=](hc::index<1> idx) [[hc]] {
           for (int i = 0; i < LOOP_COUNT; ++i)
             table_c(idx) = table_a(idx) + table_b(idx);
       });

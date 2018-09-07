@@ -50,7 +50,7 @@ int main()
 
     hc::extent<1> e(vec_size);
     hc::completion_future fut = hc::parallel_for_each(acc_view, e,
-                                [=](hc::index<1> idx) __HC__ {
+                                [=](hc::index<1> idx) [[hc]] {
                                   table_c[idx[0]] = table_a[idx[0]] + table_b[idx[0]];
                                 });
 
