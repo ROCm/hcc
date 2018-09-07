@@ -10,7 +10,7 @@ class baz {
   int bar;
   int* n[10];
 };
-// CHECK: compile_error_for_arraytype.cpp:[[@LINE-2]]:3: error: the field type is not amp-compatible
+// CHECK: compile_error_for_arraytype.cpp:[[@LINE-2]]:3: error: the field type is not hc-compatible
 // CHECK-NEXT: int* n[10];
 // CHECK-NEXT: ^
 
@@ -19,7 +19,7 @@ int kerker(void) [[cpu, hc]] {
   baz bl;
   return 0;
 }
-// CHECK: compile_error_for_arraytype.cpp:[[@LINE-3]]:3: error: 'class baz': unsupported type in amp restricted code
+// CHECK: compile_error_for_arraytype.cpp:[[@LINE-3]]:3: error: 'class baz': unsupported type in hc restricted code
 // CHECK-NEXT: baz bl;
 // CHECK-NEXT: ^
 

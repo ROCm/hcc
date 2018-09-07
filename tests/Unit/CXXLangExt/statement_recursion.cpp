@@ -4,7 +4,7 @@
 #include <iostream>
 #include <hc.hpp>
 
-int fib(int x) restrict (amp, cpu) {
+int fib(int x) [[cpu, hc]] {
   if (x == 0) return 0;
   if (x == 1) return 1;
   return fib(x - 1) + fib(x - 2);

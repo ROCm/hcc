@@ -8,5 +8,5 @@ int main()
 	hc::array_view<int> gpu_resultsv(1, &gpu_result);
     gpu_resultsv.discard_data();
     static auto fun = [&]() [[cpu, hc]] { return 0; };
-    hc::parallel_for_each(gpu_resultsv.get_extent(), [=] (hc::index<1> idx) restrict (amp) { gpu_resultsv[idx] = fun(); });
+    hc::parallel_for_each(gpu_resultsv.get_extent(), [=] (hc::index<1> idx) [[hc]] { gpu_resultsv[idx] = fun(); });
 }

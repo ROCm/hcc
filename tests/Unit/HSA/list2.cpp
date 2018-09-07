@@ -56,7 +56,7 @@ public:
 #define NUM_LIST_NODES (20)
 
 
-list_head *list_insert_new(list_head *llist_head, list_head *newitem, list_data *info, int idx) restrict (amp, cpu) {
+list_head *list_insert_new(list_head *llist_head, list_head *newitem, list_data *info, int idx) [[cpu, hc]] {
 
 	newitem->next=llist_head[idx].next;
 	llist_head[idx].next=newitem;

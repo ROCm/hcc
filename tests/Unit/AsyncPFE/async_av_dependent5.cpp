@@ -173,7 +173,7 @@ bool test1D() {
     } \
   } \
 
-  VERIFY_CONTENT_1D(av3, 2);
+  VERIFY_CONTENT_1D(av3, 0);
   VERIFY_CONTENT_1D(av4, 0);
   VERIFY_CONTENT_1D(av5, 0);
 

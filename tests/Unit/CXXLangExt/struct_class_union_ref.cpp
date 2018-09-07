@@ -42,13 +42,13 @@
 
 struct S {
   TYPE & ref;
-  explicit S(TYPE &var) restrict (amp) : ref(var) {};
+  explicit S(TYPE &var) [[hc]] : ref(var) {};
 };
 
 class C {
 public:
   TYPE & ref;
-  explicit C(TYPE &var) restrict (amp) : ref(var) {};
+  explicit C(TYPE &var) [[hc]] : ref(var) {};
 };
 
 bool test() {
