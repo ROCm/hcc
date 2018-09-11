@@ -5,20 +5,16 @@
 
 #include <iostream>
 
-#define __KERNEL__ __attribute__((amp))
-
 template<size_t GRID_SIZE, size_t TILE_SIZE>
 bool test() {
   using namespace hc;
 
-
   array_view<int, 1> av(GRID_SIZE);
   tiled_extent<1> ex(GRID_SIZE, TILE_SIZE);
   ex.set_dynamic_group_segment_size(0);
-  
-  completion_future fut = parallel_for_each(hc::accelerator().get_default_view(),
-                    ex,
-                    __KERNEL__ [=](tiled_index<1>& tidx) {
+
+  completion_future fut = parallel_for_each(
+    hc::accelerator().get_default_view(), ex, [=](tiled_index<1>& tidx) [[hc]] {
     tile_static int lds1[TILE_SIZE];
 
     // obtain workitem absolute index and workgroup index

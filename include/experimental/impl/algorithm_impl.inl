@@ -46,7 +46,7 @@ void generate_impl(ForwardIterator first, ForwardIterator last,
   }
 
   // FIXME: [[hc]] will cause g() having ambient context,
-  //        use restrict(amp) temporarily
+  //        use [[hc]] temporarily
   using _Ty = typename std::iterator_traits<ForwardIterator>::value_type;
   auto first_ = utils::get_pointer(first);
   hc::array_view<_Ty> av(hc::extent<1>(N), first_);

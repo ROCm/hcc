@@ -16,11 +16,11 @@
 
 #define SIZE (128)
 
-__attribute__((amp,cpu)) void p(VOLATILE float* fp) {
+[[cpu, hc]] void p(VOLATILE float* fp) {
   *fp = 100.0f;
 }
 
-__attribute__((amp,cpu)) float foo1(float a) {
+[[cpu, hc]] float foo1(float a) {
   union {
     VOLATILE float* fp;
     VOLATILE int* ip;
@@ -33,7 +33,7 @@ __attribute__((amp,cpu)) float foo1(float a) {
   return *(u.fp);
 }
 
-__attribute__((amp,cpu)) float foo2(float a) {
+[[cpu, hc]] float foo2(float a) {
 
   VOLATILE float* fp;
   VOLATILE int* ip;
