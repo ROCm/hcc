@@ -9,7 +9,6 @@
 
 #include "hc_callable_attributes.hpp"
 #include "hc_runtime.h"
-#include "hc_serialize.h"
 
 #include "../hc2/external/elfio/elfio.hpp"
 

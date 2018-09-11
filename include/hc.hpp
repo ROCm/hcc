@@ -18,9 +18,7 @@
 #include "hc_exception.h"
 #include "hc_index.h"
 #include "hc_runtime.h"
-#include "hc_serialize.h"
 #include "hc_launch.h"
-#include "hc_buffer.h"
 #include "hc_math.h"
 
 #include "hcc_features.hpp"
