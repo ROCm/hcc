@@ -53,9 +53,9 @@ extern "C" float __hc_copysign(float x, float y) [[hc]];
 extern "C" double __hc_copysign_double(double x, double y) [[hc]];
 
 extern "C" _Float16 __hc_cos_half(_Float16 x) [[hc]];
-extern "C" _Float16 __hc_cos_native_half(_Float16 x) [[hc]];
+extern "C" _Float16 __hc_native_cos_half(_Float16 x) [[hc]];
 extern "C" float __hc_cos(float x) [[hc]];
-extern "C" float __hc_cos_native(float x) [[hc]];
+extern "C" float __hc_native_cos(float x) [[hc]];
 extern "C" double __hc_cos_double(double x) [[hc]];
 
 extern "C" _Float16 __hc_cosh_half(_Float16 x) [[hc]];
@@ -409,10 +409,10 @@ namespace detail
         float ceil(float x) { return fast_math::ceilf(x); }
 
         HCC_MATH_LIB_FN
-        float cosf(float x) { return __hc_cos_native(x); }
+        float cosf(float x) { return __hc_native_cos(x); }
 
         HCC_MATH_LIB_FN
-        _Float16 cos(_Float16 x) { return __hc_cos_native_half(x); }
+        _Float16 cos(_Float16 x) { return __hc_native_cos_half(x); }
 
         HCC_MATH_LIB_FN
         float cos(float x) { return fast_math::cosf(x); }
@@ -668,7 +668,7 @@ namespace detail
         _Float16 tan(_Float16 x)
         {
             return __hc_sin_native_half(x) *
-                __hc_rcp_native_half(__hc_cos_native_half(x));
+                __hc_rcp_native_half(__hc_native_cos_half(x));
         }
 
         HCC_MATH_LIB_FN
