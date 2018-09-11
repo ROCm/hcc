@@ -1985,9 +1985,9 @@ public:
      * tile(t0) is only supported on extent<1>. It will produce a
      * compile-time error if used on an extent where N @f$\ne@f$ 1.
      */
-    tiled_extent<1> tile(int t0) const;
-    tiled_extent<2> tile(int t0, int t1) const;
-    tiled_extent<3> tile(int t0, int t1, int t2) const;
+    tiled_extent<1> tile(int t0) const [[cpu, hc]];
+    tiled_extent<2> tile(int t0, int t1) const [[cpu, hc]];
+    tiled_extent<3> tile(int t0, int t1, int t2) const [[cpu, hc]];
 
     /** @} */
 
@@ -5302,14 +5302,18 @@ class array_view : private array_view_base {
         if (writers_for_this_ == max_array_view_cnt_) return base_ptr_;
         if (writers_[writers_for_this_].second.second.empty()) return base_ptr_;
 
-        std::lock_guard<std::mutex> lck{
-            writers_[writers_for_this_].second.first};
+        decltype(writers_[writers_for_this_].second.second) tmp;
+        {
+            std::lock_guard<std::mutex> lck{
+                writers_[writers_for_this_].second.first};
 
-        for (auto&& x : writers_[writers_for_this_].second.second) {
-            if (!x.valid()) continue;
-            x.wait();
+            for (auto&& x : writers_[writers_for_this_].second.second) {
+                if (!x.valid()) continue;
+                x.wait();
+            }
+
+            std::swap(writers_[writers_for_this_].second.second, tmp);
         }
-        writers_[writers_for_this_].second.second.clear();
 
         return base_ptr_;
     }
@@ -5829,6 +5833,7 @@ public:
     {
         if (type == access_type_none || type == access_type_write) return;
 
+        decltype(writers_[writers_for_this_].second.second) tmp;
         {
             std::lock_guard<std::mutex> lck{
                 writers_[writers_for_this_].second.first};
@@ -5836,7 +5841,8 @@ public:
             for (auto&& x : writers_[writers_for_this_].second.second) {
                 if (x.valid()) x.wait();
             }
-            writers_[writers_for_this_].second.second.clear();
+
+            std::swap(writers_[writers_for_this_].second.second, tmp);
         }
 
         if (source_ == base_ptr_) return;
@@ -5949,7 +5955,14 @@ public:
      */
     void discard_data() const
     {
-        // Since we use system coarse grained, this is a NOP.
+        decltype(writers_[writers_for_this_].second.second) tmp;
+
+        {
+            std::lock_guard<std::mutex> lck{
+                writers_[writers_for_this_].second.first};
+
+            std::swap(writers_[writers_for_this_].second.second, tmp);
+        }
     }
 
     /** @{ */
