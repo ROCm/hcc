@@ -3465,7 +3465,7 @@ public:
      * before hitting the barrier. This is identical to wait().
      */
     void wait_with_all_memory_fence() const [[hc]] {
-        amp_barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
+        hc_barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
     }
 
     /**
@@ -3478,7 +3478,7 @@ public:
      * after the barrier are executed before hitting the barrier.
      */
     void wait_with_global_memory_fence() const [[hc]] {
-        amp_barrier(CLK_GLOBAL_MEM_FENCE);
+        hc_barrier(CLK_GLOBAL_MEM_FENCE);
     }
 
     /**
@@ -3492,7 +3492,7 @@ public:
      * hitting the barrier.
      */
     void wait_with_tile_static_memory_fence() const [[hc]] {
-        amp_barrier(CLK_LOCAL_MEM_FENCE);
+        hc_barrier(CLK_LOCAL_MEM_FENCE);
     }
 
 private:
@@ -3552,39 +3552,38 @@ class tiled_index {
     // TODO: convert to using the hc_ flavoured functions.
     template<int m = n, typename std::enable_if<m == 1>::type* = nullptr>
     tiled_index() [[hc]]
-        : global{amp_get_global_id(0)},
-          local{amp_get_local_id(0)},
-          tile{amp_get_group_id(0)},
-          tile_origin{amp_get_global_id(0) - amp_get_local_id(0)},
-          tile_dim{amp_get_local_size(0)}
+        : global{hc_get_workitem_absolute_id(0)},
+          local{hc_get_workitem_id(0)},
+          tile{hc_get_group_id(0)},
+          tile_origin{global[0] - local[0]},
+          tile_dim{hc_get_group_size(0)}
     {}
-
     template<int m = n, typename std::enable_if<m == 2>::type* = nullptr>
     tiled_index() [[hc]]
-        : global{amp_get_global_id(1), amp_get_global_id(0)},
-          local{amp_get_local_id(1), amp_get_local_id(0)},
-          tile{amp_get_group_id(1), amp_get_group_id(0)},
-          tile_origin{
-              amp_get_global_id(1) - amp_get_local_id(1),
-              amp_get_global_id(0) - amp_get_local_id(0)},
-          tile_dim{amp_get_local_size(1), amp_get_local_size(0)}
+        : global{
+            hc_get_workitem_absolute_id(1), hc_get_workitem_absolute_id(0)},
+          local{hc_get_workitem_id(1), hc_get_workitem_id(0)},
+          tile{hc_get_group_id(1), hc_get_group_id(0)},
+          tile_origin{global[0] - local[0], global[1] - local[1]},
+          tile_dim{hc_get_group_size(1), hc_get_group_size(0)}
     {}
 
     template<int m = n, typename std::enable_if<m == 3>::type* = nullptr>
     tiled_index() [[hc]]
         :
         global{
-            amp_get_global_id(2), amp_get_global_id(1), amp_get_global_id(0)},
-        local{amp_get_local_id(2), amp_get_local_id(1), amp_get_local_id(0)},
-        tile{amp_get_group_id(2), amp_get_group_id(1), amp_get_group_id(0)},
+            hc_get_workitem_absolute_id(2),
+            hc_get_workitem_absolute_id(1),
+            hc_get_workitem_absolute_id(0)},
+        local{
+            hc_get_workitem_id(2),
+            hc_get_workitem_id(1),
+            hc_get_workitem_id(0)},
+        tile{hc_get_group_id(2), hc_get_group_id(1), hc_get_group_id(0)},
         tile_origin{
-            amp_get_global_id(2) - amp_get_local_id(2),
-            amp_get_global_id(1) - amp_get_local_id(1),
-            amp_get_global_id(0) - amp_get_local_id(0)},
+            global[0] - local[0], global[1] - local[1], global[2] - local[2]},
         tile_dim{
-            amp_get_local_size(2),
-            amp_get_local_size(1),
-            amp_get_local_size(0)}
+            hc_get_group_size(2), hc_get_group_size(1), hc_get_group_size(0)}
     {}
 public:
     /**

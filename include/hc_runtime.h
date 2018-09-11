@@ -3,7 +3,12 @@
 #include "hc_aligned_alloc.h"
 #include "hc_defines.h"
 
+#include <algorithm>
+#include <cstring>
+#include <future>
+#include <map>
 #include <stdexcept>
+#include <vector>
 
 namespace hc {
 class AmPointerInfo;

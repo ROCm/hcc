@@ -57,8 +57,7 @@ inline void assertTwoArrays(int *A, int *B, size_t length){
 
 void runKernel(hc::accelerator_view &av, int *Ad){
     hc::parallel_for_each(av, hc::extent<1>(LEN), [=](hc::index<1> idx)[[hc]]{
-        int i = amp_get_global_id(0);
-        Ad[i] = Ad[i] + 1;
+        Ad[idx[0]] = Ad[idx[0]] + 1;
     });
 }
 

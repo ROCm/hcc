@@ -37,7 +37,9 @@ struct Indexer {
     operator index<n>() const [[hc]]
     {
         int tmp[n]{};
-        for (auto i = 0; i != n; ++i) tmp[n - i - 1] = amp_get_global_id(i);
+        for (auto i = 0; i != n; ++i) {
+            tmp[n - i - 1] = hc_get_workitem_absolute_id(i);
+        }
 
         return index<n>{tmp};
     }

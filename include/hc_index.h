@@ -145,7 +145,7 @@ template <int N, typename _Tp>
 struct index_helper
 {
     static inline void set(_Tp& now) [[cpu, hc]] {
-        now[N - 1] = amp_get_global_id(_Tp::rank - N);
+        now[N - 1] = hc_get_global_id(_Tp::rank - N);
         index_helper<N - 1, _Tp>::set(now);
     }
     static inline bool equal(const _Tp& _lhs, const _Tp& _rhs) [[cpu, hc]] {
@@ -161,7 +161,7 @@ template<typename _Tp>
 struct index_helper<1, _Tp>
 {
     static inline void set(_Tp& now) [[cpu, hc]] {
-        now[0] = amp_get_global_id(_Tp::rank - 1);
+        now[0] = hc_get_global_id(_Tp::rank - 1);
     }
     static inline bool equal(const _Tp& _lhs, const _Tp& _rhs) [[cpu, hc]] {
         return (_lhs[0] == _rhs[0]);
