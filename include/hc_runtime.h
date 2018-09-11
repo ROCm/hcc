@@ -519,7 +519,7 @@ public:
 
     virtual int get_seqnum() const {return -1;}
 
-    virtual bool has_cpu_accessible_am() {return false;}
+    virtual bool has_cpu_accessible_am() const { return false; }
 
 };
 
@@ -595,12 +595,6 @@ public:
       throw std::runtime_error{"Unsupported."};
   }
   [[noreturn]]
-  void* CreateKernel(
-      const char*, HCCQueue*, const void*, std::size_t) override
-  {
-      throw std::runtime_error{"Unsupported."};
-  }
-  [[noreturn]]
   std::shared_ptr<HCCAsyncOp> detectStreamDeps(hcCommandKind, HCCAsyncOp*) override
   {
       throw std::runtime_error{"Unsupported."};
@@ -653,7 +647,7 @@ public:
   }
   [[noreturn]]
   std::shared_ptr<HCCAsyncOp> LaunchKernelAsync(
-      void*,
+      void*, 
       std::size_t,
       const std::size_t*,
       const std::size_t*) override

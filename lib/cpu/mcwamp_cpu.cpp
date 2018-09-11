@@ -76,12 +76,6 @@ public:
       throw std::runtime_error{"Unsupported."};
   }
   [[noreturn]]
-  void* CreateKernel(
-      const char*, HCCQueue*, const void*, std::size_t) override
-  {
-      throw std::runtime_error{"Unsupported."};
-  }
-  [[noreturn]]
   std::shared_ptr<HCCAsyncOp> detectStreamDeps(hcCommandKind, HCCAsyncOp*) override
   {
       throw std::runtime_error{"Unsupported."};

@@ -1418,8 +1418,9 @@ public:
     //
     // Also different modes and optimizations can control when dependencies are added.
     // TODO - return reference if possible to avoid shared ptr overhead.
-    std::shared_ptr<HCCAsyncOp> detectStreamDeps(hcCommandKind newCommandKind, HCCAsyncOp *kNewOp) {
-
+    std::shared_ptr<HCCAsyncOp> detectStreamDeps(
+        hcCommandKind newCommandKind, HCCAsyncOp *kNewOp) override
+    {
         const auto newOp = static_cast<const HSAOp*> (kNewOp);
 
         assert (newCommandKind != hcCommandInvalid);
@@ -1936,7 +1937,7 @@ public:
     }
     void* getHSAAgent() override;
 
-    void* getHostAgent() override;
+    void* getHostAgent();
 
     void* getHSAAMRegion() override;
 
@@ -2575,7 +2576,10 @@ public:
         return (useCoarseGrainedRegion == false);
     }
     bool is_emulated() const override { return false; }
-    uint32_t get_version() const { return ((static_cast<unsigned int>(versionMajor) << 16) | versionMinor); }
+    uint32_t get_version() const override
+    {
+        return ((static_cast<unsigned int>(versionMajor) << 16) | versionMinor);
+    }
 
     bool has_cpu_accessible_am() const override { return cpu_accessible_am; }
 
@@ -2928,9 +2932,10 @@ public:
     }
 
 
-    bool has_cpu_accessible_am() override {
+    bool has_cpu_accessible_am()
+    {
         return cpu_accessible_am;
-    };
+    }
 
     void releaseKernargBuffer(void* kernargBuffer, int kernargBufferIndex) {
         if ( (KERNARG_POOL_SIZE > 0) && (kernargBufferIndex >= 0) ) {
@@ -3741,12 +3746,14 @@ HSADevice::HSADevice(hsa_agent_t a, hsa_agent_t host, int x_accSeqNum) : HCCDevi
 
 }
 
-inline void*
-HSADevice::getHSAAgent() override {
+inline
+void* HSADevice::getHSAAgent()
+{
     return static_cast<void*>(&getAgent());
 }
 
-static int get_seqnum_from_agent(hsa_agent_t hsaAgent)
+static
+int get_seqnum_from_agent(hsa_agent_t hsaAgent)
 {
     auto i = ctx.agentToDeviceMap_.find(hsaAgent.handle);
     if (i != ctx.agentToDeviceMap_.end()) {
@@ -3798,7 +3805,7 @@ HSAQueue::HSAQueue(HCCDevice* pDev, hsa_agent_t agent, execute_order order) :
 }
 
 
-void HSAQueue::dispose() override {
+void HSAQueue::dispose() {
     hsa_status_t status;
 
     DBOUT(DB_INIT, "HSAQueue::dispose() " << this << "in\n");
@@ -3867,35 +3874,49 @@ void HSAQueue::releaseLockedRocrQueue()
     this->qmutex.unlock();
 }
 
-inline void*
-HSAQueue::getHSAAgent() override {
+inline
+void* HSAQueue::getHSAAgent()
+{
     return static_cast<void*>(&(static_cast<HSADevice*>(getDev())->getAgent()));
 }
-inline void*
-HSAQueue::getHostAgent() override {
+inline
+void* HSAQueue::getHostAgent()
+{
     return static_cast<void*>(&(static_cast<HSADevice*>(getDev())->getHostAgent()));
 }
-inline void*
-HSAQueue::getHSAAMRegion() override {
+inline
+void* HSAQueue::getHSAAMRegion()
+{
     return static_cast<void*>(&(static_cast<HSADevice*>(getDev())->getHSAAMRegion()));
 }
-inline void*
-HSAQueue::getHSACoherentAMHostRegion() override {
+inline
+void* HSAQueue::getHSACoherentAMHostRegion()
+{
     return static_cast<void*>(&(static_cast<HSADevice*>(getDev())->getHSACoherentAMHostRegion()));
 }
-inline void*
-HSAQueue::getHSAAMHostRegion() override {
+inline
+void* HSAQueue::getHSAAMHostRegion()
+{
     return static_cast<void*>(&(static_cast<HSADevice*>(getDev())->getHSAAMHostRegion()));
 }
 
 
-inline void*
-HSAQueue::getHSAKernargRegion() override {
+inline
+void* HSAQueue::getHSAKernargRegion()
+{
     return static_cast<void*>(&(static_cast<HSADevice*>(getDev())->getHSAKernargRegion()));
 }
 
-void HSAQueue::copy_ext(const void *src, void *dst, size_t size_bytes, hc::hcCommandKind copyDir, const hc::AmPointerInfo &srcPtrInfo, const hc::AmPointerInfo &dstPtrInfo,
-              const detail::HCCDevice *copyDevice, bool forceUnpinnedCopy) override {
+void HSAQueue::copy_ext(
+    const void* src,
+    void* dst,
+    size_t size_bytes,
+    hc::hcCommandKind copyDir,
+    const hc::AmPointerInfo& srcPtrInfo,
+    const hc::AmPointerInfo& dstPtrInfo,
+    const detail::HCCDevice* copyDevice,
+    bool forceUnpinnedCopy)
+{
     // wait for all previous async commands in this queue to finish
     // TODO - can remove this synchronization, copy is tail-synchronous not required on front end.
     this->wait();
@@ -3918,8 +3939,15 @@ void HSAQueue::copy_ext(const void *src, void *dst, size_t size_bytes, hc::hcCom
 
 
 // TODO - remove me
-void HSAQueue::copy_ext(const void *src, void *dst, size_t size_bytes, hc::hcCommandKind copyDir, const hc::AmPointerInfo &srcPtrInfo, const hc::AmPointerInfo &dstPtrInfo, bool foo) override {
-
+void HSAQueue::copy_ext(
+    const void* src,
+    void* dst,
+    size_t size_bytes,
+    hc::hcCommandKind copyDir,
+    const hc::AmPointerInfo& srcPtrInfo,
+    const hc::AmPointerInfo& dstPtrInfo,
+    bool)
+{
     const detail::HCCDevice *copyDevice;
     if (srcPtrInfo._isInDeviceMem) {
         copyDevice = (srcPtrInfo._acc.get_dev_ptr());
@@ -3933,11 +3961,15 @@ void HSAQueue::copy_ext(const void *src, void *dst, size_t size_bytes, hc::hcCom
 }
 
 
-std::shared_ptr<HCCAsyncOp> HSAQueue::EnqueueAsyncCopyExt(const void* src, void* dst, size_t size_bytes,
-                                                   hcCommandKind copyDir, const hc::AmPointerInfo &srcPtrInfo, const hc::AmPointerInfo &dstPtrInfo,
-                                                   const detail::HCCDevice *copyDevice) override {
-
-
+std::shared_ptr<HCCAsyncOp> HSAQueue::EnqueueAsyncCopyExt(
+    const void* src,
+    void* dst,
+    size_t size_bytes,
+    hcCommandKind copyDir,
+    const hc::AmPointerInfo& srcPtrInfo,
+    const hc::AmPointerInfo& dstPtrInfo,
+    const detail::HCCDevice* copyDevice)
+{
     hsa_status_t status = HSA_STATUS_SUCCESS;
 
     // create shared_ptr instance
@@ -3956,7 +3988,9 @@ std::shared_ptr<HCCAsyncOp> HSAQueue::EnqueueAsyncCopyExt(const void* src, void*
 
 
 // enqueue an async copy command
-std::shared_ptr<HCCAsyncOp> HSAQueue::EnqueueAsyncCopy(const void *src, void *dst, size_t size_bytes) override {
+std::shared_ptr<HCCAsyncOp> HSAQueue::EnqueueAsyncCopy(
+    const void *src, void *dst, size_t size_bytes)
+{
     hsa_status_t status = HSA_STATUS_SUCCESS;
 
     // create shared_ptr instance
@@ -4401,14 +4435,14 @@ HSADispatch::dispose() {
 }
 
 inline uint64_t
-HSADispatch::getBeginTimestamp() override {
+HSADispatch::getBeginTimestamp() {
     hsa_amd_profiling_dispatch_time_t time;
     hsa_amd_profiling_get_dispatch_time(_agent, _signal, &time);
     return time.start;
 }
 
 inline uint64_t
-HSADispatch::getEndTimestamp() override {
+HSADispatch::getEndTimestamp() {
     hsa_amd_profiling_dispatch_time_t time;
     hsa_amd_profiling_get_dispatch_time(_agent, _signal, &time);
     return time.end;
@@ -4768,14 +4802,14 @@ HSABarrier::dispose() {
 }
 
 inline uint64_t
-HSABarrier::getBeginTimestamp() override {
+HSABarrier::getBeginTimestamp() {
     hsa_amd_profiling_dispatch_time_t time;
     hsa_amd_profiling_get_dispatch_time(_agent, _signal, &time);
     return time.start;
 }
 
 inline uint64_t
-HSABarrier::getEndTimestamp() override {
+HSABarrier::getEndTimestamp() {
     hsa_amd_profiling_dispatch_time_t time;
     hsa_amd_profiling_get_dispatch_time(_agent, _signal, &time);
     return time.end;
@@ -4807,7 +4841,8 @@ detail::HSAQueue *HSAOp::hsaQueue() const
     return static_cast<detail::HSAQueue *> (this->getQueue());
 };
 
-bool HSAOp::isReady() override {
+bool HSAOp::isReady()
+{
     bool ready = (hsa_signal_load_scacquire(_signal) == 0);
     if (ready && hsaQueue()) {
         hsaQueue()->removeAsyncOp(this);
@@ -5155,14 +5190,14 @@ HSACopy::dispose() {
 }
 
 inline uint64_t
-HSACopy::getBeginTimestamp() override {
+HSACopy::getBeginTimestamp() {
     hsa_amd_profiling_async_copy_time_t time;
     hsa_amd_profiling_get_async_copy_time(_signal, &time);
     return time.start;
 }
 
 inline uint64_t
-HSACopy::getEndTimestamp() override {
+HSACopy::getEndTimestamp() {
     hsa_amd_profiling_async_copy_time_t time;
     hsa_amd_profiling_get_async_copy_time(_signal, &time);
     return time.end;

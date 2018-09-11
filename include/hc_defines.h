@@ -32,12 +32,12 @@ extern "C" __attribute__((const,hc)) uint32_t hc_get_workitem_id(unsigned int n)
 extern "C" __attribute__((const,hc)) uint32_t hc_get_num_groups(unsigned int n);
 extern "C" __attribute__((const,hc)) uint32_t hc_get_group_id(unsigned int n);
 
-extern "C" __attribute__((const,amp)) uint32_t amp_get_global_size(unsigned int n);
-extern "C" __attribute__((const,amp)) uint32_t amp_get_global_id(unsigned int n);
-extern "C" __attribute__((const,amp)) uint32_t amp_get_local_size(unsigned int n);
-extern "C" __attribute__((const,amp)) uint32_t amp_get_local_id(unsigned int n);
-extern "C" __attribute__((const,amp)) uint32_t amp_get_num_groups(unsigned int n);
-extern "C" __attribute__((const,amp)) uint32_t amp_get_group_id(unsigned int n);
+extern "C" __attribute__((const,hc)) uint32_t amp_get_global_size(unsigned int n);
+extern "C" __attribute__((const,hc)) uint32_t amp_get_global_id(unsigned int n);
+extern "C" __attribute__((const,hc)) uint32_t amp_get_local_size(unsigned int n);
+extern "C" __attribute__((const,hc)) uint32_t amp_get_local_id(unsigned int n);
+extern "C" __attribute__((const,hc)) uint32_t amp_get_num_groups(unsigned int n);
+extern "C" __attribute__((const,hc)) uint32_t amp_get_group_id(unsigned int n);
 
 #if __HCC_ACCELERATOR__ == 2
 #define tile_static thread_local
@@ -46,7 +46,7 @@ extern "C" __attribute__((const,amp)) uint32_t amp_get_group_id(unsigned int n);
 #endif
 
 extern "C" __attribute__((noduplicate,hc)) void hc_barrier(unsigned int n);
-extern "C" __attribute__((noduplicate,amp)) void amp_barrier(unsigned int n) ;
+extern "C" __attribute__((noduplicate,hc)) void amp_barrier(unsigned int n) ;
 
 /// macro to set if we want default queue be thread-local or not
 #define TLS_QUEUE (1)
