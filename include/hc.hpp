@@ -3747,8 +3747,26 @@ struct array_base {
     using Guarded_locked_ptr = std::pair<
         std::atomic_flag, std::pair<const void*, void*>>;
 
-    static constexpr std::size_t max_array_cnt_{65536u}; // Prime.
+    static constexpr std::size_t max_array_cnt_{65536u};
+
+    inline static std::array< // TODO: this is a placeholder, and most dubious.
+        std::pair<
+            std::atomic<std::uint32_t>,
+            std::pair<std::mutex, std::forward_list<std::shared_future<void>>>>,
+        max_array_cnt_> writers_{};
     inline static std::array<Guarded_locked_ptr, max_array_cnt_> locked_ptrs_{};
+    inline thread_local static std::vector<std::size_t> captured_{};
+
+    static
+    std::size_t writers_for_()
+    {
+        for (decltype(writers_.size()) i = 0u; i != writers_.size(); ++i) {
+            if (writers_[i].first++ == 0) return i;
+            else --writers_[i].first;
+        }
+
+        throw std::runtime_error{"Failed to associate writers for array."};
+    }
 };
 
 template <typename T, int N = 1>
@@ -3767,20 +3785,28 @@ class array : private array_base {
     access_type cpu_access_;
     std::unique_ptr<T[], Deleter> data_;
     std::size_t this_idx_{max_array_cnt_};
+    std::size_t writers_for_this_{max_array_cnt_};
 
-    template<typename, int>
+    template<typename U, int M>
     friend
-    struct projection_helper;
-    template<typename, int>
+    void copy(const array<U, M>&, array<U, M>&);
+    template<typename U, int M>
     friend
-    struct array_projection_helper;
+    void copy(const array<U, M>&, const array_view<U, M>&);
+    template<typename O, typename U, int M>
+    friend
+    void copy(const array<U, M>&, O);
+    template<typename U, int M>
+    friend
+    void copy(const array<U, M>&, const array_view<U, M>&);
+    template<typename U, int M>
+    friend
+    void copy(const array_view<const U, M>&, array<U, M>&);
 
-    template <typename Q, int K>
-    friend
-    void copy(const array<Q, K>&, const array_view<Q, K>&);
-    template <typename Q, int K>
-    friend
-    void copy(const array_view<const Q, K>&, array<Q, K>&);
+    void add_to_captured_() const
+    {
+        captured_.push_back(writers_for_this_);
+    }
 
     T* allocate_()
     {
@@ -3802,9 +3828,10 @@ class array : private array_base {
 
         return static_cast<T*>(tmp);
     }
+
     static
     constexpr
-    std::uint64_t make_bitmask(
+    std::uint64_t make_bitmask_(
         std::uint8_t first, std::uint8_t last) noexcept [[cpu, hc]]
     {
         return (first == last) ?
@@ -3812,7 +3839,7 @@ class array : private array_base {
     }
 
     static
-    std::uint32_t k_r_hash(const void* ptr) [[cpu, hc]]
+    std::uint32_t k_r_hash_(const void* ptr) [[cpu, hc]]
     {
         static constexpr auto byte_offset_bits = 2u;
         static constexpr auto set_bits = 10u;
@@ -3820,19 +3847,19 @@ class array : private array_base {
             sizeof(std::uintptr_t) * CHAR_BIT - set_bits - byte_offset_bits;
 
         static const auto byte_offset = [](const void* p) {
-            constexpr auto mask = make_bitmask(byte_offset_bits, 0u);
+            constexpr auto mask = make_bitmask_(byte_offset_bits, 0u);
 
             return reinterpret_cast<std::uintptr_t>(p) & mask;
         };
         static const auto set = [](const void* p) {
             constexpr auto mask =
-                make_bitmask(set_bits + byte_offset_bits, byte_offset_bits);
+                make_bitmask_(set_bits + byte_offset_bits, byte_offset_bits);
 
             return (reinterpret_cast<std::uintptr_t>(p) & mask) >>
                 byte_offset_bits;
         };
         static const auto tag = [](const void* p) {
-            constexpr auto mask = make_bitmask(
+            constexpr auto mask = make_bitmask_(
                 tag_bits + set_bits + byte_offset_bits,
                 set_bits + byte_offset_bits);
 
@@ -3842,9 +3869,10 @@ class array : private array_base {
 
         return set(ptr) * (max_array_cnt_ / 1024);
     }
+
     std::size_t lock_this_()
     {
-        const auto n = k_r_hash(this);
+        const auto n = k_r_hash_(this);
         do {
             auto idx = 0;
             do {
@@ -3871,9 +3899,10 @@ class array : private array_base {
             return n + idx;
         } while (true); // TODO: add termination after a number of attempts.
     }
+
     array* const this_() const [[hc]]
     {
-        const auto n = k_r_hash(this);//reinterpret_cast<std::uintptr_t>(this) % max_array_cnt_;
+        const auto n = k_r_hash_(this);
 
         for (auto i = 0; i != max_array_cnt_ / 1024; ++i) {
             if (locked_ptrs_[n + i].second.first != this) continue;
@@ -3882,6 +3911,18 @@ class array : private array_base {
         }
 
         return nullptr;
+    }
+
+    void wait_for_all_pending_writers_() const
+    {
+        decltype(writers_[writers_for_this_].second.second) tmp;
+        {
+            std::lock_guard<std::mutex> lck{
+                writers_[writers_for_this_].second.first};
+
+            std::swap(tmp, writers_[writers_for_this_].second.second);
+        }
+        for (auto&& x : tmp) if (x.valid()) x.wait();
     }
 public:
     /**
@@ -3892,7 +3933,7 @@ public:
     /**
      * The element type of this array.
      */
-    typedef T value_type;
+    using value_type = T;
 
     /**
      * There is no default constructor for array<T,N>.
@@ -3926,20 +3967,11 @@ public:
         associate_{std::move(other.associate_)},
         extent_{std::move(other.extent_)},
         cpu_access_{other.cpu_access_},
-        data_{std::move(other.data_)}
+        data_{std::move(other.data_)},
+        writers_for_this_{other.writers_for_this_}
     {
-        // const auto n = //reinterpret_cast<std::uintptr_t>(this) % max_array_cnt_;
-
-        // if (n == other.this_idx_) {
-        //     if (hsa_amd_memory_unlock(&other) != HSA_STATUS_SUCCESS) {
-        //         throw std::runtime_error{
-        //             "Failed to unlock locked array pointer."};
-        //     }
-
-        //     other.this_idx_ = max_array_cnt_;
-        // }
-
         this_idx_ = lock_this_();
+        other.writers_for_this_ = max_array_cnt_;
     }
 
     /**
@@ -3967,9 +3999,15 @@ public:
         static_assert(N == 1, "illegal");
     }
     explicit
-    array(int e0, int e1) : array{hc::extent<N>{e0, e1}} {}
+    array(int e0, int e1) : array{hc::extent<N>{e0, e1}}
+    {
+        static_assert(N == 2, "illegal");
+    }
     explicit
-    array(int e0, int e1, int e2) : array{hc::extent<N>{e0, e1, e2}} {}
+    array(int e0, int e1, int e2) : array{hc::extent<N>{e0, e1, e2}}
+    {
+        static_assert(N == 3, "illegal");
+    }
 
     /** @} */
 
@@ -4083,7 +4121,8 @@ public:
         extent_{ext},
         cpu_access_{cpu_access_type},
         data_{allocate_(), Deleter{}},
-        this_idx_{lock_this_()}
+        this_idx_{lock_this_()},
+        writers_for_this_{writers_for_()}
     {}
     catch (const std::exception& ex) {
         if (ext.size() != 0) throw ex;
@@ -4093,7 +4132,8 @@ public:
 
     /** @{ */
     /**
-     * Constructs an array instance based on the given pointer on the device memory.
+     * Constructs an array instance based on the given pointer on the device
+     * memory.
      */
     array(int e0, void* accelerator_pointer)
         :
@@ -4386,7 +4426,8 @@ public:
         extent_{ext},
         cpu_access_{access_type_auto},
         data_{allocate_(), Deleter{}},
-        this_idx_{lock_this_()}
+        this_idx_{lock_this_()},
+        writers_for_this_{writers_for_()}
     {}
     catch (const std::exception& ex) {
         if (ext.size() != 0) throw ex;
@@ -4412,7 +4453,12 @@ public:
     array(int e0, int e1, accelerator_view av, accelerator_view associated_av)
         : array{hc::extent<N>{e0, e1}, std::move(av), associated_av}
     {}
-    array(int e0, int e1, int e2, accelerator_view av, accelerator_view associated_av)
+    array(
+        int e0,
+        int e1,
+        int e2,
+        accelerator_view av,
+        accelerator_view associated_av)
         : array{hc::extent<N>{e0, e1, e2}, std::move(av), associated_av}
     {}
 
@@ -4561,7 +4607,7 @@ public:
         accelerator_view associated_av)
         :
         array{
-            hc::extent<N>(e0, e1, e2),
+            hc::extent<N>{e0, e1, e2},
             srcBegin,
             srcEnd,
             std::move(av),
@@ -5148,6 +5194,11 @@ public:
 
     ~array()
     {
+        static constexpr auto force_emission_ = &array::add_to_captured_;
+
+        if (writers_for_this_ != max_array_cnt_) {
+            --writers_[writers_for_this_].first;
+        }
         if (this_idx_ == max_array_cnt_) return;
 
         if (hsa_amd_memory_unlock(this) != HSA_STATUS_SUCCESS) {
@@ -6291,7 +6342,7 @@ void copy(const array<T, N>& src, array<T, N>& dest)
         throw std::logic_error{"Tried to copy arrays of mismatched extents."};
     }
 
-    src.get_accelerator_view().wait(); // TODO: overly conservative, temporary.
+    src.wait_for_all_pending_writers_();
 
     auto s = hsa_memory_copy(
         dest.data(), src.data(), src.get_extent().size() * sizeof(T));
@@ -6318,7 +6369,7 @@ void copy(const array<T, N>& src, const array_view<T, N>& dest)
             "Tried to copy array to an array_view with a mismatched extent."};
     }
 
-    src.get_accelerator_view().wait(); // TODO: overly conservative, temporary.
+    src.wait_for_all_pending_writers_();
 
     auto s = hsa_memory_copy(
         dest.data(), src.base_ptr_, src.get_extent().size() * sizeof(T));
@@ -6539,7 +6590,7 @@ void copy(const array<T, N> &src, OutputIter destBegin)
             typename std::iterator_traits<OutputIter>::value_type, T>{},
         "Only same type copies supported.");
 
-    src.get_accelerator_view().wait(); // TODO: conservative, temporary.
+    src.wait_for_all_pending_writers_();
 
     // TODO: must add to_address() and use instead of &*.
     auto s = hsa_memory_copy(
@@ -6881,9 +6932,61 @@ void validate_compute_domain(const hc::extent<n>& compute_domain)
     }
 }
 
+template<typename Kernel>
+inline
+std::forward_list<std::shared_future<void>> predecessors_for(const Kernel& f)
+{   // TODO: cleanup & optimise; the iteration can be collapsed.
+    using AR = array_base;
+    using AV = array_view_base;
+
+    auto trigger_registration = f;
+
+    std::forward_list<std::shared_future<void>> r;
+    for (auto&& widx : AR::captured_) {
+        std::lock_guard<std::mutex> lck{AR::writers_[widx].second.first};
+
+        r.splice_after(
+            r.before_begin(),
+            std::move(AR::writers_[widx].second.second),
+            AR::writers_[widx].second.second.before_begin());
+    }
+    for (auto&& widx : AV::captured_) {
+        std::lock_guard<std::mutex> lck{AV::writers_[widx].second.first};
+
+        r.splice_after(
+            r.before_begin(),
+            std::move(AV::writers_[widx].second.second),
+            AV::writers_[widx].second.second.before_begin());
+    }
+
+    return r;
+}
+
+inline
+void register_writer(const completion_future& pending_task)
+{   // TODO: cleanup & optimise; the iteration can be collapsed.
+    using AR = array_base;
+    using AV = array_view_base;
+
+    for (auto&& widx : AR::captured_) {
+        std::lock_guard<std::mutex> lck{AR::writers_[widx].second.first};
+
+        AR::writers_[widx].second.second.emplace_front(pending_task);
+    }
+    for (auto&& widx : AV::captured_) {
+        std::lock_guard<std::mutex> lck{AV::writers_[widx].second.first};
+
+        AV::writers_[widx].second.second.emplace_front(pending_task);
+    }
+
+    AR::captured_.clear();
+    AV::captured_.clear();
+}
+
 //ND parallel_for_each, nontiled
 template<typename Kernel, int n>
 inline
+__attribute__((annotate("__HC_PFE__")))
 completion_future parallel_for_each(
     const accelerator_view& av,
     const hc::extent<n>& compute_domain,
@@ -6900,33 +7003,13 @@ completion_future parallel_for_each(
 
     validate_compute_domain(compute_domain);
 
-    using B = array_view_base;
-
-    B::captured_.clear();
-    auto g = f;
-
-    decltype(B::writers_[B::captured_[0]].second.second) pre;
-    for (auto&& widx : B::captured_) {
-        std::lock_guard<std::mutex> lck{B::writers_[widx].second.first};
-
-        pre.splice_after(
-            pre.before_begin(),
-            std::move(B::writers_[widx].second.second),
-            B::writers_[widx].second.second.before_begin());
-    }
-
-    for (auto&& x : pre) if (x.valid()) x.wait();
+    for (auto&& x : predecessors_for(f)) if (x.valid()) x.wait();
 
     completion_future tmp{
-        detail::launch_kernel_async(av.queue_, compute_domain, g)};
+        detail::launch_kernel_async(av.queue_, compute_domain, f)};
     av.add_pending_task_(tmp);
 
-    for (auto&& widx : B::captured_) {
-        std::lock_guard<std::mutex> lck{B::writers_[widx].second.first};
-
-        B::writers_[widx].second.second.emplace_front(tmp);
-    }
-
+    register_writer(tmp);
 
     return tmp;
 }
@@ -6960,6 +7043,8 @@ void validate_tiled_compute_domain(const tiled_extent<n>& compute_domain)
 
 //ND parallel_for_each, tiled
 template <typename Kernel, int n>
+inline
+__attribute__((annotate("__HC_PFE__")))
 completion_future parallel_for_each(
     const accelerator_view& av,
     const tiled_extent<n>& compute_domain,
@@ -6974,33 +7059,14 @@ completion_future parallel_for_each(
 
     validate_tiled_compute_domain(compute_domain);
 
-    using B = array_view_base;
-
-    B::captured_.clear();
-    auto g = f;
-
-    decltype(B::writers_[B::captured_[0]].second.second) pre;
-    for (auto&& widx : B::captured_) {
-        std::lock_guard<std::mutex> lck{B::writers_[widx].second.first};
-
-        pre.splice_after(
-            pre.before_begin(),
-            std::move(B::writers_[widx].second.second),
-            B::writers_[widx].second.second.before_begin());
-    }
-
-    for (auto&& x : pre) if (x.valid()) x.wait();
+    for (auto&& x : predecessors_for(f)) if (x.valid()) x.wait();
 
     completion_future tmp{
         detail::launch_kernel_with_dynamic_group_memory_async(
-            av.queue_, compute_domain, g)};
+            av.queue_, compute_domain, f)};
     av.add_pending_task_(tmp);
 
-    for (auto&& widx : B::captured_) {
-        std::lock_guard<std::mutex> lck{B::writers_[widx].second.first};
-
-        B::writers_[widx].second.second.emplace_front(tmp);
-    }
+    register_writer(tmp);
 
     return tmp;
 }
