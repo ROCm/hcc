@@ -133,7 +133,7 @@ public:
   HCCAsyncOp(HCCQueue *xqueue, hcCommandKind xCommandKind) : queue(xqueue), commandKind(xCommandKind), seqNum(0) {}
 
   virtual ~HCCAsyncOp() {}
-  virtual std::shared_future<void>* getFuture() { return nullptr; }
+  virtual const std::shared_future<void>& getFuture() const = 0;
   virtual void* getNativeHandle() { return nullptr;}
 
   /**
@@ -299,7 +299,7 @@ public:
   /// enqueue marker with prior dependency
   virtual
   std::shared_ptr<HCCAsyncOp> EnqueueMarkerWithDependency(
-      int count, std::shared_ptr <HCCAsyncOp> *depOps, memory_scope scope) = 0;
+      int count, std::shared_ptr<HCCAsyncOp>* depOps, memory_scope scope) = 0;
 
   virtual
   std::shared_ptr<HCCAsyncOp> detectStreamDeps(

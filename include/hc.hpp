@@ -295,7 +295,8 @@ public:
      */
     void wait(hcWaitMode waitMode = hcWaitModeBlocked)
     {
-        queue_->wait(waitMode);
+        wait_for_all_pending_tasks_();
+        //queue_->wait(waitMode);
 
         detail::getContext()->flushPrintfBuffer();
     }
@@ -1427,13 +1428,7 @@ public:
      *                     the expense of using one CPU core for active waiting.
      */
     void wait(hcWaitMode mode = hcWaitModeBlocked) const {
-        if (this->valid()) {
-            if (__asyncOp != nullptr) {
-                __asyncOp->setWaitMode(mode);
-            }
-            //TODO-ASYNC - need to reclaim older AsyncOps here.
-            __amp_future.wait();
-        }
+        if (__amp_future.valid()) __amp_future.wait();
 
         detail::getContext()->flushPrintfBuffer();
     }
@@ -1587,7 +1582,7 @@ private:
     std::shared_ptr<detail::HCCAsyncOp> __asyncOp;
 
     completion_future(std::shared_ptr<detail::HCCAsyncOp> event)
-        : __amp_future{*(event->getFuture())}, __asyncOp{std::move(event)}
+        : __amp_future{event->getFuture()}, __asyncOp{std::move(event)}
     {}
 
     completion_future(const std::shared_future<void>& __future)
@@ -1666,8 +1661,10 @@ private:
 
 inline
 void accelerator_view::wait_for_all_pending_tasks_()
-{
-    for (auto&& task : pending_tasks_) task.wait();
+{   // TODO: this is overly conservative, technically we only need to wait for
+    //       the eldest i.e. first in the list, then it should be legal to clean
+    //       up.
+    for (auto&& task : pending_tasks_) if (task.valid()) task.wait();
 
     pending_tasks_.clear();
 }
@@ -1686,8 +1683,10 @@ completion_future accelerator_view::create_marker(memory_scope scope) const
         deps[cnt++] = depOp; // retrieve async op associated with completion_future
     }
 
-    return completion_future{
-        queue_->EnqueueMarkerWithDependency(cnt, deps, scope)};
+    pending_tasks_.push_front(completion_future{
+        queue_->EnqueueMarkerWithDependency(cnt, deps, scope)});
+
+    return pending_tasks_.front();
 }
 
 inline
@@ -1710,8 +1709,10 @@ completion_future accelerator_view::create_blocking_marker(
         deps[cnt++] = dependent_future.__asyncOp; // retrieve async op associated with completion_future
     }
 
-    return completion_future{
-        queue_->EnqueueMarkerWithDependency(cnt, deps, scope)};
+    pending_tasks_.push_front(completion_future{
+        queue_->EnqueueMarkerWithDependency(cnt, deps, scope)});
+
+    return pending_tasks_.front();
 }
 
 template<typename InputIterator>
@@ -1748,10 +1749,10 @@ completion_future accelerator_view::create_blocking_marker(
         cnt = 0;
     }
 
-    if (cnt == 0) return lastMarker;
+    pending_tasks_.push_front(cnt == 0 ? lastMarker : completion_future{
+        queue_->EnqueueMarkerWithDependency(cnt, deps, scope)});
 
-    return completion_future{
-        queue_->EnqueueMarkerWithDependency(cnt, deps, scope)};
+    return pending_tasks_.front();
 }
 
 inline
@@ -1810,7 +1811,10 @@ inline
 completion_future accelerator_view::copy_async(
     const void* src, void* dst, std::size_t size_bytes)
 {
-    return completion_future(queue_->EnqueueAsyncCopy(src, dst, size_bytes));
+    pending_tasks_.push_front(
+        completion_future{queue_->EnqueueAsyncCopy(src, dst, size_bytes)});
+
+    return pending_tasks_.front();
 }
 
 inline
@@ -1823,7 +1827,7 @@ completion_future accelerator_view::copy_async_ext(
     const hc::AmPointerInfo& dstInfo,
     const hc::accelerator* copyAcc)
 {
-    return completion_future{
+    pending_tasks_.push_front(completion_future{
         queue_->EnqueueAsyncCopyExt(
             src,
             dst,
@@ -1831,7 +1835,9 @@ completion_future accelerator_view::copy_async_ext(
             copyDir,
             srcInfo,
             dstInfo,
-            copyAcc ? copyAcc->pDev : nullptr)};
+            copyAcc ? copyAcc->pDev : nullptr)});
+
+    return pending_tasks_.front();
 }
 
 // ------------------------------------------------------------------------
@@ -5886,12 +5892,9 @@ public:
             std::lock_guard<std::mutex> lck{
                 writers_[writers_for_this_].second.first};
 
-            for (auto&& x : writers_[writers_for_this_].second.second) {
-                if (x.valid()) x.wait();
-            }
-
             std::swap(writers_[writers_for_this_].second.second, tmp);
         }
+        for (auto&& x : tmp) if (x.valid()) x.wait();
 
         if (source_ == base_ptr_) return;
 
@@ -6939,6 +6942,7 @@ std::forward_list<std::shared_future<void>> predecessors_for(const Kernel& f)
     using AR = array_base;
     using AV = array_view_base;
 
+    AV::captured_.clear();
     auto trigger_registration = f;
 
     std::forward_list<std::shared_future<void>> r;
@@ -6980,7 +6984,6 @@ void register_writer(const completion_future& pending_task)
     }
 
     AR::captured_.clear();
-    AV::captured_.clear();
 }
 
 //ND parallel_for_each, nontiled
@@ -7050,7 +7053,9 @@ completion_future parallel_for_each(
     const tiled_extent<n>& compute_domain,
     const Kernel& f)
 {   // TODO: optimise, this spuriously does one extra copy of Kernel.
-    if (compute_domain.size() == 0) return completion_future{};
+    if (compute_domain.size() == 0) {
+        return completion_future{std::async([](){}).share()};
+    }
 
     if (av.get_accelerator().get_device_path() == L"cpu") {
         throw hc::runtime_exception{

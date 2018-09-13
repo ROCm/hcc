@@ -38,7 +38,7 @@ __attribute__((noduplicate, nothrow))
 void hc_barrier(unsigned int n) [[hc]];
 
 /// macro to set if we want default queue be thread-local or not
-#define TLS_QUEUE (1)
+#define TLS_QUEUE (0)
 
 #ifndef CLK_LOCAL_MEM_FENCE
 #define CLK_LOCAL_MEM_FENCE (1)

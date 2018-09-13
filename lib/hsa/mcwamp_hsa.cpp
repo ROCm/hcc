@@ -726,7 +726,7 @@ private:
     uint64_t apiStartTick;
     hsa_wait_state_t waitMode;
 
-    std::shared_future<void>* future;
+    std::shared_future<void> future;
 
 
     // If copy is dependent on another operation, record reference here.
@@ -747,7 +747,10 @@ private:
 
 
 public:
-    std::shared_future<void>* getFuture() override { return future; }
+    const std::shared_future<void>& getFuture() const override
+    {
+        return future;
+    }
     const detail::HSADevice* getCopyDevice() const { return copyDevice; } ;  // Which device did the copy.
 
 
@@ -798,11 +801,13 @@ public:
 
 
     // Copy mode will be set later on.
-    // HSA signals would be waited in HSA_WAIT_STATE_ACTIVE by default for HSACopy instances
-    HSACopy(detail::HCCQueue *queue, const void* src_, void* dst_, size_t sizeBytes_);
-
-
-
+    // HSA signals would be waited in HSA_WAIT_STATE_ACTIVE by default for
+    // HSACopy instances
+    HSACopy(
+        detail::HCCQueue* queue,
+        const void* src_,
+        void* dst_,
+        size_t sizeBytes_);
 
     ~HSACopy() {
         if (isSubmitted) {
@@ -813,7 +818,10 @@ public:
         dispose();
     }
 
-    hsa_status_t enqueueAsyncCopyCommand(const detail::HSADevice *copyDevice, const hc::AmPointerInfo &srcPtrInfo, const hc::AmPointerInfo &dstPtrInfo);
+    hsa_status_t enqueueAsyncCopyCommand(
+        const detail::HSADevice* copyDevice,
+        const hc::AmPointerInfo& srcPtrInfo,
+        const hc::AmPointerInfo& dstPtrInfo);
 
     // wait for the async copy to complete
     hsa_status_t waitComplete();
@@ -823,7 +831,8 @@ public:
     uint64_t getTimestampFrequency() override {
         // get system tick frequency
         uint64_t timestamp_frequency_hz = 0L;
-        hsa_system_get_info(HSA_SYSTEM_INFO_TIMESTAMP_FREQUENCY, &timestamp_frequency_hz);
+        hsa_system_get_info(
+            HSA_SYSTEM_INFO_TIMESTAMP_FREQUENCY, &timestamp_frequency_hz);
         return timestamp_frequency_hz;
     }
 
@@ -833,16 +842,24 @@ public:
 
     // synchronous version of copy
     void syncCopy();
-    void syncCopyExt(hc::hcCommandKind copyDir,
-                     const hc::AmPointerInfo &srcPtrInfo, const hc::AmPointerInfo &dstPtrInfo,
-                     const detail::HSADevice *copyDevice, bool forceUnpinnedCopy);
+    void syncCopyExt(
+        hc::hcCommandKind copyDir,
+        const hc::AmPointerInfo& srcPtrInfo,
+        const hc::AmPointerInfo& dstPtrInfo,
+        const detail::HSADevice* copyDevice,
+        bool forceUnpinnedCopy);
 
 
 private:
-  hsa_status_t hcc_memory_async_copy(detail::hcCommandKind copyKind, const detail::HSADevice *copyDevice,
-                                      const hc::AmPointerInfo &dstPtrInfo, const hc::AmPointerInfo &srcPtrInfo,
-                                      size_t sizeBytes, int depSignalCnt, const hsa_signal_t *depSignals,
-                                      hsa_signal_t completion_signal);
+    hsa_status_t hcc_memory_async_copy(
+        detail::hcCommandKind copyKind,
+        const detail::HSADevice* copyDevice,
+        const hc::AmPointerInfo& dstPtrInfo,
+        const hc::AmPointerInfo& srcPtrInfo,
+        size_t sizeBytes,
+        int depSignalCnt,
+        const hsa_signal_t* depSignals,
+        hsa_signal_t completion_signal);
 
 }; // end of HSACopy
 
@@ -852,7 +869,7 @@ private:
     hsa_wait_state_t waitMode;
 
 
-    std::shared_future<void>* future;
+    std::shared_future<void> future;
 
     // prior dependencies
     // maximum up to 5 prior dependencies could be associated with one
@@ -874,7 +891,10 @@ public:
     std::shared_ptr<HSAOp> depAsyncOps [HSA_BARRIER_DEP_SIGNAL_CNT];
 
 public:
-    std::shared_future<void>* getFuture() override { return future; }
+    const std::shared_future<void>& getFuture() const override
+    {
+        return future;
+    }
     void acquire_scope(hc::memory_scope acquireScope) { _acquire_scope = acquireScope;};
 
     bool barrierNextSyncNeedsSysRelease() const override { return _barrierNextSyncNeedsSysRelease; };
@@ -901,7 +921,7 @@ public:
     HSABarrier(detail::HCCQueue *queue, std::shared_ptr <detail::HCCAsyncOp> dependent_op) :
         HSAOp(queue, detail::hcCommandMarker),
         isDispatched(false),
-        future(nullptr),
+        future{},
         _acquire_scope(hc::no_scope),
         _barrierNextSyncNeedsSysRelease(false),
         _barrierNextKernelNeedsSysAcquire(false),
@@ -922,7 +942,7 @@ public:
     HSABarrier(detail::HCCQueue *queue, int count, std::shared_ptr <detail::HCCAsyncOp> *dependent_op_array) :
         HSAOp(queue, detail::hcCommandMarker),
         isDispatched(false),
-        future(nullptr),
+        future{},
         _acquire_scope(hc::no_scope),
         _barrierNextSyncNeedsSysRelease(false),
         _barrierNextKernelNeedsSysAcquire(false),
@@ -1000,9 +1020,12 @@ class HSADispatch : public HSAOp {
     bool isDispatched_{false};
     hsa_wait_state_t waitMode_{};
 
-    std::unique_ptr<std::shared_future<void>> future_{};
+    std::shared_future<void> future_{};
 public:
-    std::shared_future<void>* getFuture() override { return future_.get(); }
+    const std::shared_future<void>& getFuture() const override
+    {
+        return future_;
+    }
 
     void setKernelName(const char* name) { kernel_name_ = name; }
     const char* getKernelName() const
@@ -1389,6 +1412,7 @@ public:
                     << std::endl);
 
 
+        std::lock_guard<std::recursive_mutex> lck{qmutex};
 
         if (!drainingQueue_ && (asyncOps.size() >= MAX_INFLIGHT_COMMANDS_PER_QUEUE-1)) {
             DBOUT(DB_WAIT, "*** Hit max inflight ops asyncOps.size=" << asyncOps.size() << ". " << op << " force sync\n");
@@ -1574,10 +1598,7 @@ public:
                     foundFirstValidOp = true;
                 }
                 // wait on valid futures only
-                std::shared_future<void>* future = asyncOp->getFuture();
-                if (future && future->valid()) {
-                    future->wait();
-                }
+                if (asyncOp->getFuture().valid()) asyncOp->getFuture().wait();
             }
         }
         // clear async operations table
@@ -1660,7 +1681,7 @@ public:
         // create a shared_ptr instance
         std::shared_ptr<HCCAsyncOp> sp_dispatch(dispatch);
         // associate the kernel dispatch with this queue
-        pushAsyncOp(std::static_pointer_cast<HSAOp> (sp_dispatch));
+        //pushAsyncOp(std::static_pointer_cast<HSAOp> (sp_dispatch));
 
         dispatch->setLaunchConfiguration(
             nr_dim, global, local, dynamic_group_size);
@@ -1669,16 +1690,16 @@ public:
         auto status = dispatch->dispatchKernelAsyncFromOp();
         STATUS_CHECK(status, __LINE__);
 
-        if (hasArrayViewBufferDeps) {
-            // associate all buffers used by the kernel with the kernel dispatch
-            // instance
-            for (auto&& buffer : kernelBufferMap[ker]) {
-                bufferKernelMap[buffer].emplace_back(sp_dispatch);
-            }
+        // if (hasArrayViewBufferDeps) {
+        //     // associate all buffers used by the kernel with the kernel dispatch
+        //     // instance
+        //     for (auto&& buffer : kernelBufferMap[ker]) {
+        //         bufferKernelMap[buffer].emplace_back(sp_dispatch);
+        //     }
 
-            // clear data in kernelBufferMap
-            kernelBufferMap.erase(ker);
-        }
+        //     // clear data in kernelBufferMap
+        //     kernelBufferMap.erase(ker);
+        // }
 
         return sp_dispatch;
     }
@@ -1703,9 +1724,8 @@ public:
           if (!dependentAsyncOp.expired()) {
             auto dependentAsyncOpPointer = dependentAsyncOp.lock();
             // wait on valid futures only
-            std::shared_future<void>* future = dependentAsyncOpPointer->getFuture();
-            if (future->valid()) {
-              future->wait();
+            if (dependentAsyncOpPointer->getFuture().valid()) {
+              dependentAsyncOpPointer->getFuture().wait();
             }
           }
         }
@@ -2006,7 +2026,7 @@ public:
         // create shared_ptr instance
         std::shared_ptr<HSABarrier> barrier = std::make_shared<HSABarrier>(this, 0, nullptr);
         // associate the barrier with this queue
-        pushAsyncOp(barrier);
+        //pushAsyncOp(barrier);
 
         // enqueue the barrier
         status = barrier.get()->enqueueAsync(release_scope);
@@ -2027,10 +2047,11 @@ public:
     //
     // fenceScope specifies the scope of the acquire and release fence that will be
     // applied after the marker executes.  See hc::memory_scope
-    std::shared_ptr<HCCAsyncOp> EnqueueMarkerWithDependency(int count,
-            std::shared_ptr <HCCAsyncOp> *depOps,
-            hc::memory_scope fenceScope) override {
-
+    std::shared_ptr<HCCAsyncOp> EnqueueMarkerWithDependency(
+        int count,
+        std::shared_ptr<HCCAsyncOp>* depOps,
+        hc::memory_scope fenceScope) override
+    {
         hsa_status_t status = HSA_STATUS_SUCCESS;
 
         if ((count >= 0) && (count <= HSA_BARRIER_DEP_SIGNAL_CNT)) {
@@ -2038,7 +2059,7 @@ public:
             // create shared_ptr instance
             std::shared_ptr<HSABarrier> barrier = std::make_shared<HSABarrier>(this, count, depOps);
             // associate the barrier with this queue
-            pushAsyncOp(barrier);
+            //pushAsyncOp(barrier);
 
             for (int i=0; i<count; i++) {
                 auto depOp = barrier->depAsyncOps[i];
@@ -2132,41 +2153,50 @@ public:
 
     // remove finished async operation from waiting list
     void removeAsyncOp(HSAOp* asyncOp) {
-        int targetIndex = asyncOp->asyncOpsIndex();
+        std::lock_guard<std::recursive_mutex> lck{qmutex};
+
+        auto targetIndex = asyncOp->asyncOpsIndex();
 
         // Make sure the opindex is still valid.
-        // If the queue is destroyed first it may not exist in asyncops anymore so no need to destroy.
+        // If the queue is destroyed first it may not exist in asyncops anymore
+        // so no need to destroy.
         if (targetIndex < asyncOps.size() &&
             asyncOp == asyncOps[targetIndex].get()) {
 
-            // All older ops are known to be done and we can reclaim their resources here:
-            // Both execute_in_order and execute_any_order flags always remove ops in-order at the end of the pipe.
+            // All older ops are known to be done and we can reclaim their
+            // resources here:
+            // Both execute_in_order and execute_any_order flags always remove
+            // ops in-order at the end of the pipe.
             // Note if not found above targetIndex=-1 and we skip the loop:
-            for (int i = targetIndex; i>=0; i--) {
-                detail::HCCAsyncOp *op = asyncOps[i].get();
-                if (op) {
-                    asyncOps[i].reset();
+            do {
+                // The queue is retired in-order, and ops only inserted at
+                // "top", and ops can only be removed at two defined points:
+                //   - Draining the entire queue in HSAQueue::wait() - this
+                //     calls asyncOps.clear()
+                //   - Events in the middle of the queue can be removed, but
+                //     will call this function which removes all older ops.
+                // So once we remove the asyncOps, there is no way for an
+                // older async op to be come non-null and we can stop search
+                // here:
 
-        #if CHECK_OLDER_COMPLETE
-                    // opportunistically update status for any ops we encounter along the way:
-                    hsa_signal_t signal =  *(static_cast<hsa_signal_t*> (op->getNativeHandle()));
+                if (!asyncOps[targetIndex]) break;
 
-                    // v<0 : no signal, v==0 signal and done, v>0 : signal and not done:
+                asyncOps[targetIndex].reset();
+
+                #if CHECK_OLDER_COMPLETE
+                    // opportunistically update status for any ops we encounter
+                    // along the way:
+                    hsa_signal_t signal =
+                        *(static_cast<hsa_signal_t*> (op->getNativeHandle()));
+
+                    // v<0 : no signal, v==0 signal and done, v>0 : signal and
+                    // not done:
                     hsa_signal_value_t v = -1;
                     if (signal.handle)
                         v = hsa_signal_load_scacquire(signal);
                     assert (v <=0);
-        #endif
-
-                } else {
-                    // The queue is retired in-order, and ops only inserted at "top", and ops can only be removed at two defined points:
-                    //   - Draining the entire queue in HSAQueue::wait() - this calls asyncOps.clear()
-                    //   - Events in the middle of the queue can be removed, but will call this function which removes all older ops.
-                    //   So once we remove the asyncOps, there is no way for an older async op to be come non-null and we can stop search here:
-
-                    break; // stop searching if we find null, there cannot be any more valid pointers below.
-                }
-            }
+                #endif
+            } while (targetIndex--);
         }
 
 
@@ -3981,7 +4011,7 @@ std::shared_ptr<HCCAsyncOp> HSAQueue::EnqueueAsyncCopyExt(
     STATUS_CHECK(status, __LINE__);
 
     // associate the async copy command with this queue
-    pushAsyncOp(copyCommand);
+    //(copyCommand);
 
     return copyCommand;
 };
@@ -4030,11 +4060,12 @@ std::shared_ptr<HCCAsyncOp> HSAQueue::EnqueueAsyncCopy(
     }
 
     // enqueue the async copy command
-    status = copyCommand.get()->enqueueAsyncCopyCommand(copyDevice, srcPtrInfo, dstPtrInfo);
+    status = copyCommand.get()->enqueueAsyncCopyCommand(
+        copyDevice, srcPtrInfo, dstPtrInfo);
     STATUS_CHECK(status, __LINE__);
 
     // associate the async copy command with this queue
-    pushAsyncOp(copyCommand);
+    //pushAsyncOp(copyCommand);
 
     return copyCommand;
 }
@@ -4083,7 +4114,7 @@ HSAQueue::dispatch_hsa_kernel(
     HSADispatch *dispatch = sp_dispatch.get();
     waitForStreamDeps(dispatch);
 
-    pushAsyncOp(sp_dispatch);
+    //pushAsyncOp(sp_dispatch);
     dispatch->setKernelName(kernelName);
 
 
@@ -4333,11 +4364,10 @@ HSADispatch::waitComplete() {
         DBOUT (DB_MISC, "null signal, considered complete\n");
     }
 
-
     // unregister this async operation from HSAQueue
-    if (this->hsaQueue() != nullptr) {
-        this->hsaQueue()->removeAsyncOp(this);
-    }
+    // if (this->hsaQueue() != nullptr) {
+    //     this->hsaQueue()->removeAsyncOp(this);
+    // }
 
     isDispatched_ = false;
     return HSA_STATUS_SUCCESS;
@@ -4392,7 +4422,6 @@ hsa_status_t HSADispatch::dispatchKernelAsync(
 
     hsa_status_t status = HSA_STATUS_SUCCESS;
 
-
     // If HCC_OPT_FLUSH=1, we are not flushing to system scope after each command.
     // Set the flag so we remember to do so at next queue::wait() call.
     hsaQueue()->setNextSyncNeedsSysRelease(true);
@@ -4410,8 +4439,23 @@ hsa_status_t HSADispatch::dispatchKernelAsync(
 
 
     // dynamically allocate a std::shared_future<void> object
-    future_.reset(new std::shared_future<void>{
-        std::async([this] { waitComplete(); }).share()});
+    future_ = std::async(
+        [sgn = _signal,
+         p = std::move(kernargMemory_),
+         q = std::move(callable_)]() mutable {
+        //waitComplete();
+        if (!sgn.handle) return;
+
+        while (hsa_signal_wait_scacquire(
+            sgn,
+            HSA_SIGNAL_CONDITION_EQ,
+            hsa_signal_value_t{0},
+            UINT64_MAX,
+            HSA_WAIT_STATE_BLOCKED) > 0);
+
+        p.reset();
+        q.reset();
+    }).share();
 
     if (HCC_SERIALIZE_KERNEL & 0x2) {
         status = waitComplete();
@@ -4629,9 +4673,9 @@ HSABarrier::waitComplete() {
 
 
     // unregister this async operation from HSAQueue
-    if (this->hsaQueue() != nullptr) {
-        this->hsaQueue()->removeAsyncOp(this);
-    }
+    // if (this->hsaQueue() != nullptr) {
+    //     this->hsaQueue()->removeAsyncOp(this);
+    // }
 
     isDispatched = false;
 
@@ -4747,11 +4791,16 @@ HSABarrier::enqueueAsync(hc::memory_scope fenceScope) {
     _barrierNextKernelNeedsSysAcquire = hsaQueue()->nextKernelNeedsSysAcquire();
     _barrierNextSyncNeedsSysRelease   = hsaQueue()->nextSyncNeedsSysRelease();
 
-    // dynamically allocate a std::shared_future<void> object
-    future = new std::shared_future<void>(std::async(std::launch::deferred, [&] {
-        waitComplete();
-    }).share());
-
+    future = std::async([=]() {
+        //waitComplete();
+        while (hsa_signal_wait_scacquire(
+            ret.first,
+            HSA_SIGNAL_CONDITION_EQ,
+            hsa_signal_value_t{0},
+            UINT64_MAX,
+            HSA_WAIT_STATE_BLOCKED) > 0);
+    //    if (hsaQueue()) hsaQueue()->removeAsyncOp(this);
+    }).share();
 
     return HSA_STATUS_SUCCESS;
 }
@@ -4790,15 +4839,13 @@ HSABarrier::dispose() {
     }
     detail::ctx.releaseSignal(_signal, _signalIndex);
 
-    // Release referecne to our dependent ops:
+    // Release reference to our dependent ops:
     for (int i=0; i<depCount; i++) {
         depAsyncOps[i] = nullptr;
     }
 
-    if (future != nullptr) {
-      delete future;
-      future = nullptr;
-    }
+    if (future.valid()) future.wait();
+    future = {};
 }
 
 inline uint64_t
@@ -4844,9 +4891,9 @@ detail::HSAQueue *HSAOp::hsaQueue() const
 bool HSAOp::isReady()
 {
     bool ready = (hsa_signal_load_scacquire(_signal) == 0);
-    if (ready && hsaQueue()) {
-        hsaQueue()->removeAsyncOp(this);
-    }
+    // if (ready && hsaQueue()) {
+    //     hsaQueue()->removeAsyncOp(this);
+    // }
 
     return ready;
 }
@@ -4858,13 +4905,25 @@ bool HSAOp::isReady()
 //
 // Copy mode will be set later on.
 // HSA signals would be waited in HSA_WAIT_STATE_ACTIVE by default for HSACopy instances
-HSACopy::HSACopy(detail::HCCQueue *queue, const void* src_, void* dst_, size_t sizeBytes_) : HSAOp(queue, detail::hcCommandInvalid),
-    isSubmitted(false), isAsync(false), isSingleStepCopy(false), isPeerToPeer(false), future(nullptr), depAsyncOp(nullptr), copyDevice(nullptr), waitMode(HSA_WAIT_STATE_ACTIVE),
-    src(src_), dst(dst_),
-    sizeBytes(sizeBytes_)
+HSACopy::HSACopy(
+    detail::HCCQueue* queue,
+    const void* src_,
+    void* dst_,
+    size_t sizeBytes_)
+    :
+    HSAOp{queue, detail::hcCommandInvalid},
+    isSubmitted{false},
+    isAsync{false},
+    isSingleStepCopy{false},
+    isPeerToPeer{false},
+    future{},
+    depAsyncOp{nullptr},
+    copyDevice{nullptr},
+    waitMode{HSA_WAIT_STATE_ACTIVE},
+    src{src_},
+    dst{dst_},
+    sizeBytes{sizeBytes_}
 {
-
-
     apiStartTick = detail::ctx.getSystemTicks();
 }
 
@@ -4892,9 +4951,9 @@ HSACopy::waitComplete() {
 
 
     // unregister this async operation from HSAQueue
-    if (this->hsaQueue() != nullptr) {
-        this->hsaQueue()->removeAsyncOp(this);
-    }
+    // if (this->hsaQueue() != nullptr) {
+    //     this->hsaQueue()->removeAsyncOp(this);
+    // }
 
     isSubmitted = false;
 
@@ -4913,16 +4972,22 @@ void checkCopy(const void *s1, const void *s2, size_t sizeBytes)
 
 // Small wrapper that calls hsa_amd_memory_async_copy.
 // HCC knows exactly which copy-engine it wants to perfom the copy and has already made.
-hsa_status_t HSACopy::hcc_memory_async_copy(detail::hcCommandKind copyKind, const detail::HSADevice *copyDeviceArg,
-                      const hc::AmPointerInfo &dstPtrInfo, const hc::AmPointerInfo &srcPtrInfo, size_t sizeBytes,
-                      int depSignalCnt, const hsa_signal_t *depSignals,
-                      hsa_signal_t completion_signal)
+hsa_status_t HSACopy::hcc_memory_async_copy(
+    detail::hcCommandKind copyKind,
+    const detail::HSADevice* copyDeviceArg,
+    const hc::AmPointerInfo& dstPtrInfo,
+    const hc::AmPointerInfo& srcPtrInfo,
+    size_t sizeBytes,
+    int depSignalCnt,
+    const hsa_signal_t* depSignals,
+    hsa_signal_t completion_signal)
 {
     this->isSingleStepCopy = true;
     this->copyDevice = copyDeviceArg;
 
     // beautiful...:
-    hsa_agent_t copyAgent = * static_cast<hsa_agent_t*>(const_cast<detail::HSADevice*>(copyDeviceArg)->getHSAAgent());
+    hsa_agent_t copyAgent = *static_cast<hsa_agent_t*>(
+        const_cast<detail::HSADevice*>(copyDeviceArg)->getHSAAgent());
     hsa_status_t status;
     hsa_device_type_t device_type;
     status = hsa_agent_get_info(copyAgent, HSA_AGENT_INFO_DEVICE, &device_type);
@@ -5059,10 +5124,12 @@ static detail::hcCommandKind resolveMemcpyDirection(bool srcInDeviceMem, bool ds
 }
 
 inline hsa_status_t
-HSACopy::enqueueAsyncCopyCommand(const detail::HSADevice *copyDevice, const hc::AmPointerInfo &srcPtrInfo, const hc::AmPointerInfo &dstPtrInfo) {
-
+HSACopy::enqueueAsyncCopyCommand(
+    const detail::HSADevice* copyDevice,
+    const hc::AmPointerInfo& srcPtrInfo,
+    const hc::AmPointerInfo& dstPtrInfo)
+{
     hsa_status_t status = HSA_STATUS_SUCCESS;
-
 
     if (HCC_SERIALIZE_COPY & 0x1) {
         hsaQueue()->wait();
@@ -5141,9 +5208,16 @@ HSACopy::enqueueAsyncCopyCommand(const detail::HSADevice *copyDevice, const hc::
     STATUS_CHECK(status, __LINE__);
 
     // dynamically allocate a std::shared_future<void> object
-    future = new std::shared_future<void>(std::async(std::launch::deferred, [&] {
-        waitComplete();
-    }).share());
+    future = std::async([sgn = _signal]() {
+        //waitComplete();
+        while (hsa_signal_wait_scacquire(
+            sgn,
+            HSA_SIGNAL_CONDITION_EQ,
+            hsa_signal_value_t{0},
+            UINT64_MAX,
+            HSA_WAIT_STATE_BLOCKED) > 0);
+        //if (hsaQueue()) hsaQueue()->removeAsyncOp(this);
+    }).share();
 
     if (HCC_SERIALIZE_COPY & 0x2) {
         status = waitComplete();
@@ -5157,10 +5231,8 @@ HSACopy::enqueueAsyncCopyCommand(const detail::HSADevice *copyDevice, const hc::
 
 inline void
 HSACopy::dispose() {
-
     // clear reference counts for dependent ops.
     depAsyncOp = nullptr;
-
 
     // HSA signal may not necessarily be allocated by HSACopy instance
     // only release the signal if it was really allocated (signalIndex >= 0)
@@ -5183,10 +5255,8 @@ HSACopy::dispose() {
         }
     }
 
-    if (future != nullptr) {
-        delete future;
-        future = nullptr;
-    }
+    if (future.valid()) future.wait();
+    future = {};
 }
 
 inline uint64_t
