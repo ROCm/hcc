@@ -1,5 +1,12 @@
 #!/bin/bash
 
+# enable bash debugging
+KMDBSCRIPT="${KMDBSCRIPT:=0}"
+if [ $KMDBSCRIPT == "1" ]
+then
+  set -x
+fi
+
 # check command line arguments
 if [ "$#" -ne 2 ]; then
   echo "Usage: $0 input_object output_kernel" >&2
@@ -12,11 +19,11 @@ if [ ! -f "$1" ]; then
 fi
 
 if [[ "@CMAKE_SYSTEM_PROCESSOR@" == "x86_64" ]]; then
-  objcopy -B i386:x86-64 -I binary -O elf64-x86-64 --rename-section .data=.kernel "$1" "$2"
+  objcopy -B i386:x86-64 -I binary -O elf64-x86-64 --rename-section .data=.kernel --weaken "$1" "$2"
 elif [[ "@CMAKE_SYSTEM_PROCESSOR@" == "aarch64" ]]; then
-  objcopy -B aarch64 -I binary -O elf64-littleaarch64 --rename-section .data=.kernel "$1" "$2"
+  objcopy -B aarch64 -I binary -O elf64-littleaarch64 --rename-section .data=.kernel --weaken "$1" "$2"
 elif [[ "@CMAKE_SYSTEM_PROCESSOR@" == "ppc64" ]]; then
-  objcopy -B ppc64 -I binary -O elf64-powerpc --rename-section .data=.kernel "$1" "$2"
+  objcopy -B ppc64 -I binary -O elf64-powerpc --rename-section .data=.kernel --weaken "$1" "$2"
 elif [[ "@CMAKE_SYSTEM_PROCESSOR@" == "ppc64le" ]]; then
-  objcopy -B powerpc -I binary -O elf64-powerpcle --rename-section .data=.kernel "$1" "$2"
+  objcopy -B powerpc -I binary -O elf64-powerpcle --rename-section .data=.kernel --weaken "$1" "$2"
 fi
