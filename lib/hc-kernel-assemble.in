@@ -138,6 +138,7 @@ if [ $EARLY_FINALIZATION == 1 ]; then
 
   # collect all the error codes from forked processes
   # error handling
+  ret=0
   for pid in ${pids[*]}; do
     wait $pid || ret=$((ret+$?))
   done
