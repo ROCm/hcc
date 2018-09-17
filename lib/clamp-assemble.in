@@ -1,6 +1,13 @@
 #!/bin/bash
 # clamp-assemble kernel-bitcode kernel-object
 
+# enable bash debugging
+KMDBSCRIPT="${KMDBSCRIPT:=0}"
+if [ $KMDBSCRIPT == "1" ]
+then
+  set -x
+fi
+
 BINDIR=$(dirname $0)
 EMBED=$BINDIR/clamp-embed
 
