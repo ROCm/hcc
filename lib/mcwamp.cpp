@@ -20,11 +20,8 @@
 
 #include <dlfcn.h>
 
-// weak symbols of kernel codes
-
 // Kernel bundle
-extern "C" char * kernel_bundle_source[] asm ("_binary_kernel_bundle_start") __attribute__((visibility("hidden")));
-extern "C" char * kernel_bundle_end[] asm ("_binary_kernel_bundle_end") __attribute__((visibility("hidden")));
+extern "C" char * kernel_bundle_source[] asm ("_binary_kernel_bundle_start") __attribute__((visibility("default")));
 
 // interface of HCC runtime implementation
 struct RuntimeImpl {
@@ -257,99 +254,108 @@ static inline uint64_t Read8byteIntegerFromBuffer(const char *data, size_t pos) 
   exit(val); \
 }
 
-#define OFFLOAD_BUNDLER_MAGIC_STR "__CLANG_OFFLOAD_BUNDLE__"
-#define OFFLOAD_BUNDLER_MAGIC_STR_LENGTH (24)
-#define HCC_TRIPLE_PREFIX "hcc-amdgcn-amd-amdhsa--"
-#define HCC_TRIPLE_PREFIX_LENGTH (23)
+struct _code_bundle {
+  uint64_t offset;
+  uint64_t size;
+  uint64_t triple_size;
+  const char* triple;
+  const char* device_binary;
+};
 
-// Try determine a compatible code object within kernel bundle for a queue
-// Returns true if a compatible code object is found, and returns its size and
-// pointer to the code object. Returns false in case no compatible code object
-// is found.
-inline bool DetermineAndGetProgram(KalmarQueue* pQueue, size_t* kernel_size, void** kernel_source) {
+static void read_code_bundles(std::vector<_code_bundle>& bundles) {
 
-  bool FoundCompatibleKernel = false;
+  //std::cout << "read_code_bundles..." << std::endl;
 
-  // walk through bundle header
-  // get bundle file size
-  size_t bundle_size =
-    (std::ptrdiff_t)((void *)kernel_bundle_end) -
-    (std::ptrdiff_t)((void *)kernel_bundle_source);
+  const char* bundles_data_start = (const char *)kernel_bundle_source;
 
-  // point to bundle file data
-  const char *data = (const char *)kernel_bundle_source;
+  while (1) {
 
-  // skip OFFLOAD_BUNDLER_MAGIC_STR
-  size_t pos = 0;
-  if (pos + OFFLOAD_BUNDLER_MAGIC_STR_LENGTH > bundle_size) {
-    RUNTIME_ERROR(1, "Bundle size too small", __LINE__)
-  }
-  std::string MagicStr(data + pos, OFFLOAD_BUNDLER_MAGIC_STR_LENGTH);
-  if (MagicStr.compare(OFFLOAD_BUNDLER_MAGIC_STR) != 0) {
-    RUNTIME_ERROR(1, "Incorrect magic string", __LINE__)
-  }
-  pos += OFFLOAD_BUNDLER_MAGIC_STR_LENGTH;
-
-  // Read number of bundles.
-  if (pos + 8 > bundle_size) {
-    RUNTIME_ERROR(1, "Fail to parse number of bundles", __LINE__)
-  }
-  uint64_t NumberOfBundles = Read8byteIntegerFromBuffer(data, pos);
-  pos += 8;
-
-  for (uint64_t i = 0; i < NumberOfBundles; ++i) {
-    // Read offset.
-    if (pos + 8 > bundle_size) {
-      RUNTIME_ERROR(1, "Fail to parse bundle offset", __LINE__)
-    }
-    uint64_t Offset = Read8byteIntegerFromBuffer(data, pos);
-    pos += 8;
-
-    // Read size.
-    if (pos + 8 > bundle_size) {
-      RUNTIME_ERROR(1, "Fail to parse bundle size", __LINE__)
-    }
-    uint64_t Size = Read8byteIntegerFromBuffer(data, pos);
-    pos += 8;
-
-    // Read triple size.
-    if (pos + 8 > bundle_size) {
-      RUNTIME_ERROR(1, "Fail to parse triple size", __LINE__)
-    }
-    uint64_t TripleSize = Read8byteIntegerFromBuffer(data, pos);
-    pos += 8;
-
-    // Read triple.
-    if (pos + TripleSize > bundle_size) {
-      RUNTIME_ERROR(1, "Fail to parse triple", __LINE__)
-    }
-    std::string Triple(data + pos, TripleSize);
-    pos += TripleSize;
-
-    // only check bundles with HCC triple prefix string
-    if (Triple.compare(0, HCC_TRIPLE_PREFIX_LENGTH, HCC_TRIPLE_PREFIX) == 0) {
-      // use KalmarDevice::IsCompatibleKernel to check
-      size_t SizeST = (size_t)Size;
-      void *Content = (unsigned char *)data + Offset;
-      if (pQueue->getDev()->IsCompatibleKernel((void*)SizeST, Content)) {
-        *kernel_size = SizeST;
-        *kernel_source = Content;
-        FoundCompatibleKernel = true;
-        break;
+    constexpr char OFFLOAD_BUNDLER_MAGIC_STR[] = "__CLANG_OFFLOAD_BUNDLE__";
+    constexpr size_t OFFLOAD_BUNDLER_MAGIC_STR_LENGTH = sizeof(OFFLOAD_BUNDLER_MAGIC_STR)-1;
+    auto detect_bundle_magic = [&](const char* b) {
+      //std::cout << "detecting magic string..." << std::endl;
+      for (int i = 0; i < OFFLOAD_BUNDLER_MAGIC_STR_LENGTH; ++i) {
+        if (b[i] != OFFLOAD_BUNDLER_MAGIC_STR[i])
+          return false;
       }
+      return true;
+    };
+
+    if (detect_bundle_magic(bundles_data_start)) {
+
+      //std::cout << "bundles detected!" << std::endl;
+
+      auto read_uint64 = [](const char* p) {
+        return *reinterpret_cast<const uint64_t*>(p);
+      };
+
+      // skip the magic string
+      const char* bundles_data_ptr = bundles_data_start + OFFLOAD_BUNDLER_MAGIC_STR_LENGTH;
+
+      // get number of bundles
+      uint64_t num_bundles = read_uint64(bundles_data_ptr);
+      bundles_data_ptr+=8;
+
+      size_t bundle_end = 0;
+      for (uint64_t i = 0; i < num_bundles; ++i) {
+
+        _code_bundle b = {0};
+        b.offset = read_uint64(bundles_data_ptr);
+        bundles_data_ptr+=8;
+        b.size = read_uint64(bundles_data_ptr);
+        bundles_data_ptr+=8;
+        b.triple_size = read_uint64(bundles_data_ptr);
+        bundles_data_ptr+=8;
+        b.triple = bundles_data_ptr;
+        bundles_data_ptr+=b.triple_size;
+        b.device_binary = bundles_data_start + b.offset;
+        bundle_end = std::max(bundle_end, b.offset + b.size);
+
+        auto detect_hcc_code = [](_code_bundle& b) {
+          constexpr char HCC_TRIPLE_PREFIX[] = "hcc-amdgcn-amd-amdhsa--";
+          constexpr size_t HCC_TRIPLE_PREFIX_LENGTH = sizeof(HCC_TRIPLE_PREFIX)-1;
+          return (b.triple_size >= HCC_TRIPLE_PREFIX_LENGTH
+                  && std::memcmp(b.triple, HCC_TRIPLE_PREFIX,
+                                   HCC_TRIPLE_PREFIX_LENGTH) == 0);
+        };
+        if (detect_hcc_code(b)) bundles.push_back(std::move(b));
+      }
+
+      // bump to read the next group of bundles
+      bundles_data_start += bundle_end;
+    }
+    else {
+      
+      //std::cout << "no more device code objects" << std::endl;
+
+      // no more device code objects, exit
+      break;
     }
   }
-
-  return FoundCompatibleKernel;
 }
 
-void LoadInMemoryProgram(KalmarQueue* pQueue) {
-  size_t kernel_size = 0;
-  void* kernel_source = nullptr;
 
-  // Only call BuildProgram in case a compatible code object is found
-  if (DetermineAndGetProgram(pQueue, &kernel_size, &kernel_source)) {
-    pQueue->getDev()->BuildProgram((void*)kernel_size, kernel_source);
+void LoadInMemoryProgram(KalmarQueue* pQueue) {
+  static std::vector<_code_bundle> bundles;
+
+#if 0
+  // NOTE: To investigate, this seems to cause a crash
+  // when linking this libray with g++
+  static std::once_flag f;
+  std::call_once(f, [&](){ read_code_bundles(bundles); });
+#else
+  static bool done = false;
+  if (!done) {
+    read_code_bundles(bundles);
+    done = true;
+  }
+#endif
+
+  for (auto&& b : bundles) {
+    if (pQueue->getDev()->IsCompatibleKernel((void*) b.size, (void*) b.device_binary)) {
+      //std::cout << "build program, size=" << b.size << std::endl;
+      pQueue->getDev()->BuildProgram((void*) b.size, (void*) b.device_binary);
+    }
   }
 }
 
