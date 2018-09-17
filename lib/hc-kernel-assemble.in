@@ -17,10 +17,12 @@ BINDIR=$(dirname "$0")
 CLANG=$BINDIR/hcc
 LLVM_LINK=$BINDIR/llvm-link
 OPT=$BINDIR/opt
+CLAMP_DEVICE=$BINDIR/clamp-device
 LLVM_AS=$BINDIR/llvm-as
 LLVM_DIS=$BINDIR/llvm-dis
 CLAMP_ASM=$BINDIR/clamp-assemble
 LIBPATH=$BINDIR/../lib
+CLANG_OFFLOAD_BUNDLER=$BINDIR/clang-offload-bundler
 
 # At build directory, HCC compiler tools are placed under compiler/bin/, and
 # header files are placed under include/. At install directory, HCC compiler
@@ -55,10 +57,29 @@ case $CMAKE_BUILD_TYPE in
     CXXFLAGS=$CXXFLAGS
 esac
 
-if [ "$#" -ne 2 ]; then
+if [ "$#" -lt 2 ]; then
   echo "Usage: $0 kernel-bitcode object" >&2
   exit 1
 fi
+
+AMDGPU_TARGET_ARRAY=()
+EARLY_FINALIZATION=0
+for ARG in "$@"
+do
+  case $ARG in
+    ######################
+    # Parse AMDGPU target
+    ######################
+    --amdgpu-target=*)
+    AMDGPU_TARGET_ARRAY+=("${ARG#*=}")
+    continue
+    ;;
+    --early_finalize)
+    EARLY_FINALIZATION=1
+    continue
+    ;;
+  esac
+done
 
 # inject a new GPU IR to replace the IR from the FE
 HC_REPLACE_GPU_FE_LLVM="${HC_REPLACE_GPU_FE_LLVM:=0}"
@@ -90,8 +111,51 @@ if [ $KMDUMPLLVM == "1" ]; then
   cp "$TEMP_NAME.ll" ./dump.kernel_input.ll
 fi
 
-ln -s "$KERNEL_INPUT" "$1.bc"
-$CLAMP_ASM "$1.bc" "$TEMP_NAME.camp.o"
+if [ $EARLY_FINALIZATION == 1 ]; then
+  # invoke the backend to finalize the IR
+  echo "do early finalization"
+
+  # touch an empty object for host part, to accomodate rule required by
+  # clang-offload-bundler
+  touch $TEMP_DIR/__empty.o
+
+  # invoke clang-offload-bundler to create kernel bundle
+  CLANG_OFFLOAD_BUNDLER_INPUTS_ARGS="-inputs=$TEMP_DIR/__empty.o"
+  CLANG_OFFLOAD_BUNDLER_TARGETS_ARGS="-targets=host-@CMAKE_SYSTEM_PROCESSOR@-unknown-linux"
+
+  declare -a pids
+  # for each GPU target, lower to GCN ISA in HSACO format
+  for AMDGPU_TARGET in ${AMDGPU_TARGET_ARRAY[@]}; do
+    { $CLAMP_DEVICE "$KERNEL_INPUT" "$TEMP_DIR/kernel-$AMDGPU_TARGET.hsaco" --amdgpu-target=$AMDGPU_TARGET; } &
+
+    # error handling
+    pids+=("${pids[@]}" "$!")
+
+    # augment arguments to clang-offload-bundler
+    CLANG_OFFLOAD_BUNDLER_INPUTS_ARGS+=",$TEMP_DIR/kernel-$AMDGPU_TARGET.hsaco"
+    CLANG_OFFLOAD_BUNDLER_TARGETS_ARGS+=",hcc-amdgcn-amd-amdhsa--$AMDGPU_TARGET"
+  done
+
+  # collect all the error codes from forked processes
+  # error handling
+  for pid in ${pids[*]}; do
+    wait $pid || ret=$((ret+$?))
+  done
+  if [ $ret != 0 ]; then
+    exit $ret
+  fi
+
+  # invoke clang-offload-bundler
+  $CLANG_OFFLOAD_BUNDLER -type=o $CLANG_OFFLOAD_BUNDLER_INPUTS_ARGS $CLANG_OFFLOAD_BUNDLER_TARGETS_ARGS -outputs=$TEMP_DIR/kernel.bundle
+
+  OLD_PWD=$PWD
+  cd $TEMP_DIR
+  $CLAMP_ASM "kernel.bundle" "$TEMP_NAME.camp.o"
+  cd $OLD_PWD
+else
+  ln -s "$KERNEL_INPUT" "$1.bc"
+  $CLAMP_ASM "$1.bc" "$TEMP_NAME.camp.o"
+fi
 
 if [ -f "$TEMP_DIR/$BASENAME.tmp.o" ]; then
   ld -r --allow-multiple-definition "$TEMP_DIR/$BASENAME.tmp.o" "$TEMP_NAME.camp.o" -o "$2"
