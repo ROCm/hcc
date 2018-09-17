@@ -2654,8 +2654,12 @@ public:
 
         switch(MACH) {
             case hc::EF_AMDGPU_MACH_AMDGCN_GFX701 : triple.append("701"); break;
+            case hc::EF_AMDGPU_MACH_AMDGCN_GFX702 : triple.append("702"); break;
+            case hc::EF_AMDGPU_MACH_AMDGCN_GFX801 : triple.append("801"); break;
+            case hc::EF_AMDGPU_MACH_AMDGCN_GFX802 : triple.append("802"); break;
             case hc::EF_AMDGPU_MACH_AMDGCN_GFX803 : triple.append("803"); break;
             case hc::EF_AMDGPU_MACH_AMDGCN_GFX900 : triple.append("900"); break;
+            case hc::EF_AMDGPU_MACH_AMDGCN_GFX902 : triple.append("902"); break;
             case hc::EF_AMDGPU_MACH_AMDGCN_GFX906 : triple.append("906"); break;
         }
 
