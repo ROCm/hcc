@@ -336,20 +336,10 @@ static void read_code_bundles(std::vector<_code_bundle>& bundles) {
 
 
 void LoadInMemoryProgram(KalmarQueue* pQueue) {
-  static std::vector<_code_bundle> bundles;
 
-#if 0
-  // NOTE: To investigate, this seems to cause a crash
-  // when linking this libray with g++
+  static std::vector<_code_bundle> bundles;
   static std::once_flag f;
   std::call_once(f, [&](){ read_code_bundles(bundles); });
-#else
-  static bool done = false;
-  if (!done) {
-    read_code_bundles(bundles);
-    done = true;
-  }
-#endif
 
   for (auto&& b : bundles) {
     if (pQueue->getDev()->IsCompatibleKernel((void*) b.size, (void*) b.device_binary)) {
