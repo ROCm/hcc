@@ -322,6 +322,9 @@ do
 
   OBJS_TO_PROCESS=()
 
+  # ELF section names for IR and ISA
+  KERNEL_IR_SECTION=".kernel_ir"
+  KERNEL_SECTION=".kernel"
 
   if [[ "$ARG" =~ [^[:space:]]+\.cpu$ ]]; then
 
@@ -410,11 +413,11 @@ do
         echo "processing static library $DETECTED_STATIC_LIBRARY"
       fi
 
-      # detect whether the objects in the static library contain a .kernel section
-      KERNEL_UNDETECTED=`objdump -t "$DETECTED_STATIC_LIBRARY" 2> /dev/null | grep -q "\.kernel"; echo $?`
+      # detect whether the objects in the static library contain a .kernel_ir section
+      KERNEL_UNDETECTED=`objdump -t "$DETECTED_STATIC_LIBRARY" 2> /dev/null | grep -q "$KERNEL_IR_SECTION"; echo $?`
       if [[ $KERNEL_UNDETECTED == "0" ]]; then
 
-        # .kernel section detected, extract the objects from the archieve
+        # .kernel_ir section detected, extract the objects from the archieve
 
         if [ $VERBOSE == 2 ]; then
           echo "kernel detected in $DETECTED_STATIC_LIBRARY"
@@ -479,8 +482,8 @@ do
       echo "processing $OBJ"
     fi
 
-    # detect whether the objects in the static library contain a .kernel section
-    KERNEL_UNDETECTED=`objdump -t "$OBJ" 2> /dev/null | grep -q "\.kernel"; echo $?`
+    # detect whether the objects in the static library contain a .kernel_ir section
+    KERNEL_UNDETECTED=`objdump -t "$OBJ" 2> /dev/null | grep -q "$KERNEL_IR_SECTION"; echo $?`
     if [[ $KERNEL_UNDETECTED == "0" ]]; then
 
       FILE=`basename "$OBJ"` # remove path
@@ -489,14 +492,14 @@ do
       HOST_FILE="$TEMP_DIR/$FILENAME.host.o"
 
       # extract kernel section
-      objcopy -O binary -j .kernel "$OBJ" "$KERNEL_FILE"
+      objcopy -O binary -j "$KERNEL_IR_SECTION" "$OBJ" "$KERNEL_FILE"
       ret=$?
       if [ $ret != 0 ]; then
         exit $ret
       fi
 
       # extract host section
-      objcopy -R .kernel "$OBJ" "$HOST_FILE"
+      objcopy -R "$KERNEL_IR_SECTION" "$OBJ" "$HOST_FILE"
       ret=$?
       if [ $ret != 0 ]; then
         exit $ret
@@ -605,7 +608,7 @@ if [ ${#LINK_KERNEL_ARGS[@]} != 0 ]; then
   # build a new kernel object
   pushd . > /dev/null
   cd $TEMP_DIR
-  $CLAMP_EMBED kernel.bundle kernel_hsa.o
+  $CLAMP_EMBED kernel.bundle kernel_hsa.o "$KERNEL_SECTION"
   popd > /dev/null
 
   # link everything together

@@ -100,6 +100,10 @@ TEMP_DIR=`mktemp -d`
 BASENAME=`basename "$2"`
 TEMP_NAME="$TEMP_DIR/$BASENAME"
 
+# ELF section names for IR and ISA
+KERNEL_IR_SECTION=".kernel_ir"
+KERNEL_SECTION=".kernel"
+
 # hip-kernel-assemble goes after hip-host-assemble, so attempt to link object from host
 if [ -f "$2" ]; then
   mv "$2" "$TEMP_DIR/$BASENAME.tmp.o"
@@ -150,11 +154,11 @@ if [ $EARLY_FINALIZATION == 1 ]; then
 
   OLD_PWD=$PWD
   cd $TEMP_DIR
-  $CLAMP_ASM "kernel.bundle" "$TEMP_NAME.camp.o"
+  $CLAMP_ASM "kernel.bundle" "$TEMP_NAME.camp.o" "$KERNEL_SECTION"
   cd $OLD_PWD
 else
   ln -s "$KERNEL_INPUT" "$1.bc"
-  $CLAMP_ASM "$1.bc" "$TEMP_NAME.camp.o"
+  $CLAMP_ASM "$1.bc" "$TEMP_NAME.camp.o" "$KERNEL_IR_SECTION"
 fi
 
 if [ -f "$TEMP_DIR/$BASENAME.tmp.o" ]; then

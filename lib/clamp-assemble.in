@@ -11,8 +11,8 @@ fi
 BINDIR=$(dirname $0)
 EMBED=$BINDIR/clamp-embed
 
-if [ "$#" -ne 2 ]; then
-  echo "Usage: $0 kernel-bitcode object" >&2
+if [ "$#" -ne 3 ]; then
+  echo "Usage: $0 kernel-bitcode object elf_section_name" >&2
   exit 1
 fi
 
@@ -23,10 +23,10 @@ fi
 
 if [ -f "$2" ]; then
   mv "$2" "$2.host.o"
-  $EMBED "$1" "$2.kernel.o"
+  $EMBED "$1" "$2.kernel.o" "$3"
   ld -r "$2.kernel.o" "$2.host.o" -o "$2"
   rm "$2.kernel.o" "$2.host.o"
 else
-  $EMBED "$1" "$2"
+  $EMBED "$1" "$2" "$3"
 fi
 
