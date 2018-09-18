@@ -113,7 +113,6 @@ fi
 
 if [ $EARLY_FINALIZATION == 1 ]; then
   # invoke the backend to finalize the IR
-  echo "do early finalization"
 
   # touch an empty object for host part, to accomodate rule required by
   # clang-offload-bundler
