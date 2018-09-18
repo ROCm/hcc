@@ -571,16 +571,16 @@ fi
 # linker return value
 ret=0
 
+# touch an empty object for host part, to accomodate rule required by
+# clang-offload-bundler
+touch $TEMP_DIR/__empty.o
+
+# invoke clang-offload-bundler to create kernel bundle
+CLANG_OFFLOAD_BUNDLER_INPUTS_ARGS="-inputs=$TEMP_DIR/__empty.o"
+CLANG_OFFLOAD_BUNDLER_TARGETS_ARGS="-targets=host-@CMAKE_SYSTEM_PROCESSOR@-unknown-linux"
+
 # only do kernel lowering if there are objects given
 if [ ${#LINK_KERNEL_ARGS[@]} != 0 ]; then
-
-  # touch an empty object for host part, to accomodate rule required by
-  # clang-offload-bundler
-  touch $TEMP_DIR/__empty.o
-
-  # invoke clang-offload-bundler to create kernel bundle
-  CLANG_OFFLOAD_BUNDLER_INPUTS_ARGS="-inputs=$TEMP_DIR/__empty.o"
-  CLANG_OFFLOAD_BUNDLER_TARGETS_ARGS="-targets=host-@CMAKE_SYSTEM_PROCESSOR@-unknown-linux"
 
   if [ $KMTHINLTO == "1" ]; then
     _thinlto_path
@@ -591,31 +591,30 @@ if [ ${#LINK_KERNEL_ARGS[@]} != 0 ]; then
   if [ $VERBOSE != 0 ]; then
     echo "Finished generation of AMD GCN kernels"
   fi
+fi
 
-  # invoke clang-offload-bundler
-  $CLANG_OFFLOAD_BUNDLER -type=o $CLANG_OFFLOAD_BUNDLER_INPUTS_ARGS $CLANG_OFFLOAD_BUNDLER_TARGETS_ARGS -outputs=$TEMP_DIR/kernel.bundle
+# invoke clang-offload-bundler
+$CLANG_OFFLOAD_BUNDLER -type=o $CLANG_OFFLOAD_BUNDLER_INPUTS_ARGS $CLANG_OFFLOAD_BUNDLER_TARGETS_ARGS -outputs=$TEMP_DIR/kernel.bundle
 
-  # error handling
-  ret=$?
-  if [ $ret != 0 ]; then
-    exit $ret
-  fi
+# error handling
+ret=$?
+if [ $ret != 0 ]; then
+  exit $ret
+fi
 
-  if [ $KMDUMPBUNDLE == "1" ]; then
-    cp $TEMP_DIR/kernel.bundle ./dump.bundle
-  fi
+if [ $KMDUMPBUNDLE == "1" ]; then
+  cp $TEMP_DIR/kernel.bundle ./dump.bundle
+fi
 
-  # build a new kernel object
-  pushd . > /dev/null
-  cd $TEMP_DIR
-  $CLAMP_EMBED kernel.bundle kernel_hsa.o "$KERNEL_SECTION"
-  popd > /dev/null
+# build a new kernel object
+pushd . > /dev/null
+cd $TEMP_DIR
+$CLAMP_EMBED kernel.bundle kernel_hsa.o "$KERNEL_SECTION"
+popd > /dev/null
 
-  # link everything together
-  ld --allow-multiple-definition $TEMP_DIR/kernel_hsa.o "${LINK_HOST_ARGS[@]}" "${LINK_CPU_ARG[@]}" "${LINK_OTHER_ARGS[@]}"
-  ret=$?
-
-fi # if [ -n $LINK_KERNEL_ARGS ];
+# link everything together
+ld --allow-multiple-definition $TEMP_DIR/kernel_hsa.o "${LINK_HOST_ARGS[@]}" "${LINK_CPU_ARG[@]}" "${LINK_OTHER_ARGS[@]}"
+ret=$?
 
 # remove temp files
 if [ -e $TEMP_DIR/kernel_hsa.o ]; then
