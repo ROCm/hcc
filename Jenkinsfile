@@ -96,7 +96,8 @@ node( 'hcctest' )
             -DHSA_AMDGPU_GPU_TARGET="gfx900;gfx803" \
             -DNUM_TEST_THREADS="4" \
             ../..
-          make -j\$(nproc)
+          // make -j\$(nproc)
+          make -j2
         """
 
       // Cap the maximum amount of testing, in case of hangs
