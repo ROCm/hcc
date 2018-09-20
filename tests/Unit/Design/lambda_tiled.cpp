@@ -1,32 +1,32 @@
 // RUN: %cxxamp %s -o %t.out && %t.out
-#include <amp.h>
+#include <hc.hpp>
 #include <stdlib.h>
 #include <iostream>
 int main(void){
   const int vecSize = 128;
 
   // Alloc & init input data
-  Concurrency::extent<1> e(vecSize);
-  Concurrency::tiled_extent<16> et(e);
-  Concurrency::tiled_extent<16> et2 = e.tile<16>();
+  hc::extent<1> e(vecSize);
+  hc::tiled_extent<1> et(e.tile(16));
+  hc::tiled_extent<1> et2 = e.tile(16);
   assert(et.tile_dim0 == 16);
   assert(et2.tile_dim0 == 16);
-  Concurrency::array<int, 1> a(vecSize);
-  Concurrency::array<int, 1> b(vecSize);
-  Concurrency::array<int, 1> c(vecSize);
+  hc::array<int, 1> a(vecSize);
+  hc::array<int, 1> b(vecSize);
+  hc::array<int, 1> c(vecSize);
   int sum = 0;
-  Concurrency::array_view<int> ga(a);
-  Concurrency::array_view<int> gb(b);
-  Concurrency::array_view<int> gc(c);
-  for (Concurrency::index<1> i(0); i[0] < vecSize; i++) {
+  hc::array_view<int> ga(a);
+  hc::array_view<int> gb(b);
+  hc::array_view<int> gc(c);
+  for (hc::index<1> i(0); i[0] < vecSize; i++) {
     ga[i] = 100.0f * rand() / RAND_MAX;
     gb[i] = 100.0f * rand() / RAND_MAX;
     sum += a[i] + b[i];
   }
 
-  Concurrency::parallel_for_each(
+  hc::parallel_for_each(
     et,
-    [=](Concurrency::tiled_index<16> idx) restrict(amp) {
+    [=](hc::tiled_index<1> idx) [[hc]] {
     gc[idx] = ga[idx]+gb[idx];
   });
 

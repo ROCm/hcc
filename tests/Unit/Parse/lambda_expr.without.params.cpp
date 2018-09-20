@@ -1,7 +1,7 @@
 // RUN: %cxxamp -c %s
 
-int f1() restrict(amp) { return 1;}
-int f_amp() restrict(amp) {
+int f1() [[hc]] { return 1;}
+int f_amp() [[hc]] {
   []
   {
     f1(); // OK

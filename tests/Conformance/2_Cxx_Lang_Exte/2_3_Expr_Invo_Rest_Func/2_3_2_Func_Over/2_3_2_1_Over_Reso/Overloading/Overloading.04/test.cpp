@@ -11,7 +11,7 @@
 class c
 {
 public:
-    int f(int) restrict(amp)
+    int f(int) [[hc]]
     {
         return 1;
     }

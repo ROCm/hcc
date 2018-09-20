@@ -6,7 +6,7 @@ int main() {
   int c;
   // Note that capture-by-reference in amp restricted codes is not allowed
   [=, &c] ()
-    restrict(cpu)
+    [[cpu]]
     { c = a + b; } ();
   return c;
 }

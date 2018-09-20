@@ -3,7 +3,7 @@
 
 #include <iostream>
 #include <random>
-#include <amp.h>
+#include <hc.hpp>
 
 // added for checking HSA profile
 #include <hc.hpp>
@@ -31,10 +31,10 @@ bool test() {
   }
 
   // launch kernel
-  Concurrency::extent<1> e(vecSize);
+  hc::extent<1> e(vecSize);
   parallel_for_each(
     e,
-    [=](Concurrency::index<1> idx) restrict(amp) {
+    [=](hc::index<1> idx) [[hc]] {
 
       p_c[idx[0]] = p_a[idx[0]] + p_b[idx[0]];
 

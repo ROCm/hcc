@@ -1,7 +1,7 @@
 // RUN: %cxxamp %s -o %t.out && %t.out
-#include <amp.h>
+#include <hc.hpp>
 using std::vector;
-using namespace concurrency;
+using namespace hc;
 
 //2_Cxx_Lang_Exte/2_4_amp_Rest_Modi/2_4_1_Rest_on_Type/2_4_1_3_Comp_Type/Negative/BoolPointer/test.cpp
 void f_boolpointer() restrict(auto) // Not a negative test anymore since pointer to bool is now supported
@@ -11,7 +11,7 @@ void f_boolpointer() restrict(auto) // Not a negative test anymore since pointer
     *pb = true;
 }
 
-void AMP_AND_CPU_Func() restrict(cpu,amp)
+void AMP_AND_CPU_Func() [[cpu, hc]]
 {
   f_boolpointer(); // OK
 }

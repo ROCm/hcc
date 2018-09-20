@@ -8,7 +8,7 @@
 class base{
  public:
   __attribute__((annotate("deserialize"))) /* For compiler */
-  base(int a_,float b_) restrict(amp) :a(a_), b(b_) {}
+  base(int a_,float b_) [[hc]] :a(a_), b(b_) {}
   int a;
   float b;
 };
@@ -16,23 +16,23 @@ class baz {
  public:
 #if 0 // This declaration is supposed to be generated
   __attribute__((annotate("deserialize"))) /* For compiler */
-  baz(base&, int foo) restrict(amp);
+  baz(base&, int foo) [[hc]];
 #endif
-  void cho(void) restrict(amp) {};
+  void cho(void) [[hc]] {};
 
   base &B; // No reference type is considered amp-compatible
   int bar;
 };
 
 #ifdef __KALMAR_ACCELERATOR__
-int kerker(void) restrict(amp,cpu) {
+int kerker(void) [[cpu, hc]] {
   base b(1234, 0.0f);
   // Will pass if deserializer declaration and definition are generated
   baz bl(b, 1);
   return bl.B.a;
 }
 #else
-extern int kerker(void) restrict(amp,cpu);
+extern int kerker(void) [[cpu, hc]];
 TEST(GPUCodeGen, ConstructorWithRef) {
   EXPECT_EQ(kerker(), 1234);
 }

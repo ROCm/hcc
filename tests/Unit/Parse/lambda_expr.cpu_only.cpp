@@ -5,7 +5,7 @@ int main() {
   int b = 2;
   int c;
   [=, &c] ()
-    restrict(cpu)
+    [[cpu]]
     { c = a + b; } ();
   return c;
 }

@@ -4,12 +4,12 @@
 // Do not delete or add any line; it is referred to by absolute line number in the
 // FileCheck lines below
 //////////////////////////////////////////////////////////////////////////////////
-#include <amp.h>
-using namespace concurrency;
+#include <hc.hpp>
+using namespace hc;
 
 void f_wrong_order_of_trailing_return() {
   // error: inner lambda has incorrect lamda-declarator clause
-  parallel_for_each(extent<1>(1), [&](index<1> idx) restrict(amp) { 
+  parallel_for_each(extent<1>(1), [&](index<1> idx) [[hc]] { 
    []() mutable -> void restrict(auto) {}(); // expected_error{{expected body of lambda expression}}
    });
 }

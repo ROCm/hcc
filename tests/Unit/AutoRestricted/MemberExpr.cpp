@@ -1,15 +1,15 @@
 // RUN: %cxxamp %s -o %t.out && %t.out
-#include <amp.h>
+#include <hc.hpp>
 
 class c2
 {
 public:
-    int f(int) restrict(cpu)
+    int f(int) [[cpu]]
     {
         return 1;
     }
 
-    int f(float) restrict(cpu,amp)
+    int f(float) [[cpu, hc]]
     {
         return 0;
     }

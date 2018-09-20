@@ -8,7 +8,7 @@ class Member {
  public:
   // Compiler-generated constructor
   __attribute__((noinline))
-  __attribute__((annotate("auto_deserialize"))) Member(float, int) restrict(amp);
+  __attribute__((annotate("auto_deserialize"))) Member(float, int) [[hc]];
   float bzzt;
   int zzz;
 };
@@ -17,7 +17,7 @@ class baz {
  public:
   // Compiler-generated constructor
   __attribute__((annotate("auto_deserialize"))) baz(float m1, int m2,
-    int foo_, float bar_) restrict(amp,cpu);
+    int foo_, float bar_) [[cpu, hc]];
 
   Member m;
   int foo;
@@ -25,7 +25,7 @@ class baz {
 };
 
 __attribute__((annotate("user_deserialize")))
-int fake_use(void) restrict(amp) {
+int fake_use(void) [[hc]] {
   baz bll(0.0, 0,  1, 2.0);
   return bll.foo;
 }

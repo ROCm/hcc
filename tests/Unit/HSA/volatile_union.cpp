@@ -1,7 +1,7 @@
 
 // RUN: %hc %s -o %t.out && %t.out
 
-#include <amp.h>
+#include <hc.hpp>
 
 // added for checking HSA profile
 #include <hc.hpp>
@@ -49,12 +49,12 @@ __attribute__((amp,cpu)) float foo2(float a) {
 bool test() {
   bool ret = true;
 
-  using namespace concurrency;
+  using namespace hc;
 
   float table[SIZE] { 0.0f };
 
   // test foo1
-  parallel_for_each(extent<1>(SIZE), [&table](index<1> idx) restrict(amp) {
+  parallel_for_each(extent<1>(SIZE), [&table](index<1> idx) [[hc]] {
     table[idx[0]] = foo1(0.0f);
   });
 
@@ -70,7 +70,7 @@ bool test() {
   }
 
   // test foo2
-  parallel_for_each(extent<1>(SIZE), [&table](index<1> idx) restrict(amp) {
+  parallel_for_each(extent<1>(SIZE), [&table](index<1> idx) [[hc]] {
     table[idx[0]] = foo2(0.0f);
   });
 

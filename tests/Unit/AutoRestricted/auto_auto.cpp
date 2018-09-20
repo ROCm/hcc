@@ -1,10 +1,10 @@
 // RUN: %hc -Xclang -fauto-auto %s -o %t.out && %t.out
 
 #include <vector>
-#include <amp.h>
+#include <hc.hpp>
 #include <iostream>
 
-using namespace concurrency;
+using namespace hc;
 
 bool CopyArray() {
     std::vector<int> va{1, 2, 3, 4, 5};

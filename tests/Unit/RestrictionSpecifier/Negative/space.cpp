@@ -5,7 +5,7 @@
 // FileCheck lines below
 //////////////////////////////////////////////////////////////////////////////////
 
-#include <amp.h>
+#include <hc.hpp>
 
 int f1() restrict(cpu,   ,auto1)  // expected-error{{'auto1': unrecognized restriction sepcifier}}
 {

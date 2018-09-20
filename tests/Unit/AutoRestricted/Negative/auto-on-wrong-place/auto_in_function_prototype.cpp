@@ -4,9 +4,9 @@
 // Do not delete or add any line; it is referred to by absolute line number in the
 // FileCheck lines below
 //////////////////////////////////////////////////////////////////////////////////
-#include <amp.h>
+#include <hc.hpp>
 
-using namespace concurrency;
+using namespace hc;
 
 int test(int (*p)(int, int) restrict(auto)) // expected-error{{'auto' not allowed in function prototype}}
 {

@@ -6,7 +6,7 @@ int main() {
   int c;
   // capture-by-reference is not allowed in amp-restricted kernel lambda
   [=, &c] ()
-    restrict(cpu)
+    [[cpu]]
     { c = a + b; } ();
   return c;
 }

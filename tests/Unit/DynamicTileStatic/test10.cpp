@@ -24,7 +24,7 @@ bool test1D() {
 
   array_view<int, 1> output1(GRID_SIZE);
 
-  parallel_for_each(tiled_ex, [=](tiled_index<1>& idx) __attribute((hc)) {
+  parallel_for_each(tiled_ex, [=](1>& idx) __attribute((hc)) {
     output1(idx.global[0]) = idx.tile_dim[0];
   });
 

@@ -4,13 +4,13 @@
 // Do not delete or add any line; it is referred to by absolute line number in the
 // FileCheck lines below
 //////////////////////////////////////////////////////////////////////////////////
-#include <amp.h>
-using namespace concurrency;
+#include <hc.hpp>
+using namespace hc;
 
 // different restriction specifier on function declaration and definition
 struct S
 {
-  int test() restrict(amp);
+  int test() [[hc]];
 };
 
 int S::test() restrict(auto) {
@@ -20,7 +20,7 @@ int S::test() restrict(auto) {
 // CHECK-NEXT:int S::test() restrict(auto)
 // CHECK-NEXT:                            ^
 // CHECK-NEXT:note: previous declaration is here
-// CHECK-NEXT:  int test() restrict(amp);
+// CHECK-NEXT:  int test() [[hc]];
 // CHECK-NEXT:      ^
 // CHECK-NEXT:on_more_declarations.cpp:[[@LINE-9]]:8: error: out-of-line definition of 'test' does not match any declaration in 'S'
 // CHECK-NEXT:int S::test() restrict(auto)

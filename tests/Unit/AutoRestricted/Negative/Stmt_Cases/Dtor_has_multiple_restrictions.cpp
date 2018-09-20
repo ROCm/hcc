@@ -4,15 +4,15 @@
 // Do not delete or add any line; it is referred to by absolute line number in the
 // FileCheck lines below
 //////////////////////////////////////////////////////////////////////////////////
-#include <amp.h>
-using namespace concurrency;
+#include <hc.hpp>
+using namespace hc;
 
 int f_dtor_mulitple() restrict(auto) {
   class MyClass
   { 
     public:
       MyClass() {}
-      MyClass() restrict(amp) {}
+      MyClass() [[hc]] {}
 
       ~MyClass();
   };

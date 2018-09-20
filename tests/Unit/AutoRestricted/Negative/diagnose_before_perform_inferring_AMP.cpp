@@ -4,9 +4,9 @@
 // Do not delete or add any line; it is referred to by absolute line number in the
 // FileCheck lines below
 //////////////////////////////////////////////////////////////////////////////////
-#include <amp.h>
+#include <hc.hpp>
 
-int f1() restrict(amp) {return 1;} 
+int f1() [[hc]] {return 1;} 
 int f2() restrict(cpu,auto) {
   return f1();
 }

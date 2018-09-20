@@ -4,8 +4,8 @@
 // Do not delete or add any line; it is referred to by absolute line number in the
 // FileCheck lines below
 //////////////////////////////////////////////////////////////////////////////////
-#include <amp.h>
-using namespace concurrency;
+#include <hc.hpp>
+using namespace hc;
 
 // CXXTryStmt
 void f_try_catch() restrict(auto) {
@@ -15,7 +15,7 @@ void f_try_catch() restrict(auto) {
   }
 }
 
-void AMP_AND_CPU_Func() restrict(cpu,amp) {
+void AMP_AND_CPU_Func() [[cpu, hc]] {
   f_try_catch();
 }
 // CHECK: CXXTryStmt.cpp:[[@LINE-2]]:3: error: call from AMP-restricted function to CPU-restricted function

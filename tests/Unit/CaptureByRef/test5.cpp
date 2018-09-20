@@ -1,7 +1,7 @@
 
 // RUN: %hc %s -o %t.out && %t.out
 
-#include <amp.h>
+#include <hc.hpp>
 #include <iostream>
 #include <cstdlib>
 
@@ -14,7 +14,7 @@
 #define VECTOR_SIZE (1024)
 
 bool test() {
-  using namespace Concurrency;
+  using namespace hc;
 
   int table[VECTOR_SIZE];
   int table2[VECTOR_SIZE];
@@ -27,7 +27,7 @@ bool test() {
   int val2 = rand() % 15 + 1;
 
   extent<1> ex(VECTOR_SIZE);
-  parallel_for_each(ex, [&](index<1> idx) restrict(amp) {
+  parallel_for_each(ex, [&](index<1> idx) [[hc]] {
     // capture multiple scalar types by reference
     table[idx[0]] += table2[idx[0]];
   });

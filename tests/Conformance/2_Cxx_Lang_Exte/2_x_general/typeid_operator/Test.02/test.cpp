@@ -4,7 +4,7 @@
 // THIS CODE IS PROVIDED *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION ANY IMPLIED WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT.
 // See the Apache Version 2.0 License for specific language governing permissions and limitations under the License.
 /// <tags>P2</tags>
-/// <summary>Use typeid to compare two equal member function pointers, one with restrict(cpu)</summary>
+/// <summary>Use typeid to compare two equal member function pointers, one with [[cpu]]</summary>
 
 // RUN: %cxxamp %s -o %t.out && %t.out
 
@@ -20,7 +20,7 @@ struct S
 int main()
 {
     int (S::*p1)(float a, double b) = &S::foo;
-    int (S::*p2)(float a, double b) restrict(cpu) = &S::foo;
+    int (S::*p2)(float a, double b) [[cpu]] = &S::foo;
     
     return typeid(p1) == typeid(p2) ? 0 : 1;
 }

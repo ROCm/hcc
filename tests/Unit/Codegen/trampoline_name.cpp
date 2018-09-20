@@ -1,11 +1,11 @@
 // RUN: %gtest_amp %s -o %t && %t
 #include <stdlib.h>
-#include <amp.h>
+#include <hc.hpp>
 #include <gtest/gtest.h>
 // the functor to test
 class baz {
  public:
-  void operator()(Concurrency::index<1> idx) restrict(amp) {}
+  void operator()(hc::index<1> idx) [[hc]] {}
   int foo;
   float bar;
 };

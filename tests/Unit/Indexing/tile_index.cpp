@@ -1,8 +1,8 @@
 // RUN: %cxxamp %s -o %t.out && %t.out
 #include <iostream> 
-#include <amp.h>
+#include <hc.hpp>
 #include <vector>
-using namespace concurrency;
+using namespace hc;
 int test_1d() {
   std::vector<int> vv(100);
   for (int i = 0; i<100; i++)
@@ -11,8 +11,8 @@ int test_1d() {
   extent<1> e(100);
   {
     array_view<int, 1> av(e, vv.data()); 
-    parallel_for_each(av.get_extent().tile<5>(),
-      [=](tiled_index<5> idx) restrict(amp) { 
+    parallel_for_each(av.get_extent().tile(5),
+      [=](tiled_index<1> idx) [[hc]] { 
 	av(idx) = 
           idx.tile[0] +
           idx.tile_origin[0] * 100;
@@ -32,8 +32,8 @@ int test_2d()
   extent<2> e(10, 20);
   {
     array_view<int, 2> av(e, vv.data()); 
-    parallel_for_each(av.get_extent().tile<5,5>(),
-      [=](tiled_index<5,5> idx) restrict(amp) { 
+    parallel_for_each(av.get_extent().tile(5,5),
+      [=](tiled_index<2> idx) [[hc]] { 
 	av(idx) = 
           idx.tile[0] +
           idx.tile[1] * 10 +
@@ -57,7 +57,7 @@ int test_2d()
 
 int test_tiled_extent_1d(void) {
   extent<1> e(123);
-  tiled_extent<10> myTileExtent(e);
+  tiled_extent<1> myTileExtent(e.tile(10));
   auto padded = myTileExtent.pad();
   assert(padded[0] == 130);
 
@@ -68,7 +68,7 @@ int test_tiled_extent_1d(void) {
 
 int test_tiled_extent_2d(void) {
   extent<2> e(123, 456);
-  tiled_extent<10,30> myTileExtent(e);
+  tiled_extent<2> myTileExtent(e.tile(10,30));
   auto padded = myTileExtent.pad();
   assert(padded[0] == 130);
   assert(padded[1] == 480);
@@ -81,7 +81,7 @@ int test_tiled_extent_2d(void) {
 
 int test_tiled_extent_3d(void) {
   extent<3> e(123, 456, 789);
-  tiled_extent<10, 30, 40> myTileExtent(e);
+  tiled_extent<3> myTileExtent(e.tile(10, 30, 40));
   auto padded = myTileExtent.pad();
   assert(padded[0] == 130);
   assert(padded[1] == 480);

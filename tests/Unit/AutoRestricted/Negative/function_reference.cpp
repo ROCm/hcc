@@ -4,11 +4,11 @@
 // Do not delete or add any line; it is referred to by absolute line number in the
 // FileCheck lines below
 //////////////////////////////////////////////////////////////////////////////////
-#include <amp.h>
-using namespace concurrency;
+#include <hc.hpp>
+using namespace hc;
 
 //initialize function reference with a function with incompatible restriction specifier</summary>
-int glorp(int x) restrict(amp) {
+int glorp(int x) [[hc]] {
   return 668 + x;
 }
 
@@ -18,7 +18,7 @@ int f_func_ref() restrict(auto) {
   return 1;
 }
 
-void CPU_Func() restrict(cpu)
+void CPU_Func() [[cpu]]
 {
   f_func_ref();
 }

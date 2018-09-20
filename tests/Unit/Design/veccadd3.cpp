@@ -1,8 +1,8 @@
 // RUN: %cxxamp %s -o %t.out && %t.out
-#include <amp.h>
+#include <hc.hpp>
 #include <iostream>
 
-using namespace concurrency;
+using namespace hc;
 
 void vecAdd(float* A, float* B, float* C, int n)
 
@@ -14,7 +14,7 @@ void vecAdd(float* A, float* B, float* C, int n)
     copy(A,AA);
     copy(B,BA);	
     parallel_for_each(view, CA.get_extent(), 
-            [&AA,&BA,&CA](index<1> i) restrict(amp) {
+            [&AA,&BA,&CA](index<1> i) [[hc]] {
             CA[i] = AA[i] + BA[i];
     });
     copy(CA,C);

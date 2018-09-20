@@ -2,15 +2,15 @@
 
 #if !DISABLED_PENDING_REMOVAL
   // RUN: %cxxamp %s -o %t.out && %t.out
-  #include <amp.h>
-  #include <amp_math.h>
+  #include <hc.hpp>
+  #include <hc_math.hpp>
 
   #include <iostream>
   #include <random>
   #include <cmath>
   #include <cassert>
 
-  using namespace concurrency;
+  using namespace hc;
 
   #define ERROR_THRESHOLD (1e-1)
 
@@ -42,7 +42,7 @@
 
     parallel_for_each(
       e,
-      [=](index<1> idx) restrict(amp) {
+      [=](index<1> idx) [[hc]] {
       gc[idx] = fast_math::max(ga[idx], gb[idx]);
     });
 

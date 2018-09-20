@@ -2,7 +2,7 @@
 // RUN: %hc %s -o %t.out && %t.out
 
 #include <iostream>
-#include <amp.h>
+#include <hc.hpp>
 
 // added for checking HSA profile
 #include <hc.hpp>
@@ -26,8 +26,8 @@ bool test() {
   int *p_ans = &ans[0];
 
   parallel_for_each(
-    Concurrency::extent<1>(vecSize),
-    [=](Concurrency::index<1> idx) restrict(amp) {
+    hc::extent<1>(vecSize),
+    [=](hc::index<1> idx) [[hc]] {
 
     S s;
     s.a = (int)idx[0];

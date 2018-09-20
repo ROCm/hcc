@@ -1,10 +1,10 @@
 //XFAIL:*
 // RUN: %cxxamp %s -o %t.out && %t.out
-#include <amp.h>
+#include <hc.hpp>
 
-int f1() restrict(cpu,amp) {return 1;} 
+int f1() [[cpu, hc]] {return 1;} 
 int f2xx() restrict(cpu,auto);  // expected-error{{'auto' restriction specifier is only allowed on function definition}}
-int f2xx() restrict(cpu)
+int f2xx() [[cpu]]
 {
   return f1();
 }

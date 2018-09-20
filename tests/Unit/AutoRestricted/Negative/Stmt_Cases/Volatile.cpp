@@ -4,8 +4,8 @@
 // Do not delete or add any line; it is referred to by absolute line number in the
 // FileCheck lines below
 //////////////////////////////////////////////////////////////////////////////////
-#include <amp.h>
-using namespace concurrency;
+#include <hc.hpp>
+using namespace hc;
 
 // volatile is not allowed in amp context
 class s_volatile
@@ -25,7 +25,7 @@ void f_volatile() restrict(auto)
   volatile double &pd1 = (volatile double&)d;
 }
 
-void AMP_AND_CPU_Func() restrict(cpu,amp) {
+void AMP_AND_CPU_Func() [[cpu, hc]] {
   f_volatile();
 }
 // CHECK: Volatile.cpp:[[@LINE-2]]:3: error: call from AMP-restricted function to CPU-restricted function

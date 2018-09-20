@@ -1,12 +1,12 @@
 // RUN: %cxxamp %s -o %t.out && %t.out
-#include <amp.h>
+#include <hc.hpp>
 #include <stdlib.h>
 #include <iostream>
 #include <vector>
 #include <numeric>
 #include <math.h>
 
-using namespace concurrency;
+using namespace hc;
 
 #define T float
 #define TOLERANCE 1e-5
@@ -19,7 +19,7 @@ int main(void) {
   std::vector<T> init(vecSize, INIT);
   array<T, 1> count(vecSize, init.begin());
 
-  parallel_for_each(count.get_extent(), [=, &count](index<1> idx) restrict(amp) {
+  parallel_for_each(count.get_extent(), [=, &count](index<1> idx) [[hc]] {
     for(unsigned i = 0; i < vecSize; i++) {
       atomic_fetch_add(&count[i], INIT);
     }

@@ -1,7 +1,7 @@
 // RUN: %amp_device -D__KALMAR_ACCELERATOR__ -c -S -emit-llvm %s
-#include <amp.h>
+#include <hc.hpp>
 
-using namespace concurrency;
+using namespace hc;
 
 int main()
 {
@@ -9,6 +9,6 @@ int main()
   array<int, 1> temp(length);
   array<int, 1> data(length);
   extent<1> cdomain_transpose(16);
-  parallel_for_each (cdomain_transpose, [=, &data, &temp] (index<1> tidx)  restrict(amp) {});
+  parallel_for_each (cdomain_transpose, [=, &data, &temp] (index<1> tidx)  [[hc]] {});
   return 0;
 }

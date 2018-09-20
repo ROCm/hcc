@@ -1,14 +1,14 @@
 // RUN: %cxxamp %s -o %t.out && %t.out
-#include <amp.h>
-#include <amp_short_vectors.h>
+#include <hc.hpp>
+#include <hc_short_vector.hpp>
 
-using namespace concurrency;
-using namespace concurrency::graphics;
+using namespace hc;
+using namespace hc::short_vector;
 
 int main(void) {
   // Three-component Access
 
-  // int_3 get_Sxyw() const restrict(cpu, amp);
+  // int_3 get_Sxyw() const [[cpu, hc]];
   {
     int a = -1, b = 2, c = -3, d = 4;
     int_4 e(a, b, c, d);
@@ -57,7 +57,7 @@ int main(void) {
     assert(f == g);
   }
 
-  // void set_Sxyw() restrict(cpu, amp);
+  // void set_Sxyw() [[cpu, hc]];
   {
     int a = -1, b = 2, c = -3, d = 4;
     int_4 e(a, b, c, d), f(a, b, c, c);
@@ -108,7 +108,7 @@ int main(void) {
 
   // Four-component Access
 
-  // int_4 get_Sxyzw() const restrict(cpu, amp);
+  // int_4 get_Sxyzw() const [[cpu, hc]];
   {
     int a = -1, b = 2, c = -3, d = 4;
     int_4 e(a, b, c, d), f(a, b, c, d), g;
@@ -193,7 +193,7 @@ int main(void) {
     assert(f == g);
   }
 
-  // void set_Sxyzw(int_4 v) restrict(cpu, amp);
+  // void set_Sxyzw(int_4 v) [[cpu, hc]];
   {
     int a = -1, b = 2, c = -3, d = 4;
     int_4 e(a, b, c, d), f(a, b, c, d), g;

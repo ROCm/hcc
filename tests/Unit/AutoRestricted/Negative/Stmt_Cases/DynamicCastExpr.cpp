@@ -4,8 +4,8 @@
 // Do not delete or add any line; it is referred to by absolute line number in the
 // FileCheck lines below
 //////////////////////////////////////////////////////////////////////////////////
-#include <amp.h>
-using namespace concurrency;
+#include <hc.hpp>
+using namespace hc;
 
 // DynamicCast
 class A {};
@@ -17,7 +17,7 @@ void f_dynamiccast() restrict(auto)
     A * a = dynamic_cast<A*>(b);
 }
 
-void AMP_AND_CPU_Func() restrict(cpu,amp) {
+void AMP_AND_CPU_Func() [[cpu, hc]] {
   f_dynamiccast();
 }
 // CHECK: DynamicCastExpr.cpp:[[@LINE-2]]:3: error: call from AMP-restricted function to CPU-restricted function

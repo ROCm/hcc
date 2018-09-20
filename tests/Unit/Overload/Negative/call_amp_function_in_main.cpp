@@ -4,10 +4,10 @@
 // Do not delete or add any line; it is referred to by absolute line number in the
 // FileCheck lines below
 //////////////////////////////////////////////////////////////////////////////
-#include <amp.h>
-using namespace concurrency;
+#include <hc.hpp>
+using namespace hc;
 
-int foo() restrict(amp)
+int foo() [[hc]]
 {
   return 1;
 }

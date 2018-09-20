@@ -1,9 +1,9 @@
 // RUN: %cxxamp %s -o %t.out && %t.out
-#include <amp.h>
-#include <amp_short_vectors.h>
+#include <hc.hpp>
+#include <hc_short_vector.hpp>
 
-using namespace concurrency;
-using namespace concurrency::graphics;
+using namespace hc;
+using namespace hc::short_vector;
 
 // type trait and helper function
 template<typename T, typename U> struct is_same

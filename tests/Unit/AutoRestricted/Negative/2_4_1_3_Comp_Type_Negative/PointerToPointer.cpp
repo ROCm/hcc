@@ -4,18 +4,18 @@
 // Do not delete or add any line; it is referred to by absolute line number in the
 // FileCheck lines below
 //////////////////////////////////////////////////////////////////////////////////
-#include <amp.h>
+#include <hc.hpp>
 #include "common.h"
 
 using std::vector;
-using namespace concurrency;
+using namespace hc;
 
 void PointerToPointerNotSupported(int x) __AUTO {
   int ** ptr;
   return;
 }
 
-void AMP_AND_CPU_Func() restrict(cpu,amp) {
+void AMP_AND_CPU_Func() [[cpu, hc]] {
   PointerToPointerNotSupported(1);
 }
 // CHECK: PointerToPointer.cpp:[[@LINE-2]]:3: error: call from AMP-restricted function to CPU-restricted function

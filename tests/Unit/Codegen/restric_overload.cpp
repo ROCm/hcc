@@ -5,14 +5,14 @@
 #endif
 class baz {
  public:
-  void foo(void) restrict(amp) {bar = 1;}
-  void foo(void) restrict(cpu) {bar = 2;}
+  void foo(void) [[hc]] {bar = 1;}
+  void foo(void) [[cpu]] {bar = 2;}
   int bar;
 };
 
-int fake_use(void) restrict(cpu,amp) {
+int fake_use(void) [[cpu, hc]] {
   baz baz_cpu;
-  baz_cpu.foo(); //call the one with restrict(cpu)
+  baz_cpu.foo(); //call the one with [[cpu]]
   return baz_cpu.bar;
 }
 #ifndef __KALMAR_ACCELERATOR__

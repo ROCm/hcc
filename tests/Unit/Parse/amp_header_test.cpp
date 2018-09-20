@@ -1,4 +1,4 @@
 // RUN: %cxxamp -c %s
-#include <amp.h>
+#include <hc.hpp>
 
 

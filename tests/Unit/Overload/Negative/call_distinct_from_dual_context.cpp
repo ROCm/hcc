@@ -4,12 +4,12 @@
 // Do not delete or add any line; it is referred to by absolute line number in the
 // FileCheck lines below
 //////////////////////////////////////////////////////////////////////////////////
-#include <amp.h>
-using namespace concurrency;
+#include <hc.hpp>
+using namespace hc;
 
-int f1() restrict(cpu) {return 1;} 
+int f1() [[cpu]] {return 1;} 
 
-int AMP_AND_CPU_Func_1() restrict(cpu,amp)
+int AMP_AND_CPU_Func_1() [[cpu, hc]]
 {
   return f1();
 }
@@ -22,7 +22,7 @@ int foo() {}
 
 int main()
 {
-  auto a_lambda_func = []() restrict(cpu,amp) { 
+  auto a_lambda_func = []() [[cpu, hc]] { 
     foo();
   };
 // CHECK: call_distinct_from_dual_context.cpp:[[@LINE-2]]:8: error:  'foo':  no overloaded function has restriction specifiers that are compatible with the ambient context 'main()::(anonymous class)::operator()'
@@ -30,7 +30,7 @@ int main()
 // CHECK-NEXT:       ^
 
 
-  parallel_for_each(extent<1>(1), [](index<1>) restrict(cpu,amp) {
+  parallel_for_each(extent<1>(1), [](index<1>) [[cpu, hc]] {
     foo();
   });
 // CHECK: call_distinct_from_dual_context.cpp:[[@LINE-2]]:8: error:  'foo':  no overloaded function has restriction specifiers that are compatible with the ambient context 'main()::(anonymous class)::operator()'

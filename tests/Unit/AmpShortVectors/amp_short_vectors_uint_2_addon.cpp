@@ -1,14 +1,14 @@
 // RUN: %cxxamp %s -o %t.out && %t.out
-#include <amp.h>
-#include <amp_short_vectors.h>
+#include <hc.hpp>
+#include <hc_short_vector.hpp>
 
-using namespace concurrency;
-using namespace concurrency::graphics;
+using namespace hc;
+using namespace hc::short_vector;
 
 int main(void) {
   // More Interger Operators
 
-  // uint_2 operator~() const restrict(cpu, amp);
+  // uint_2 operator~() const [[cpu, hc]];
   {
     unsigned int a = 5u;
     unsigned int b = ~a;
@@ -17,7 +17,7 @@ int main(void) {
     assert(d == e);
   }
 
-  // uint_2& operator%=(const uint_2& rhs) restrict(cpu, amp);
+  // uint_2& operator%=(const uint_2& rhs) [[cpu, hc]];
   {
     unsigned int a = 5u, b = 10u;
     uint_2 c(a), d(b);
@@ -27,7 +27,7 @@ int main(void) {
     assert(c == e);
   }
 
-  // uint_2& operator^=(const uint_2& rhs) restrict(cpu, amp);
+  // uint_2& operator^=(const uint_2& rhs) [[cpu, hc]];
   {
     unsigned int a = 5u, b = 10u;
     uint_2 c(a), d(b);
@@ -37,7 +37,7 @@ int main(void) {
     assert(c == e);
   }
 
-  // uint_2& operator|=(const uint_2& rhs) restrict(cpu, amp);
+  // uint_2& operator|=(const uint_2& rhs) [[cpu, hc]];
   {
     unsigned int a = 5u, b = 10u;
     uint_2 c(a), d(b);
@@ -47,7 +47,7 @@ int main(void) {
     assert(c == e);
   }
 
-  // uint_2& operator&=(const uint_2& rhs) restrict(cpu, amp);
+  // uint_2& operator&=(const uint_2& rhs) [[cpu, hc]];
   {
     unsigned int a = 5u, b = 10u;
     uint_2 c(a), d(b);
@@ -57,7 +57,7 @@ int main(void) {
     assert(c == e);
   }
 
-  // uint_2& operator>>=(const uint_2& rhs) restrict(cpu, amp);
+  // uint_2& operator>>=(const uint_2& rhs) [[cpu, hc]];
   {
     unsigned int a = 5u, b = 10u;
     uint_2 c(a), d(b);
@@ -67,7 +67,7 @@ int main(void) {
     assert(c == e);
   }
 
-  // uint_2& operator<<=(const uint_2& rhs) restrict(cpu, amp);
+  // uint_2& operator<<=(const uint_2& rhs) [[cpu, hc]];
   {
     unsigned int a = 5u, b = 10u;
     uint_2 c(a), d(b);
@@ -78,7 +78,7 @@ int main(void) {
   }
 
   // uint_2 operator%(const uint_2& lhs, const uint_2& rhs) 
-  //   restrict(cpu, amp);
+  //   [[cpu, hc]];
   {
     unsigned int a = 5u, b = 10u;
     uint_2 c(a), d(b);
@@ -88,7 +88,7 @@ int main(void) {
   }
 
   // uint_2 operator^(const uint_2& lhs, const uint_2& rhs) 
-  //   restrict(cpu, amp);
+  //   [[cpu, hc]];
   {
     unsigned int a = 5u, b = 10u;
     uint_2 c(a), d(b);
@@ -98,7 +98,7 @@ int main(void) {
   }
 
   // uint_2 operator|(const uint_2& lhs, const uint_2& rhs) 
-  //   restrict(cpu, amp);
+  //   [[cpu, hc]];
   {
     unsigned int a = 5u, b = 10u;
     uint_2 c(a), d(b);
@@ -108,7 +108,7 @@ int main(void) {
   }
 
   // uint_2 operator&(const uint_2& lhs, const uint_2& rhs) 
-  //   restrict(cpu, amp);
+  //   [[cpu, hc]];
   {
     unsigned int a = 5u, b = 10u;
     uint_2 c(a), d(b);
@@ -118,7 +118,7 @@ int main(void) {
   }
 
   // uint_2 operator<<(const uint_2& lhs, const uint_2& rhs) 
-  //   restrict(cpu, amp);
+  //   [[cpu, hc]];
   {
     unsigned int a = 5u, b = 10u;
     uint_2 c(a), d(b);
@@ -128,7 +128,7 @@ int main(void) {
   }
 
   // uint_2 operator>>(const uint_2& lhs, const uint_2& rhs) 
-  //   restrict(cpu, amp);
+  //   [[cpu, hc]];
   {
     unsigned int a = 5u, b = 10u;
     uint_2 c(a), d(b);

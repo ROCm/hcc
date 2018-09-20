@@ -4,14 +4,14 @@
 // Do not delete or add any line; it is referred to by absolute line number in the
 // FileCheck lines below
 //////////////////////////////////////////////////////////////////////////////////
-#include <amp.h>
-using namespace concurrency;
+#include <hc.hpp>
+using namespace hc;
 
-short foo_short(unsigned short s) restrict(amp) {
+short foo_short(unsigned short s) [[hc]] {
     return (s + 2);
 }
 // CHECK: char_short_wchar_longlong_longdouble.cpp:[[@LINE-3]]:1: error: short type can't be used as function return type in AMP-restricted functions
-// CHECK-NEXT: short foo_short(unsigned short s) restrict(amp) {
+// CHECK-NEXT: short foo_short(unsigned short s) [[hc]] {
 // CHECK-NEXT: ^
 
 int f_char_short_wchar_longlong_longdouble() restrict(auto)
@@ -24,7 +24,7 @@ int f_char_short_wchar_longlong_longdouble() restrict(auto)
   return 0;
 }
 
-void AMP_AND_CPU_Func() restrict(cpu,amp) {
+void AMP_AND_CPU_Func() [[cpu, hc]] {
   f_char_short_wchar_longlong_longdouble();
 }
 // CHECK: char_short_wchar_longlong_longdouble.cpp:[[@LINE-2]]:3: error: call from AMP-restricted function to CPU-restricted function
