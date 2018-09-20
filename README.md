@@ -2,7 +2,7 @@ HCC : An open source C++ compiler for heterogeneous devices
 ===========================================================
 This repository hosts the HCC compiler implementation project. The goal is to 
 implement a compiler that takes a program that conforms to a parallel programming 
-standard such as C++ AMP, HC, C++ 17 ParallelSTL, or OpenMP, and transforms it 
+standard such as HC, C++ 17 ParallelSTL and transforms it 
 into the AMD GCN ISA.
 
 The project is based on LLVM+CLANG. For more information, please visit the 
@@ -40,29 +40,10 @@ sudo make install
 
 Use HCC
 =======
-For C++AMP source codes:
-```bash
-hcc `clamp-config --cxxflags --ldflags` foo.cpp
-```
 
 For HC source codes:
 ```bash
-hcc `hcc-config --cxxflags --ldflags` foo.cpp
-```
-
-In case you build HCC from source and want to use the compiled binaries
-directly in the build directory:
-
-For C++AMP source codes:
-```bash
-# notice the --build flag
-bin/hcc `bin/clamp-config --build --cxxflags --ldflags` foo.cpp
-```
-
-For HC source codes:
-```bash
-# notice the --build flag
-bin/hcc `bin/hcc-config --build --cxxflags --ldflags` foo.cpp
+hcc -hc foo.cpp -o foo
 ```
 
 Multiple ISA
@@ -76,25 +57,12 @@ use `--amdgpu-target=` command line option
 It's possible to specify multiple `--amdgpu-target=` option. Example:
 
 ```bash
-# ISA for Hawaii(gfx701), Carrizo(gfx801), Tonga(gfx802) and Fiji(gfx803) would 
+# ISA for Fiji(gfx803) and Vega10(gfx900) would 
 # be produced
-hcc `hcc-config --cxxflags --ldflags` \
-    --amdgpu-target=gfx701 \
-    --amdgpu-target=gfx801 \
-    --amdgpu-target=gfx802 \
+hcc -hc \
     --amdgpu-target=gfx803 \
+    --amdgpu-target=gfx900 \
     foo.cpp
-```
-
-use `HCC_AMDGPU_TARGET` env var
-------------------------------------------
-Use `,` to delimit each AMDGPU target in HCC. Example:
-
-```bash
-export HCC_AMDGPU_TARGET=gfx701,gfx801,gfx802,gfx803
-# ISA for Hawaii(gfx701), Carrizo(gfx801), Tonga(gfx802) and Fiji(gfx803) would 
-# be produced
-hcc `hcc-config --cxxflags --ldflags` foo.cpp
 ```
 
 configure HCC use CMake `HSA_AMDGPU_GPU_TARGET` variable
@@ -105,12 +73,11 @@ produce multiple ISAs via `HSA_AMDGPU_GPU_TARGET` CMake variable.
 Use `;` to delimit each AMDGPU target. Example:
 
 ```bash
-# ISA for Hawaii(gfx701), Carrizo(gfx801), Tonga(gfx802) and Fiji(gfx803) would 
+# ISA for Fiji(gfx803) and Vega10(gfx900) would 
 # be produced by default
 cmake \
     -DCMAKE_BUILD_TYPE=Release \
-    -DROCM_DEVICE_LIB_DIR=~hcc/ROCm-Device-Libs/build/dist/lib \
-    -DHSA_AMDGPU_GPU_TARGET="gfx701;gfx801;gfx802;gfx803" \
+    -DHSA_AMDGPU_GPU_TARGET="gfx803;gfx900" \
     ../hcc
 ```
 
@@ -124,8 +91,6 @@ Configure the build in the following way:
 ```bash
 cmake \
     -DCMAKE_BUILD_TYPE=Release \
-    -DHSA_AMDGPU_GPU_TARGET=<AMD GPU ISA version string> \
-    -DROCM_DEVICE_LIB_DIR=<location of the ROCm-Device-Libs bitcode> \
     -DUSE_CODEXL_ACTIVITY_LOGGER=1 \
     <ToT HCC checkout directory>
 ```
