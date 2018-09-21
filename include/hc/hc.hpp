@@ -12,6 +12,7 @@
 
 #pragma once
 
+#include "hc_agent_pool.hpp"
 #include "hc_atomics.hpp"
 #include "hc_callable_attributes.hpp"
 #include "hc_defines.hpp"
@@ -19,6 +20,7 @@
 #include "hc_index.hpp"
 #include "hc_launch.hpp"
 #include "hc_math.hpp"
+#include "hc_queue_pool.hpp"
 #include "hc_runtime.hpp"
 
 #include <hsa/hsa.h>
@@ -42,10 +44,6 @@
  * @namespace hc
  * Heterogeneous  C++ (HC) namespace
  */
-namespace detail
-{
-    class HSAQueue;
-};
 
 namespace hc
 {
@@ -53,8 +51,6 @@ namespace hc
 
     using namespace atomics;
     using namespace detail::enums;
-    using namespace detail::CLAMP;
-
 
     // forward declaration
     class accelerator;
@@ -95,8 +91,13 @@ namespace hc
      */
     inline
     std::uint64_t get_system_ticks()
-    {
-        return detail::getContext()->getSystemTicks();
+    {   // TODO: unify the HSA error checking into a single function.
+        std::uint64_t r{};
+        detail::throwing_hsa_result_check(
+            hsa_system_get_info(HSA_SYSTEM_INFO_TIMESTAMP, &r),
+            __FILE__, __func__, __LINE__);
+
+        return r;
     }
 
     /**
@@ -109,11 +110,13 @@ namespace hc
     inline
     std::uint64_t get_tick_frequency()
     {
-        return detail::getContext()->getSystemTickFrequency();
-    }
+        std::uint64_t r{};
+        detail::throwing_hsa_result_check(
+            hsa_system_get_info(HSA_SYSTEM_INFO_TIMESTAMP_FREQUENCY, &r),
+            __FILE__, __func__, __LINE__);
 
-    #define GET_SYMBOL_ADDRESS(acc, symbol) \
-        acc.get_symbol_address( #symbol );
+        return r;
+    }
 
     // ------------------------------------------------------------------------
     // completion_future
@@ -129,13 +132,11 @@ namespace hc
      * operation.
      */
     class completion_future {
-        std::shared_future<void> __amp_future;
-        std::thread* __thread_then = nullptr;
-        std::shared_ptr<detail::HCCAsyncOp> __asyncOp;
+        std::shared_future<void> future_{};
+        std::shared_ptr<std::once_flag> maybe_then_{};
 
         friend class accelerator_view;
         template<typename, int> friend class array_view;
-        friend class detail::HSAQueue;
 
         // non-tiled parallel_for_each
         // generic version
@@ -196,28 +197,25 @@ namespace hc
         completion_future copy_async(
             const array_view<T, N>& src, OutputIter destBegin);
 
-        // CREATORS
-        completion_future(std::shared_ptr<detail::HCCAsyncOp> event)
-            : __amp_future{event->getFuture()}, __asyncOp{std::move(event)}
-        {}
-
-        completion_future(const std::shared_future<void>& __future)
+        completion_future(std::shared_future<void> future)
             :
-            __amp_future(__future), __thread_then(nullptr), __asyncOp(nullptr)
+            future_{std::move(future)},
+            maybe_then_{std::make_shared<std::once_flag>()}
         {}
     public:
 
         /**
-         * Default constructor. Constructs an empty uninitialized completion_future
-         * object which does not refer to any asynchronous operation. Default
-         * constructed completion_future objects have valid() == false
+         * Default constructor. Constructs an empty uninitialized
+         * completion_future object which does not refer to any asynchronous
+         * operation. Default constructed completion_future objects have valid()
+         * == false
          */
-        completion_future()
-            : __amp_future(), __thread_then(nullptr), __asyncOp(nullptr) {};
+        completion_future() = default;
 
         /**
-         * Copy constructor. Constructs a new completion_future object that refers
-         * to the same asynchronous operation as the other completion_future object.
+         * Copy constructor. Constructs a new completion_future object that
+         * refers to the same asynchronous operation as the other
+         * completion_future object.
          *
          * @param[in] other An object of type completion_future from which to
          *                  initialize this.
@@ -226,8 +224,8 @@ namespace hc
 
         /**
          * Move constructor. Move constructs a new completion_future object that
-         * refers to the same asynchronous operation as originally referred by the
-         * other completion_future object. After this constructor returns,
+         * refers to the same asynchronous operation as originally referred by
+         * the other completion_future object. After this constructor returns,
          * other.valid() == false
          *
          * @param[in] other An object of type completion_future which the new
@@ -235,10 +233,12 @@ namespace hc
          */
         completion_future(completion_future&&) = default;
 
+        ~completion_future() = default;
         /**
-         * Copy assignment. Copy assigns the contents of other to this. This method
-         * causes this to stop referring its current asynchronous operation and
-         * start referring the same asynchronous operation as other.
+         * Copy assignment. Copy assigns the contents of other to this. This
+         * method causes this to stop referring its current asynchronous
+         * operation and start referring the same asynchronous operation as
+         * other.
          *
          * @param[in] other An object of type completion_future which is copy
          *                  assigned to this.
@@ -246,10 +246,10 @@ namespace hc
         completion_future& operator=(const completion_future&) = default;
 
         /**
-         * Move assignment. Move assigns the contents of other to this. This method
-         * causes this to stop referring its current asynchronous operation and
-         * start referring the same asynchronous operation as other. After this
-         * method returns, other.valid() == false
+         * Move assignment. Move assigns the contents of other to this. This
+         * method causes this to stop referring its current asynchronous
+         * operation and start referring the same asynchronous operation as
+         * other. After this method returns, other.valid() == false
          *
          * @param[in] other An object of type completion_future which is move
          *                  assigned to this.
@@ -257,14 +257,16 @@ namespace hc
         completion_future& operator=(completion_future&&) = default;
 
         /**
-         * This method is functionally identical to std::shared_future<void>::get.
-         * This method waits for the associated asynchronous operation to finish
-         * and returns only upon the completion of the asynchronous operation. If
-         * an exception was encountered during the execution of the asynchronous
-         * operation, this method throws that stored exception.
+         * This method is functionally identical to
+         * std::shared_future<void>::get. This method waits for the associated
+         * asynchronous operation to finish and returns only upon the completion
+         * of the asynchronous operation. If an exception was encountered during
+         * the execution of the asynchronous operation, this method throws that
+         * stored exception.
          */
-        void get() const {
-            __amp_future.get();
+        void get() const
+        {
+            future_.get();
         }
 
         /**
@@ -272,8 +274,9 @@ namespace hc
          * std::shared_future<void>::valid. This returns true if this
          * completion_future is associated with an asynchronous operation.
          */
-        bool valid() const {
-            return __amp_future.valid();
+        bool valid() const
+        {
+            return future_.valid();
         }
 
         /** @{ */
@@ -282,166 +285,161 @@ namespace hc
          * std::shared_future<void> methods.
          *
          * The wait method waits for the associated asynchronous operation to
-         * finish and returns only upon completion of the associated asynchronous
-         * operation or if an exception was encountered when executing the
-         * asynchronous operation.
+         * finish and returns only upon completion of the associated
+         * asynchronous operation or if an exception was encountered when
+         * executing the asynchronous operation.
          *
          * The other variants are functionally identical to the
          * std::shared_future<void> member methods with same names.
          *
-         * @param waitMode[in] An optional parameter to specify the wait mode. By
-         *                     default it would be hcWaitModeBlocked.
-         *                     hcWaitModeActive would be used to reduce latency with
-         *                     the expense of using one CPU core for active waiting.
+         * @param waitMode[in] An optional parameter to specify the wait mode.
+         *                     By default it would be hcWaitModeBlocked.
+         *                     hcWaitModeActive would be used to reduce latency
+         *                     with the expense of using one CPU core for active
+         *                     waiting.
          */
-        void wait(hcWaitMode mode = hcWaitModeBlocked) const {
-            if (__amp_future.valid()) __amp_future.wait();
+        void wait() const
+        {
+            future_.wait();
 
-            detail::getContext()->flushPrintfBuffer();
+            // TODO: printf:(
+            //detail::getContext()->flushPrintfBuffer();
         }
 
         template<typename Rep, typename Period>
         std::future_status wait_for(
             const std::chrono::duration<Rep, Period>& rel_time) const
         {
-            return __amp_future.wait_for(rel_time);
+            return future_.wait_for(rel_time);
         }
 
-        template <class Clock, class Duration>
+        template<typename Clock, typename Duration>
         std::future_status wait_until(
             const std::chrono::time_point<Clock, Duration>& abs_time) const
         {
-            return __amp_future.wait_until(abs_time);
+            return future_.wait_until(abs_time);
         }
 
         /** @} */
 
         /**
-         * Conversion operator to std::shared_future<void>. This method returns a
-         * shared_future<void> object corresponding to this completion_future
+         * Conversion operator to std::shared_future<void>. This method returns
+         * a shared_future<void> object corresponding to this completion_future
          * object and refers to the same asynchronous operation.
          */
         operator std::shared_future<void>() const
         {
-            return __amp_future;
+            return future_;
         }
 
         /**
-         * This method enables specification of a completion callback func which is
-         * executed upon completion of the asynchronous operation associated with
-         * this completion_future object. The completion callback func should have
-         * an operator() that is valid when invoked with non arguments, i.e.,
-         * "func()".
+         * This method enables specification of a completion callback func which
+         * is executed upon completion of the asynchronous operation associated
+         * with this completion_future object. The completion callback func
+         * should have an operator() that is valid when invoked with non
+         * arguments, i.e., "func()".
          */
-        // FIXME: notice we removed const from the signature here
-        //        the original signature in the specification should be
-        //        template<typename functor>
-        //        void then(const functor& func) const;
         template<typename F>
-        void then(const F& func)
-        {   // TODO: this should be completely redone, it is inefficient and odd.
-            // could only assign once
-            if (__thread_then == nullptr) {
-                // spawn a new thread to wait on the future and then execute the
-                // callback functor
-                __thread_then = new std::thread([&]() {
-                    this->wait();
-                    if (this->valid()) func();
-                });
-            }
+        void then(const F& func) const
+        {   // TODO: this is probably incorrect; then() was underspecified in
+            //       C++AMP, and subtle to get right; we may want to remove it
+            //       or extend it to return a future, otherwise it is
+            //       intractable to provide guarantees about when the
+            //       continuation executes and, respectively, when it completes.
+            std::call_once(
+                *maybe_then_, [=](const std::shared_future<void>& fut) {
+                std::thread{[=]() { fut.wait(); func(); }}.detach();
+            }, std::cref(future_));
         }
 
         /**
          * Get the native handle for the asynchronous operation encapsulated in
-         * this completion_future object. The method is mostly used for debugging
-         * purpose.
+         * this completion_future object. The method is mostly used for
+         * debugging purpose.
          * Applications should retain the parent completion_future to ensure the
          * native handle is not deallocated by the HCC runtime. The
-         * completion_future pointer to the native handle is reference counted, so a
-         * copy of the completion_future is sufficient to retain the native_handle.
+         * completion_future pointer to the native handle is reference counted,
+         * so a copy of the completion_future is sufficient to retain the
+         * native_handle.
          */
-        void* get_native_handle() const {
-        if (__asyncOp != nullptr) {
-            return __asyncOp->getNativeHandle();
-        } else {
-            return nullptr;
-        }
-        }
+        // void* get_native_handle() const
+        // {
+        //     if (__asyncOp != nullptr) {
+        //         return __asyncOp->getNativeHandle();
+        //     } else {
+        //         return nullptr;
+        //     }
+        // }
 
         /**
-         * Get the tick number when the underlying asynchronous operation begins.
+         * Get the tick number when the underlying asynchronous operation
+         * begins.
          *
          * @return An implementation-defined tick number in case the instance is
-         *         created by a kernel dispatch or a barrier packet. 0 otherwise.
+         *         created by a kernel dispatch or a barrier packet. 0
+         *         otherwise.
          */
-        uint64_t get_begin_tick() {
-        if (__asyncOp != nullptr) {
-            return __asyncOp->getBeginTimestamp();
-        } else {
-            return 0L;
-        }
-        }
+        // uint64_t get_begin_tick()
+        // {
+        //     if (__asyncOp != nullptr) {
+        //         return __asyncOp->getBeginTimestamp();
+        //     } else {
+        //         return 0L;
+        //     }
+        // }
 
         /**
          * Get the tick number when the underlying asynchronous operation ends.
          *
          * @return An implementation-defined tick number in case the instance is
-         *         created by a kernel dispatch or a barrier packet. 0 otherwise.
+         *         created by a kernel dispatch or a barrier packet. 0
+         *         otherwise.
          */
-        uint64_t get_end_tick() {
-        if (__asyncOp != nullptr) {
-            return __asyncOp->getEndTimestamp();
-        } else {
-            return 0L;
-        }
-        }
+        // uint64_t get_end_tick()
+        // {
+        //     if (__asyncOp != nullptr) {
+        //         return __asyncOp->getEndTimestamp();
+        //     } else {
+        //         return 0L;
+        //     }
+        // }
 
         /**
          * Get the frequency of ticks per second for the underlying asynchronous
          * operation.
          *
-         * @return An implementation-defined frequency in Hz in case the instance is
-         *         created by a kernel dispatch or a barrier packet. 0 otherwise.
+         * @return An implementation-defined frequency in Hz in case the
+         *         instance is created by a kernel dispatch or a barrier packet.
+         *         0 otherwise.
          */
-        uint64_t get_tick_frequency() {
-        if (__asyncOp != nullptr) {
-            return __asyncOp->getTimestampFrequency();
-        } else {
-            return 0L;
-        }
-        }
+        // uint64_t get_tick_frequency()
+        // {
+        //     if (__asyncOp != nullptr) {
+        //         return __asyncOp->getTimestampFrequency();
+        //     } else {
+        //         return 0L;
+        //     }
+        // }
 
         /**
          * Get if the async operations has been completed.
          *
          * @return True if the async operation has been completed, false if not.
          */
-        bool is_ready() {
-        if (__asyncOp != nullptr) {
-            return __asyncOp->isReady();
-        } else {
-            return false;
+        bool is_ready()
+        {
+            return future_.wait_for(std::chrono::nanoseconds{0}) ==
+                std::future_status::ready;
         }
-        }
-
-        ~completion_future() {
-        if (__thread_then != nullptr) {
-            __thread_then->join();
-        }
-        delete __thread_then;
-        __thread_then = nullptr;
-
-        if (__asyncOp != nullptr) {
-            __asyncOp = nullptr;
-        }
-        }
-
 
         /**
-         * @return reference count for the completion future.  Primarily used for
-         * debug purposes.
+         * @return reference count for the completion future. Primarily used for
+         *         debug purposes.
          */
-        int get_use_count() const { return __asyncOp.use_count(); };
+        // int get_use_count() const
+        // {
+        //     return __asyncOp.use_count();
+        // }
     };
 
     // ------------------------------------------------------------------------
@@ -449,13 +447,16 @@ namespace hc
     // ------------------------------------------------------------------------
 
     /**
-     * Represents a logical (isolated) accelerator view of a compute accelerator.
-     * An object of this type can be obtained by calling the default_view property
-     * or create_view member functions on an accelerator object.
+     * Represents a logical (isolated) accelerator view of a compute
+     * accelerator. An object of this type can be obtained by calling the
+     * default_view property or create_view member functions on an accelerator
+     * object.
      */
     class accelerator_view {
-        std::shared_ptr<detail::HCCQueue> queue_;
         mutable std::forward_list<completion_future> pending_tasks_; // TODO: spec fault.
+        accelerator const* accelerator_;
+        hsa_queue_t* queue_;
+        queuing_mode qmode_;
 
         friend class accelerator;
         template <typename, int> friend class array;
@@ -463,27 +464,14 @@ namespace hc
 
         template<typename Domain, typename Kernel>
         friend
-        void detail::launch_kernel_with_dynamic_group_memory(
-            const std::shared_ptr<detail::HCCQueue>&,
-            const Domain&,
-            const Kernel&);
-        template<typename Domain, typename Kernel>
-        friend
-        std::shared_ptr<detail::HCCAsyncOp>
-            detail::launch_kernel_with_dynamic_group_memory_async(
-            const std::shared_ptr<detail::HCCQueue>&,
-            const Domain&,
-            const Kernel&);
-        template<typename Domain, typename Kernel>
-        friend
         void detail::launch_kernel(
-            const std::shared_ptr<detail::HCCQueue>&,
+            const accelerator_view&,
             const Domain&,
             const Kernel&);
         template<typename Domain, typename Kernel>
         friend
-        std::shared_ptr<detail::HCCAsyncOp> detail::launch_kernel_async(
-            const std::shared_ptr<detail::HCCQueue>&,
+        std::shared_future<void> detail::launch_kernel_async(
+            const accelerator_view&,
             const Domain&,
             const Kernel&);
 
@@ -501,32 +489,32 @@ namespace hc
         completion_future parallel_for_each(
             const accelerator_view&, const tiled_extent<n>&, const Kernel&);
 
-        // IMPLEMENTATION - CREATORS
-        explicit
-        accelerator_view(std::shared_ptr<detail::HCCQueue> queue)
-            : queue_{std::move(queue)}
-        {}
-
         // IMPLEMENTATION - MANIPULATORS
         void add_pending_task_(const completion_future& task) const
         {
             pending_tasks_.push_front(task);
         }
-        // TODO: reorder completion_future to allow for inline definition or move to
-        //       .cpp (the latter may be preferable).
+        // TODO: reorder completion_future to allow for inline definition or
+        //       move to .cpp (the latter may be preferable).
         void wait_for_all_pending_tasks_();
+
+        // IMPLEMENTATION - CREATORS
+        accelerator_view(
+            const accelerator& accelerator,
+            hsa_queue_t* queue,
+            queuing_mode qmode = queuing_mode_automatic)
+            : accelerator_{&accelerator}, queue_{queue}, qmode_{qmode}
+        {}
     public:
         accelerator_view() = delete;
         /**
-         * Copy-constructs an accelerator_view object. This function does a shallow
-         * copy with the newly created accelerator_view object pointing to the same
-         * underlying view as the "other" parameter.
+         * Copy-constructs an accelerator_view object. This function does a
+         * shallow copy with the newly created accelerator_view object pointing
+         * to the same underlying view as the "other" parameter.
          *
          * @param[in] other The accelerator_view object to be copied.
          */
-        accelerator_view(const accelerator_view& other)
-            : queue_{other.queue_}, pending_tasks_{} // N.B. pending tasks not copied.
-        {}
+        accelerator_view(const accelerator_view&) = default;
         accelerator_view(accelerator_view&&) = default;
 
         ~accelerator_view()
@@ -534,16 +522,17 @@ namespace hc
             wait_for_all_pending_tasks_();
         }
         /**
-         * Assigns an accelerator_view object to "this" accelerator_view object and
-         * returns a reference to "this" object. This function does a shallow
-         * assignment with the newly created accelerator_view object pointing to
-         * the same underlying view as the passed accelerator_view parameter.
+         * Assigns an accelerator_view object to "this" accelerator_view object
+         * and returns a reference to "this" object. This function does a
+         * shallow assignment with the newly created accelerator_view object
+         * pointing to the same underlying view as the passed accelerator_view
+         * parameter.
          *
          * @param[in] other The accelerator_view object to be assigned from.
          * @return A reference to "this" accelerator_view object.
          */
         accelerator_view& operator=(const accelerator_view&) = default;
-        accelerator_view& operator=(accelerator_view&) = default;
+        accelerator_view& operator=(accelerator_view&&) = default;
 
         /**
          * Returns the queuing mode that this accelerator_view was created with.
@@ -551,57 +540,47 @@ namespace hc
          *
          * @return The queuing mode.
          */
-        queuing_mode get_queuing_mode() const
+        queuing_mode get_queuing_mode() const noexcept
         {
-            return queue_->get_mode();
-        }
-
-        /**
-         * Returns the execution order of this accelerator_view.
-         */
-        execute_order get_execute_order() const noexcept
-        {
-            return queue_->get_execute_order();
+            return qmode_;
         }
 
         /**
          * Returns a boolean value indicating whether the accelerator view when
-         * passed to a parallel_for_each would result in automatic selection of an
-         * appropriate execution target by the runtime. In other words, this is the
-         * accelerator view that will be automatically selected if
+         * passed to a parallel_for_each would result in automatic selection of
+         * an appropriate execution target by the runtime. In other words, this
+         * is the accelerator view that will be automatically selected if
          * parallel_for_each is invoked without explicitly specifying an
          * accelerator view.
          *
-         * @return A boolean value indicating if the accelerator_view is the auto
-         *         selection accelerator_view.
+         * @return A boolean value indicating if the accelerator_view is the
+         *         auto selection accelerator_view.
          */
-        bool get_is_auto_selection() const noexcept
-        {   // FIXME: dummy implementation now
-            return false;
-        }
+        bool get_is_auto_selection() const noexcept;
 
         /**
          * Returns a 32-bit unsigned integer representing the version number of
-         * this accelerator view. The format of the integer is major.minor, where
-         * the major version number is in the high-order 16 bits, and the minor
-         * version number is in the low-order bits.
+         * this accelerator view. The format of the integer is major.minor,
+         * where the major version number is in the high-order 16 bits, and the
+         * minor version number is in the low-order bits.
          *
-         * The version of the accelerator view is usually the same as that of the
-         * parent accelerator.
+         * The version of the accelerator view is usually the same as that of
+         * the parent accelerator.
          */
         unsigned int get_version() const;
 
         /**
-         * Returns the accelerator that this accelerator_view has been created on.
+         * Returns the accelerator that this accelerator_view has been created
+         * on.
          */
         accelerator get_accelerator() const;
 
         /**
-         * Returns a boolean value indicating whether the accelerator_view supports
-         * debugging through extensive error reporting.
+         * Returns a boolean value indicating whether the accelerator_view
+         * supports debugging through extensive error reporting.
          *
-         * The is_debug property of the accelerator view is usually same as that of
-         * the parent accelerator.
+         * The is_debug property of the accelerator view is usually same as that
+         * of the parent accelerator.
          */
         bool get_is_debug() const noexcept
         {   // FIXME: dummy implementation now
@@ -609,41 +588,41 @@ namespace hc
         }
 
         /**
-         * Performs a blocking wait for completion of all commands submitted to the
-         * accelerator view prior to calling wait().
+         * Performs a blocking wait for completion of all commands submitted to
+         * the accelerator view prior to calling wait().
          *
-         * @param waitMode[in] An optional parameter to specify the wait mode. By
-         *                     default it would be hcWaitModeBlocked.
-         *                     hcWaitModeActive would be used to reduce latency with
-         *                     the expense of using one CPU core for active waiting.
+         * @param waitMode[in] An optional parameter to specify the wait mode.
+         *                     By default it would be hcWaitModeBlocked.
+         *                     hcWaitModeActive would be used to reduce latency
+         *                     with the expense of using one CPU core for active
+         *                     waiting.
          */
-        void wait(hcWaitMode waitMode = hcWaitModeBlocked)
+        void wait()//hcWaitMode waitMode = hcWaitModeBlocked)
         {
             wait_for_all_pending_tasks_();
-            //queue_->wait(waitMode);
 
-            detail::getContext()->flushPrintfBuffer();
+            //detail::getContext()->flushPrintfBuffer();
         }
 
         /**
-         * Sends the queued up commands in the accelerator_view to the device for
-         * execution.
+         * Sends the queued up commands in the accelerator_view to the device
+         * for execution.
          *
          * An accelerator_view internally maintains a buffer of commands such as
          * data transfers between the host memory and device buffers, and kernel
          * invocations (parallel_for_each calls). This member function sends the
          * commands to the device for processing. Normally, these commands
-         * to the GPU automatically whenever the runtime determines that they need
-         * to be, such as when the command buffer is full or when waiting for
-         * transfer of data from the device buffers to host memory. The flush
-         * member function will send the commands manually to the device.
+         * to the GPU automatically whenever the runtime determines that they
+         * need to be, such as when the command buffer is full or when waiting
+         * for transfer of data from the device buffers to host memory. The
+         * flush member function will send the commands manually to the device.
          *
          * Calling this member function incurs an overhead and must be used with
-         * discretion. A typical use of this member function would be when the CPU
-         * waits for an arbitrary amount of time and would like to force the
-         * execution of queued device commands in the meantime. It can also be used
-         * to ensure that resources on the accelerator are reclaimed after all
-         * references to them have been removed.
+         * discretion. A typical use of this member function would be when the
+         * CPU waits for an arbitrary amount of time and would like to force the
+         * execution of queued device commands in the meantime. It can also be
+         * used to ensure that resources on the accelerator are reclaimed after
+         * all references to them have been removed.
          *
          * Because flush operates asynchronously, it can return either before or
          * after the device finishes executing the buffered commands, the
@@ -655,57 +634,57 @@ namespace hc
          * @return None
          */
         void flush()
-        {
-            queue_->flush();
+        {   // TODO: for now we always submit immediately, so flush is a NOP.
+            return;
         }
 
         /**
-         * This command inserts a marker event into the accelerator_view's command
-         * queue. This marker is returned as a completion_future object. When all
-         * commands that were submitted prior to the marker event creation have
-         * completed, the future is ready.
+         * This command inserts a marker event into the accelerator_view's
+         * command queue. This marker is returned as a completion_future object.
+         * When all commands that were submitted prior to the marker event
+         * creation have completed, the future is ready.
          *
-         * Regardless of the accelerator_view's execute_order (execute_any_order,
-         * execute_in_order), the marker always ensures older commands complete
-         * before the returned completion_future is marked ready. Thus, markers
-         * provide a mechanism to enforce order between commands in an
-         * execute_any_order accelerator_view.
+         * Regardless of the accelerator_view's execute_order
+         * (execute_any_order, execute_in_order), the marker always ensures
+         * older commands complete before the returned completion_future is
+         * marked ready. Thus, markers provide a mechanism to enforce order
+         * between commands in an execute_any_order accelerator_view.
          *
-         * fence_scope controls the scope of the acquire and release fences applied
-         * after the marker executes.  Options are:
+         * fence_scope controls the scope of the acquire and release fences
+         * applied after the marker executes.  Options are:
          *   - no_scope : No fence operation is performed.
          *   - accelerator_scope: Memory is acquired from and released to the
          *     accelerator scope where the marker executes.
-         *   - system_scope: Memory is acquired from and released to system scope
-         *     (all accelerators including CPUs)
+         *   - system_scope: Memory is acquired from and released to system
+         *     scope (all accelerators including CPUs)
          *
          * @return A future which can be waited on, and will block until the
          *         current batch of commands has completed.
          */
         completion_future create_marker(
-            memory_scope fence_scope=system_scope) const;
+            memory_scope fence_scope = system_scope) const;
 
         /**
-         * This command inserts a marker event into the accelerator_view's command
-         * queue with a prior dependent asynchronous event.
+         * This command inserts a marker event into the accelerator_view's
+         * command queue with a prior dependent asynchronous event.
          *
          * This marker is returned as a completion_future object. When its
          * dependent event and all commands submitted prior to the marker event
          * creation have been completed, the future is ready.
          *
-         * Regardless of the accelerator_view's execute_order (execute_any_order,
-         * execute_in_order), the marker always ensures older commands complete
-         * before the returned completion_future is marked ready. Thus, markers
-         * provide a mechanism to enforce order between commands in an
-         * execute_any_order accelerator_view.
+         * Regardless of the accelerator_view's execute_order
+         * (execute_any_order, execute_in_order), the marker always ensures
+         * older commands complete before the returned completion_future is
+         * marked ready. Thus, markers provide a mechanism to enforce order
+         * between commands in an execute_any_order accelerator_view.
          *
-         * fence_scope controls the scope of the acquire and release fences applied
-         * after the marker executes.  Options are:
+         * fence_scope controls the scope of the acquire and release fences
+         * applied after the marker executes.  Options are:
          *   - no_scope : No fence operation is performed.
          *   - accelerator_scope: Memory is acquired from and released to the
          *     accelerator scope where the marker executes.
-         *   - system_scope: Memory is acquired from and released to system scope
-         *     (all accelerators including CPUs)
+         *   - system_scope: Memory is acquired from and released to system
+         *     scope (all accelerators including CPUs)
          *
          * dependent_futures may be recorded in another queue or another
          * accelerator.  If in another accelerator, the runtime performs
@@ -717,29 +696,29 @@ namespace hc
          */
         completion_future create_blocking_marker(
             completion_future& dependent_future,
-            memory_scope fence_scope=system_scope) const;
+            memory_scope fence_scope = system_scope) const;
 
         /**
-         * This command inserts a marker event into the accelerator_view's command
-         * queue with arbitrary number of dependent asynchronous events.
+         * This command inserts a marker event into the accelerator_view's
+         * command queue with arbitrary number of dependent asynchronous events.
          *
          * This marker is returned as a completion_future object. When its
          * dependent events and all commands submitted prior to the marker event
          * creation have been completed, the completion_future is ready.
          *
-         * Regardless of the accelerator_view's execute_order (execute_any_order,
-         * execute_in_order), the marker always ensures older commands complete
-         * before the returned completion_future is marked ready. Thus, markers
-         * provide a mechanism to enforce order between commands in an
-         * execute_any_order accelerator_view.
+         * Regardless of the accelerator_view's execute_order
+         * (execute_any_order, execute_in_order), the marker always ensures
+         * older commands complete before the returned completion_future is
+         * marked ready. Thus, markers provide a mechanism to enforce order
+         * between commands in an execute_any_order accelerator_view.
          *
-         * fence_scope controls the scope of the acquire and release fences applied
-         * after the marker executes.  Options are:
+         * fence_scope controls the scope of the acquire and release fences
+         * applied after the marker executes.  Options are:
          *   - no_scope : No fence operation is performed.
          *   - accelerator_scope: Memory is acquired from and released to the
          *     accelerator scope where the marker executes.
-         *   - system_scope: Memory is acquired from and released to system scope
-         *     (all accelerators including CPUs)
+         *   - system_scope: Memory is acquired from and released to system
+         *     scope (all accelerators including CPUs)
          *
          * @return A future which can be waited on, and will block until the
          *         current batch of commands, plus the dependent event have
@@ -747,21 +726,21 @@ namespace hc
          */
         completion_future create_blocking_marker(
             std::initializer_list<completion_future> dependent_future_list,
-            memory_scope fence_scope=system_scope) const;
+            memory_scope fence_scope = system_scope) const;
 
         /**
-         * This command inserts a marker event into the accelerator_view's command
-         * queue with arbitrary number of dependent asynchronous events.
+         * This command inserts a marker event into the accelerator_view's
+         * command queue with arbitrary number of dependent asynchronous events.
          *
          * This marker is returned as a completion_future object. When its
          * dependent events and all commands submitted prior to the marker event
          * creation have been completed, the completion_future is ready.
          *
-         * Regardless of the accelerator_view's execute_order (execute_any_order,
-         * execute_in_order), the marker always ensures older commands complete
-         * before the returned completion_future is marked ready. Thus, markers
-         * provide a mechanism to enforce order between commands in an
-         * execute_any_order accelerator_view.
+         * Regardless of the accelerator_view's execute_order
+         * (execute_any_order, execute_in_order), the marker always ensures
+         * older commands complete before the returned completion_future is
+         * marked ready. Thus, markers provide a mechanism to enforce order
+         * between commands in an execute_any_order accelerator_view.
          *
          * @return A future which can be waited on, and will block until the
          *         current batch of commands, plus the dependent event have
@@ -769,7 +748,9 @@ namespace hc
          */
         template<typename InputIterator>
         completion_future create_blocking_marker(
-            InputIterator first,InputIterator last, memory_scope scope) const;
+            InputIterator first,
+            InputIterator last,
+            memory_scope fence_scope = system_scope) const;
 
         /**
          * Copies size_bytes bytes from src to dst.
@@ -781,280 +762,110 @@ namespace hc
          */
         void copy(const void* src, void* dst, std::size_t size_bytes)
         {
-            queue_->copy(src, dst, size_bytes);
+            wait_for_all_pending_tasks_();
+
+            detail::throwing_hsa_result_check(
+                hsa_memory_copy(dst, src, size_bytes),
+                __FILE__, __func__, __LINE__);
         }
 
         /**
          * Copies size_bytes bytes from src to dst.
          * Src and dst must not overlap.
          * Note the src is the first parameter and dst is second, following C++
-         * convention. The copy command will execute after any commands already
-         * inserted into the accelerator_view finish. This is a synchronous copy
-         * command, and the copy operation complete before this call returns. The
-         * copy_ext flavor allows caller to provide additional information about
-         * each pointer, which can improve performance by eliminating replicated
-         * lookups. This interface is intended for language runtimes such as HIP.
-
-        @p copyDir : Specify direction of copy.  Must be hcMemcpyHostToHost,
-                    hcMemcpyHostToDevice, hcMemcpyDeviceToHost, or
-                    hcMemcpyDeviceToDevice.
-        @p forceUnpinnedCopy : Force copy to be performed with host involvement
-                                rather than with accelerator copy engines.
-        */
-        void copy_ext(
-            const void* src,
-            void* dst,
-            std::size_t size_bytes,
-            hcCommandKind copyDir,
-            const hc::AmPointerInfo& srcInfo,
-            const hc::AmPointerInfo& dstInfo,
-            const hc::accelerator* copyAcc,
-            bool forceUnpinnedCopy);
-
-        // TODO - this form is deprecated, provided for use with older HIP runtimes.
-        [[deprecated]]
-        void copy_ext(
-            const void* src,
-            void* dst,
-            std::size_t size_bytes,
-            hcCommandKind copyDir,
-            const hc::AmPointerInfo& srcInfo,
-            const hc::AmPointerInfo& dstInfo,
-            bool forceUnpinnedCopy);
-
-        /**
-         * Copies size_bytes bytes from src to dst.
-         * Src and dst must not overlap.
-         * Note the src is the first parameter and dst is second, following C++
          * convention. This is an asynchronous copy command, and this call may
-         * return before the copy operation completes. If the source or dest is host
-         * memory, the memory must be pinned or a runtime exception will be thrown.
-         * Pinned memory can be created with am_alloc with flag=amHostPinned flag.
+         * return before the copy operation completes. If the source or dest is
+         * host memory, the memory must be pinned or a runtime exception will be
+         * thrown. Pinned memory can be created with am_alloc with
+         * flag=amHostPinned flag.
          *
          * The copy command will be implicitly ordered with respect to commands
          * previously enqueued to this accelerator_view:
          * - If the accelerator_view execute_order is execute_in_order
          *   (the default), then the copy will execute after all previously sent
          *   commands finish execution.
-         * - If the accelerator_view execute_order is execute_any_order, then the
+         * - If the accelerator_view execute_order is execute_any_order, then
+         *   the
          *   copy will start after all previously send commands start but can
          *   execute in any order.
          */
         completion_future copy_async(
-            const void* src, void* dst, std::size_t size_bytes);
+            const void* src, void* dst, std::size_t size_bytes)
+        {
+            wait_for_all_pending_tasks_();
+
+            return completion_future{std::async([=]() {
+                detail::throwing_hsa_result_check(
+                    hsa_memory_copy(dst, src, size_bytes),
+                    __FILE__, __func__, __LINE__);
+            }).share()};
+        }
 
         /**
-         * Copies size_bytes bytes from src to dst.
-         * Src and dst must not overlap.
-         * Note the src is the first parameter and dst is second, following C++
-         * convention. This is an asynchronous copy command, and this call may
-         * return before the copy operation completes. If the source or dest is host
-         * memory, the memory must be pinned or a runtime exception will be thrown.
-         * Pinned memory can be created with am_alloc with flag = amHostPinned flag.
-         *
-         * The copy command will be implicitly ordered with respect to commands
-         * previously enqueued to this accelerator_view:
-         * - If the accelerator_view execute_order is execute_in_order
-         *   (the default), then the copy will execute after all previously sent
-         *   commands finish execution.
-         * - If the accelerator_view execute_order is execute_any_order, then the
-         *   copy will start after all previously send commands start but can
-         *   execute in any order. The copyAcc determines where the copy is executed
-         *   and does not affect the ordering.
-         *
-         * The copy_async_ext flavor allows caller to provide additional information
-         * about each pointer, which can improve performance by eliminating
-         * replicated lookups, and also allow control over which device performs the
-         * copy. This interface is intended for language runtimes such as HIP.
-         *
-         *  @p copyDir : Specify direction of copy. Must be hcMemcpyHostToHost,
-         *               hcMemcpyHostToDevice, hcMemcpyDeviceToHost, or
-         *               hcMemcpyDeviceToDevice.
-         *  @p copyAcc : Specify which accelerator performs the copy operation. The
-         *               specified accelerator must have access to the source and
-         *               dest pointers - either because the memory is allocated on
-         *               those devices or because the accelerator has peer access to
-         *               the memory. If copyAcc is nullptr, then the copy will be
-         *               performed by the host. In this case, the host accelerator
-         *               must have access to both pointers. The copy operation will
-         *               be performed by the specified engine but is not
-         *               synchronized with respect to any operations on that device.
-         */
-        completion_future copy_async_ext(
-            const void* src,
-            void* dst,
-            std::size_t size_bytes,
-            hcCommandKind copyDir,
-            const hc::AmPointerInfo& srcInfo,
-            const hc::AmPointerInfo& dstInfo,
-            const hc::accelerator* copyAcc);
-
-        /**
-         * Compares "this" accelerator_view with the passed accelerator_view object
-         * to determine if they represent the same underlying object.
+         * Compares "this" accelerator_view with the passed accelerator_view
+         * object to determine if they represent the same underlying object.
          *
          * @param[in] other The accelerator_view object to be compared against.
-         * @return A boolean value indicating whether the passed accelerator_view
-         *         object is same as "this" accelerator_view.
+         * @return A boolean value indicating whether the passed
+         *         accelerator_view object is same as "this" accelerator_view.
          */
-        bool operator==(const accelerator_view& other) const
+        bool operator==(const accelerator_view& other) const noexcept
         {
             return queue_ == other.queue_;
         }
 
         /**
-         * Compares "this" accelerator_view with the passed accelerator_view object
-         * to determine if they represent different underlying objects.
+         * Compares "this" accelerator_view with the passed accelerator_view
+         * object to determine if they represent different underlying objects.
          *
          * @param[in] other The accelerator_view object to be compared against.
-         * @return A boolean value indicating whether the passed accelerator_view
-         *         object is different from "this" accelerator_view.
+         * @return A boolean value indicating whether the passed
+         *         accelerator_view object is different from "this"
+         *         accelerator_view.
          */
-        bool operator!=(const accelerator_view& other) const
+        bool operator!=(const accelerator_view& other) const noexcept
         {
             return !(*this == other);
         }
 
         /**
-         * Returns the maximum size of tile static area available on this
-         * accelerator view.
-         */
-        size_t get_max_tile_static_size() const
-        {
-            return queue_.get()->getDev()->GetMaxTileStaticSize();
-        }
-
-        /**
-         * Returns the number of pending asynchronous operations on this
-         * accelerator view.
-         *
-         * Care must be taken to use this API in a thread-safe manner,
-         */
-        int get_pending_async_ops() const
-        {
-            return queue_->getPendingAsyncOps();
-        }
-
-        /**
-         * Returns true if the accelerator_view is currently empty.
-         *
-         * Care must be taken to use this API in a thread-safe manner.
-         * As the accelerator completes work, the queue may become empty
-         * after this function returns false;
-         */
-        bool get_is_empty() const
-        {
-            return queue_->isEmpty();
-        }
-
-        /**
          * Returns an opaque handle which points to the underlying HSA queue.
          *
-         * @return An opaque handle of the underlying HSA queue, if the accelerator
-         *         view is based on HSA.  NULL if otherwise.
+         * @return An opaque handle of the underlying HSA queue, if the
+         *         accelerator view is based on HSA.  NULL if otherwise.
          */
         void* get_hsa_queue() const
         {
-            return queue_->getHSAQueue();
-        }
-
-        /**
-         * Returns an opaque handle which points to the underlying HSA agent.
-         *
-         * @return An opaque handle of the underlying HSA agent, if the accelerator
-         *         view is based on HSA.  NULL otherwise.
-         */
-        void* get_hsa_agent() const
-        {
-            return queue_->getHSAAgent();
-        }
-
-        /**
-         * Returns an opaque handle which points to the AM region on the HSA agent.
-         * This region can be used to allocate accelerator memory which is
-         * accessible from the specified accelerator.
-         *
-         * @return An opaque handle of the region, if the accelerator is based
-         *         on HSA.  NULL otherwise.
-         */
-        void* get_hsa_am_region() const
-        {
-            return queue_->getHSAAMRegion();
-        }
-
-
-        /**
-         * Returns an opaque handle which points to the AM system region on the HSA
-         * agent. This region can be used to allocate system memory which is
-         * accessible from the specified accelerator.
-         *
-         * @return An opaque handle of the region, if the accelerator is based
-         *         on HSA.  NULL otherwise.
-         */
-        void* get_hsa_am_system_region() const
-        {
-            return queue_->getHSAAMHostRegion();
-        }
-
-        /**
-         * Returns an opaque handle which points to the AM system region on the HSA
-         * agent. This region can be used to allocate finegrained system memory
-         * which is accessible from the specified accelerator.
-         *
-         * @return An opaque handle of the region, if the accelerator is based
-         *         on HSA.  NULL otherwise.
-         */
-        void* get_hsa_am_finegrained_system_region() const
-        {
-            return queue_->getHSACoherentAMHostRegion();
-        }
-
-        /**
-         * Returns an opaque handle which points to the Kernarg region on the HSA
-         * agent.
-         *
-         * @return An opaque handle of the region, if the accelerator view is based
-         *         on HSA.  NULL otherwise.
-         */
-        void* get_hsa_kernarg_region() const
-        {
-            return queue_->getHSAKernargRegion();
-        }
-
-        /**
-         * Returns if the accelerator view is based on HSA.
-         */
-        bool is_hsa_accelerator() const
-        {
-            return queue_->hasHSAInterOp();
+            return queue_;
         }
 
         /**
          * Dispatch a kernel into the accelerator_view.
          *
-         * This function is intended to provide a gateway to dispatch code objects,
-         * with some assistance from HCC. Kernels are specified in the standard code
-         * object format, and can be created from a variety of compiler tools
-         * including the assembler, offline cl compilers, or other tools. The caller
-         * also specifies the execution configuration and kernel arguments. HCC will
-         * copy the kernel arguments into an appropriate segment and insert the
-         * packet into the queue. HCC will also automatically handle signal and
-         * kernarg allocation and deallocation for the command.
+         * This function is intended to provide a gateway to dispatch code
+         * objects, with some assistance from HCC. Kernels are specified in the
+         * standard code object format, and can be created from a variety of
+         * compiler tools including the assembler, offline cl compilers, or
+         * other tools. The caller also specifies the execution configuration
+         * and kernel arguments. HCC will copy the kernel arguments into an
+         * appropriate segment and insert the packet into the queue. HCC will
+         * also automatically handle signal and kernarg allocation and
+         * deallocation for the command.
          *
          * The kernel is dispatched asynchronously, and thus this API may return
          * before the kernel finishes executing.
 
-        * Kernels dispatched with this API may be interleaved with other copy and
-        * kernel commands generated from copy or parallel_for_each commands. The
-        * kernel honors the execute_order associated with the accelerator_view.
-        * Specifically, if execute_order is execute_in_order, then the kernel
-        * will wait for older data and kernel commands in the same queue before
-        * beginning execution.  If execute_order is execute_any_order, then the
-        * kernel may begin executing without regards to the state of older kernels.
-        * This call honors the packer barrier bit (1 << HSA_PACKET_HEADER_BARRIER)
-        * if set in the aql.header field.  If set, this provides the same
-        * synchronization behavior as execute_in_order for the command generated by
-        * this API.
+        * Kernels dispatched with this API may be interleaved with other copy
+        * and kernel commands generated from copy or parallel_for_each commands.
+        * The kernel honors the execute_order associated with the
+        * accelerator_view. Specifically, if execute_order is execute_in_order,
+        * then the kernel will wait for older data and kernel commands in the
+        * same queue before beginning execution. If execute_order is
+        * execute_any_order, then the kernel may begin executing without regards
+        * to the state of older kernels. This call honors the packer barrier bit
+        * (1 << HSA_PACKET_HEADER_BARRIER) if set in the aql.header field. If
+        * set, this provides the same synchronization behavior as
+        * execute_in_order for the command generated by this API.
         *
         * @p aql is an HSA-format "AQL" packet. The following fields must
         * be set by the caller:
@@ -1067,30 +878,31 @@ namespace hc
         *  aql.header: Must specify the desired memory fence operations, and
         *              barrier bit (if desired.). A typical conservative setting
         *              would be:
-        aql.header = (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
-                    (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE) |
-                    (1 << HSA_PACKET_HEADER_BARRIER);
+        aql.header =
+            (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
+            (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE) |
+            (1 << HSA_PACKET_HEADER_BARRIER);
 
-        * The following fields are ignored. The API will will set up these fields
-        * before dispatching the AQL packet:
+        * The following fields are ignored. The API will will set up these
+        * fields before dispatching the AQL packet:
         *  aql.completion_signal
         *  aql.kernarg
         *
         * @p args : Pointer to kernel arguments with the size and alignment
         *           expected by the kernel. The args are copied and then passed
-        *           directly to the kernel. After this function returns, the args
-        *           memory may be deallocated.
+        *           directly to the kernel. After this function returns, the
+        *           args memory may be deallocated.
         * @p argSz : Size of the arguments.
         * @p cf : Written with a completion_future that can be used to track the
         *         status of the dispatch. May be NULL, in which case no
         *         completion_future is returned and the caller must use other
         *         synchronization techniques such as calling
-        *         accelerator_view::wait() or waiting on a younger command in the
-        *         same queue.
-        * @p kernel_name: Optionally specify the name of the kernel for debug and
-        *                 profiling. May be null. If specified, the caller is
-        *                 responsible for ensuring the memory for the name remains
-        *                 allocated until the kernel completes.
+        *         accelerator_view::wait() or waiting on a younger command in
+        *         the same queue.
+        * @p kernel_name: Optionally specify the name of the kernel for debug
+        *                 and profiling. May be null. If specified, the caller
+        *                 is responsible for ensuring the memory for the name
+        *                 remains allocated until the kernel completes.
         *
         * The dispatch_hsa_kernel call will perform the following operations:
         *    - Efficiently allocate a kernarg region and copy the arguments.
@@ -1099,22 +911,22 @@ namespace hc
         *    - Kernargs and signals are automatically reclaimed by the HCC
         *      runtime.
         */
-        void dispatch_hsa_kernel(
-            const hsa_kernel_dispatch_packet_t* aql,
-            void* args,
-            size_t argsize,
-            completion_future* cf = nullptr,
-            const char* kernel_name = nullptr)
-        {
-            wait_for_all_pending_tasks_(); // TODO: this is conservative.
+        // void dispatch_hsa_kernel(
+        //     const hsa_kernel_dispatch_packet_t* aql,
+        //     void* args,
+        //     size_t argsize,
+        //     completion_future* cf = nullptr,
+        //     const char* kernel_name = nullptr)
+        // {
+        //     wait_for_all_pending_tasks_(); // TODO: this is conservative.
 
-            completion_future tmp{};
-            queue_->dispatch_hsa_kernel(aql, args, argsize, &tmp, kernel_name);
+        //     completion_future tmp{};
+        //     queue_->dispatch_hsa_kernel(aql, args, argsize, &tmp, kernel_name);
 
-            add_pending_task_(tmp);
+        //     add_pending_task_(tmp);
 
-            if (cf) *cf = std::move(tmp);
-        }
+        //     if (cf) *cf = std::move(tmp);
+        // }
 
         /**
          * Set a CU affinity to specific command queues.
@@ -1131,11 +943,7 @@ namespace hc
          *
          * @return true if operations succeeds or false if not.
          */
-        bool set_cu_mask(const std::vector<bool>& cu_mask)
-        {   // If it is HSA based accelerator view, set cu mask, otherwise, return;
-            if (!is_hsa_accelerator()) return false;
-            return queue_->set_cu_mask(cu_mask);
-        }
+        bool set_cu_mask(const std::vector<bool>& cu_mask);
     };
 
     // ------------------------------------------------------------------------
@@ -1148,6 +956,23 @@ namespace hc
      * getting the default device.
      */
     class accelerator {
+        // DATA - STATICS
+        inline static std::once_flag maybe_set_default_{};
+
+        // DATA
+        hsa_agent_t agent_{};
+
+        friend class accelerator_view;
+
+        // IMPLEMENTATION - CREATORS
+        explicit
+        accelerator(hsa_agent_t agent) : agent_{agent}
+        {
+            if (detail::Agent_pool::pool().count(agent) != 0) return;
+
+            throw std::logic_error{
+                "Tried to create accelerator from unknown HSA agent."};
+        }
     public:
         static constexpr const wchar_t cpu_accelerator[]{L"cpu"};
         static constexpr const wchar_t default_accelerator[]{L"default"};
@@ -1162,7 +987,7 @@ namespace hc
          * The actual accelerator chosen as the default can be affected by
          * calling accelerator::set_default().
          */
-        accelerator() : accelerator(L"default") {}
+        accelerator() : accelerator{default_accelerator} {}
 
         /**
          * Constructs a new accelerator object that represents the physical
@@ -1183,7 +1008,12 @@ namespace hc
          */
         explicit
         accelerator(const std::wstring& path)
-            : pDev(detail::getContext()->getDevice(path))
+            : accelerator{
+                (path == default_accelerator) ?
+                    detail::Agent_pool::default_agent() :
+                        ((path == cpu_accelerator) ?
+                            detail::Agent_pool::cpu_agent() :
+                            hsa_agent_t{std::stoull(path)})}
         {}
 
         /**
@@ -1199,19 +1029,23 @@ namespace hc
         /**
          * Returns a std::vector of accelerator objects (in no specific
          * order) representing all accelerators that are available, including
-         * reference accelerators and WARP accelerators if available.
+         * reference accelerators if available.
          *
          * @return A vector of accelerators.
          */
         static
         std::vector<accelerator> get_all()
         {
-            static auto all = detail::getContext()->getDevices();
+            static std::vector<accelerator> r;
+            static std::once_flag f;
 
-            std::vector<accelerator> ret;
-            for(auto&& device : all) ret.push_back(device);
+            std::call_once(f, []() {
+                for(auto&& agent : detail::Agent_pool::pool()) {
+                    r.push_back(accelerator{agent.first});
+                }
+            });
 
-            return ret;
+            return r;
         }
 
         /**
@@ -1231,7 +1065,30 @@ namespace hc
         static
         bool set_default(const std::wstring& path)
         {
-            return detail::getContext()->set_default(path);
+            bool r{false};
+            std::call_once(maybe_set_default_, [&]() {
+                r = true;
+
+                if (path == default_accelerator) return;
+                if (path == cpu_accelerator) {
+                    detail::Agent_pool::default_agent() =
+                        detail::Agent_pool::cpu_agent();
+
+                    return;
+                }
+
+                const hsa_agent_t tmp{std::stoull(path)};
+                if (detail::Agent_pool::pool().count(tmp) != 0) {
+                    detail::Agent_pool::default_agent() = tmp;
+
+                    return;
+                }
+
+                throw std::logic_error{
+                    "Tried to set unknown HSA agent as default."};
+            });
+
+            return r;
         }
 
         /**
@@ -1254,7 +1111,11 @@ namespace hc
         static
         accelerator_view get_auto_selection_view()
         {
-            return accelerator_view{detail::getContext()->auto_select()};
+            set_default(default_accelerator);
+
+            static accelerator acc{default_accelerator};
+
+            return acc.get_default_view();
         }
 
         /**
@@ -1279,7 +1140,8 @@ namespace hc
          */
         accelerator_view get_default_view() const
         {
-            return accelerator_view{pDev->get_default_queue()};
+            return accelerator_view{
+                *this, detail::Queue_pool::default_queue(agent_)};
         }
 
         /**
@@ -1291,12 +1153,11 @@ namespace hc
          *                  be queueing_mode_automatic if not specified.
          */
         accelerator_view create_view(
-            execute_order order = execute_in_order,
+            execute_order = execute_in_order,
             queuing_mode mode = queuing_mode_automatic)
         {
-            auto pQueue = pDev->createQueue(order);
-            pQueue->set_mode(mode);
-            return accelerator_view{pQueue};
+            return accelerator_view{
+                *this, detail::Queue_pool::defined_queue(agent_), mode};
         }
 
         /**
@@ -1309,7 +1170,7 @@ namespace hc
          */
         bool operator==(const accelerator& other) const
         {
-            return pDev == other.pDev;
+            return agent_.handle == other.agent_.handle;
         }
 
         /**
@@ -1330,7 +1191,7 @@ namespace hc
          *
          * The default_cpu_access_type is used for arrays created on this
          * accelerator or for implicit array_view memory allocations accessed on
-         * this this accelerator.
+         * this accelerator.
          *
          * This method only succeeds if the default_cpu_access_type for the
          * accelerator has not already been overriden by a previous call to this
@@ -1346,9 +1207,16 @@ namespace hc
          */
         bool set_default_cpu_access_type(access_type type)
         {
-            pDev->set_access(type);
+            static std::unordered_map<hsa_agent_t, std::once_flag> done;
 
-            return true;
+            bool set{false};
+            std::call_once(done[agent_], [&](){
+                set = true;
+
+                detail::Agent_pool::pool()[agent_].default_cpu_access = type;
+            });
+
+            return set;
         }
 
         /**
@@ -1358,7 +1226,7 @@ namespace hc
          */
         std::wstring get_device_path() const
         {
-            return pDev->get_path();
+            return std::to_wstring(agent_.handle);
         }
 
         /**
@@ -1366,7 +1234,7 @@ namespace hc
          */
         std::wstring get_description() const
         {
-            return pDev->get_description();
+            return detail::Agent_pool::pool()[agent_].name;
         }
 
         /**
@@ -1377,7 +1245,7 @@ namespace hc
          */
         unsigned int get_version() const
         {
-            return pDev->get_version();
+            return detail::Agent_pool::pool()[agent_].version;
         }
 
         /**
@@ -1399,7 +1267,7 @@ namespace hc
          */
         size_t get_dedicated_memory() const
         {
-            return pDev->get_mem();
+            return detail::Agent_pool::pool()[agent_].dedicated_memory;
         }
 
         /**
@@ -1408,8 +1276,8 @@ namespace hc
          * supports_limited_double_precision also returns true.
          */
         bool get_supports_double_precision() const
-        {
-            return pDev->is_double();
+        {   // This is true for all targets we support at the moment.
+            return true;
         }
 
         /**
@@ -1419,8 +1287,8 @@ namespace hc
          * a parallel_for_each kernel.
          */
         bool get_supports_limited_double_precision() const
-        {
-            return pDev->is_lim_double();
+        {   // This is true for all targets we support at the moment.
+            return true;
         }
 
         /**
@@ -1439,7 +1307,7 @@ namespace hc
          */
         bool get_is_emulated() const
         {
-            return pDev->is_emulated();
+            return detail::Agent_pool::pool()[agent_].is_cpu;
         }
 
         /**
@@ -1448,7 +1316,7 @@ namespace hc
          */
         bool get_supports_cpu_shared_memory() const
         {
-            return pDev->is_unified();
+            return detail::Agent_pool::pool()[agent_].has_cpu_shared_memory;
         }
 
         /**
@@ -1457,7 +1325,7 @@ namespace hc
          */
         access_type get_default_cpu_access_type() const
         {
-            return pDev->get_access();
+            return detail::Agent_pool::pool()[agent_].default_cpu_access;
         }
 
 
@@ -1465,23 +1333,9 @@ namespace hc
          * Returns the maximum size of tile static area available on this
          * accelerator.
          */
-        size_t get_max_tile_static_size() const
+        std::size_t get_max_tile_static_size() const
         {
-        return get_default_view().get_max_tile_static_size();
-        }
-
-        /**
-         * Returns a vector of all accelerator_view associated with this
-         * accelerator.
-         */
-        std::vector<accelerator_view> get_all_views() const
-        {
-            std::vector<accelerator_view> result;
-            for (auto&& q : pDev->get_all_queues()) {
-                result.push_back(accelerator_view{q});
-            }
-
-            return result;
+            return detail::Agent_pool::pool()[agent_].max_tile_static_size;
         }
 
         /**
@@ -1494,7 +1348,8 @@ namespace hc
          */
         void* get_hsa_am_region() const
         {
-            return get_default_view().get_hsa_am_region();
+            return &detail::Agent_pool::pool()[agent_]
+                .agent_allocated_coarse_grained_region;
         }
 
         /**
@@ -1507,7 +1362,8 @@ namespace hc
          */
         void* get_hsa_am_system_region() const
         {
-            return get_default_view().get_hsa_am_system_region();
+            return
+                &detail::Agent_pool::pool()[agent_].system_coarse_grained_region;
         }
 
         /**
@@ -1520,7 +1376,7 @@ namespace hc
          */
         void* get_hsa_am_finegrained_system_region() const
         {
-            return get_default_view().get_hsa_am_finegrained_system_region();
+            return &detail::Agent_pool::pool()[agent_].fine_grained_region;
         }
 
         /**
@@ -1531,8 +1387,8 @@ namespace hc
          *         on HSA.  NULL otherwise.
          */
         void* get_hsa_kernarg_region() const
-        {
-            return get_default_view().get_hsa_kernarg_region();
+        {   // TODO: fix
+            return nullptr;
         }
 
         /**
@@ -1540,43 +1396,21 @@ namespace hc
          */
         bool is_hsa_accelerator() const
         {
-            return get_default_view().is_hsa_accelerator();
+            return true;
         }
 
         /**
          * Returns the profile the accelerator.
-         * - hcAgentProfileNone in case the accelerator is not based on HSA.
-         * - hcAgentProfileBase in case the accelerator is of HSA Base Profile.
-         * - hcAgentProfileFull in case the accelerator is of HSA Full Profile.
+         * - accelerator_profile_none in case the accelerator is not based on
+         *   HSA.
+         * - accelerator_profile_base in case the accelerator implements the HSA
+         *   Base Profile.
+         * - accelerator_profile_full in case the accelerator implements the HSA
+         *   Full Profile.
          */
-        hcAgentProfile get_profile() const
+        accelerator_profile get_profile() const
         {
-            return pDev->getProfile();
-        }
-
-        void memcpy_symbol(
-            const char* symbolName,
-            void* hostptr,
-            std::size_t count,
-            std::size_t offset = 0,
-            hcCommandKind kind = hcMemcpyHostToDevice)
-        {
-            pDev->memcpySymbol(symbolName, hostptr, count, offset, kind);
-        }
-
-        void memcpy_symbol(
-            void* symbolAddr,
-            void* hostptr,
-            std::size_t count,
-            std::size_t offset = 0,
-            hcCommandKind kind = hcMemcpyHostToDevice)
-        {
-            pDev->memcpySymbol(symbolAddr, hostptr, count, offset, kind);
-        }
-
-        void* get_symbol_address(const char* symbolName) const
-        {
-            return pDev->getSymbolAddress(symbolName);
+            return detail::Agent_pool::pool()[agent_].profile;
         }
 
         /**
@@ -1586,8 +1420,8 @@ namespace hc
          *         accelerator is based on HSA. NULL otherwise.
          */
         void* get_hsa_agent() const
-        {
-            return pDev->getHSAAgent();
+        {   // TODO: redo, should return the handle directly.
+            return const_cast<hsa_agent_t*>(&agent_);
         }
 
         /**
@@ -1598,7 +1432,7 @@ namespace hc
          */
         bool get_is_peer(const accelerator& other) const
         {
-            return pDev->is_peer(other.pDev);
+            return false;//pDev->is_peer(other.pDev);
         }
 
         /**
@@ -1621,7 +1455,7 @@ namespace hc
          */
         unsigned int get_cu_count() const
         {
-            return pDev->get_compute_unit_count();
+            return detail::Agent_pool::pool()[agent_].compute_unit_count;
         }
 
         /**
@@ -1631,7 +1465,7 @@ namespace hc
          */
         int get_seqnum() const
         {
-            return pDev->get_seqnum();
+            return INT_MAX;
         }
 
 
@@ -1642,26 +1476,20 @@ namespace hc
          * "large BAR" or "resizeable BAR" address mapping.
          */
         bool has_cpu_accessible_am() const
-        {
-            return pDev->has_cpu_accessible_am();
+        {   // TODO: fix.
+            return detail::Agent_pool::pool()[agent_]
+                .has_cpu_accessible_agent_allocated_coarse_grained;
         }
-
-        detail::HCCDevice* get_dev_ptr() const
-        {
-            return pDev;
-        }
-
-    private:
-        accelerator(detail::HCCDevice* pDev) : pDev(pDev) {}
-        friend class accelerator_view;
-        detail::HCCDevice* pDev;
     };
 
 
     inline
     accelerator accelerator_view::get_accelerator() const
     {
-        return queue_->getDev();
+        if (accelerator_) return *accelerator_;
+
+        throw std::logic_error{
+            "Tried to query accelerator from empty accelerator_view."};
     }
 
     // ------------------------------------------------------------------------
@@ -1680,87 +1508,35 @@ namespace hc
     }
 
     inline
-    completion_future accelerator_view::create_marker(memory_scope scope) const
+    completion_future accelerator_view::create_marker(memory_scope) const
     {
-        std::shared_ptr<detail::HCCAsyncOp> deps[1];
-        // If necessary create an explicit dependency on previous command
-        // This is necessary for example if copy command is followed by marker -
-        // we need the marker to wait for the copy to complete.
-        auto depOp = queue_->detectStreamDeps(hcCommandMarker, nullptr);
-
-        int cnt = 0;
-        if (depOp) {
-            deps[cnt++] = depOp; // retrieve async op associated with completion_future
-        }
-
-        pending_tasks_.push_front(completion_future{
-            queue_->EnqueueMarkerWithDependency(cnt, deps, scope)});
+        pending_tasks_.push_front(detail::insert_barrier(*this));
 
         return pending_tasks_.front();
     }
 
     inline
     completion_future accelerator_view::create_blocking_marker(
-        completion_future& dependent_future, memory_scope scope) const
+        completion_future& dependent_future, memory_scope) const
     {
-        std::shared_ptr<detail::HCCAsyncOp> deps[2];
-
-        // If necessary create an explicit dependency on previous command
-        // This is necessary for example if copy command is followed by marker -
-        // we need the marker to wait for the copy to complete.
-        auto depOp = queue_->detectStreamDeps(hcCommandMarker, nullptr);
-
-        int cnt = 0;
-        if (depOp) {
-            deps[cnt++] = depOp; // retrieve async op associated with completion_future
-        }
-
-        if (dependent_future.__asyncOp) {
-            deps[cnt++] = dependent_future.__asyncOp; // retrieve async op associated with completion_future
-        }
-
         pending_tasks_.push_front(completion_future{
-            queue_->EnqueueMarkerWithDependency(cnt, deps, scope)});
+            std::async([=]() { dependent_future.wait(); }).share()});
 
         return pending_tasks_.front();
     }
 
+    // TODO: constrain to take completion_future only.
     template<typename InputIterator>
     inline
     completion_future accelerator_view::create_blocking_marker(
-        InputIterator first, InputIterator last, memory_scope scope) const
-    {
-        std::shared_ptr<detail::HCCAsyncOp> deps[5]; // array of 5 pointers to the native handle of async ops. 5 is the max supported by barrier packet
-        hc::completion_future lastMarker;
-
-        // If necessary create an explicit dependency on previous command
-        // This is necessary for example if copy command is followed by marker - we
-        // need the marker to wait for the copy to complete.
-        auto depOp = queue_->detectStreamDeps(hcCommandMarker, nullptr);
-
-        int cnt = 0;
-        if (depOp) {
-            deps[cnt++] = depOp; // retrieve async op associated with completion_future
-        }
-
-        // loop through signals and group into sections of 5
-        // every 5 signals goes into one barrier packet
-        // since HC sets the barrier bit in each AND barrier packet, we know
-        // the barriers will execute in-order
-        for (auto iter = first; iter != last; ++iter) {
-            if (!iter->__asyncOp) continue;
-
-            deps[cnt++] = iter->__asyncOp; // retrieve async op associated with completion_future
-
-            if (cnt != 5) continue;
-
-            lastMarker = completion_future{
-                queue_->EnqueueMarkerWithDependency(cnt, deps, hc::no_scope)};
-            cnt = 0;
-        }
-
-        pending_tasks_.push_front(cnt == 0 ? lastMarker : completion_future{
-            queue_->EnqueueMarkerWithDependency(cnt, deps, scope)});
+        InputIterator first, InputIterator last, memory_scope) const
+    {   // TODO: optimise by nesting the hsa_signal_t inside the
+        //       completion_future and then building AND AQL packets.
+        std::vector<completion_future> tmp{first, last};
+        pending_tasks_.push_front(completion_future{
+            std::async([tmp = std::move(tmp)]() {
+                for (auto&& x : tmp) if (x.valid()) x.wait();
+            }).share()});
 
         return pending_tasks_.front();
     }
@@ -1768,90 +1544,34 @@ namespace hc
     inline
     completion_future accelerator_view::create_blocking_marker(
         std::initializer_list<completion_future> dependent_future_list,
-        memory_scope scope) const
+        memory_scope) const
     {
         return create_blocking_marker(
-            dependent_future_list.begin(), dependent_future_list.end(), scope);
-    }
-
-
-    inline
-    void accelerator_view::copy_ext(
-        const void* src,
-        void* dst,
-        std::size_t size_bytes,
-        hcCommandKind copyDir,
-        const hc::AmPointerInfo& srcInfo,
-        const hc::AmPointerInfo& dstInfo,
-        const hc::accelerator* copyAcc,
-        bool forceUnpinnedCopy)
-    {
-        wait_for_all_pending_tasks_();
-
-        queue_->copy_ext(
-            src,
-            dst,
-            size_bytes,
-            copyDir,
-            srcInfo,
-            dstInfo,
-            copyAcc ? copyAcc->pDev : nullptr,
-            forceUnpinnedCopy);
+            dependent_future_list.begin(), dependent_future_list.end());
     }
 
     inline
-    void accelerator_view::copy_ext(
-        const void* src,
-        void* dst,
-        std::size_t size_bytes,
-        hcCommandKind copyDir,
-        const hc::AmPointerInfo& srcInfo,
-        const hc::AmPointerInfo& dstInfo,
-        bool forceHostCopyEngine)
+    bool accelerator_view::set_cu_mask(const std::vector<bool>& cu_mask)
     {
-        wait_for_all_pending_tasks_();
+        const auto agent =
+            *static_cast<hsa_agent_t*>(accelerator_->get_hsa_agent());
+        const auto cnt = detail::Agent_pool::pool()[agent].compute_unit_count;
 
-        queue_->copy_ext(
-            src,
-            dst,
-            size_bytes,
-            copyDir,
-            srcInfo,
-            dstInfo,
-            forceHostCopyEngine);
-    }
+        if (cnt == 0) return false;
 
-    inline
-    completion_future accelerator_view::copy_async(
-        const void* src, void* dst, std::size_t size_bytes)
-    {
-        pending_tasks_.push_front(
-            completion_future{queue_->EnqueueAsyncCopy(src, dst, size_bytes)});
+        static const auto round_up_to_next_multiple_of_32 = [](std::size_t x) {
+            x = x + 32 - 1;
+            return x - x % 32;
+        };
 
-        return pending_tasks_.front();
-    }
+        std::vector<std::uint32_t> mask{cu_mask.cbegin(), cu_mask.cend()};
+        mask.resize(round_up_to_next_multiple_of_32(cnt));
 
-    inline
-    completion_future accelerator_view::copy_async_ext(
-        const void* src,
-        void* dst,
-        std::size_t size_bytes,
-        hcCommandKind copyDir,
-        const hc::AmPointerInfo& srcInfo,
-        const hc::AmPointerInfo& dstInfo,
-        const hc::accelerator* copyAcc)
-    {
-        pending_tasks_.push_front(completion_future{
-            queue_->EnqueueAsyncCopyExt(
-                src,
-                dst,
-                size_bytes,
-                copyDir,
-                srcInfo,
-                dstInfo,
-                copyAcc ? copyAcc->pDev : nullptr)});
+        detail::throwing_hsa_result_check(
+            hsa_amd_queue_cu_set_mask(queue_, mask.size(), mask.data()),
+            __FILE__, __func__, __LINE__);
 
-        return pending_tasks_.front();
+        return true; // Unclear how this failing could be anything but an error.
     }
 
     // ------------------------------------------------------------------------
@@ -1872,7 +1592,7 @@ namespace hc
         /**
          * A static member of extent<N> that contains the rank of this extent.
          */
-        static const int rank = N;
+        static constexpr int rank = N;
 
         /**
          * The element type of extent<N>.
@@ -1880,8 +1600,9 @@ namespace hc
         typedef int value_type;
 
         /**
-         * Default constructor. The value at each dimension is initialized to zero.
-         * Thus, "extent<3> ix;" initializes the variable to the position (0,0,0).
+         * Default constructor. The value at each dimension is initialized to
+         * zero. Thus, "extent<3> ix;" initializes the variable to the position
+         * (0,0,0).
          */
         extent() [[cpu, hc]] = default;
 
@@ -1977,8 +1698,10 @@ namespace hc
          * @return Returns true if the "idx" is contained within the space
          *         defined by this extent (with an assumed origin of zero).
          */
-        bool contains(const index<N>& idx) const [[cpu, hc]] {
-            return detail::amp_helper<N, index<N>, extent<N>>::contains(idx, *this);
+        bool contains(const index<N>& idx) const noexcept [[cpu, hc]]
+        {
+            return detail::amp_helper<N, index<N>, extent<N>>::contains(
+                idx, *this);
         }
 
         /**
@@ -1986,7 +1709,8 @@ namespace hc
          * (in units of elements), which is computed as:
          * extent[0] * extent[1] ... * extent[N-1]
          */
-        unsigned int size() const [[cpu, hc]] {
+        unsigned int size() const noexcept [[cpu, hc]]
+        {
             return detail::index_helper<N, extent<N>>::count_size(*this);
         }
 
@@ -2209,7 +1933,7 @@ namespace hc
      */
     // FIXME: the signature is not entirely the same as defined in:
     //        C++AMP spec v1.2 #1253
-    template <int N>
+    template<int N>
     inline
     extent<N> operator+(const extent<N>& lhs, const extent<N>& rhs) [[cpu, hc]]
     {
@@ -2217,7 +1941,7 @@ namespace hc
         __r += rhs;
         return __r;
     }
-    template int N>
+    template<int N>
     inline
     extent<N> operator-(const extent<N>& lhs, const extent<N>& rhs) [[cpu, hc]]
     {
@@ -2593,6 +2317,7 @@ namespace hc
     static constexpr auto __HSA_WAVEFRONT_SIZE__ = 64;
 
     extern "C"
+    constexpr
     unsigned int __wavesize() [[hc]];
     #if __hcc_backend__ == HCC_BACKEND_AMDGPU
         extern "C"
@@ -4191,11 +3916,12 @@ namespace hc
             hsa_region_t* r{nullptr};
             switch (cpu_access_) {
             case access_type_none: case access_type_auto:
-                r = static_cast<hsa_region_t*>(owner_.get_hsa_am_region());
+                r = static_cast<hsa_region_t*>(
+                    owner_.get_accelerator().get_hsa_am_region());
                 break;
             default:
                 r = static_cast<hsa_region_t*>(
-                    owner_.get_hsa_am_system_region());
+                    owner_.get_accelerator().get_hsa_am_system_region());
             }
 
             void* tmp{nullptr};
@@ -4265,7 +3991,8 @@ namespace hc
                 auto s = hsa_amd_memory_lock(
                     this,
                     sizeof(*this),
-                    static_cast<hsa_agent_t*>(owner_.get_hsa_agent()),
+                    static_cast<hsa_agent_t*>(
+                        owner_.get_accelerator().get_hsa_agent()),
                     1,
                     reinterpret_cast<void**>(
                         &locked_ptrs_[n + idx].second.second));
@@ -5714,7 +5441,7 @@ namespace hc
                 else --writers_[i].first;
             }
 
-            throwstd::runtime_error{
+            throw std::runtime_error{
                 "Failed to associate writers for array_view."};
         }
     };
@@ -7472,7 +7199,7 @@ namespace hc
 
         if (av.get_accelerator().get_device_path() == L"cpu") {
         throw hc::runtime_exception{
-            detail::__errorMsg_UnsupportedAccelerator, E_FAIL};
+            detail::__errorMsg_UnsupportedAccelerator, detail::E_FAIL};
         }
 
         validate_compute_domain(compute_domain);
@@ -7530,7 +7257,7 @@ namespace hc
 
         if (av.get_accelerator().get_device_path() == L"cpu") {
             throw hc::runtime_exception{
-                detail::__errorMsg_UnsupportedAccelerator, E_FAIL};
+                detail::__errorMsg_UnsupportedAccelerator, detail::E_FAIL};
         }
 
         validate_tiled_compute_domain(compute_domain);
@@ -7538,8 +7265,7 @@ namespace hc
         for (auto&& x : predecessors_for(f)) if (x.valid()) x.wait();
 
         completion_future tmp{
-            detail::launch_kernel_with_dynamic_group_memory_async(
-                av.queue_, compute_domain, f)};
+            detail::launch_kernel_async(av, compute_domain, f)};
         av.add_pending_task_(tmp);
 
         register_writer(tmp);

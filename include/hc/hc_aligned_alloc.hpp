@@ -4,7 +4,6 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-
 #pragma once
 
 #include <cassert>

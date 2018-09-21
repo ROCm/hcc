@@ -1,3 +1,9 @@
+//===----------------------------------------------------------------------===//
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
 #pragma once
 
 #include <cstdint>
@@ -37,15 +43,12 @@ extern "C"
 __attribute__((noduplicate, nothrow))
 void hc_barrier(unsigned int n) [[hc]];
 
-/// macro to set if we want default queue be thread-local or not
-#define TLS_QUEUE (0)
-
 #ifndef CLK_LOCAL_MEM_FENCE
-#define CLK_LOCAL_MEM_FENCE (1)
+    #define CLK_LOCAL_MEM_FENCE (1)
 #endif
 
 #ifndef CLK_GLOBAL_MEM_FENCE
-#define CLK_GLOBAL_MEM_FENCE (2)
+    #define CLK_GLOBAL_MEM_FENCE (2)
 #endif
 
 // Provide automatic type conversion for void*.

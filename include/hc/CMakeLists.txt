@@ -1,20 +1,29 @@
-set(HC_headers
-    hc_aligned_alloc.hpp
-    hc_am_internal.hpp
-    hc_am.hpp
-    hc_atomics.hpp
-    hc_callable_attributes.hpp
-    hc_defines.hpp
-    hc_exception.hpp
-    hc_index.hpp
-    hc_launch.hpp
-    hc_math.hpp
-    hc_norm_unorm.hpp
-    hc_printf.hpp
-    hc_rt_debug.hpp
-    hc_runtime.hpp
-    hc_short_vector.hpp
-    hc.hpp)
+set(
+    HC_headers
+        hc_agent_pool.hpp
+        hc_aligned_alloc.hpp
+        hc_am_internal.hpp
+        hc_am.hpp
+        hc_atomics.hpp
+        hc_callable_attributes.hpp
+        hc_defines.hpp
+        hc_exception.hpp
+        hc_index.hpp
+        hc_kernel_emitter.hpp
+        hc_launch.hpp
+        hc_math.hpp
+        hc_norm_unorm.hpp
+        hc_printf.hpp
+        hc_queue_pool.hpp
+        hc_rt_debug.hpp
+        hc_runtime.hpp
+        hc_short_vector.hpp
+        hc_signal_pool.hpp
+        hc.hpp
+        implementation/hc_code_object_bundle.hpp
+        implementation/hc_program_state.hpp
+        implementation/hc_raii_handle.hpp
+        implementation/hc_type_support.hpp)
 
 # Set location for output directory
 set(output_dir "${PROJECT_BINARY_DIR}/include/hc")
