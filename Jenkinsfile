@@ -96,7 +96,6 @@ node( 'hcctest' )
             -DHSA_AMDGPU_GPU_TARGET="gfx900;gfx803" \
             -DNUM_TEST_THREADS="4" \
             ../..
-          // make -j\$(nproc)
           make -j2
         """
 
