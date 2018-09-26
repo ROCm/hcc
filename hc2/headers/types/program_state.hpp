@@ -153,10 +153,21 @@ namespace hc2
             std::call_once(f, []() {
                 std::vector<std::vector<char>> ks;
                 dl_iterate_phdr(copy_kernel_sections_<>, &ks);
-
                 for (auto&& x : ks) {
-                    Bundled_code_header tmp{x};
-                    if (valid(tmp)) r.push_back(std::move(tmp));
+                    size_t offset = 0;
+                    while(offset < x.size()) {
+                        size_t read_bundle_size = 0;
+                        Bundled_code_header tmp{x.cbegin()+offset,
+                                                x.cend(), 
+                                                &read_bundle_size};
+                        if (valid(tmp)) {
+                            r.push_back(std::move(tmp));
+                            offset+=read_bundle_size;
+                        }
+                        else {
+                            break;
+                        }
+                    }
                 }
             });
 

@@ -57,10 +57,11 @@ namespace hc2
         bool read(
             RandomAccessIterator f,
             RandomAccessIterator l,
-            Bundled_code_header& x)
+            Bundled_code_header& x,
+            size_t* read_size)
         {
             std::copy_n(f, sizeof(x.cbuf), x.cbuf);
-
+            std::uint64_t max_offset = sizeof(x.cbuf);
             if (valid(x)) {
                 x.bundles.resize(x.bundle_cnt);
 
@@ -73,21 +74,21 @@ namespace hc2
 
                     std::copy_n(
                         f + y.offset, y.bundle_sz, std::back_inserter(y.blob));
-
+                    max_offset = std::max(max_offset, y.offset + y.bundle_sz);
                     it += y.triple_sz;
                 }
-
+                if (read_size) *read_size = (size_t) max_offset;
                 return true;
             }
-
+            if (read_size) *read_size = (size_t) max_offset;
             return false;
         }
 
         friend
         inline
-        bool read(const std::vector<char>& blob, Bundled_code_header& x)
+        bool read(const std::vector<char>& blob, Bundled_code_header& x, size_t* read_size=nullptr)
         {
-            return read(blob.cbegin(), blob.cend(), x);
+            return read(blob.cbegin(), blob.cend(), x, read_size);
         }
 
         friend
@@ -117,15 +118,15 @@ namespace hc2
         Bundled_code_header(Bundled_code_header&&) = default;
 
         template<typename RandomAccessIterator>
-        Bundled_code_header(RandomAccessIterator f, RandomAccessIterator l)
+        Bundled_code_header(RandomAccessIterator f, RandomAccessIterator l, size_t* read_size=nullptr)
             : Bundled_code_header{}
         {
-            read(f, l, *this);
+            read(f, l, *this, read_size);
         }
 
         explicit
-        Bundled_code_header(const std::vector<char>& blob)
-            : Bundled_code_header{blob.cbegin(), blob.cend()}
+        Bundled_code_header(const std::vector<char>& blob, size_t* read_size=nullptr)
+            : Bundled_code_header{blob.cbegin(), blob.cend(), read_size}
         {}
     };
     constexpr const char Bundled_code_header::magic_string[];

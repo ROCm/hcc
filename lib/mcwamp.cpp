@@ -264,8 +264,6 @@ struct _code_bundle {
 
 static void read_code_bundles(std::vector<_code_bundle>& bundles) {
 
-  //std::cout << "read_code_bundles..." << std::endl;
-
   const char* bundles_data_start = (const char *)kernel_bundle_source;
 
   while (1) {
@@ -273,7 +271,6 @@ static void read_code_bundles(std::vector<_code_bundle>& bundles) {
     constexpr char OFFLOAD_BUNDLER_MAGIC_STR[] = "__CLANG_OFFLOAD_BUNDLE__";
     constexpr size_t OFFLOAD_BUNDLER_MAGIC_STR_LENGTH = sizeof(OFFLOAD_BUNDLER_MAGIC_STR)-1;
     auto detect_bundle_magic = [&](const char* b) {
-      //std::cout << "detecting magic string..." << std::endl;
       for (int i = 0; i < OFFLOAD_BUNDLER_MAGIC_STR_LENGTH; ++i) {
         if (b[i] != OFFLOAD_BUNDLER_MAGIC_STR[i])
           return false;
@@ -282,8 +279,6 @@ static void read_code_bundles(std::vector<_code_bundle>& bundles) {
     };
 
     if (detect_bundle_magic(bundles_data_start)) {
-
-      //std::cout << "bundles detected!" << std::endl;
 
       auto read_uint64 = [](const char* p) {
         return *reinterpret_cast<const uint64_t*>(p);
@@ -325,9 +320,6 @@ static void read_code_bundles(std::vector<_code_bundle>& bundles) {
       bundles_data_start += bundle_end;
     }
     else {
-      
-      //std::cout << "no more device code objects" << std::endl;
-
       // no more device code objects, exit
       break;
     }
@@ -343,7 +335,6 @@ void LoadInMemoryProgram(KalmarQueue* pQueue) {
 
   for (auto&& b : bundles) {
     if (pQueue->getDev()->IsCompatibleKernel((void*) b.size, (void*) b.device_binary)) {
-      //std::cout << "build program, size=" << b.size << std::endl;
       pQueue->getDev()->BuildProgram((void*) b.size, (void*) b.device_binary);
     }
   }
