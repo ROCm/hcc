@@ -8,6 +8,8 @@ KMDBSCRIPT="${KMDBSCRIPT:=0}"
 # dump the LLVM bitcode
 KMDUMPLLVM="${KMDUMPLLVM:=0}"
 
+AMDGPU_OBJ_CODEGEN="${AMDGPU_OBJ_CODEGEN:=0}"
+
 if [ $KMDBSCRIPT == "1" ]
 then
   set -x
@@ -63,7 +65,6 @@ if [ "$#" -lt 2 ]; then
 fi
 
 AMDGPU_TARGET_ARRAY=()
-EARLY_FINALIZATION=0
 for ARG in "$@"
 do
   case $ARG in
@@ -75,7 +76,7 @@ do
     continue
     ;;
     --early_finalize)
-    EARLY_FINALIZATION=1
+    AMDGPU_OBJ_CODEGEN=1
     continue
     ;;
   esac
@@ -115,7 +116,7 @@ if [ $KMDUMPLLVM == "1" ]; then
   cp "$TEMP_NAME.ll" ./dump.kernel_input.ll
 fi
 
-if [ $EARLY_FINALIZATION == 1 ]; then
+if [ $AMDGPU_OBJ_CODEGEN == 1 ]; then
   # invoke the backend to finalize the IR
 
   # touch an empty object for host part, to accomodate rule required by
