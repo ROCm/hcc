@@ -2746,14 +2746,25 @@ extern "C" unsigned int __sadhi_u16x2_u8x4(unsigned int src0, unsigned int src1,
 /**
  * Get system timestamp
  */
-extern "C" uint64_t __clock_u64() __HC__;
+extern "C" __attribute__((always_inline))
+uint64_t __ockl_memrealtime_u64(void);
+
+extern "C" inline __attribute((always_inline)) uint64_t __clock_u64() __HC__ {
+  return (uint64_t) __ockl_memrealtime_u64();
+}
+
 
 /**
  * Get hardware cycle count
  *
  * Notice the return value of this function is implementation defined.
  */
-extern "C" uint64_t __cycle_u64() __HC__;
+extern "C" __attribute__((always_inline))
+uint64_t __ockl_memtime_u64(void);
+
+extern "C" inline __attribute((always_inline)) uint64_t __cycle_u64() __HC__ {
+  return (uint64_t) __ockl_memtime_u64();
+}
 
 /**
  * Get the count of the number of earlier (in flattened
