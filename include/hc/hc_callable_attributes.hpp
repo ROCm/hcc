@@ -10,11 +10,6 @@
 #include <tuple>
 #include <utility>
 
-namespace detail
-{
-    template<typename, typename> struct Kernel_emitter;
-}
-
 namespace hc
 {
     namespace attr_impl
@@ -26,6 +21,10 @@ namespace hc
         struct Waves_per_EU_tag {};
     } // Namespace attr_impl.
 
+    namespace detail
+    {
+        template<typename, typename> struct Kernel_emitter;
+    }
 
     template<unsigned int min_size = 0, unsigned int max_size = 0>
     class Flat_workgroup_size : public attr_impl::Flat_wg_tag {
@@ -144,7 +143,7 @@ namespace hc
             Callable callable_{};
 
             template<typename, typename>
-            friend struct ::detail::Kernel_emitter;
+            friend struct detail::Kernel_emitter;
         public:
             // CREATORS
             Callable_with_AMDGPU_attributes() [[cpu, hc]] = default;
