@@ -1,5 +1,5 @@
 #include <hc/hc.hpp>
-#include <hc/hc_math.hpp.hpp>
+#include <hc/hc_math.hpp>
 #include <hc/hc_short_vector.hpp>
 
 using namespace hc;

@@ -6,7 +6,7 @@
 // ticket 136805 is fixed.
 
 #include <hc/hc.hpp>
-#include <hc/hc_math.hpp.hpp>
+#include <hc/hc_math.hpp>
 
 #include <iostream>
 #include <random>

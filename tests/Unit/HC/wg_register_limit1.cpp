@@ -3,7 +3,7 @@
 #include <hc/hc.hpp>
 #include <string>
 #include <cmath>
-#include <hc/hc_math.hpp.hpp>
+#include <hc/hc_math.hpp>
 
 int main() {
   bool pass = false;
