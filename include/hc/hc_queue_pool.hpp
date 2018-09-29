@@ -152,13 +152,17 @@ namespace hc
             }
 
             static
-            void enable(std::pair<void*, std::uint64_t>& slot) noexcept
+            void enable(
+                std::pair<void*, std::uint64_t>& slot,
+                hsa_queue_t* queue) noexcept
             {   // Precondition: reserved2 = fully formed packet header.
                 auto p = static_cast<hsa_barrier_and_packet_t*>(slot.first);
                 std::uint16_t h = p->reserved2;
                 p->reserved2 = 0;
 
                 __atomic_store(&p->header, &h, __ATOMIC_SEQ_CST);
+
+                hsa_signal_store_screlease(queue->doorbell_signal, slot.second);
             }
 
             static
