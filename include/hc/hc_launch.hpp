@@ -75,20 +75,31 @@ namespace hc
             return std::unique_ptr<void, decltype(deleter)>{new Kernel{f}, deleter};
         }
 
-        template<typename T>
         constexpr
         inline
-        std::array<std::size_t, T::rank> local_dimensions(const T&)
+        std::array<std::uint16_t, 1> local_dimensions(const hc::extent<1>&)
         {
-            return std::array<std::size_t, T::rank>{};
+            return std::array<std::uint16_t, 1>{64};
+        }
+        constexpr
+        inline
+        std::array<std::uint16_t, 2> local_dimensions(const hc::extent<2>&)
+        {
+            return std::array<std::uint16_t, 2>{8, 8};
+        }
+        constexpr
+        inline
+        std::array<std::uint16_t, 3> local_dimensions(const hc::extent<3>&)
+        {
+            return std::array<std::uint16_t, 3>{4, 4, 4};
         }
 
         template<int n>
         inline
-        std::array<std::size_t, n> local_dimensions(
+        std::array<std::uint16_t, n> local_dimensions(
             const hc::tiled_extent<n>& domain)
         {
-            std::array<std::size_t, n> r{};
+            std::array<std::uint16_t, n> r{};
             for (auto i = 0; i != n; ++i) r[i] = domain.tile_dim[i];
 
             return r;
@@ -112,13 +123,13 @@ namespace hc
         template<typename Domain>
         inline
         std::pair<
-            std::array<std::size_t, Domain::rank>,
-            std::array<std::size_t, Domain::rank>> dimensions(
+            std::array<std::uint32_t, Domain::rank>,
+            std::array<std::uint16_t, Domain::rank>> dimensions(
                 const Domain& domain)
         {   // TODO: optimise.
             using R = std::pair<
-                std::array<std::size_t, Domain::rank>,
-                std::array<std::size_t, Domain::rank>>;
+                std::array<std::uint32_t, Domain::rank>,
+                std::array<std::uint16_t, Domain::rank>>;
 
             R r{};
             auto tmp = local_dimensions(domain);
@@ -170,16 +181,19 @@ namespace hc
 
             const auto dims = dimensions(domain);
 
-            slot->workgroup_size_x = dims.second[Domain::rank - 1];
-            slot->workgroup_size_y =
-                (Domain::rank > 1) ? dims.second[Domain::rank - 2] : 1;
-            slot->workgroup_size_z =
-                (Domain::rank > 2) ? dims.second[Domain::rank - 3] : 1;
             slot->grid_size_x = dims.first[Domain::rank - 1];
             slot->grid_size_y =
                 (Domain::rank > 1) ? dims.first[Domain::rank - 1] : 1;
             slot->grid_size_z =
                 (Domain::rank > 2) ? dims.first[Domain::rank - 2] : 1;
+            slot->workgroup_size_x = std::min<std::uint16_t>(
+                dims.second[Domain::rank - 1], slot->grid_size_x);
+            slot->workgroup_size_y = std::min<std::uint16_t>(
+                (Domain::rank > 1) ? dims.second[Domain::rank - 2] : 1,
+                slot->grid_size_y);
+            slot->workgroup_size_z = std::min<std::uint16_t>(
+                (Domain::rank > 2) ? dims.second[Domain::rank - 3] : 1,
+                slot->grid_size_z);
 
             using K = Kernel_emitter<IndexType<Domain>, Kernel>;
 
@@ -205,6 +219,17 @@ namespace hc
             launch_kernel_async(av, domain, f).wait();
         }
 
+        template<typename Kernel>
+        inline
+        void* lock_callable(hsa_agent_t agent, void* ptr)
+        {
+            throwing_hsa_result_check(
+                hsa_amd_memory_lock(ptr, sizeof(Kernel), &agent, 1, &ptr),
+                __FILE__, __func__, __LINE__);
+
+            return ptr;
+        }
+
         template<typename AcceleratorView, typename Domain, typename Kernel>
         inline
         std::shared_future<void> launch_kernel_async(
@@ -212,17 +237,18 @@ namespace hc
             const Domain& domain,
             const Kernel& f)
         {
-            auto ks = make_kernel_state(f);
+            const auto agent = *static_cast<hsa_agent_t*>(
+                av.get_accelerator().get_hsa_agent());
+            auto queue = static_cast<hsa_queue_t*>(av.get_hsa_queue());
 
-            auto slot = Queue_pool::queue_slot(
-                static_cast<hsa_queue_t*>(av.get_hsa_queue()));
+            auto ks = make_kernel_state(f);
+            auto slot = Queue_pool::queue_slot(queue);
             auto signal = make_kernel_dispatch<Kernel>(
                 domain,
                 static_cast<hsa_kernel_dispatch_packet_t*>(slot.first),
-                *static_cast<hsa_agent_t*>(
-                    av.get_accelerator().get_hsa_agent()),
-                ks.get());
-            Queue_pool::enable(slot);
+                agent,
+                lock_callable<Kernel>(agent, ks.get()));
+            Queue_pool::enable(slot, queue);
 
             return std::async([=, ks = std::move(ks)]() mutable {
                 Signal_pool::wait(signal);
@@ -253,7 +279,8 @@ namespace hc
                 static_cast<hsa_queue_t*>(av.get_hsa_queue()));
             auto signal = make_barrier(
                 static_cast<hsa_barrier_and_packet_t*>(slot.first));
-            Queue_pool::enable(slot);
+            Queue_pool::enable(
+                slot, static_cast<hsa_queue_t*>(av.get_hsa_queue()));
 
             return std::async([=]() {
                 Signal_pool::wait(signal);
