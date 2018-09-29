@@ -139,7 +139,7 @@ namespace hc
                 std::string r(sz, '\0');
                 throwing_hsa_result_check(
                     hsa_executable_symbol_get_info(
-                        x, HSA_EXECUTABLE_SYMBOL_INFO_NAME, r.data()),
+                        x, HSA_EXECUTABLE_SYMBOL_INFO_NAME, &r[0]),
                     __FILE__, __func__, __LINE__);
 
                 return r;
@@ -244,6 +244,8 @@ namespace hc
 
                 std::call_once(f, []() {
                     for (auto&& agent : Agent_pool::pool()) {
+                        if (agent.second.is_cpu) continue;
+
                         r.emplace(
                             agent.first, HSA_kernel<Emitter>{agent.first});
                     }
@@ -254,7 +256,6 @@ namespace hc
         };
 
         template<typename T>
-        constexpr
         inline
         void ignore_arg(T&&)
         {}

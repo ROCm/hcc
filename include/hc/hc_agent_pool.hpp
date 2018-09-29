@@ -249,6 +249,8 @@ namespace hc
             static
             std::size_t size_(hsa_region_t x)
             {
+                if (x.handle == 0) return 0u;
+
                 std::size_t r{};
                 throwing_hsa_result_check(
                     hsa_region_get_info(x, HSA_REGION_INFO_ALLOC_MAX_SIZE, &r),
@@ -327,7 +329,7 @@ namespace hc
                 max_tile_static_size{size_(group_(x))},
                 min_queue_size{min_queue_sz_(x)},
                 name{name_(x)},
-                profile{profile_(x)},
+                profile{is_gpu ? profile_(x) : enums::accelerator_profile_none},
                 system_coarse_grained_region{system_cg_()},
                 version{version_(x)}
             {}
@@ -382,7 +384,9 @@ namespace hc
 
         hsa_agent_t Agent_pool::cpu_agent_()
         {   // TODO: for e.g. multi-socket there can be multiple CPU agents.
-            for (auto&& x : pool()) if (x.second.is_cpu) return x.second.agent_;
+            for (auto&& x : agents_()) {
+                if (HSA_agent::type_(x) == HSA_DEVICE_TYPE_CPU) return x;
+            }
 
             return {};
         }
