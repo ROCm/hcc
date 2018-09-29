@@ -974,8 +974,8 @@ namespace hc
                 "Tried to create accelerator from unknown HSA agent."};
         }
     public:
-        static constexpr const wchar_t cpu_accelerator[]{L"cpu"};
-        static constexpr const wchar_t default_accelerator[]{L"default"};
+        inline static constexpr const wchar_t cpu_accelerator[]{L"cpu"};
+        inline static constexpr const wchar_t default_accelerator[]{L"default"};
 
         /**
          * Constructs a new accelerator object that represents the default
@@ -7207,7 +7207,7 @@ namespace hc
         for (auto&& x : predecessors_for(f)) if (x.valid()) x.wait();
 
         completion_future tmp{
-            detail::launch_kernel_async(av.queue_, compute_domain, f)};
+            detail::launch_kernel_async(av, compute_domain, f)};
         av.add_pending_task_(tmp);
 
         register_writer(tmp);
