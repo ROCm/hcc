@@ -32,12 +32,12 @@ namespace hc
             template<int n>
             operator index<n>() const noexcept [[hc]]
             {
-                int tmp[n]{};
+                index<n> tmp;
                 for (auto i = 0; i != n; ++i) {
                     tmp[n - i - 1] = hc_get_workitem_absolute_id(i);
                 }
 
-                return index<n>{tmp};
+                return tmp;
             }
 
             template<int n>
