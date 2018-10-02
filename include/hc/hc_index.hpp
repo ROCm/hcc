@@ -348,18 +348,16 @@ namespace hc
              *
              * @param[in] i0 The component values of the index vector.
              */
+            template<
+                typename... Ts,
+                typename std::enable_if<sizeof...(Ts) == N>::type* = nullptr>
             explicit
-            index(int i0) [[cpu, hc]] : base_(i0) {}
-
-            template<typename... Ts>
-            explicit
-            index(Ts... xs) [[cpu, hc]] : base_(xs...)
+            index(Ts... i_n) [[cpu, hc]] : base_{static_cast<int>(i_n)...}
             {
                 static_assert(
                     sizeof...(Ts) <= 3,
                     "Explicit constructor with rank greater than 3 is not "
                         "allowed");
-                static_assert(sizeof...(Ts) == N, "rank should be consistent");
             }
 
             /** @} */
@@ -373,7 +371,7 @@ namespace hc
              * @param[in] components An array of N int values.
              */
             explicit
-            index(const int components[]) [[cpu, hc]] : base_(components) {}
+            index(const int components[]) [[cpu, hc]] : base_{components} {}
 
             /**
              * Assigns the component values of "other" to this index<N> object.
@@ -518,12 +516,6 @@ namespace hc
             /** @} */
         };
 
-        ////////////////////////////////////////////////////////////////////////
-        // explicit instantions
-        ////////////////////////////////////////////////////////////////////////
-        template class index<1>;
-        template class index<2>;
-        template class index<3>;
 
         ////////////////////////////////////////////////////////////////////////
         // operators for index<N>
