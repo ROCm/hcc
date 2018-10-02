@@ -83,7 +83,7 @@ namespace hc
                 C r;
                 throwing_hsa_result_check(
                     hsa_agent_iterate_regions(x, [](hsa_region_t rg, void* pr) {
-                    hsa_region_segment_t s{};
+                        hsa_region_segment_t s{};
                         throwing_hsa_result_check(
                             hsa_region_get_info(
                                 rg, HSA_REGION_INFO_SEGMENT, &s),
@@ -253,7 +253,7 @@ namespace hc
 
                 std::size_t r{};
                 throwing_hsa_result_check(
-                    hsa_region_get_info(x, HSA_REGION_INFO_ALLOC_MAX_SIZE, &r),
+                    hsa_region_get_info(x, HSA_REGION_INFO_SIZE, &r),
                     __FILE__, __func__, __LINE__);
 
                 return r;
@@ -403,8 +403,9 @@ namespace hc
 
             tmp.erase(
                 std::remove_if(tmp.begin(), tmp.end(), [](const HSA_agent& x) {
-                return x.is_cpu;
-            }), tmp.end());
+                    return x.is_cpu;
+                }),
+                tmp.end());
 
             if (tmp.empty()) return cpu_agent_();
 
