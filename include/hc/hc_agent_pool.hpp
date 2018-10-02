@@ -364,6 +364,7 @@ namespace hc
             HSA_agent& operator=(HSA_agent&&) = default;
         };
 
+        inline
         const std::vector<hsa_agent_t>& Agent_pool::agents_()
         {
             static std::vector<hsa_agent_t> r;
@@ -382,6 +383,7 @@ namespace hc
             return r;
         }
 
+        inline
         hsa_agent_t Agent_pool::cpu_agent_()
         {   // TODO: for e.g. multi-socket there can be multiple CPU agents.
             for (auto&& x : agents_()) {
@@ -391,6 +393,7 @@ namespace hc
             return {};
         }
 
+        inline
         hsa_agent_t Agent_pool::default_agent_()
         {
             using T = decltype(*pool().cbegin());
@@ -413,6 +416,7 @@ namespace hc
             })->agent_;
         }
 
+        inline
         hsa_region_t Agent_pool::system_cg_()
         {
             static hsa_region_t sys_cg{};
@@ -437,6 +441,7 @@ namespace hc
             return sys_cg;
         }
 
+        inline
         std::unordered_map<hsa_agent_t, Agent_pool::HSA_agent>& Agent_pool::
             pool()
         {
@@ -450,6 +455,7 @@ namespace hc
             return r;
         }
 
+        inline
         hsa_agent_t Agent_pool::cpu_agent()
         {
             static const hsa_agent_t r{cpu_agent_()};
@@ -457,6 +463,7 @@ namespace hc
             return r;
         }
 
+        inline
         hsa_agent_t& Agent_pool::default_agent()
         {
             static hsa_agent_t r{default_agent_()};
