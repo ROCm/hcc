@@ -12,16 +12,16 @@
 
 #pragma once
 
-#include "hc_agent_pool.hpp"
-#include "hc_atomics.hpp"
-#include "hc_callable_attributes.hpp"
-#include "hc_defines.hpp"
-#include "hc_exception.hpp"
-#include "hc_index.hpp"
-#include "hc_launch.hpp"
-#include "hc_math.hpp"
-#include "hc_queue_pool.hpp"
-#include "hc_runtime.hpp"
+#include <hc/hc_agent_pool.hpp>
+#include <hc/hc_atomics.hpp>
+#include <hc/hc_callable_attributes.hpp>
+#include <hc/hc_defines.hpp>
+#include <hc/hc_exception.hpp>
+#include <hc/hc_index.hpp>
+#include <hc/hc_launch.hpp>
+#include <hc/hc_math.hpp>
+#include <hc/hc_queue_pool.hpp>
+#include <hc/hc_runtime.hpp>
 
 #include <hsa/hsa.h>
 #include <hsa/hsa_ext_amd.h>
@@ -47,8 +47,6 @@
 
 namespace hc
 {
-    class AmPointerInfo;
-
     using namespace atomics;
     using namespace detail::enums;
 
@@ -597,7 +595,7 @@ namespace hc
          *                     with the expense of using one CPU core for active
          *                     waiting.
          */
-        void wait()//hcWaitMode waitMode = hcWaitModeBlocked)
+        void wait()
         {
             wait_for_all_pending_tasks_();
 
@@ -1348,8 +1346,12 @@ namespace hc
          */
         void* get_hsa_am_region() const
         {
-            return &detail::Agent_pool::pool()[agent_]
+            auto& acg = detail::Agent_pool::pool()[agent_]
                 .agent_allocated_coarse_grained_region;
+            if (acg.handle) return &acg;
+
+            return &detail::Agent_pool::pool()[agent_]
+                .system_coarse_grained_region;
         }
 
         /**
@@ -1432,7 +1434,19 @@ namespace hc
          */
         bool get_is_peer(const accelerator& other) const
         {
-            return false;//pDev->is_peer(other.pDev);
+            if (*this == other) return true;
+
+            hsa_amd_memory_pool_access_t r{};
+            detail::throwing_hsa_result_check(
+                hsa_amd_agent_memory_pool_get_info(
+                    *static_cast<hsa_agent_t*>(other.get_hsa_agent()),
+                    *static_cast<hsa_amd_memory_pool_t*>(
+                        other.get_hsa_am_region()),
+                    HSA_AMD_AGENT_MEMORY_POOL_INFO_ACCESS,
+                    &r),
+                __FILE__, __func__, __LINE__);
+
+            return r != HSA_AMD_MEMORY_POOL_ACCESS_NEVER_ALLOWED;
         }
 
         /**
@@ -1588,6 +1602,13 @@ namespace hc
     template<int N>
     class extent {
         static_assert(N > 0, "Dimensionality must be positive");
+
+        using base =
+            detail::index_impl<typename detail::__make_indices<N>::type>;
+        base base_;
+
+        template<int, typename> friend struct detail::index_helper;
+        template<int, typename, typename> friend struct detail::amp_helper;
     public:
         /**
          * A static member of extent<N> that contains the rank of this extent.
@@ -1625,18 +1646,16 @@ namespace hc
          *
          * @param[in] e0 The component values of the extent vector.
          */
+        template<
+            typename... Ts,
+            typename std::enable_if<sizeof...(Ts) == N>::type* = nullptr>
         explicit
-        extent(int e0) [[cpu, hc]] : base_{e0} {}
-
-        template<typename ..._Tp>
-        explicit
-        extent(_Tp ... __t) [[cpu, hc]] : base_{__t...}
+        extent(Ts... i_n) [[cpu, hc]] : base_{i_n...}
         {
             static_assert(
-                sizeof...(__t) <= 3,
+                sizeof...(Ts) <= 3,
                 "Can only supply at most 3 individual coordinates in the "
                 "constructor.");
-            static_assert(sizeof...(__t) == N, "rank should be consistent.");
         }
 
         /** @} */
@@ -1650,7 +1669,7 @@ namespace hc
          * @param[in] components An array of N int values.
          */
         explicit
-        extent(const int components[]) [[cpu, hc]] : base_(components) {}
+        extent(const int components[]) [[cpu, hc]] : base_{components} {}
 
         /**
          * Constructs an extent<N> with the coordinate values provided the array
@@ -1737,11 +1756,12 @@ namespace hc
          * Produces a tiled_extent object with the tile extents given by t0, t1,
          * and t2, plus a certain amount of dynamic group segment.
          */
-        tiled_extent<1> tile_with_dynamic(int t0, int dynamic_size) const;
+        tiled_extent<1> tile_with_dynamic(
+            int t0, unsigned int dynamic_size) const;
         tiled_extent<2> tile_with_dynamic(
-            int t0, int t1, int dynamic_size) const;
+            int t0, int t1, unsigned int dynamic_size) const;
         tiled_extent<3> tile_with_dynamic(
-            int t0, int t1, int t2, int dynamic_size) const;
+            int t0, int t1, int t2, unsigned int dynamic_size) const;
 
         /** @} */
 
@@ -1907,14 +1927,6 @@ namespace hc
         }
 
         /** @} */
-
-    private:
-        using base =
-            detail::index_impl<typename detail::__make_indices<N>::type>;
-        base base_;
-
-        template<int, typename> friend struct detail::index_helper;
-        template<int, typename, typename> friend struct detail::amp_helper;
     };
 
     // ------------------------------------------------------------------------
@@ -2275,7 +2287,7 @@ namespace hc
     template <int N>
     inline
     tiled_extent<1> extent<N>::tile_with_dynamic(
-        int t0, int dynamic_size) const [[cpu, hc]]
+        int t0, unsigned int dynamic_size) const [[cpu, hc]]
     {
         static_assert(
             N == 1,
@@ -2286,7 +2298,7 @@ namespace hc
     template <int N>
     inline
     tiled_extent<2> extent<N>::tile_with_dynamic(
-        int t0, int t1, int dynamic_size) const [[cpu, hc]]
+        int t0, int t1, unsigned int dynamic_size) const [[cpu, hc]]
     {
         static_assert(
             N == 2,
@@ -2297,7 +2309,7 @@ namespace hc
     template <int N>
     inline
     tiled_extent<3> extent<N>::tile_with_dynamic(
-        int t0, int t1, int t2, int dynamic_size) const [[cpu, hc]]
+        int t0, int t1, int t2, unsigned int dynamic_size) const [[cpu, hc]]
     {
         static_assert(
             N == 3,
@@ -3688,6 +3700,11 @@ namespace hc
          */
         static constexpr int rank{n};
 
+        tiled_index(const index<n>& g) [[cpu, hc]] : tiled_index{}
+        {
+            const_cast<index<n>&>(global) = g; // TODO: remove yucky cast.
+        }
+
         /**
          * Copy constructor. Constructs a new tiled_index from the supplied
          * argument "other".
@@ -3742,8 +3759,6 @@ namespace hc
         {
             return global;
         }
-
-        tiled_index(const index<n>& g) [[cpu, hc]] : global{g} {}
     };
 
     // ------------------------------------------------------------------------
