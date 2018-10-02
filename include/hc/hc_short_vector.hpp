@@ -6,7 +6,7 @@
 //===----------------------------------------------------------------------===//
 #pragma once
 
-#include <hc/hc_defines.h>
+#include <hc/hc_defines.hpp>
 #include <hc/hc_norm_unorm.hpp>
 
 #include <type_traits>
