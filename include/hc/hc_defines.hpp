@@ -51,16 +51,6 @@ void hc_barrier(unsigned int n) [[hc]];
     #define CLK_GLOBAL_MEM_FENCE (2)
 #endif
 
-// Provide automatic type conversion for void*.
-class auto_voidp {
-    void* ptr_;
-    public:
-        auto_voidp(void* ptr) : ptr_{ptr} {}
-
-        template<typename T>
-        operator T*() const { return static_cast<T*>(ptr_); }
-};
-
 // Valid values for__hcc_backend__ to indicate the
 // compiler backend
 #define HCC_BACKEND_AMDGPU (1)
