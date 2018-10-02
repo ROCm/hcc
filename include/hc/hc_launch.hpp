@@ -62,7 +62,7 @@ namespace hc
         std::unique_ptr<void, void (*)(void*)>  make_kernel_state(
             const Kernel& f)
         {
-            static const auto deleter = [](void* p) {
+            static const auto del = [](void* p) {
                 if (hsa_amd_memory_unlock(p) != HSA_STATUS_SUCCESS) {
                     std::cerr << "Failed to unlock locked kernel memory; "
                         << "HC Runtime may be in an inconsistent state."
@@ -72,7 +72,7 @@ namespace hc
                 delete static_cast<Kernel*>(p);
             };
 
-            return std::unique_ptr<void, decltype(deleter)>{new Kernel{f}, deleter};
+            return std::unique_ptr<void, decltype(del)>{new Kernel{f}, del};
         }
 
         constexpr
@@ -183,15 +183,15 @@ namespace hc
 
             slot->grid_size_x = dims.first[Domain::rank - 1];
             slot->grid_size_y =
-                (Domain::rank > 1) ? dims.first[Domain::rank - 1] : 1;
+                (Domain::rank > 1) ? dims.first[Domain::rank - 2] : 1;
             slot->grid_size_z =
-                (Domain::rank > 2) ? dims.first[Domain::rank - 2] : 1;
-            slot->workgroup_size_x = std::min<std::uint16_t>(
+                (Domain::rank > 2) ? dims.first[Domain::rank - 3] : 1;
+            slot->workgroup_size_x = std::min<std::uint32_t>(
                 dims.second[Domain::rank - 1], slot->grid_size_x);
-            slot->workgroup_size_y = std::min<std::uint16_t>(
+            slot->workgroup_size_y = std::min<std::uint32_t>(
                 (Domain::rank > 1) ? dims.second[Domain::rank - 2] : 1,
                 slot->grid_size_y);
-            slot->workgroup_size_z = std::min<std::uint16_t>(
+            slot->workgroup_size_z = std::min<std::uint32_t>(
                 (Domain::rank > 2) ? dims.second[Domain::rank - 3] : 1,
                 slot->grid_size_z);
 
