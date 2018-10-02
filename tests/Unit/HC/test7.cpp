@@ -6,7 +6,6 @@
 #include <iostream>
 
 // a test which checks accelerator::get_hsa_am_region()
-// a test which checks accelerator::get_hsa_kernarg_region()
 bool test() {
 
   hc::accelerator acc;
@@ -21,12 +20,6 @@ bool test() {
   // checks if we can get AM region
   void* am_region = acc.get_hsa_am_region();
   ret &= (am_region != nullptr);
-
-  std::cout << ret << "\n";
-
-  // checks if we can get Kernarg region
-  void* kernarg_region = acc.get_hsa_kernarg_region();
-  ret &= (kernarg_region != nullptr);
 
   std::cout << ret << "\n";
 
