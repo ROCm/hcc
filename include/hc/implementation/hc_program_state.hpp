@@ -300,6 +300,20 @@ namespace hc
             }
 
             static
+            void* agent_ptr(void* host_ptr)
+            {
+                hsa_amd_pointer_info_t tmp{};
+                tmp.size = sizeof(hsa_amd_pointer_info_t);
+
+                throwing_hsa_result_check(
+                    hsa_amd_pointer_info(
+                        host_ptr, &tmp, nullptr, nullptr, nullptr),
+                    __FILE__, __func__, __LINE__);
+
+                return tmp.agentBaseAddress;
+            }
+
+            static
             void associate_globals_with_host_allocation_(
                 hsa_agent_t agent,
                 hsa_executable_t executable,
@@ -325,10 +339,6 @@ namespace hc
                     using RAII_global =
                         std::unique_ptr<void, decltype(hsa_amd_memory_unlock)*>;
 
-                    static std::unordered_map<std::string, RAII_global> globals;
-
-                    if (globals.find(x) != globals.cend()) return;
-
                     const auto it1 = symbol_addresses_().find(x);
 
                     if (it1 == symbol_addresses_().cend()) {
@@ -336,29 +346,29 @@ namespace hc
                             "Global symbol: " + x + " is undefined."};
                     }
 
+                    static std::unordered_map<std::string, RAII_global> globals;
+
                     static std::mutex mtx;
                     std::lock_guard<std::mutex> lck{mtx};
 
-                    if (globals.find(x) != globals.cend()) return;
+                    void* p{nullptr};
+                    if (globals.find(x) == globals.cend()) {
+                        void* host_ptr =
+                            reinterpret_cast<void*>(it1->second.first);
+                        throwing_hsa_result_check(
+                            hsa_amd_memory_lock(
+                                host_ptr, it1->second.second, nullptr, 0u, &p),
+                            __FILE__, __func__, __LINE__);
 
-                    void* host_ptr = reinterpret_cast<void*>(it1->second.first);
-                    void* agent_ptr = nullptr;
-                    throwing_hsa_result_check(
-                        hsa_amd_memory_lock(
-                            host_ptr,
-                            it1->second.second,
-                            nullptr,
-                            0u,
-                            &agent_ptr),
-                        __FILE__, __func__, __LINE__);
+                        globals.emplace(
+                            x, RAII_global{host_ptr, hsa_amd_memory_unlock});
+                    }
+                    else p = agent_ptr(globals.find(x)->second.get());
 
                     throwing_hsa_result_check(
                         hsa_executable_agent_global_variable_define(
-                            executable, agent, x.c_str(), agent_ptr),
+                            executable, agent, x.c_str(), p),
                         __FILE__, __func__, __LINE__);
-
-                    globals.emplace(
-                        x, RAII_global{host_ptr, hsa_amd_memory_unlock});
                 }
             }
 
