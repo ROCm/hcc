@@ -117,11 +117,12 @@ namespace hc
             };
         } // namespace hc::detail::enums
 
+        template<std::size_t m, std::size_t n>
         inline
         void throwing_hsa_result_check(
             hsa_status_t s,
-            const std::string& file,
-            const std::string& fn,
+            const char (&file)[m],
+            const char (&fn)[n],
             int line)
         {
             if (s == HSA_STATUS_SUCCESS || s == HSA_STATUS_INFO_BREAK) return;
@@ -132,10 +133,10 @@ namespace hc
             throw std::system_error{
                 (r == HSA_STATUS_SUCCESS) ? s : r,
                 std::system_category(),
-                "In " + file +
-                    ", in function " + fn +
-                    ", on line " + std::to_string(line) +
-                    ", HSA RT failed: " + p
+                "In " + (file +
+                    (", in function " + (fn +
+                    (((", on line " + std::to_string(line)) +
+                    ", HSA RT failed: ") + p))))
             };
         }
 
@@ -153,6 +154,4 @@ namespace hc
         };
         inline static const HC_runtime hc_runtime{};
     } // Namespace hc::detail.
-    class AmPointerInfo;
-    class completion_future;
 } // Namespace hc.
