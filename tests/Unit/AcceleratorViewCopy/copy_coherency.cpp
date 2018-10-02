@@ -1,4 +1,4 @@
-// RUN: %hc %s -o %t.out -lhc_am -L/home/alexv/Programming/ROCR-Runtime/src/build -lhsa-runtime64 && %t.out
+// RUN: %hc %s -o %t.out  -L/home/alexv/Programming/ROCR-Runtime/src/build -lhsa-runtime64 && %t.out
 //
 // Test coherency and flushes.  Need to flush GPU caches before H2D copy
 
@@ -68,7 +68,7 @@ void singleAccelerator(int numElements)
 
     //int * A  = hc::am_alloc(sizeElements, acc, 0);
     int * B  = hc::am_alloc(sizeElements, acc, 0);
-    int * Bh = hc::am_alloc(sizeElements, acc, amHostPinned);
+    int * Bh = hc::am_alloc(sizeElements, acc, am_host_pinned);
 
     if (1) {
         printf ("test: running same-stream copy coherency test\n");
@@ -179,7 +179,7 @@ void multiAccelerator(int numElements)
     const size_t sizeElements = numElements * sizeof(int);
     int * dataGpu0 = hc::am_alloc(sizeElements, gpus[0], 0);
     int * dataGpu1 = hc::am_alloc(sizeElements, gpus[1], 0);
-    int * dataHost = hc::am_alloc(sizeElements, gpus[1], amHostPinned);
+    int * dataHost = hc::am_alloc(sizeElements, gpus[1], am_host_pinned);
 
     hc::accelerator_view av0 = gpus[0].create_view();
     hc::accelerator_view av1 = gpus[1].create_view();
@@ -259,14 +259,8 @@ int main()
     const size_t sizeElements = numElements * sizeof(int);
     printf ("info: buffer size = %6.2f MB\n", sizeElements / 1024.0 / 1024.0);
 
-    if (1) {
-        singleAccelerator(numElements);
-    }
-
-    // TODO - need to re-enable multi-GPU tests:
-    if (0) {
-        multiAccelerator(numElements);
-    }
+    singleAccelerator(numElements);
+    multiAccelerator(numElements);
 
     printf ("passed!\n");
     return 0;

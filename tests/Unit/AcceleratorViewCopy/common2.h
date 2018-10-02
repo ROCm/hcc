@@ -11,7 +11,7 @@ inline hc::completion_future MemcpyAsync(hc::accelerator_view &av, const void *S
 }
 
 inline void* HostAlloc(hc::accelerator &Acc, size_t Size){
-    return hc::am_alloc(Size, Acc, amHostPinned);
+    return hc::am_alloc(Size, Acc, am_host_pinned);
 }
 
 inline void* DeviceAlloc(hc::accelerator &Acc, size_t Size){

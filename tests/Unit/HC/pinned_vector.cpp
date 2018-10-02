@@ -1,4 +1,4 @@
-// RUN: %hc -lhc_am %s -o %t.out && %t.out
+// RUN: %hc  %s -o %t.out && %t.out
 
 #include <iostream>
 #include <hc/hc.hpp>
@@ -18,12 +18,12 @@ bool test_data_ptr() {
   hc::accelerator acc;
   hc::AmPointerInfo ap(nullptr, nullptr, nullptr, 0, acc);
 
-  if(am_memtracker_getinfo(&ap, v.data()) != AM_SUCCESS){
+  if(am_memtracker_get_info(&ap, v.data()) != AM_SUCCESS){
     std::cout << "pinned_vector memory not tracked by AmPointerTracker\n";
     return false;
   }
 
-  if(ap._hostPointer != ap._devicePointer
+  if(ap.host_pointer != ap.device_pointer
      or ap._isInDeviceMem
      or not ap._isAmManaged){
     std::cout << "sanity check on tracked pinned_vector memory failed\n";

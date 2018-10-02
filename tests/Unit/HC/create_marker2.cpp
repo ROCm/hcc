@@ -48,7 +48,7 @@ bool test(bool useWaitMode, hc::memory_scope releaseScope, hc::hcWaitMode mode =
   if (!useWaitMode) {
     fut2.wait();
   } else {
-    fut2.wait(mode);
+    fut2.wait();
   }
 
   // the barrier packet would ensure all previous packets were processed

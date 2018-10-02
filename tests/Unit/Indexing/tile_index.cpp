@@ -80,7 +80,7 @@ int test_tiled_extent_2d(void) {
 
 int test_tiled_extent_3d(void) {
   extent<3> e(123, 456, 789);
-  tiled_extent myTileExtent(e.tile(10, 30, 40));
+  tiled_extent<3> myTileExtent(e.tile(10, 30, 40));
   auto padded = myTileExtent.pad();
   assert(padded[0] == 130);
   assert(padded[1] == 480);

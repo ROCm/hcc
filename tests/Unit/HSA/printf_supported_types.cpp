@@ -1,4 +1,4 @@
-// RUN: %hc %s -DHCC_ENABLE_ACCELERATOR_PRINTF -lhc_am -o %t.out && %t.out | %FileCheck %s
+// RUN: %hc %s -DHCC_ENABLE_ACCELERATOR_PRINTF  -o %t.out && %t.out | %FileCheck %s
 
 #include <cassert>
 #include <hc/hc.hpp>

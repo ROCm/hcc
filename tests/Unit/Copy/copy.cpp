@@ -24,14 +24,14 @@ int main(void) {
   accelerator_view gpu_av = gpu_acc.get_default_view();
 
   std::vector<T> source(vecSize, INIT + 1);
-  array<T, 1> src(vecSize, source.begin());
+  array<T, 1> src(vecSize, source.begin(), gpu_av);
 
   std::vector<T> destination(vecSize, INIT);
-  array<T, 1> dest(vecSize, destination.begin());
+  array<T, 1> dest(vecSize, destination.begin(), gpu_av);
 
   // array that holds original value of dest
   std::vector<T> target(vecSize, 0);
-  array<T, 1> tgt(vecSize, target.begin());
+  array<T, 1> tgt(vecSize, target.begin(), gpu_av);
 
   // Run in a separate thread
   std::thread t([&]() {

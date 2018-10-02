@@ -10,7 +10,7 @@ int main() {
   try  {
     // We expect the runtime will fire an exception due to a large work group size
     hc::parallel_for_each(hc::extent<2>(8192,1).tile(8192,1), [](hc::tiled_index<2> i) [[hc]] {});
-  } catch (detail::runtime_exception e) {
+  } catch (hc::detail::runtime_exception e) {
     std::string err_str = e.what();
     pass = err_str.find("The extent of the tile") != std::string::npos &&
     err_str.find("exceeds the device limit") != std::string::npos;
@@ -19,7 +19,7 @@ int main() {
   try  {
     // We expect the runtime will fire an exception due to a large work group size
     hc::parallel_for_each(hc::extent<2>(1,8192).tile(1,8192), [](hc::tiled_index<2> i) [[hc]] {});
-  } catch (detail::runtime_exception e) {
+  } catch (hc::detail::runtime_exception e) {
     std::string err_str = e.what();
     pass &= err_str.find("The extent of the tile") != std::string::npos &&
     err_str.find("exceeds the device limit") != std::string::npos;

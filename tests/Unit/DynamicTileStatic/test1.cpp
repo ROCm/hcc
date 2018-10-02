@@ -14,7 +14,7 @@ bool test() {
   size_t size1 = acc.get_max_tile_static_size();
   std::cout << "Max tile static size of accelerator: " << size1 << "\n";
 
-  size_t size2 = av.get_max_tile_static_size();
+  size_t size2 = av.get_accelerator().get_max_tile_static_size();
   std::cout << "Max tile static size of accelerator_view: " << size2 << "\n";
 
   // size1 and size2 shall agree

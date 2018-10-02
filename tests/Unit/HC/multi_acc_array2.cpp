@@ -29,15 +29,13 @@ int main() {
     host_result_y[i] = a * host_x[i] + host_y[i];
   }
 
-  std::vector<hc::accelerator> all_accelerators = hc::accelerator::get_all();
-  std::vector<hc::accelerator> accelerators;
-  for (auto a = all_accelerators.begin(); a != all_accelerators.end(); a++) {
-
-    // only pick accelerators supported by the HSA runtime
-    if (a->is_hsa_accelerator()) {
-      accelerators.push_back(*a);
-    }
-  }
+  std::vector<hc::accelerator> accelerators = hc::accelerator::get_all();
+  accelerators.erase(
+      std::remove_if(
+          accelerators.begin(),
+          accelerators.end(),
+          [](const hc::accelerator& acc) { return acc.get_is_emulated(); }),
+      accelerators.end());
 
   constexpr int numViewPerAcc = 2;
   int numSaxpyPerView = N/(accelerators.size() * numViewPerAcc);

@@ -2,7 +2,10 @@
 // RUN: %hc %s -o %t.out && %t.out
 
 #include <hc/hc.hpp>
+#include <hc/hc_am.hpp>
 
+#include <atomic>
+#include <memory>
 #include <iostream>
 #include <random>
 
@@ -30,21 +33,31 @@ bool test() {
     table_b[i] = int_dist(rd);
   }
 
+  hc::accelerator acc;
+  hc::accelerator_view av = acc.get_default_view();
+
   // launch kernel
+  std::unique_ptr<std::atomic<std::uint32_t>, decltype(hc::am_free)*> done{
+    hc::am_alloc(sizeof(std::atomic<bool>), acc, am_host_coherent),
+    hc::am_free};
+  *done = 0;
+
   hc::extent<1> e(vecSize);
   hc::completion_future fut = hc::parallel_for_each(
-    e,
-    [=](hc::index<1> idx) [[hc]] {
-      for (int i = 0; i < LOOP_COUNT; ++i) 
+      av, e, [=, done = done.get()](hc::index<1> idx) [[hc]] {
+      for (int i = 0; i < LOOP_COUNT; ++i)
         table_c(idx) = table_a(idx) + table_b(idx);
+
+      while (*done == 0);
   });
 
   // create a barrier packet
-  hc::accelerator_view av = hc::accelerator().get_default_view();
   hc::completion_future fut2 = av.create_marker();
 
   ret &= (fut.is_ready() == false);
   ret &= (fut2.is_ready() == false);
+
+  *done = 1;
 
   // wait on the barrier packet
   fut2.wait();
@@ -75,5 +88,3 @@ int main() {
 
   return !(ret == true);
 }
-
-

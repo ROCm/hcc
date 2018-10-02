@@ -1,5 +1,5 @@
 
-// RUN: %hc %s -lhc_am -o %t.out && %t.out
+// RUN: %hc %s  -o %t.out && %t.out
 
 #include <cstdlib>
 #include <cstdio>

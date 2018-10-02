@@ -1,4 +1,4 @@
-// RUN: %hc -lhc_am %s -o %t.out && %t.out
+// RUN: %hc  %s -o %t.out && %t.out
 
 #include <iostream>
 #include <random>
