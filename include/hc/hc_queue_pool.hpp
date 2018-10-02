@@ -70,8 +70,15 @@ namespace hc
                         sz,
                         HSA_QUEUE_TYPE_MULTI,
                         [](hsa_status_t status, hsa_queue_t*, void*) {
-                            throwing_hsa_result_check(
-                                status, __FILE__, __func__, __LINE__);
+                            try {
+                                throwing_hsa_result_check(
+                                    status, __FILE__, __func__, __LINE__);
+                            }
+                            catch (const std::exception& ex) {
+                                std::cerr << ex.what() << std::endl;
+
+                                throw;
+                            }
                         },
                         nullptr,
                         UINT32_MAX,
