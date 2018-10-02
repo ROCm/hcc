@@ -2,7 +2,6 @@ set(
     HC_headers
         hc_agent_pool.hpp
         hc_aligned_alloc.hpp
-        hc_am_internal.hpp
         hc_am.hpp
         hc_atomics.hpp
         hc_callable_attributes.hpp
