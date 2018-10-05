@@ -2747,10 +2747,10 @@ extern "C" unsigned int __sadhi_u16x2_u8x4(unsigned int src0, unsigned int src1,
  * Get system timestamp
  */
 extern "C" __attribute__((always_inline))
-uint64_t __ockl_memrealtime_u64(void);
+std::uint64_t __ockl_memrealtime_u64(void);
 
-extern "C" inline __attribute((always_inline)) uint64_t __clock_u64() __HC__ {
-  return (uint64_t) __ockl_memrealtime_u64();
+extern "C" inline __attribute((always_inline)) std::uint64_t __clock_u64() __HC__ {
+  return __ockl_memrealtime_u64();
 }
 
 
@@ -2760,10 +2760,10 @@ extern "C" inline __attribute((always_inline)) uint64_t __clock_u64() __HC__ {
  * Notice the return value of this function is implementation defined.
  */
 extern "C" __attribute__((always_inline))
-uint64_t __ockl_memtime_u64(void);
+std::uint64_t __ockl_memtime_u64(void);
 
-extern "C" inline __attribute((always_inline)) uint64_t __cycle_u64() __HC__ {
-  return (uint64_t) __ockl_memtime_u64();
+extern "C" inline __attribute((always_inline)) std::uint64_t __cycle_u64() __HC__ {
+  return __ockl_memtime_u64();
 }
 
 /**
