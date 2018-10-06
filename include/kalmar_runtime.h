@@ -37,6 +37,8 @@ enum execute_order
     execute_any_order
 };
 
+/// NOTE: This enum is used for indexing into an array.
+/// So any modifications to this need to be done with caution.
 enum queue_priority
 {
     priority_high = 0,

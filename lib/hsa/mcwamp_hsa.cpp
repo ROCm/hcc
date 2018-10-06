@@ -1157,18 +1157,20 @@ struct RocrQueue {
     }
 
     RocrQueue(hsa_agent_t agent, size_t queue_size, HSAQueue *hccQueue, queue_priority priority)
+        : _priority(priority)
     {
         // Map queue_priority to hsa_amd_queue_priority_t
+        hsa_amd_queue_priority_t queue_priority;
         switch (priority) {
             case priority_low:
-                _priority = HSA_AMD_QUEUE_PRIORITY_LOW;
+                queue_priority = HSA_AMD_QUEUE_PRIORITY_LOW;
                 break;
             case priority_high:
-                _priority = HSA_AMD_QUEUE_PRIORITY_HIGH;
+                queue_priority = HSA_AMD_QUEUE_PRIORITY_HIGH;
                 break;
             case priority_normal:
             default:
-                _priority = HSA_AMD_QUEUE_PRIORITY_NORMAL;
+                queue_priority = HSA_AMD_QUEUE_PRIORITY_NORMAL;
                 break;
         }
 
@@ -1181,8 +1183,8 @@ struct RocrQueue {
         STATUS_CHECK(status, __LINE__);
 
         // Set queue priority
-        status = hsa_amd_queue_set_priority(_hwQueue, _priority);
-        DBOUT(DB_QUEUE, "  " <<  __func__ << ": set priority for HSA command queue: " << _hwQueue << " to " << _priority << "\n");
+        status = hsa_amd_queue_set_priority(_hwQueue, queue_priority);
+        DBOUT(DB_QUEUE, "  " <<  __func__ << ": set priority for HSA command queue: " << _hwQueue << " to " << queue_priority << "\n");
         STATUS_CHECK(status, __LINE__);
 
         // TODO - should we provide a mechanism to conditionally enable profiling as a performance optimization?
@@ -1215,7 +1217,7 @@ struct RocrQueue {
     // Track profiling enabled state here. - no need now since all hw queues have profiling enabled.
 
     // Priority could be tracked here:
-    hsa_amd_queue_priority_t _priority;
+    queue_priority _priority;
 };
 
 
@@ -2251,28 +2253,13 @@ public:
     void createOrstealRocrQueue(Kalmar::HSAQueue *thief, queue_priority priority = priority_normal) {
         RocrQueue *foundRQ = nullptr;
 
-        // Map Kalmar::enums:queue_priority to rqIndex which is used for indexing into rocrQueues
-        int rqIndex = 1;
-        switch (priority) {
-            case priority_low:
-                rqIndex = 0;
-                break;
-            case priority_high:
-                rqIndex = 2;
-                break;
-            case priority_normal:
-            default:
-                rqIndex = 1;
-                break;
-        }
-
         this->rocrQueuesMutex.lock();
 
         // TODO: Do we want the max queues for each priority to be different?
         // Allocate a new queue when we are below the HCC_MAX_QUEUES limit
-        if (rocrQueues[rqIndex].size() < HCC_MAX_QUEUES) {
+        if (rocrQueues[priority].size() < HCC_MAX_QUEUES) {
             foundRQ = new RocrQueue(agent, this->queue_size, thief, priority);
-            rocrQueues[rqIndex].push_back(foundRQ);
+            rocrQueues[priority].push_back(foundRQ);
             DBOUT(DB_QUEUE, "Create new rocrQueue=" << foundRQ << " for thief=" << thief << "\n")
         }
 
@@ -2287,7 +2274,7 @@ public:
             this->rocrQueuesMutex.lock();
 
             // First make a pass to see if we can find an unused queue
-            for (auto rq : rocrQueues[rqIndex]) {
+            for (auto rq : rocrQueues[priority]) {
                 if (rq->_hccQueue == nullptr) {
                     DBOUT(DB_QUEUE, "Found unused rocrQueue=" << rq << " for thief=" << thief << ".  hwQueue=" << rq->_hwQueue << "\n")
                     foundRQ = rq;
@@ -2307,7 +2294,7 @@ public:
 
             // Second pass, try steal from a ROCR queue associated with an HCC queue, but with no active tasks
 
-            for (auto rq : rocrQueues[rqIndex]) {
+            for (auto rq : rocrQueues[priority]) {
                 if (rq->_hccQueue != thief)  {
                     auto victimHccQueue = rq->_hccQueue;
                     // victimHccQueue==nullptr should be detected by above loop.
@@ -2356,24 +2343,11 @@ private:
         // change priority as required?
         auto rqSize = rocrQueues[0].size()+rocrQueues[1].size()+rocrQueues[2].size();
         if (hccSize < rqSize) {
-            // Map hsa_amd_queue_priority_t to rqIndex which is used for indexing into rocrQueues
-            int rqIndex = 1;
-            switch (rocrQueue->_priority) {
-                case HSA_AMD_QUEUE_PRIORITY_LOW:
-                    rqIndex = 0;
-                    break;
-                case HSA_AMD_QUEUE_PRIORITY_HIGH:
-                    rqIndex = 2;
-                    break;
-                case HSA_AMD_QUEUE_PRIORITY_NORMAL:
-                default:
-                    rqIndex = 1;
-                    break;
-            }
-            auto iter = std::find(rocrQueues[rqIndex].begin(), rocrQueues[rqIndex].end(), rocrQueue);
-            assert(iter != rocrQueues[rqIndex].end());
+            queue_priority priority = rocrQueue->_priority;
+            auto iter = std::find(rocrQueues[priority].begin(), rocrQueues[priority].end(), rocrQueue);
+            assert(iter != rocrQueues[priority].end());
             // Remove the pointer from the list:
-            rocrQueues[rqIndex].erase(iter);
+            rocrQueues[priority].erase(iter);
             DBOUT(DB_QUEUE, "removeRocrQueue-hard: rocrQueue=" << rocrQueue << " hccQueues/rocrQueues=" << hccSize << "/" << rqSize << "\n")
             delete rocrQueue; // this will delete the HSA HW queue.
         }
