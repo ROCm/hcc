@@ -1440,8 +1440,7 @@ namespace hc
             detail::throwing_hsa_result_check(
                 hsa_amd_agent_memory_pool_get_info(
                     *static_cast<hsa_agent_t*>(other.get_hsa_agent()),
-                    *static_cast<hsa_amd_memory_pool_t*>(
-                        other.get_hsa_am_region()),
+                    *static_cast<hsa_amd_memory_pool_t*>(get_hsa_am_region()),
                     HSA_AMD_AGENT_MEMORY_POOL_INFO_ACCESS,
                     &r),
                 __FILE__, __func__, __LINE__);
