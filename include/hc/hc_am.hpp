@@ -130,7 +130,9 @@ namespace hc
             region = static_cast<hsa_region_t*>(acc.get_hsa_am_region());
         }
 
-        if (!region || region->handle == 0) return nullptr;
+        if (!region || region->handle == 0) {
+            region = static_cast<hsa_region_t*>(acc.get_hsa_am_system_region());
+        }
 
         size = (alignment == 0) ? size : (size + alignment);
         void* r{nullptr};
