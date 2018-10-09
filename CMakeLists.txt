@@ -411,7 +411,6 @@ if (HCC_INTEGRATE_ROCDL)
   file(MAKE_DIRECTORY ${ROCDL_BUILD_DIR}/lib)
   add_custom_target(rocdl_links DEPENDS ${AMDGCN_LIB_TARGETS})
   add_custom_command(TARGET rocdl_links POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E create_symlink ../irif/irif.amdgcn.bc                              irif.amdgcn.bc
     COMMAND ${CMAKE_COMMAND} -E create_symlink ../opencl/opencl.amdgcn.bc                          opencl.amdgcn.bc
     COMMAND ${CMAKE_COMMAND} -E create_symlink ../ockl/ockl.amdgcn.bc                              ockl.amdgcn.bc
     COMMAND ${CMAKE_COMMAND} -E create_symlink ../hc/hc.amdgcn.bc                                  hc.amdgcn.bc
