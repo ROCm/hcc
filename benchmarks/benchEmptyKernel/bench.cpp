@@ -22,10 +22,9 @@
 
 #define BENCH_HSA 1
 
+#include <hc/hc.hpp>
+#include <hc/hc_am.hpp>
 
-#include "hc.hpp"
-#include "hc_am.hpp"
-#include "grid_launch.hpp"
 #include <iostream>
 #include <fstream>
 #include <string>
