@@ -9,8 +9,8 @@ int main(void){
   hc::extent<1> e(vecSize);
   hc::tiled_extent<1> et(e.tile(TILE));
   hc::tiled_extent<1> et2 = e.tile(TILE);
-  assert(et.tile_dim0 == TILE);
-  assert(et2.tile_dim0 == TILE);
+  assert(et.tile_dim[0] == TILE);
+  assert(et2.tile_dim[0] == TILE);
   hc::array<int, 1> a(vecSize);
   hc::array<int, 1> b(vecSize);
   hc::array<int, 1> c(vecSize);

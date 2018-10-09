@@ -39,8 +39,8 @@ int test_2d()
           idx.tile[1] * 10 +
           idx.tile_origin[0] * 100 +
           idx.tile_origin[1] * 1000 +
-          idx.tile_extent[0] * 10000 +
-          idx.tile_extent[1] * 100000;
+          idx.tile_dim[0] * 10000 +
+          idx.tile_dim[1] * 100000;
       });
     assert(av.get_extent() == e);
     for(unsigned int i = 0; i < av.get_extent()[0]; i++)

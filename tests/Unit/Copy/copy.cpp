@@ -34,7 +34,8 @@ int main(void) {
 
   // Run in a separate thread
   std::thread t([&]() {
-     parallel_for_each(gpu_av, dest.get_extent(), [=, &dest, &tgt](index<1> idx) [[hc]] {
+     parallel_for_each(
+       gpu_av, dest.get_extent(), [=, &dest, &tgt](hc::index<1> idx) [[hc]] {
      for(unsigned i = 0; i < vecSize; i++)
        for (unsigned j = 0; j < vecSize; j++)
          tgt[idx] = dest[i];

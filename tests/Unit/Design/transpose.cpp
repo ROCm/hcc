@@ -214,9 +214,8 @@ void transpose_tiled_truncate_option_b(
          const array_view<const _value_type, 2>& data,
          const array_view<_value_type, 2>& data_transpose) {
   extent<2> e = data.get_extent();
-  tiled_extent<_tile_size, _tile_size> e_tiled(e.tile<_tile_size,
-                                               _tile_size>());
-  tiled_extent<_tile_size, _tile_size> e_truncated(e_tiled.truncate());
+  tiled_extent<2> e_tiled(e.tile(_tile_size, _tile_size));
+  tiled_extent<2> e_truncated(e_tiled.truncate());
 
   // Transform matrix to be multiple of 16*16 and transpose.
   auto b  = data.section(index<2>(0,0), e_truncated);
