@@ -52,6 +52,7 @@ endmacro(amp_target name )
 ####################
 macro(add_mcwamp_library name )
   add_library( ${name} ${ARGN} )
+  target_compile_definitions(${name} PUBLIC __HIPCC__)
   amp_target(${name})
   # LLVM and Clang shall be compiled beforehand
   add_dependencies(${name} llvm-link opt clang rocdl)
@@ -62,6 +63,7 @@ endmacro(add_mcwamp_library name )
 ####################
 macro(add_mcwamp_library_cpu name )
   add_library( ${name} SHARED ${ARGN} )
+  target_compile_definitions(${name} PUBLIC __HIPCC__)
   amp_target(${name})
   # LLVM and Clang shall be compiled beforehand
   add_dependencies(${name} llvm-link opt clang rocdl)
@@ -73,6 +75,7 @@ endmacro(add_mcwamp_library_cpu name )
 ####################
 macro(add_mcwamp_library_hsa name )
   add_library( ${name} SHARED ${ARGN} )
+  target_compile_definitions(${name} PUBLIC __HIPCC__)
   amp_target(${name})
   # LLVM and Clang shall be compiled beforehand
   add_dependencies(${name} llvm-link opt clang hc_am rocdl)
@@ -85,6 +88,7 @@ endmacro(add_mcwamp_library_hsa name )
 
 macro(add_mcwamp_library_hc_am name )
   add_library( ${name} SHARED ${ARGN} )
+  target_compile_definitions(${name} PUBLIC __HIPCC__)
   amp_target(${name})
   # LLVM and Clang shall be compiled beforehand
   add_dependencies(${name} llvm-link opt clang rocdl)
