@@ -178,10 +178,12 @@ fi
 # Invoke HCC-specific opt passes
 # Optimization notes:
 #  -disable-simplify-libcalls:  prevents transforming loops into library calls such as memset, memcopy on GPU
-$OPT -mtriple amdgcn-amd-amdhsa -mcpu=$AMDGPU_TARGET \
-  -load $LIB/LLVMSelectAcceleratorCode@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+$OPT -mtriple amdgcn-amd-amdhsa -mcpu=$AMDGPU_TARGET -relocation-model=pic \
   -load $LIB/LLVMPromotePointerKernArgsToGlobal@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-  -select-accelerator-code -promote-pointer-kernargs-to-global \
+  -load $LIB/LLVMExternaliseGlobalsInAcceleratorCode@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+  -load $LIB/LLVMSelectAcceleratorCode@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+  -select-accelerator-code -externalise-globals-in-accelerator-code \
+  -promote-pointer-kernargs-to-global \
   -dce -globaldce -always-inline -infer-address-spaces \
   -amdgpu-internalize-symbols -disable-simplify-libcalls $KMOPTOPT -verify \
   < $2.linked.bc -o $2.opt.bc

@@ -371,8 +371,9 @@ install(PROGRAMS $<TARGET_FILE:LLVMAMDGPUDesc>
                  $<TARGET_FILE:LLVMMC>
                  $<TARGET_FILE:LLVMCore>
                  $<TARGET_FILE:LLVMSupport>
-                 $<TARGET_FILE:LLVMSelectAcceleratorCode>
+                 $<TARGET_FILE:LLVMExternaliseGlobalsInAcceleratorCode>
                  $<TARGET_FILE:LLVMPromotePointerKernArgsToGlobal>
+                 $<TARGET_FILE:LLVMSelectAcceleratorCode>
                  $<TARGET_FILE:LLVMHello>
         DESTINATION lib
         COMPONENT compiler
