@@ -12,6 +12,7 @@
 #include <hsa/hsa.h>
 
 #include <algorithm>
+#include <atomic>
 #include <cstring>
 #include <future>
 #include <map>
@@ -140,18 +141,19 @@ namespace hc
             };
         }
 
-        struct HC_runtime {
-            HC_runtime()
-            {
-                throwing_hsa_result_check(
-                    hsa_init(), __FILE__, __func__, __LINE__);
-            }
-            ~HC_runtime()
-            {
-                throwing_hsa_result_check(
-                    hsa_shut_down(), __FILE__, __func__, __LINE__);
-            }
-        };
-        inline static const HC_runtime hc_runtime{};
+        inline
+        __attribute__((constructor))
+        void construct_hc_runtime()
+        {
+            throwing_hsa_result_check(hsa_init(), __FILE__, __func__, __LINE__);
+        }
+
+        inline
+        __attribute__((destructor))
+        void destruct_hc_runtime()
+        {
+            throwing_hsa_result_check(
+                hsa_shut_down(), __FILE__, __func__, __LINE__);
+        }
     } // Namespace hc::detail.
 } // Namespace hc.
