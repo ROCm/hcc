@@ -74,7 +74,7 @@ node( 'hcctest' )
   }
 
 // JENKINS-33510: the jenkinsfile dir() command is not workin well with docker.inside()
-  hcc_build_image.inside( '--privileged --device=/dev/kfd --group-add video' )
+  hcc_build_image.inside( '--privileged --device=/dev/kfd --device=/dev/dri --group-add video' )
   {
     stage('hcc-lc release')
     {
@@ -96,7 +96,7 @@ node( 'hcctest' )
             -DHSA_AMDGPU_GPU_TARGET="gfx900;gfx803" \
             -DNUM_TEST_THREADS="4" \
             ../..
-          make -j\$(nproc)
+          make -j2
         """
 
       // Cap the maximum amount of testing, in case of hangs
