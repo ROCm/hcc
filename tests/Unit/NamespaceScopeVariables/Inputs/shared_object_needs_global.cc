@@ -16,7 +16,7 @@ bool test_scalar()
 
     if (read_scalar[0] != global_scalar) return false;
 
-    parallel_for_each(hc::extent<1>{1}, [=](index<1>) [[hc]] {
+    parallel_for_each(hc::extent<1>{1}, [](index<1>) [[hc]] {
         ++global_scalar;
     });
 
@@ -41,7 +41,7 @@ bool test_array()
         return false;
     }
 
-    parallel_for_each(hc::extent<1>{1}, [=](index<1>) [[hc]] {
+    parallel_for_each(hc::extent<1>{1}, [](index<1>) [[hc]] {
         for (auto&& x : global_array) ++x;
     });
 
