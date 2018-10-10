@@ -2679,7 +2679,8 @@ public:
             case hc::EF_AMDGPU_MACH_AMDGCN_GFX902 : triple.append("902"); break;
             case hc::EF_AMDGPU_MACH_AMDGCN_GFX906 : triple.append("906"); break;
         }
-
+        if (reader.get_flags() & hc::EF_AMDGPU_XNACK) triple += "+xnack";
+        
         const auto isa{get_isa_name_from_triple(std::move(triple))};
 
         hsa_isa_t co_isa{};
