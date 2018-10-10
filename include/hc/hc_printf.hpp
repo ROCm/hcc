@@ -6,17 +6,17 @@
 //===----------------------------------------------------------------------===//
 #pragma once
 
-#include <type_traits>
-#include <cstdlib>
-#include <cstdio>
-#include <cassert>
-#include <atomic>
-#include <string>
-#include <regex>
-#include <iostream>
-#include <algorithm>
+#include <hc/hc_am.hpp>
 
-#include "hc_am_internal.hpp"
+#include <algorithm>
+#include <atomic>
+#include <cassert>
+#include <cstdio>
+#include <cstdlib>
+#include <iostream>
+#include <regex>
+#include <string>
+#include <type_traits>
 
 // The printf on the accelerator is only enabled when
 // The HCC_ENABLE_ACCELERATOR_PRINTF is defined
