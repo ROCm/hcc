@@ -5728,7 +5728,6 @@ namespace hc
                 tmp = std::move(writer_signals_()[writers_for_this_]);
                 tmp1 = std::move(writers_()[writers_for_this_].second.second);
             }
-            //for (auto&& x : tmp) if (x.valid()) x.wait();
             for (auto&& x : tmp) {
                 if (x.handle != 0) detail::Signal_pool::wait(x);
             }
