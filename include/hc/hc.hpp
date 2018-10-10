@@ -15,6 +15,7 @@
 #include <hc/hc_agent_pool.hpp>
 #include <hc/hc_atomics.hpp>
 #include <hc/hc_callable_attributes.hpp>
+#include <hc/hc_completion_future.hpp>
 #include <hc/hc_defines.hpp>
 #include <hc/hc_exception.hpp>
 #include <hc/hc_index.hpp>
@@ -22,6 +23,7 @@
 #include <hc/hc_math.hpp>
 #include <hc/hc_queue_pool.hpp>
 #include <hc/hc_runtime.hpp>
+#include <hc/implementation/hc_n_way_set_associative_cache.hpp>
 
 #include <hsa/hsa.h>
 #include <hsa/hsa_ext_amd.h>
@@ -38,6 +40,7 @@
 #include <tuple>
 #include <type_traits>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 
 /**
@@ -117,330 +120,6 @@ namespace hc
     }
 
     // ------------------------------------------------------------------------
-    // completion_future
-    // ------------------------------------------------------------------------
-
-    /**
-     * This class is the return type of all asynchronous APIs and has an
-     * interface analogous to std::shared_future<void>. Similar to
-     * std::shared_future, this type provides member methods such as wait and
-     * get to wait for asynchronous operations to finish, and the type
-     * additionally provides a member method then(), to specify a completion
-     * callback functor to be executed upon completion of an asynchronous
-     * operation.
-     */
-    class completion_future {
-        std::shared_future<void> future_{};
-        std::shared_ptr<std::once_flag> maybe_then_{};
-
-        friend class accelerator_view;
-        template<typename, int> friend class array_view;
-
-        // non-tiled parallel_for_each
-        // generic version
-        template<typename Kernel, int n>
-        friend
-        completion_future parallel_for_each(
-            const accelerator_view&, const extent<n>&, const Kernel&);
-
-        // tiled parallel_for_each
-        // generic version
-        template<typename Kernel, int n>
-        friend
-        completion_future parallel_for_each(
-            const accelerator_view&, const tiled_extent<n>&, const Kernel&);
-
-        // copy_async
-        template<typename T, int N>
-        friend
-        completion_future copy_async(
-            const array_view<const T, N>& src, const array_view<T, N>& dest);
-        template<typename T, int N>
-        friend
-        completion_future copy_async(const array<T, N>& src, array<T, N>& dest);
-        template<typename T, int N>
-        friend
-        completion_future copy_async(
-            const array<T, N>& src, const array_view<T, N>& dest);
-        template<typename T, int N>
-        friend
-        completion_future copy_async(
-            const array_view<T, N>& src, const array_view<T, N>& dest);
-        template<typename T, int N>
-        friend
-        completion_future copy_async(
-            const array_view<const T, N>& src, array<T, N>& dest);
-
-        template<typename InputIter, typename T, int N>
-        friend
-        completion_future copy_async(
-            InputIter srcBegin, InputIter srcEnd, array<T, N>& dest);
-        template<typename InputIter, typename T, int N>
-        friend
-        completion_future copy_async(
-            InputIter srcBegin, InputIter srcEnd, const array_view<T, N>& dest);
-        template<typename InputIter, typename T, int N>
-        friend
-        completion_future copy_async(InputIter srcBegin, array<T, N>& dest);
-        template<typename InputIter, typename T, int N>
-        friend
-        completion_future copy_async(
-            InputIter srcBegin, const array_view<T, N>& dest);
-        template<typename OutputIter, typename T, int N>
-        friend
-        completion_future copy_async(
-            const array<T, N>& src, OutputIter destBegin);
-        template<typename OutputIter, typename T, int N>
-        friend
-        completion_future copy_async(
-            const array_view<T, N>& src, OutputIter destBegin);
-
-        completion_future(std::shared_future<void> future)
-            :
-            future_{std::move(future)},
-            maybe_then_{std::make_shared<std::once_flag>()}
-        {}
-    public:
-
-        /**
-         * Default constructor. Constructs an empty uninitialized
-         * completion_future object which does not refer to any asynchronous
-         * operation. Default constructed completion_future objects have valid()
-         * == false
-         */
-        completion_future() = default;
-
-        /**
-         * Copy constructor. Constructs a new completion_future object that
-         * refers to the same asynchronous operation as the other
-         * completion_future object.
-         *
-         * @param[in] other An object of type completion_future from which to
-         *                  initialize this.
-         */
-        completion_future(const completion_future&) = default;
-
-        /**
-         * Move constructor. Move constructs a new completion_future object that
-         * refers to the same asynchronous operation as originally referred by
-         * the other completion_future object. After this constructor returns,
-         * other.valid() == false
-         *
-         * @param[in] other An object of type completion_future which the new
-         *                  completion_future
-         */
-        completion_future(completion_future&&) = default;
-
-        ~completion_future() = default;
-        /**
-         * Copy assignment. Copy assigns the contents of other to this. This
-         * method causes this to stop referring its current asynchronous
-         * operation and start referring the same asynchronous operation as
-         * other.
-         *
-         * @param[in] other An object of type completion_future which is copy
-         *                  assigned to this.
-         */
-        completion_future& operator=(const completion_future&) = default;
-
-        /**
-         * Move assignment. Move assigns the contents of other to this. This
-         * method causes this to stop referring its current asynchronous
-         * operation and start referring the same asynchronous operation as
-         * other. After this method returns, other.valid() == false
-         *
-         * @param[in] other An object of type completion_future which is move
-         *                  assigned to this.
-         */
-        completion_future& operator=(completion_future&&) = default;
-
-        /**
-         * This method is functionally identical to
-         * std::shared_future<void>::get. This method waits for the associated
-         * asynchronous operation to finish and returns only upon the completion
-         * of the asynchronous operation. If an exception was encountered during
-         * the execution of the asynchronous operation, this method throws that
-         * stored exception.
-         */
-        void get() const
-        {
-            future_.get();
-        }
-
-        /**
-         * This method is functionally identical to
-         * std::shared_future<void>::valid. This returns true if this
-         * completion_future is associated with an asynchronous operation.
-         */
-        bool valid() const
-        {
-            return future_.valid();
-        }
-
-        /** @{ */
-        /**
-         * These methods are functionally identical to the corresponding
-         * std::shared_future<void> methods.
-         *
-         * The wait method waits for the associated asynchronous operation to
-         * finish and returns only upon completion of the associated
-         * asynchronous operation or if an exception was encountered when
-         * executing the asynchronous operation.
-         *
-         * The other variants are functionally identical to the
-         * std::shared_future<void> member methods with same names.
-         *
-         * @param waitMode[in] An optional parameter to specify the wait mode.
-         *                     By default it would be hcWaitModeBlocked.
-         *                     hcWaitModeActive would be used to reduce latency
-         *                     with the expense of using one CPU core for active
-         *                     waiting.
-         */
-        void wait() const
-        {
-            future_.wait();
-
-            // TODO: printf:(
-            //detail::getContext()->flushPrintfBuffer();
-        }
-
-        template<typename Rep, typename Period>
-        std::future_status wait_for(
-            const std::chrono::duration<Rep, Period>& rel_time) const
-        {
-            return future_.wait_for(rel_time);
-        }
-
-        template<typename Clock, typename Duration>
-        std::future_status wait_until(
-            const std::chrono::time_point<Clock, Duration>& abs_time) const
-        {
-            return future_.wait_until(abs_time);
-        }
-
-        /** @} */
-
-        /**
-         * Conversion operator to std::shared_future<void>. This method returns
-         * a shared_future<void> object corresponding to this completion_future
-         * object and refers to the same asynchronous operation.
-         */
-        operator std::shared_future<void>() const
-        {
-            return future_;
-        }
-
-        /**
-         * This method enables specification of a completion callback func which
-         * is executed upon completion of the asynchronous operation associated
-         * with this completion_future object. The completion callback func
-         * should have an operator() that is valid when invoked with non
-         * arguments, i.e., "func()".
-         */
-        template<typename F>
-        void then(const F& func) const
-        {   // TODO: this is probably incorrect; then() was underspecified in
-            //       C++AMP, and subtle to get right; we may want to remove it
-            //       or extend it to return a future, otherwise it is
-            //       intractable to provide guarantees about when the
-            //       continuation executes and, respectively, when it completes.
-            std::call_once(
-                *maybe_then_, [=](const std::shared_future<void>& fut) {
-                std::thread{[=]() { fut.wait(); func(); }}.detach();
-            }, std::cref(future_));
-        }
-
-        /**
-         * Get the native handle for the asynchronous operation encapsulated in
-         * this completion_future object. The method is mostly used for
-         * debugging purpose.
-         * Applications should retain the parent completion_future to ensure the
-         * native handle is not deallocated by the HCC runtime. The
-         * completion_future pointer to the native handle is reference counted,
-         * so a copy of the completion_future is sufficient to retain the
-         * native_handle.
-         */
-        // void* get_native_handle() const
-        // {
-        //     if (__asyncOp != nullptr) {
-        //         return __asyncOp->getNativeHandle();
-        //     } else {
-        //         return nullptr;
-        //     }
-        // }
-
-        /**
-         * Get the tick number when the underlying asynchronous operation
-         * begins.
-         *
-         * @return An implementation-defined tick number in case the instance is
-         *         created by a kernel dispatch or a barrier packet. 0
-         *         otherwise.
-         */
-        // uint64_t get_begin_tick()
-        // {
-        //     if (__asyncOp != nullptr) {
-        //         return __asyncOp->getBeginTimestamp();
-        //     } else {
-        //         return 0L;
-        //     }
-        // }
-
-        /**
-         * Get the tick number when the underlying asynchronous operation ends.
-         *
-         * @return An implementation-defined tick number in case the instance is
-         *         created by a kernel dispatch or a barrier packet. 0
-         *         otherwise.
-         */
-        // uint64_t get_end_tick()
-        // {
-        //     if (__asyncOp != nullptr) {
-        //         return __asyncOp->getEndTimestamp();
-        //     } else {
-        //         return 0L;
-        //     }
-        // }
-
-        /**
-         * Get the frequency of ticks per second for the underlying asynchronous
-         * operation.
-         *
-         * @return An implementation-defined frequency in Hz in case the
-         *         instance is created by a kernel dispatch or a barrier packet.
-         *         0 otherwise.
-         */
-        // uint64_t get_tick_frequency()
-        // {
-        //     if (__asyncOp != nullptr) {
-        //         return __asyncOp->getTimestampFrequency();
-        //     } else {
-        //         return 0L;
-        //     }
-        // }
-
-        /**
-         * Get if the async operations has been completed.
-         *
-         * @return True if the async operation has been completed, false if not.
-         */
-        bool is_ready()
-        {
-            return future_.wait_for(std::chrono::nanoseconds{0}) ==
-                std::future_status::ready;
-        }
-
-        /**
-         * @return reference count for the completion future. Primarily used for
-         *         debug purposes.
-         */
-        // int get_use_count() const
-        // {
-        //     return __asyncOp.use_count();
-        // }
-    };
-
-    // ------------------------------------------------------------------------
     // accelerator_view
     // ------------------------------------------------------------------------
 
@@ -451,14 +130,21 @@ namespace hc
      * object.
      */
     class accelerator_view {
-        mutable std::forward_list<completion_future> pending_tasks_; // TODO: spec fault.
+        using ConcurrentTaskList_ =
+            std::pair<std::mutex, std::forward_list<completion_future>>;
+
+        // IMPLEMENTATION - DATA
+        //mutable std::forward_list<completion_future> pending_tasks_; // TODO: spec fault.
+        mutable completion_future pending_tasks_;
         accelerator const* accelerator_;
         hsa_queue_t* queue_;
         queuing_mode qmode_;
+        bool is_default_;
 
+        // FRIENDS
         friend class accelerator;
-        template <typename, int> friend class array;
-        template <typename, int> friend class array_view;
+        template<typename, int> friend class array;
+        template<typename, int> friend class array_view;
 
         template<typename Domain, typename Kernel>
         friend
@@ -473,36 +159,57 @@ namespace hc
             const Domain&,
             const Kernel&);
 
-        // non-tiled parallel_for_each
-        // generic version
-        template <typename Kernel, int n>
+        template<typename Kernel, int n>
         friend
         completion_future parallel_for_each(
             const accelerator_view&, const extent<n>&, const Kernel&);
 
-        // tiled parallel_for_each
-        // generic version
-        template <typename Kernel, int n>
+        template<typename Kernel, int n>
         friend
         completion_future parallel_for_each(
             const accelerator_view&, const tiled_extent<n>&, const Kernel&);
-
-        // IMPLEMENTATION - MANIPULATORS
-        void add_pending_task_(const completion_future& task) const
-        {
-            pending_tasks_.push_front(task);
-        }
-        // TODO: reorder completion_future to allow for inline definition or
-        //       move to .cpp (the latter may be preferable).
-        void wait_for_all_pending_tasks_();
 
         // IMPLEMENTATION - CREATORS
         accelerator_view(
             const accelerator& accelerator,
             hsa_queue_t* queue,
-            queuing_mode qmode = queuing_mode_automatic)
-            : accelerator_{&accelerator}, queue_{queue}, qmode_{qmode}
+            queuing_mode qmode = queuing_mode_automatic,
+            bool is_default = false)
+            :
+            accelerator_{&accelerator},
+            queue_{queue},
+            qmode_{qmode},
+            is_default_{is_default}
         {}
+
+        // IMPLEMENTATION - MANIPULATORS
+        void add_pending_task_(completion_future task) const
+        {
+            //pending_tasks_.push_front(task);
+            auto& prior = is_default_ ?
+                pending_tasks_for_default_av_().second : pending_tasks_;
+
+            std::unique_lock<std::mutex> lck{
+                pending_tasks_for_default_av_().first, std::defer_lock};
+
+            if (is_default_) lck.lock();
+
+            prior = std::async(std::launch::deferred, [](completion_future t, completion_future prev) {
+                if (prev.valid()) prev.wait();
+                if (t.valid()) t.wait();
+            }, std::move(task), std::move(prior)).share();
+        }
+
+        void wait_for_all_pending_tasks_()
+        {
+            auto& prior = is_default_ ?
+                pending_tasks_for_default_av_().second : pending_tasks_;
+
+            if (prior.valid()) prior.wait();
+        }
+
+        // IMPLEMENTATION - ACCESSORS
+        std::pair<std::mutex, completion_future>& pending_tasks_for_default_av_() const;
     public:
         accelerator_view() = delete;
         /**
@@ -515,10 +222,8 @@ namespace hc
         accelerator_view(const accelerator_view&) = default;
         accelerator_view(accelerator_view&&) = default;
 
-        ~accelerator_view()
-        {
-            wait_for_all_pending_tasks_();
-        }
+        ~accelerator_view();
+
         /**
          * Assigns an accelerator_view object to "this" accelerator_view object
          * and returns a reference to "this" object. This function does a
@@ -659,8 +364,24 @@ namespace hc
          * @return A future which can be waited on, and will block until the
          *         current batch of commands has completed.
          */
-        completion_future create_marker(
-            memory_scope fence_scope = system_scope) const;
+        completion_future create_marker(memory_scope = system_scope) const
+        {
+            auto& prior = is_default_ ?
+                pending_tasks_for_default_av_().second : pending_tasks_;
+
+            std::unique_lock<std::mutex> lck{
+                pending_tasks_for_default_av_().first, std::defer_lock};
+
+            if (is_default_) lck.lock();
+
+            completion_future tmp{std::async(std::launch::deferred,
+                [](completion_future prev, std::shared_future<void> barrier) {
+                if (prev.valid()) prev.wait();
+                barrier.wait();
+            }, std::move(prior), detail::insert_barrier(*this).first).share()};
+
+            return prior = std::move(tmp);
+        }
 
         /**
          * This command inserts a marker event into the accelerator_view's
@@ -694,7 +415,72 @@ namespace hc
          */
         completion_future create_blocking_marker(
             completion_future& dependent_future,
-            memory_scope fence_scope = system_scope) const;
+            memory_scope = system_scope) const
+        {
+            auto& prior = is_default_ ?
+                pending_tasks_for_default_av_().second : pending_tasks_;
+
+            completion_future tmp{std::async(std::launch::deferred, [=](
+                std::shared_future<void> prev,
+                std::shared_future<void> barrier) {
+                dependent_future.wait();
+                prev.wait();
+                barrier.wait();
+            }, std::move(prior), detail::insert_barrier(*this).first).share()};
+
+            std::unique_lock<std::mutex> lck{
+                pending_tasks_for_default_av_().first, std::defer_lock};
+
+            if (is_default_) lck.lock();
+
+            return prior = std::move(tmp);
+        }
+
+        /**
+         * This command inserts a marker event into the accelerator_view's
+         * command queue with arbitrary number of dependent asynchronous events.
+         *
+         * This marker is returned as a completion_future object. When its
+         * dependent events and all commands submitted prior to the marker event
+         * creation have been completed, the completion_future is ready.
+         *
+         * Regardless of the accelerator_view's execute_order
+         * (execute_any_order, execute_in_order), the marker always ensures
+         * older commands complete before the returned completion_future is
+         * marked ready. Thus, markers provide a mechanism to enforce order
+         * between commands in an execute_any_order accelerator_view.
+         *
+         * @return A future which can be waited on, and will block until the
+         *         current batch of commands, plus the dependent event have
+         *         been completed.
+         */
+        // TODO: constrain to take completion_future only.
+        template<typename InputIterator>
+        completion_future create_blocking_marker(
+            InputIterator first,
+            InputIterator last,
+            memory_scope = system_scope) const
+        {   // TODO: optimise by nesting the hsa_signal_t inside the
+            //       completion_future and then building AND AQL packets.
+            return pending_tasks_;
+            // std::vector<completion_future> tmp{first, last};
+            // completion_future fut{std::async(
+            //     [](std::vector<completion_future> futs) {
+            //         for (auto&& x : futs) if (x.valid()) x.wait();
+            //     }, std::move(tmp)).share()};
+
+            // auto& pending = is_default_ ?
+            //     pending_tasks_for_default_av_().second : pending_tasks_;
+
+            // std::unique_lock<std::mutex> lck{
+            //     pending_tasks_for_default_av_().first, std::defer_lock};
+
+            // if (is_default_) lck.lock();
+
+            // pending.push_front(std::move(fut));
+
+            // return pending.front();
+        }
 
         /**
          * This command inserts a marker event into the accelerator_view's
@@ -724,31 +510,11 @@ namespace hc
          */
         completion_future create_blocking_marker(
             std::initializer_list<completion_future> dependent_future_list,
-            memory_scope fence_scope = system_scope) const;
-
-        /**
-         * This command inserts a marker event into the accelerator_view's
-         * command queue with arbitrary number of dependent asynchronous events.
-         *
-         * This marker is returned as a completion_future object. When its
-         * dependent events and all commands submitted prior to the marker event
-         * creation have been completed, the completion_future is ready.
-         *
-         * Regardless of the accelerator_view's execute_order
-         * (execute_any_order, execute_in_order), the marker always ensures
-         * older commands complete before the returned completion_future is
-         * marked ready. Thus, markers provide a mechanism to enforce order
-         * between commands in an execute_any_order accelerator_view.
-         *
-         * @return A future which can be waited on, and will block until the
-         *         current batch of commands, plus the dependent event have
-         *         been completed.
-         */
-        template<typename InputIterator>
-        completion_future create_blocking_marker(
-            InputIterator first,
-            InputIterator last,
-            memory_scope fence_scope = system_scope) const;
+            memory_scope = system_scope) const
+        {
+            return create_blocking_marker(
+                dependent_future_list.begin(), dependent_future_list.end());
+        }
 
         /**
          * Copies size_bytes bytes from src to dst.
@@ -838,95 +604,6 @@ namespace hc
         }
 
         /**
-         * Dispatch a kernel into the accelerator_view.
-         *
-         * This function is intended to provide a gateway to dispatch code
-         * objects, with some assistance from HCC. Kernels are specified in the
-         * standard code object format, and can be created from a variety of
-         * compiler tools including the assembler, offline cl compilers, or
-         * other tools. The caller also specifies the execution configuration
-         * and kernel arguments. HCC will copy the kernel arguments into an
-         * appropriate segment and insert the packet into the queue. HCC will
-         * also automatically handle signal and kernarg allocation and
-         * deallocation for the command.
-         *
-         * The kernel is dispatched asynchronously, and thus this API may return
-         * before the kernel finishes executing.
-
-        * Kernels dispatched with this API may be interleaved with other copy
-        * and kernel commands generated from copy or parallel_for_each commands.
-        * The kernel honors the execute_order associated with the
-        * accelerator_view. Specifically, if execute_order is execute_in_order,
-        * then the kernel will wait for older data and kernel commands in the
-        * same queue before beginning execution. If execute_order is
-        * execute_any_order, then the kernel may begin executing without regards
-        * to the state of older kernels. This call honors the packer barrier bit
-        * (1 << HSA_PACKET_HEADER_BARRIER) if set in the aql.header field. If
-        * set, this provides the same synchronization behavior as
-        * execute_in_order for the command generated by this API.
-        *
-        * @p aql is an HSA-format "AQL" packet. The following fields must
-        * be set by the caller:
-        *  aql.kernel_object
-        *  aql.group_segment_size : includes static + dynamic group size
-        *  aql.private_segment_size
-        *  aql.grid_size_x, aql.grid_size_y, aql.grid_size_z
-        *  aql.group_size_x, aql.group_size_y, aql.group_size_z
-        *  aql.setup: The 2 bits at HSA_KERNEL_DISPATCH_PACKET_SETUP_DIMENSIONS.
-        *  aql.header: Must specify the desired memory fence operations, and
-        *              barrier bit (if desired.). A typical conservative setting
-        *              would be:
-        aql.header =
-            (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
-            (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE) |
-            (1 << HSA_PACKET_HEADER_BARRIER);
-
-        * The following fields are ignored. The API will will set up these
-        * fields before dispatching the AQL packet:
-        *  aql.completion_signal
-        *  aql.kernarg
-        *
-        * @p args : Pointer to kernel arguments with the size and alignment
-        *           expected by the kernel. The args are copied and then passed
-        *           directly to the kernel. After this function returns, the
-        *           args memory may be deallocated.
-        * @p argSz : Size of the arguments.
-        * @p cf : Written with a completion_future that can be used to track the
-        *         status of the dispatch. May be NULL, in which case no
-        *         completion_future is returned and the caller must use other
-        *         synchronization techniques such as calling
-        *         accelerator_view::wait() or waiting on a younger command in
-        *         the same queue.
-        * @p kernel_name: Optionally specify the name of the kernel for debug
-        *                 and profiling. May be null. If specified, the caller
-        *                 is responsible for ensuring the memory for the name
-        *                 remains allocated until the kernel completes.
-        *
-        * The dispatch_hsa_kernel call will perform the following operations:
-        *    - Efficiently allocate a kernarg region and copy the arguments.
-        *    - Efficiently allocate a signal, if required.
-        *    - Dispatch the command into the queue and flush it to the GPU.
-        *    - Kernargs and signals are automatically reclaimed by the HCC
-        *      runtime.
-        */
-        // void dispatch_hsa_kernel(
-        //     const hsa_kernel_dispatch_packet_t* aql,
-        //     void* args,
-        //     size_t argsize,
-        //     completion_future* cf = nullptr,
-        //     const char* kernel_name = nullptr)
-        // {
-        //     wait_for_all_pending_tasks_(); // TODO: this is conservative.
-
-        //     completion_future tmp{};
-        //     queue_->dispatch_hsa_kernel(aql, args, argsize, &tmp, kernel_name);
-
-        //     add_pending_task_(tmp);
-
-        //     if (cf) *cf = std::move(tmp);
-        // }
-
-        /**
          * Set a CU affinity to specific command queues.
          * The setting is permanent until the queue is destroyed or CU affinity
          * is set again. This setting is "atomic", it won't affect the dispatch
@@ -955,7 +632,13 @@ namespace hc
      */
     class accelerator {
         // DATA - STATICS
-        inline static std::once_flag maybe_set_default_{};
+        static
+        std::once_flag& maybe_set_default_()
+        {
+            static std::once_flag r{};
+
+            return r;
+        }
 
         // DATA
         hsa_agent_t agent_{};
@@ -972,8 +655,18 @@ namespace hc
                 "Tried to create accelerator from unknown HSA agent."};
         }
     public:
-        inline static constexpr const wchar_t cpu_accelerator[]{L"cpu"};
-        inline static constexpr const wchar_t default_accelerator[]{L"default"};
+        static
+        constexpr
+        const wchar_t* cpu_accelerator()
+        {
+            return L"cpu";
+        }
+        static
+        constexpr
+        const wchar_t* default_accelerator()
+        {
+            return L"default";
+        }
 
         /**
          * Constructs a new accelerator object that represents the default
@@ -985,7 +678,7 @@ namespace hc
          * The actual accelerator chosen as the default can be affected by
          * calling accelerator::set_default().
          */
-        accelerator() : accelerator{default_accelerator} {}
+        accelerator() : accelerator{default_accelerator()} {}
 
         /**
          * Constructs a new accelerator object that represents the physical
@@ -1007,9 +700,9 @@ namespace hc
         explicit
         accelerator(const std::wstring& path)
             : accelerator{
-                (path == default_accelerator) ?
+                (path == default_accelerator()) ?
                     detail::Agent_pool::default_agent() :
-                        ((path == cpu_accelerator) ?
+                        ((path == cpu_accelerator()) ?
                             detail::Agent_pool::cpu_agent() :
                             hsa_agent_t{std::stoull(path)})}
         {}
@@ -1064,11 +757,11 @@ namespace hc
         bool set_default(const std::wstring& path)
         {
             bool r{false};
-            std::call_once(maybe_set_default_, [&]() {
+            std::call_once(maybe_set_default_(), [&]() {
                 r = true;
 
-                if (path == default_accelerator) return;
-                if (path == cpu_accelerator) {
+                if (path == default_accelerator()) return;
+                if (path == cpu_accelerator()) {
                     detail::Agent_pool::default_agent() =
                         detail::Agent_pool::cpu_agent();
 
@@ -1109,9 +802,9 @@ namespace hc
         static
         accelerator_view get_auto_selection_view()
         {
-            set_default(default_accelerator);
+            set_default(default_accelerator());
 
-            static accelerator acc{default_accelerator};
+            static accelerator acc{default_accelerator()};
 
             return acc.get_default_view();
         }
@@ -1139,7 +832,10 @@ namespace hc
         accelerator_view get_default_view() const
         {
             return accelerator_view{
-                *this, detail::Queue_pool::default_queue(agent_)};
+                *this,
+                detail::Queue_pool::default_queue(agent_),
+                queuing_mode_automatic,
+                true};
         }
 
         /**
@@ -1350,8 +1046,7 @@ namespace hc
                 .agent_allocated_coarse_grained_region;
             if (acg.handle) return &acg;
 
-            return &detail::Agent_pool::pool()[agent_]
-                .system_coarse_grained_region;
+            return nullptr;
         }
 
         /**
@@ -1364,8 +1059,8 @@ namespace hc
          */
         void* get_hsa_am_system_region() const
         {
-            return
-                &detail::Agent_pool::pool()[agent_].system_coarse_grained_region;
+            return &detail::Agent_pool::pool()[agent_]
+                .system_coarse_grained_region;
         }
 
         /**
@@ -1434,7 +1129,8 @@ namespace hc
          */
         bool get_is_peer(const accelerator& other) const
         {
-            if (*this == other) return true;
+            if (*this == other) return false;
+            if (!get_hsa_am_region()) return false;
 
             hsa_amd_memory_pool_access_t r{};
             detail::throwing_hsa_result_check(
@@ -1508,59 +1204,39 @@ namespace hc
     // ------------------------------------------------------------------------
     // member function implementations
     // ------------------------------------------------------------------------
-
-    // TODO: move this into accelerator_view's definition
     inline
-    void accelerator_view::wait_for_all_pending_tasks_()
-    {   // TODO: this is overly conservative, technically we only need to wait
-        //       for the eldest i.e. first in the list, then it should be legal
-        //       to clean up.
-        for (auto&& task : pending_tasks_) if (task.valid()) task.wait();
-
-        pending_tasks_.clear();
-    }
-
-    inline
-    completion_future accelerator_view::create_marker(memory_scope) const
+    std::pair<std::mutex, completion_future>& accelerator_view::
+        pending_tasks_for_default_av_() const
     {
-        pending_tasks_.push_front(detail::insert_barrier(*this));
+        if (!accelerator_) throw "WTF?!?!?!?!";
 
-        return pending_tasks_.front();
+        using ConcurrentFuture_ = std::pair<std::mutex, completion_future>;
+
+        static const auto cnt = detail::Agent_pool::pool().size();
+        static const auto del = [](ConcurrentFuture_* ptr) {
+            if (!ptr) return;
+
+            std::lock_guard<std::mutex> lck{ptr->first};
+
+            if (ptr->second.valid()) ptr->second.wait();
+
+            delete [] ptr;
+        };
+        static std::unique_ptr<ConcurrentFuture_[], decltype(del)> r{
+            new ConcurrentFuture_[cnt], del};
+
+        const auto idx = std::distance(
+            detail::Agent_pool::pool().begin(),
+            detail::Agent_pool::pool().find(
+                *static_cast<hsa_agent_t*>(accelerator_->get_hsa_agent())));
+
+        return r[idx];
     }
 
     inline
-    completion_future accelerator_view::create_blocking_marker(
-        completion_future& dependent_future, memory_scope) const
+    accelerator_view::~accelerator_view()
     {
-        pending_tasks_.push_front(completion_future{
-            std::async([=]() { dependent_future.wait(); }).share()});
-
-        return pending_tasks_.front();
-    }
-
-    // TODO: constrain to take completion_future only.
-    template<typename InputIterator>
-    inline
-    completion_future accelerator_view::create_blocking_marker(
-        InputIterator first, InputIterator last, memory_scope) const
-    {   // TODO: optimise by nesting the hsa_signal_t inside the
-        //       completion_future and then building AND AQL packets.
-        std::vector<completion_future> tmp{first, last};
-        pending_tasks_.push_front(completion_future{
-            std::async([tmp = std::move(tmp)]() {
-                for (auto&& x : tmp) if (x.valid()) x.wait();
-            }).share()});
-
-        return pending_tasks_.front();
-    }
-
-    inline
-    completion_future accelerator_view::create_blocking_marker(
-        std::initializer_list<completion_future> dependent_future_list,
-        memory_scope) const
-    {
-        return create_blocking_marker(
-            dependent_future_list.begin(), dependent_future_list.end());
+        if (!is_default_) wait_for_all_pending_tasks_();
     }
 
     inline
@@ -3850,7 +3526,7 @@ namespace hc
     struct array_base {
         struct Deleter {
             template<typename T>
-            void operator()(T* ptr)
+            void operator()(T* ptr) const noexcept
             {
                 if (!ptr) return;
                 if (hsa_memory_free(ptr) == HSA_STATUS_SUCCESS) return;
@@ -3859,28 +3535,45 @@ namespace hc
                     << " be in an inconsistent state." << std::endl;
             }
         };
-        using Guarded_locked_ptr = std::pair<
-            std::atomic_flag, std::pair<const void*, void*>>;
+        using GuardedWriterConcurrentList_ = std::pair<
+            std::atomic_flag,
+            std::pair<std::mutex, std::forward_list<std::shared_future<void>>>>;
 
         static constexpr std::size_t max_array_cnt_{65536u};
 
-        inline static std::array< // TODO: this is a placeholder, and most dubious.
-            std::pair<
-                std::atomic<std::uint32_t>,
-                std::pair<
-                    std::mutex, std::forward_list<std::shared_future<void>>>>,
-            max_array_cnt_> writers_{};
-        inline static std::array<
-            Guarded_locked_ptr, max_array_cnt_> locked_ptrs_{};
-        inline thread_local static std::vector<std::size_t> captured_{};
+        static
+        std::vector<std::size_t>& captured_()
+        {
+            thread_local static std::vector<std::size_t> r{};
+
+            return r;
+        }
+
+        static
+        std::vector<GuardedWriterConcurrentList_>& writers_()
+        {   // TODO: this is a placeholder, and most dubious.
+            static std::vector<GuardedWriterConcurrentList_> r{max_array_cnt_};
+
+            return r;
+        }
+
+        static
+        detail::N_way_set_associative_cache<void*>& locked_ptr_cache_() noexcept
+        {
+            static detail::N_way_set_associative_cache<void*> r;
+
+            return r;
+        }
 
         static
         std::size_t writers_for_()
         {
-            for (decltype(writers_.size()) i = 0u; i != writers_.size(); ++i) {
-                if (writers_[i].first++ == 0) return i;
-                else --writers_[i].first;
-            }
+            auto it = writers_().begin();
+            do {
+                if (it->first.test_and_set()) continue;
+
+                return std::distance(writers_().begin(), it);
+            } while (++it != writers_().end());
 
             throw std::runtime_error{"Failed to associate writers for array."};
         }
@@ -3901,7 +3594,6 @@ namespace hc
         extent<N> extent_;
         access_type cpu_access_;
         std::unique_ptr<T[], Deleter> data_;
-        std::size_t this_idx_{max_array_cnt_};
         std::size_t writers_for_this_{max_array_cnt_};
 
         template<typename U, int M>
@@ -3922,7 +3614,7 @@ namespace hc
 
         void add_to_captured_() const
         {
-            captured_.push_back(writers_for_this_);
+            captured_().push_back(writers_for_this_);
         }
 
         T* allocate_()
@@ -3938,6 +3630,11 @@ namespace hc
                     owner_.get_accelerator().get_hsa_am_system_region());
             }
 
+            if (!r) {
+                r = static_cast<hsa_region_t*>(
+                    owner_.get_accelerator().get_hsa_am_system_region());
+            }
+
             void* tmp{nullptr};
 
             auto s = hsa_memory_allocate(*r, extent_.size() * sizeof(T), &tmp);
@@ -3948,101 +3645,41 @@ namespace hc
             return static_cast<T*>(tmp);
         }
 
-        static
-        constexpr
-        std::uint64_t make_bitmask_(
-            std::uint8_t first, std::uint8_t last) noexcept [[cpu, hc]]
+        void lock_this_()
         {
-            return (first == last) ?
-                0u : ((UINT64_MAX >> (64u - (first - last))) << last);
-        }
+            void* tmp{};
+            auto s = hsa_amd_memory_lock(
+                this,
+                sizeof(*this),
+                static_cast<hsa_agent_t*>(
+                    owner_.get_accelerator().get_hsa_agent()),
+                1,
+                reinterpret_cast<void**>(&tmp));
 
-        static
-        std::uint32_t k_r_hash_(const void* ptr) [[cpu, hc]]
-        {
-            static constexpr auto byte_offset_bits = 2u;
-            static constexpr auto set_bits = 10u;
-            static constexpr auto tag_bits =
-                sizeof(std::uintptr_t) * CHAR_BIT - set_bits - byte_offset_bits;
+            if (s != HSA_STATUS_SUCCESS) {
+                throw std::runtime_error{"Failed to lock array address."};
+            }
 
-            static const auto byte_offset = [](const void* p) {
-                constexpr auto mask = make_bitmask_(byte_offset_bits, 0u);
-
-                return reinterpret_cast<std::uintptr_t>(p) & mask;
-            };
-            static const auto set = [](const void* p) {
-                constexpr auto mask = make_bitmask_(
-                    set_bits + byte_offset_bits, byte_offset_bits);
-
-                return (reinterpret_cast<std::uintptr_t>(p) & mask) >>
-                    byte_offset_bits;
-            };
-            static const auto tag = [](const void* p) {
-                constexpr auto mask = make_bitmask_(
-                    tag_bits + set_bits + byte_offset_bits,
-                    set_bits + byte_offset_bits);
-
-                return (reinterpret_cast<std::uintptr_t>(p) & mask) >>
-                    (set_bits + byte_offset_bits);
-            };
-
-            return set(ptr) * (max_array_cnt_ / 1024);
-        }
-
-        std::size_t lock_this_()
-        {
-            const auto n = k_r_hash_(this);
-            do {
-                auto idx = 0;
-                do {
-                    idx = 0;
-                    while (idx != max_array_cnt_ / 1024) {
-                        if (!locked_ptrs_[n + idx].first.test_and_set()) break;
-                        ++idx;
-                    }
-                } while (idx == max_array_cnt_ / 1024);
-
-                auto s = hsa_amd_memory_lock(
-                    this,
-                    sizeof(*this),
-                    static_cast<hsa_agent_t*>(
-                        owner_.get_accelerator().get_hsa_agent()),
-                    1,
-                    reinterpret_cast<void**>(
-                        &locked_ptrs_[n + idx].second.second));
-
-                if (s != HSA_STATUS_SUCCESS) {
-                    throw std::runtime_error{"Failed to lock array address."};
-                }
-
-                locked_ptrs_[n + idx].second.first = this;
-
-                return n + idx;
-            } while (true); // TODO: add termination after a number of attempts.
+            while (!locked_ptr_cache_().insert(this, tmp).second);
         }
 
         array* const this_() const [[hc]]
         {
-            const auto n = k_r_hash_(this);
+            const auto it = locked_ptr_cache_().find(this);
 
-            for (auto i = 0; i != max_array_cnt_ / 1024; ++i) {
-                if (locked_ptrs_[n + i].second.first != this) continue;
+            if (it == locked_ptr_cache_().end()) return nullptr;
 
-                return static_cast<array* const>(
-                    locked_ptrs_[n + i].second.second);
-            }
-
-            return nullptr;
+            return static_cast<array* const>(*it);
         }
 
         void wait_for_all_pending_writers_() const
         {
-            decltype(writers_[writers_for_this_].second.second) tmp;
+            decltype(writers_()[writers_for_this_].second.second) tmp;
             {
                 std::lock_guard<std::mutex> lck{
-                    writers_[writers_for_this_].second.first};
+                    writers_()[writers_for_this_].second.first};
 
-                std::swap(tmp, writers_[writers_for_this_].second.second);
+                tmp = std::move(writers_()[writers_for_this_].second.second);
             }
             for (auto&& x : tmp) if (x.valid()) x.wait();
         }
@@ -4092,7 +3729,7 @@ namespace hc
             data_{std::move(other.data_)},
             writers_for_this_{other.writers_for_this_}
         {
-            this_idx_ = lock_this_();
+            lock_this_();
             other.writers_for_this_ = max_array_cnt_;
         }
 
@@ -4249,9 +3886,10 @@ namespace hc
             extent_{ext},
             cpu_access_{cpu_access_type},
             data_{allocate_(), Deleter{}},
-            this_idx_{lock_this_()},
             writers_for_this_{writers_for_()}
-        {}
+        {
+            lock_this_();
+        }
         catch (const std::exception& ex) {
             if (ext.size() != 0) throw ex;
 
@@ -4572,9 +4210,10 @@ namespace hc
             extent_{ext},
             cpu_access_{access_type_auto},
             data_{allocate_(), Deleter{}},
-            this_idx_{lock_this_()},
             writers_for_this_{writers_for_()}
-        {}
+        {
+            lock_this_();
+        }
         catch (const std::exception& ex) {
             if (ext.size() != 0) throw ex;
 
@@ -5356,19 +4995,18 @@ namespace hc
 
         ~array()
         {
+            [[maybe_unused]]
             static constexpr auto force_emission_ = &array::add_to_captured_;
 
             if (writers_for_this_ != max_array_cnt_) {
-                --writers_[writers_for_this_].first;
+                writers_()[writers_for_this_].first.clear();
             }
-            if (this_idx_ == max_array_cnt_) return;
+            if (locked_ptr_cache_().erase(this) == 0u) return;
 
             if (hsa_amd_memory_unlock(this) != HSA_STATUS_SUCCESS) {
                 std::cerr << "Failed to unlock locked array pointer; HC runtime"
                     << " may be in an inconsistent state." << std::endl;
             }
-
-            locked_ptrs_[this_idx_].first.clear();
         }
     };
 
@@ -5382,17 +5020,49 @@ namespace hc
      * of array<T, N>.
      */
     struct array_view_base {
+        using GuardedWriterConcurrentList_ =
+            array_base::GuardedWriterConcurrentList_;
+
         static constexpr std::size_t max_array_view_cnt_{65536};
 
-        inline static std::array< // TODO: this is a placeholder, and most dubious.
-            std::pair<
-                std::atomic<std::uint32_t>,
-                std::pair<std::mutex, std::forward_list<std::shared_future<void>>>>,
-            max_array_view_cnt_> writers_{};
-        inline static std::mutex mutex_{}; // TODO: use shared_mutex if C++17 feasible.
-        inline static std::unordered_map<
-            const void*, std::shared_ptr<void>> cache_{};
-        inline thread_local static std::vector<std::size_t> captured_{};
+        static
+        std::unordered_map<const void*, std::shared_ptr<void>>& cache_()
+        {
+            static std::unordered_map<const void*, std::shared_ptr<void>> r;
+
+            return r;
+        }
+
+        const std::shared_ptr<void>& cache_for_(
+            const void* ptr, std::size_t byte_cnt)
+        {
+            if (ptr == this) return cache_for_sourceless_(this, byte_cnt);
+
+            std::lock_guard<std::mutex> lck{mutex_()};
+
+            const auto it = cache_().find(ptr);
+
+            if (it != cache_().cend()) return it->second;
+
+            static const accelerator acc{};
+
+            void* tmp{nullptr};
+            auto s = hsa_memory_allocate(
+                *static_cast<hsa_region_t*>(acc.get_hsa_am_system_region()),
+                    //acc.get_hsa_am_finegrained_system_region()),
+                byte_cnt,
+                &tmp);
+
+            if (s != HSA_STATUS_SUCCESS) {
+                throw std::runtime_error{
+                    "Failed cache allocation for array_view."};
+            }
+
+            return cache_().emplace(
+                std::piecewise_construct,
+                std::make_tuple(ptr),
+                std::make_tuple(tmp, hsa_memory_free)).first->second;
+        }
 
         static
         const std::shared_ptr<void>& cache_for_sourceless_(
@@ -5410,50 +5080,56 @@ namespace hc
                     "Failed cache allocation for sourceless array_view."};
             }
 
-            std::lock_guard<std::mutex> lck{mutex_};
+            std::lock_guard<std::mutex> lck{mutex_()};
 
-            return cache_.emplace(
+            return cache_().emplace(
                 std::piecewise_construct, std::make_tuple(ptr),
                 std::make_tuple(ptr, hsa_memory_free)).first->second;
         }
 
-        const std::shared_ptr<void>& cache_for_(
-            const void* ptr, std::size_t byte_cnt)
+        static
+        std::unordered_set<std::size_t>& captured_()
         {
-            if (ptr == this) return cache_for_sourceless_(this, byte_cnt);
+            thread_local static std::unordered_set<std::size_t> r{};
 
-            std::lock_guard<std::mutex> lck{mutex_};
+            return r;
+        }
 
-            const auto it = cache_.find(ptr);
+        static
+        std::mutex& mutex_()
+        {
+            static std::mutex r{}; // TODO: use shared_mutex if C++17 feasible.
 
-            if (it != cache_.cend()) return it->second;
+            return r;
+        }
 
-            static const accelerator acc{};
+        static
+        std::vector<GuardedWriterConcurrentList_>& writers_() noexcept
+        {
+            static std::vector<GuardedWriterConcurrentList_> r{
+                max_array_view_cnt_};
 
-            void* tmp{nullptr};
-            auto s = hsa_memory_allocate(
-                *static_cast<hsa_region_t*>(acc.get_hsa_am_system_region()),
-                byte_cnt,
-                &tmp);
+            return r;
+        }
 
-            if (s != HSA_STATUS_SUCCESS) {
-                throw std::runtime_error{
-                    "Failed cache allocation for array_view."};
-            }
+        static
+        std::vector<std::vector<hsa_signal_t>>& writer_signals_() noexcept
+        {
+            static std::vector<std::vector<hsa_signal_t>> r{
+                max_array_view_cnt_};
 
-            return cache_.emplace(
-                std::piecewise_construct,
-                std::make_tuple(ptr),
-                std::make_tuple(tmp, hsa_memory_free)).first->second;
+            return r;
         }
 
         static
         std::size_t writers_for_()
-        {
-            for (decltype(writers_.size()) i = 0u; i != writers_.size(); ++i) {
-                if (writers_[i].first++ == 0) return i;
-                else --writers_[i].first;
-            }
+        {   // TODO: should be fused with the definition in array_base.
+            auto it = writers_().begin();
+            do {
+                if (it->first.test_and_set()) continue;
+
+                return std::distance(writers_().begin(), it);
+            } while (++it != writers_().end());
 
             throw std::runtime_error{
                 "Failed to associate writers for array_view."};
@@ -5512,25 +5188,22 @@ namespace hc
         T* updated_data_() const [[cpu]]
         {
             if (writers_for_this_ == max_array_view_cnt_) return base_ptr_;
-            if (writers_[writers_for_this_].second.second.empty()) {
+            if (writers_()[writers_for_this_].second.second.empty()) {
                 return base_ptr_;
             }
 
-            decltype(writers_[writers_for_this_].second.second) tmp;
+            decltype(writers_()[writers_for_this_].second.second) tmp;
             {
                 std::lock_guard<std::mutex> lck{
-                    writers_[writers_for_this_].second.first};
+                    writers_()[writers_for_this_].second.first};
 
-                for (auto&& x : writers_[writers_for_this_].second.second) {
-                    if (!x.valid()) continue;
-                    x.wait();
-                }
-
-                std::swap(writers_[writers_for_this_].second.second, tmp);
+                tmp = std::move(writers_()[writers_for_this_].second.second);
             }
+            for (auto&& x : tmp) if (x.valid()) x.wait();
 
             return base_ptr_;
         }
+
         T* updated_data_() const [[hc]]
         {
             return base_ptr_;
@@ -5637,7 +5310,7 @@ namespace hc
             if (source_ == base_ptr_) return;
 
             auto s = hsa_memory_copy(
-                const_cast<ValT_*>(base_ptr_), //
+                const_cast<ValT_*>(base_ptr_),
                 source_,
                 extent_.size() * sizeof(T));
 
@@ -5771,8 +5444,7 @@ namespace hc
             writers_for_this_{other.writers_for_this_}
         {   // N.B.: this is coupled with make_registered_kernel, and relies on
             //       it copying the user provided Callable.
-            ++writers_[writers_for_this_].first;
-            captured_.push_back(writers_for_this_);
+            captured_().insert(writers_for_this_);
         }
         template<
             typename U = T,
@@ -5785,14 +5457,7 @@ namespace hc
             base_ptr_{other.base_ptr_},
             source_{other.source_},
             writers_for_this_{other.writers_for_this_}
-        {
-            if (writers_for_this_ == max_array_view_cnt_) return;
-
-            // N.B.: this is coupled with make_registered_kernel, and relies on
-            //       it copying the user provided Callable. It causes a spurious
-            //       writer registration that inserts a needless wait; TODO - fix.
-            captured_.push_back(writers_for_this_);
-        }
+        {}
 
         array_view(const array_view& other) [[hc]]
             :
@@ -5815,9 +5480,7 @@ namespace hc
             base_ptr_{other.base_ptr_},
             source_{other.source_},
             writers_for_this_{other.writers_for_this_}
-        {
-            ++writers_[writers_for_this_].first;
-        }
+        {}
         template<
             typename U,
             typename V = T,
@@ -5873,7 +5536,7 @@ namespace hc
         accelerator_view get_source_accelerator_view() const
         {
             static const auto cpu_av{
-                accelerator{accelerator::cpu_accelerator}.get_default_view()};
+                accelerator{accelerator::cpu_accelerator()}.get_default_view()};
 
             return owner_ ? owner_->get_default_view() : cpu_av;
         }
@@ -6001,7 +5664,7 @@ namespace hc
          */
         void refresh() const
         {
-            static const accelerator cpu{accelerator::cpu_accelerator};
+            static const accelerator cpu{accelerator::cpu_accelerator()};
 
             if (owner_ && *owner_ == cpu) return;
             if (base_ptr_ == source_) return;
@@ -6056,14 +5719,19 @@ namespace hc
         {
             if (type == access_type_none || type == access_type_write) return;
 
-            decltype(writers_[writers_for_this_].second.second) tmp;
+            std::vector<hsa_signal_t> tmp;
+            std::forward_list<std::shared_future<void>> tmp1;
             {
                 std::lock_guard<std::mutex> lck{
-                    writers_[writers_for_this_].second.first};
+                    writers_()[writers_for_this_].second.first};
 
-                std::swap(writers_[writers_for_this_].second.second, tmp);
+                tmp = std::move(writer_signals_()[writers_for_this_]);
+                tmp1 = std::move(writers_()[writers_for_this_].second.second);
             }
-            for (auto&& x : tmp) if (x.valid()) x.wait();
+            //for (auto&& x : tmp) if (x.valid()) x.wait();
+            for (auto&& x : tmp) {
+                if (x.handle != 0) detail::Signal_pool::wait(x);
+            }
 
             if (source_ == base_ptr_) return;
 
@@ -6074,6 +5742,7 @@ namespace hc
 
             throw std::runtime_error{"Failed to synchronise array_view."};
         }
+
         template<
             typename U = T,
             typename std::enable_if<std::is_const<U>{}>::type* = nullptr>
@@ -6183,13 +5852,14 @@ namespace hc
          */
         void discard_data() const
         {
-            decltype(writers_[writers_for_this_].second.second) tmp;
+            if (std::is_const<T>{}) return;
 
+            decltype(writers_()[writers_for_this_].second.second) tmp;
             {
                 std::lock_guard<std::mutex> lck{
-                    writers_[writers_for_this_].second.first};
+                    writers_()[writers_for_this_].second.first};
 
-                std::swap(writers_[writers_for_this_].second.second, tmp);
+                tmp = std::move(writers_()[writers_for_this_].second.second);
             }
         }
 
@@ -6487,19 +6157,23 @@ namespace hc
             return array_view<T, m>{view_extent, source_};
         }
 
-        ~array_view() [[cpu]][[hc]]
+        ~array_view() [[cpu, hc]]
         {
             #if __HCC_ACCELERATOR__ != 1
                 if (!data_) return;
 
-                {
-                    std::lock_guard<std::mutex> lck{mutex_};
+                auto& writers = writers_()[writers_for_this_];
 
-                    if (data_.use_count() == 2) cache_.erase(source_);
+                std::size_t n{0u};
+                if (writers_for_this_ != max_array_view_cnt_) {
+                    std::lock_guard<std::mutex> lck{writers.second.first};
+
+                    n = std::distance(
+                        writers.second.second.cbegin(),
+                        writers.second.second.cend());
+
+                    if (data_.use_count() - n > 2) return;
                 }
-
-                if (writers_for_this_ == max_array_view_cnt_) return;
-                if (--writers_[writers_for_this_].first != 0) return;
 
                 try {
                     synchronize(access_type_read_write);
@@ -6507,6 +6181,17 @@ namespace hc
                 catch (const std::exception& ex) {
                     std::cerr << ex.what() << std::endl;
                 }
+
+                {
+                    std::lock_guard<std::mutex> lck{mutex_()};
+
+                    cache_().erase(source_);
+                }
+
+                std::lock_guard<std::mutex> lck{writers.second.first};
+                writers.second.second.clear();
+                writer_signals_()[writers_for_this_].clear();
+                writers.first.clear();
             #endif
         }
     };
@@ -6656,44 +6341,45 @@ namespace hc
      * @param[in] srcEnd An interator to the end of a source container.
      * @param[out] dest An object of type array<T,N> to be copied to.
      */
-    template<typename InputIter, typename T, int N>
+    template<typename InputIterator, typename T, int N>
     inline
-    void copy(InputIter srcBegin, InputIter srcEnd, array<T, N>& dest)
+    void copy(InputIterator first, InputIterator last, array<T, N>& dst)
     {
         static_assert(
             std::is_same<
-                typename std::iterator_traits<InputIter>::iterator_category,
+                typename std::iterator_traits<InputIterator>::iterator_category,
                 std::random_access_iterator_tag>{},
             "Only contiguous random access iterators supported.");
         static_assert(
             std::is_same<
-                typename std::iterator_traits<InputIter>::value_type, T>{},
+                typename std::iterator_traits<InputIterator>::value_type, T>{},
             "Only same type copies supported.");
 
-        if (srcBegin == srcEnd) return;
+        if (first == last) return;
 
-        if (std::distance(srcBegin, srcEnd) != dest.get_extent().size()) {
+        if (std::distance(first, last) != dst.get_extent().size()) {
             throw std::logic_error{"Mismatched copy sizes."};
         }
 
-        copy(srcBegin, dest);
+        copy(first, dst);
     }
 
-    template<typename InputIter, typename T, int N>
+    template<typename InputIterator, typename T, int N>
     inline
-    void copy(InputIter srcBegin, array<T, N>& dest)
+    void copy(InputIterator first, array<T, N>& dst)
     {
         static_assert(
             std::is_same<
-                typename std::iterator_traits<InputIter>::iterator_category,
+                typename std::iterator_traits<InputIterator>::iterator_category,
                 std::random_access_iterator_tag>{},
             "Only contiguous random access iterators supported.");
         static_assert(
-            std::is_same<typename std::iterator_traits<InputIter>::value_type, T>{},
+            std::is_same<
+                typename std::iterator_traits<InputIterator>::value_type, T>{},
             "Only same type copies supported.");
 
-        auto s = hsa_memory_copy( // TODO: add to_address() and use it instead of &*.
-            dest.data(), &*srcBegin, dest.get_extent().size() * sizeof(T));
+        auto s = hsa_memory_copy( // TODO: add to_address(), use it and not &*.
+            dst.data(), &*first, dst.get_extent().size() * sizeof(T));
 
         if (s == HSA_STATUS_SUCCESS) return;
 
@@ -6718,50 +6404,50 @@ namespace hc
      * @param[in] srcEnd An interator to the end of a source container.
      * @param[out] dest An object of type array_view<T,N> to be copied to.
      */
-    template<typename InputIter, typename T, int N>
+    template<typename InputIterator, typename T, int N>
     inline
     void copy(
-        InputIter srcBegin, InputIter srcEnd, const array_view<T, N>& dest)
+        InputIterator first, InputIterator last, const array_view<T, N>& dst)
     {
         static_assert(
             std::is_same<
-                typename std::iterator_traits<InputIter>::iterator_category,
+                typename std::iterator_traits<InputIterator>::iterator_category,
                 std::random_access_iterator_tag>{},
             "Only contiguous random access iterators supported.");
         static_assert(
             std::is_same<
-                typename std::iterator_traits<InputIter>::value_type, T>{},
+                typename std::iterator_traits<InputIterator>::value_type, T>{},
             "Only same type copies supported.");
 
-        if (srcBegin == srcEnd) return;
+        if (first == last) return;
 
-        if (std::distance(srcBegin, srcEnd) != dest.get_extent().size()) {
+        if (std::distance(first, last) != dst.get_extent().size()) {
             throw std::logic_error{"Mismatched copy sizes."};
         }
 
-        auto s = hsa_memory_copy( // TODO: add to_address() and use it instead of &*.
-            dest.base_ptr_, &*srcBegin, dest.get_extent().size() * sizeof(T));
+        auto s = hsa_memory_copy( // TODO: add to_address(), use it and not &*.
+            dst.base_ptr_, &*first, dst.get_extent().size() * sizeof(T));
 
         if (s == HSA_STATUS_SUCCESS) return;
 
         throw std::runtime_error{"Failed iterator range to array_view copy."};
     }
 
-    template<typename InputIter, typename T, int N>
+    template<typename InputIterator, typename T, int N>
     inline
-    void copy(InputIter srcBegin, const array_view<T, N>& dest)
+    void copy(InputIterator first, const array_view<T, N>& dst)
     {
         static_assert(
             std::is_same<
-                typename std::iterator_traits<InputIter>::iterator_category,
+                typename std::iterator_traits<InputIterator>::iterator_category,
                 std::random_access_iterator_tag>{},
             "Only contiguous random access iterators supported.");
         static_assert(
             std::is_same<
-                typename std::iterator_traits<InputIter>::value_type, T>{},
+                typename std::iterator_traits<InputIterator>::value_type, T>{},
             "Only same type copies supported.");
 
-        copy(srcBegin, srcBegin + dest.get_extent().size(), dest);
+        copy(first, first + dst.get_extent().size(), dst);
     }
 
     /** @} */
@@ -6776,25 +6462,26 @@ namespace hc
      * @param[out] destBegin An output iterator addressing the position of the
      *                       first element in the destination container.
      */
-    template<typename OutputIter, typename T, int N>
+    template<typename OutputIterator, typename T, int N>
     inline
-    void copy(const array<T, N> &src, OutputIter destBegin)
+    void copy(const array<T, N>& src, OutputIterator first_out)
     {
         static_assert(
             std::is_same<
-                typename std::iterator_traits<OutputIter>::iterator_category,
+                typename std::iterator_traits<
+                    OutputIterator>::iterator_category,
                 std::random_access_iterator_tag>{},
             "Only contiguous random access iterators supported.");
         static_assert(
             std::is_same<
-                typename std::iterator_traits<OutputIter>::value_type, T>{},
+                typename std::iterator_traits<OutputIterator>::value_type, T>{},
             "Only same type copies supported.");
 
         src.wait_for_all_pending_writers_();
 
         // TODO: must add to_address() and use instead of &*.
         auto s = hsa_memory_copy(
-            &*destBegin, src.data(), src.get_extent().size() * sizeof(T));
+            &*first_out, src.data(), src.get_extent().size() * sizeof(T));
 
         if (s == HSA_STATUS_SUCCESS) return;
 
@@ -6811,25 +6498,26 @@ namespace hc
      * @param[out] destBegin An output iterator addressing the position of the
      *                       first element in the destination container.
      */
-    template<typename OutputIter, typename T, int N>
+    template<typename OutputIterator, typename T, int N>
     inline
-    void copy(const array_view<T, N> &src, OutputIter destBegin)
+    void copy(const array_view<T, N>& src, OutputIterator first_out)
     {
         static_assert(
             std::is_same<
-                typename std::iterator_traits<OutputIter>::iterator_category,
+                typename std::iterator_traits<
+                    OutputIterator>::iterator_category,
                 std::random_access_iterator_tag>{},
             "Only contiguous random access iterators supported.");
         static_assert(
             std::is_same<
-                typename std::iterator_traits<OutputIter>::value_type, T>{},
+                typename std::iterator_traits<OutputIterator>::value_type, T>{},
             "Only same type copies supported.");
 
         src.synchronize(); // TODO: conservative, temporary.
 
-        // TODO: must add to_address() and use instead of &*.
+        // TODO: add to_address() and use it and not &*.
         auto s = hsa_memory_copy(
-            &*destBegin, src.data(), src.get_extent().size() * sizeof(T));
+            &*first_out, src.data(), src.get_extent().size() * sizeof(T));
 
         if (s == HSA_STATUS_SUCCESS) return;
 
@@ -6850,10 +6538,9 @@ namespace hc
      */
     template<typename T, int N>
     inline
-    completion_future copy_async(const array<T, N>& src, array<T, N>& dest)
+    completion_future copy_async(const array<T, N>& src, array<T, N>& dst)
     {
-        return
-            completion_future{std::async([&]() { copy(src, dest); }).share()};
+        return completion_future{std::async([&]() { copy(src, dst); }).share()};
     }
 
     /**
@@ -6866,10 +6553,10 @@ namespace hc
     template<typename T, int N>
     inline
     completion_future copy_async(
-        const array<T, N>& src, const array_view<T, N>& dest)
+        const array<T, N>& src, const array_view<T, N>& dst)
     {   // TODO: should this count as a writer to the array_view?
         return completion_future{
-            std::async([&, dest]() { copy(src, dest); }).share()};
+            std::async([&, dst]() { copy(src, dst); }).share()};
     }
 
     /** @{ */
@@ -6884,18 +6571,18 @@ namespace hc
     template<typename T, int N>
     inline
     completion_future copy_async(
-        const array_view<const T, N>& src, array<T, N>& dest)
+        const array_view<const T, N>& src, array<T, N>& dst)
     {
         return completion_future{
-            std::async([&, src]() { copy(src, dest); }).share()};
+            std::async([&, src]() { copy(src, dst); }).share()};
     }
 
     template<typename T, int N>
     inline
-    completion_future copy_async(const array_view<T, N>& src, array<T, N>& dest)
+    completion_future copy_async(const array_view<T, N>& src, array<T, N>& dst)
     {
         return completion_future{
-            std::async([&, src]() { copy(src, dest); }).share()};
+            std::async([&, src]() { copy(src, dst); }).share()};
     }
 
     /** @} */
@@ -6912,19 +6599,17 @@ namespace hc
     template<typename T, int N>
     inline
     completion_future copy_async(
-        const array_view<const T, N>& src, const array_view<T, N>& dest)
+        const array_view<const T, N>& src, const array_view<T, N>& dst)
     {   // TODO: should this count as a writer to the array_view?
-        return
-            completion_future{std::async([=]() { copy(src, dest); }).share()};
+        return completion_future{std::async([=]() { copy(src, dst); }).share()};
     }
 
     template<typename T, int N>
     inline
     completion_future copy_async(
-        const array_view<T, N>& src, const array_view<T, N>& dest)
+        const array_view<T, N>& src, const array_view<T, N>& dst)
     {   // TODO: should this count as a writer to the array_view?
-        return
-            completion_future{std::async([=]() { copy(src, dest); }).share()};
+        return completion_future{std::async([=]() { copy(src, dst); }).share()};
     }
 
     /** @} */
@@ -6945,44 +6630,44 @@ namespace hc
      * @param[in] srcEnd An interator to the end of a source container.
      * @param[out] dest An object of type array<T,N> to be copied to.
      */
-    template<typename InputIter, typename T, int N>
+    template<typename InputIterator, typename T, int N>
     inline
     completion_future copy_async(
-        InputIter srcBegin, InputIter srcEnd, array<T, N>& dest)
+        InputIterator first, InputIterator last, array<T, N>& dst)
     {
         static_assert(
             std::is_same<
-                typename std::iterator_traits<InputIter>::iterator_category,
+                typename std::iterator_traits<InputIterator>::iterator_category,
                 std::random_access_iterator_tag>{},
             "Only contiguous random access iterators supported.");
         static_assert(
             std::is_same<
-                typename std::iterator_traits<InputIter>::value_type, T>{},
+                typename std::iterator_traits<InputIterator>::value_type, T>{},
             "Only same type copies supported.");
 
-        if (std::distance(srcBegin, srcEnd) != dest.get_extent().size()) {
+        if (std::distance(first, last) != dst.get_extent().size()) {
             throw std::logic_error{"Mismatched copy sizes."};
         }
 
         return completion_future{
-            std::async([=, &dest]() { copy(srcBegin, srcEnd, dest); }).share()};
+            std::async([=, &dst]() { copy(first, last, dst); }).share()};
     }
 
-    template<typename InputIter, typename T, int N>
+    template<typename InputIterator, typename T, int N>
     inline
-    completion_future copy_async(InputIter srcBegin, array<T, N>& dest)
+    completion_future copy_async(InputIterator first, array<T, N>& dst)
     {
         static_assert(
             std::is_same<
-                typename std::iterator_traits<InputIter>::iterator_category,
+                typename std::iterator_traits<InputIterator>::iterator_category,
                 std::random_access_iterator_tag>{},
             "Only contiguous random access iterators supported.");
         static_assert(
             std::is_same<
-                typename std::iterator_traits<InputIter>::value_type, T>{},
+                typename std::iterator_traits<InputIterator>::value_type, T>{},
             "Only same type copies supported.");
 
-        return copy_async(srcBegin, srcBegin + dest.get_extent().size(), dest);
+        return copy_async(first, first + dst.get_extent().size(), dst);
     }
 
     /** @} */
@@ -7003,45 +6688,45 @@ namespace hc
      * @param[in] srcEnd An interator to the end of a source container.
      * @param[out] dest An object of type array_view<T,N> to be copied to.
      */
-    template<typename InputIter, typename T, int N>
+    template<typename InputIterator, typename T, int N>
     inline
     completion_future copy_async(
-        InputIter srcBegin, InputIter srcEnd, const array_view<T, N>& dest)
+        InputIterator first, InputIterator last, const array_view<T, N>& dst)
     {
         static_assert(
             std::is_same<
-                typename std::iterator_traits<InputIter>::iterator_category,
+                typename std::iterator_traits<InputIterator>::iterator_category,
                 std::random_access_iterator_tag>{},
             "Only contiguous random access iterators supported.");
         static_assert(
             std::is_same<
-                typename std::iterator_traits<InputIter>::value_type, T>{},
+                typename std::iterator_traits<InputIterator>::value_type, T>{},
             "Only same type copies supported.");
 
-        if (std::distance(srcBegin, srcEnd) != dest.get_extent().size()) {
+        if (std::distance(first, last) != dst.get_extent().size()) {
             throw std::logic_error{"Mismatched copy sizes."};
         }
 
         return completion_future{
-            std::async([=]() { copy(srcBegin, srcEnd, dest); }).share()};
+            std::async([=]() { copy(first, last, dst); }).share()};
     }
 
-    template<typename InputIter, typename T, int N>
+    template<typename InputIterator, typename T, int N>
     inline
     completion_future copy_async(
-        InputIter srcBegin, const array_view<T, N>& dest)
+        InputIterator first, const array_view<T, N>& dst)
     {
-    static_assert(
+        static_assert(
             std::is_same<
-                typename std::iterator_traits<InputIter>::iterator_category,
+                typename std::iterator_traits<InputIterator>::iterator_category,
                 std::random_access_iterator_tag>{},
             "Only contiguous random access iterators supported.");
         static_assert(
             std::is_same<
-                typename std::iterator_traits<InputIter>::value_type, T>{},
+                typename std::iterator_traits<InputIterator>::value_type, T>{},
             "Only same type copies supported.");
 
-        return copy_async(srcBegin, srcBegin + dest.get_extent().size(), dest);
+        return copy_async(first, first + dst.get_extent().size(), dst);
     }
 
     /** @} */
@@ -7056,22 +6741,24 @@ namespace hc
      * @param[out] destBegin An output iterator addressing the position of the
      *                       first element in the destination container.
      */
-    template<typename OutputIter, typename T, int N>
+    template<typename OutputIterator, typename T, int N>
     inline
-    completion_future copy_async(const array<T, N>& src, OutputIter destBegin)
+    completion_future copy_async(
+        const array<T, N>& src, OutputIterator first_out)
     {
         static_assert(
             std::is_same<
-                typename std::iterator_traits<OutputIter>::iterator_category,
+                typename std::iterator_traits<
+                    OutputIterator>::iterator_category,
                 std::random_access_iterator_tag>{},
             "Only contiguous random access iterators supported.");
         static_assert(
             std::is_same<
-                typename std::iterator_traits<OutputIter>::value_type, T>{},
+                typename std::iterator_traits<OutputIterator>::value_type, T>{},
             "Only same type copies supported.");
 
         return completion_future{
-            std::async([&, destBegin]() { copy(src, destBegin); }).share()};
+            std::async([&, first_out]() { copy(src, first_out); }).share()};
     }
 
     /**
@@ -7084,23 +6771,24 @@ namespace hc
      * @param[out] destBegin An output iterator addressing the position of the
      *                       first element in the destination container.
      */
-    template<typename OutputIter, typename T, int N>
+    template<typename OutputIterator, typename T, int N>
     inline
     completion_future copy_async(
-        const array_view<T, N>& src, OutputIter destBegin)
+        const array_view<T, N>& src, OutputIterator first_out)
     {
         static_assert(
             std::is_same<
-                typename std::iterator_traits<OutputIter>::iterator_category,
+                typename std::iterator_traits<
+                    OutputIterator>::iterator_category,
                 std::random_access_iterator_tag>{},
             "Only contiguous random access iterators supported.");
         static_assert(
             std::is_same<
-                typename std::iterator_traits<OutputIter>::value_type, T>{},
+                typename std::iterator_traits<OutputIterator>::value_type, T>{},
             "Only same type copies supported.");
 
         return completion_future{
-            std::async([=]() { copy(src, destBegin); }).share()};
+            std::async([=]() { copy(src, first_out); }).share()};
     }
 
     // ------------------------------------------------------------------------
@@ -7149,53 +6837,53 @@ namespace hc
 
     template<typename Kernel>
     inline
-    std::forward_list<std::shared_future<void>> predecessors_for(const Kernel& f)
+    std::forward_list<std::shared_future<void>> predecessors_for(
+        const Kernel& f)
     {   // TODO: cleanup & optimise; the iteration can be collapsed.
         using AR = array_base;
         using AV = array_view_base;
 
-        AV::captured_.clear();
-        auto trigger_registration = f;
-
         std::forward_list<std::shared_future<void>> r;
-        for (auto&& widx : AR::captured_) {
-            std::lock_guard<std::mutex> lck{AR::writers_[widx].second.first};
+        for (auto&& widx : AR::captured_()) {
+            std::lock_guard<std::mutex> lck{AR::writers_()[widx].second.first};
 
             r.splice_after(
                 r.before_begin(),
-                std::move(AR::writers_[widx].second.second),
-                AR::writers_[widx].second.second.before_begin());
+                std::move(AR::writers_()[widx].second.second),
+                AR::writers_()[widx].second.second.before_begin());
         }
-        for (auto&& widx : AV::captured_) {
-            std::lock_guard<std::mutex> lck{AV::writers_[widx].second.first};
+        for (auto&& widx : AV::captured_()) {
+            std::lock_guard<std::mutex> lck{AV::writers_()[widx].second.first};
 
             r.splice_after(
                 r.before_begin(),
-                std::move(AV::writers_[widx].second.second),
-                AV::writers_[widx].second.second.before_begin());
+                std::move(AV::writers_()[widx].second.second),
+                AV::writers_()[widx].second.second.before_begin());
         }
 
         return r;
     }
 
     inline
-    void register_writer(const completion_future& pending_task)
+    void register_writer(
+        const std::pair<std::shared_future<void>, hsa_signal_t>& writer)
     {   // TODO: cleanup & optimise; the iteration can be collapsed.
         using AR = array_base;
         using AV = array_view_base;
 
-        for (auto&& widx : AR::captured_) {
-            std::lock_guard<std::mutex> lck{AR::writers_[widx].second.first};
+        for (auto&& widx : AR::captured_()) {
+            std::lock_guard<std::mutex> lck{AR::writers_()[widx].second.first};
 
-            AR::writers_[widx].second.second.emplace_front(pending_task);
+            AR::writers_()[widx].second.second.emplace_front(writer.first);
         }
-        for (auto&& widx : AV::captured_) {
-            std::lock_guard<std::mutex> lck{AV::writers_[widx].second.first};
+        for (auto&& widx : AV::captured_()) {
+            std::lock_guard<std::mutex> lck{AV::writers_()[widx].second.first};
 
-            AV::writers_[widx].second.second.emplace_front(pending_task);
+            AV::writers_()[widx].second.second.emplace_front(writer.first);
+            AV::writer_signals_()[widx].push_back(writer.second);
         }
 
-        AR::captured_.clear();
+        AR::captured_().clear();
     }
 
     //ND parallel_for_each, nontiled
@@ -7207,8 +6895,11 @@ namespace hc
         const hc::extent<n>& compute_domain,
         const Kernel& f)
     {   // TODO: unify with tiled, everything is essentially tiled
+        array_view_base::captured_().clear();
+
         if (compute_domain.size() == 0) {
-            return completion_future{std::async([](){}).share()};
+            return completion_future{
+                std::async(std::launch::deferred, [](){}).share()};
         }
 
         if (av.get_accelerator().get_device_path() == L"cpu") {
@@ -7218,15 +6909,19 @@ namespace hc
 
         validate_compute_domain(compute_domain);
 
+        array_view_base::captured_().clear();
+        {
+            [[maybe_unused]]
+            const auto register_captured_avs = f;
+        }
         for (auto&& x : predecessors_for(f)) if (x.valid()) x.wait();
 
-        completion_future tmp{
-            detail::launch_kernel_async(av, compute_domain, f)};
-        av.add_pending_task_(tmp);
+        auto tmp = detail::launch_kernel_async(av, compute_domain, f);
 
+        av.add_pending_task_(tmp.first);
         register_writer(tmp);
 
-        return tmp;
+        return tmp.first;
     }
 
     template<int n>
@@ -7264,9 +6959,10 @@ namespace hc
         const accelerator_view& av,
         const tiled_extent<n>& compute_domain,
         const Kernel& f)
-    {   // TODO: optimise, this spuriously does one extra copy of Kernel.
+    {
         if (compute_domain.size() == 0) {
-            return completion_future{std::async([](){}).share()};
+            return completion_future{
+                std::async(std::launch::deferred, [](){}).share()};
         }
 
         if (av.get_accelerator().get_device_path() == L"cpu") {
@@ -7276,14 +6972,18 @@ namespace hc
 
         validate_tiled_compute_domain(compute_domain);
 
+        array_view_base::captured_().clear();
+        {
+            [[maybe_unused]]
+            const auto register_captured_avs = f;
+        }
         for (auto&& x : predecessors_for(f)) if (x.valid()) x.wait();
 
-        completion_future tmp{
-            detail::launch_kernel_async(av, compute_domain, f)};
-        av.add_pending_task_(tmp);
+        auto tmp = detail::launch_kernel_async(av, compute_domain, f);
 
+        av.add_pending_task_(tmp.first);
         register_writer(tmp);
 
-        return tmp;
+        return tmp.first;
     }
 } // namespace hc
