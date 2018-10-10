@@ -2225,8 +2225,6 @@ private:
 
     std::map<std::string, HSAExecutable*> executables;
 
-    hsa_isa_t agentISA;
-
     hcAgentProfile profile;
 
     /*TODO: This is the first CPU which will provide system memory pool
@@ -2682,19 +2680,32 @@ public:
 
         const auto isa{get_isa_name_from_triple(std::move(triple))};
 
-        hsa_isa_t co_isa{};
-        status = hsa_isa_from_name(isa.c_str(), &co_isa);
+        struct isa_comp_data {
+            hsa_isa_t isa_type;
+            bool is_compatible;
+        } co_data;
+
+        status = hsa_isa_from_name(isa.c_str(), &co_data.isa_type);
         STATUS_CHECK(status, __LINE__);
 
         // Check if the code object is compatible with ISA of the agent
-        bool isCompatible = false;
-        status = hsa_isa_compatible(co_isa, agentISA, &isCompatible);
+        co_data.is_compatible = false;
+        status =
+            hsa_agent_iterate_isas(
+                agent,
+                [](hsa_isa_t agent_isa, void* data) {
+                    isa_comp_data* co_data = static_cast<isa_comp_data*>(data);
+                    if (agent_isa == co_data->isa_type)
+                        co_data->is_compatible = true;
+                    return HSA_STATUS_SUCCESS;
+                },
+                &co_data);
         STATUS_CHECK(status, __LINE__);
 
         // release allocated memory
         free(kernel_source);
 
-        return isCompatible;
+        return co_data.is_compatible;
     }
 
     void* CreateKernel(const char* fun, Kalmar::KalmarQueue *queue) override {
@@ -3842,10 +3853,6 @@ HSADevice::HSADevice(hsa_agent_t a, hsa_agent_t host, int x_accSeqNum) : KalmarD
     /// Query the maximum number of work-items in each dimension of a workgroup
     status = hsa_agent_get_info(agent, HSA_AGENT_INFO_WORKGROUP_MAX_DIM, &workgroup_max_dim);
 
-    STATUS_CHECK(status, __LINE__);
-
-    /// Get ISA associated with the agent
-    status = hsa_agent_get_info(agent, HSA_AGENT_INFO_ISA, &agentISA);
     STATUS_CHECK(status, __LINE__);
 
     /// Get the profile of the agent
