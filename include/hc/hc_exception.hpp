@@ -22,7 +22,7 @@ namespace hc
             " \"CPU accelerator\"."};
 
         // TODO: this should use standard error_code / error_category.
-        using HRESULT = decltype(E_FAIL);
+        using HRESULT = typename std::remove_const<decltype(E_FAIL)>::type;
         class runtime_exception : public std::exception {
             std::string message_;
             HRESULT code_;
