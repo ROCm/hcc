@@ -144,7 +144,6 @@ namespace hc
         enum Packet_type{ barrier, kernel, n };
 
         template<Packet_type packet>
-        constexpr
         inline
         std::uint16_t make_packet_header() noexcept
         {
@@ -232,7 +231,7 @@ namespace hc
 
         template<typename AcceleratorView, typename Domain, typename Kernel>
         inline
-        std::shared_future<void> launch_kernel_async(
+        std::pair<std::shared_future<void>, hsa_signal_t> launch_kernel_async(
             const AcceleratorView& av,
             const Domain& domain,
             const Kernel& f)
@@ -250,11 +249,12 @@ namespace hc
                 lock_callable<Kernel>(agent, ks.get()));
             Queue_pool::enable(slot, queue);
 
-            return std::async([=, ks = std::move(ks)]() mutable {
-                Signal_pool::wait(signal);
-                ks.reset();
-                Signal_pool::deallocate(signal);
-            }).share();
+            return {
+                std::async([=](decltype(ks)) {
+                    Signal_pool::wait(signal);
+                    Signal_pool::deallocate(signal);
+                }, std::move(ks)).share(),
+                signal};
         }
 
         inline
@@ -273,7 +273,8 @@ namespace hc
 
         template<typename AcceleratorView>
         inline
-        std::shared_future<void> insert_barrier(const AcceleratorView& av)
+        std::pair<std::shared_future<void>, hsa_signal_t> insert_barrier(
+            const AcceleratorView& av)
         {
             auto slot = Queue_pool::queue_slot(
                 static_cast<hsa_queue_t*>(av.get_hsa_queue()));
@@ -282,10 +283,12 @@ namespace hc
             Queue_pool::enable(
                 slot, static_cast<hsa_queue_t*>(av.get_hsa_queue()));
 
-            return std::async([=]() {
-                Signal_pool::wait(signal);
-                Signal_pool::deallocate(signal);
-            }).share();
+            return {
+                std::async([=]() {
+                    Signal_pool::wait(signal);
+                    Signal_pool::deallocate(signal);
+                }).share(),
+                signal};
         }
     } // Namespace hc::detail.
 } // Namespace hc.
