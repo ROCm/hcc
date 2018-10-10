@@ -1208,7 +1208,9 @@ namespace hc
     std::pair<std::mutex, completion_future>& accelerator_view::
         pending_tasks_for_default_av_() const
     {
-        if (!accelerator_) throw "WTF?!?!?!?!";
+        if (!accelerator_) {
+            throw std::logic_error{"Invariants of class accelerator broken."};
+        }
 
         using ConcurrentFuture_ = std::pair<std::mutex, completion_future>;
 
