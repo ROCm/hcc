@@ -50,44 +50,10 @@ bool test() {
   hc::accelerator_view av = hc::accelerator().get_default_view();
   hc::completion_future fut2 = av.create_marker();
 
-  void* nativeHandle = fut.get_native_handle();
-  void* nativeHandle2 = fut2.get_native_handle();
-
-#if TEST_DEBUG
-  std::cout << nativeHandle << "\n";
-  std::cout << nativeHandle2 << "\n";
-#endif
-
-  hsa_signal_value_t signal_value;
-  hsa_signal_value_t signal_value2;
-
-  signal_value = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(nativeHandle));
-#if TEST_DEBUG
-  std::cout << "kernel signal value: " << signal_value << "\n";
-#endif
-
-  signal_value2 = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(nativeHandle2));
-#if TEST_DEBUG
-  std::cout << "barrier signal value: " << signal_value << "\n";
-#endif
-
   // wait on the barrier packet
   fut2.wait();
 
   // the barrier packet would ensure all previous packets were processed
-
-  signal_value = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(nativeHandle));
-#if TEST_DEBUG
-  std::cout << "kernel signal value: " << signal_value << "\n";
-#endif
-  ret &= (signal_value == 0);
-
-  signal_value2 = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(nativeHandle2));
-#if TEST_DEBUG
-  std::cout << "barrier signal value: " << signal_value << "\n";
-#endif
-  ret &= (signal_value2 == 0);
-
   // verify
   int error = 0;
   for(unsigned i = 0; i < vecSize; i++) {
