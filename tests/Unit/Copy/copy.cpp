@@ -17,7 +17,7 @@ int main(void) {
   std::vector<accelerator> accs = accelerator::get_all();
   accelerator gpu_acc;
   for (auto& it: accs)
-    if (it != accelerator(accelerator::cpu_accelerator)) {
+    if (it != accelerator{accelerator::cpu_accelerator()}) {
       gpu_acc = it;
       break;
     }
