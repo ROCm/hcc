@@ -5,6 +5,7 @@ set(
         hc_am.hpp
         hc_atomics.hpp
         hc_callable_attributes.hpp
+        hc_completion_future.hpp
         hc_defines.hpp
         hc_exception.hpp
         hc_index.hpp
@@ -20,6 +21,7 @@ set(
         hc_signal_pool.hpp
         hc.hpp
         implementation/hc_code_object_bundle.hpp
+        implementation/hc_n_way_set_associative_cache.hpp
         implementation/hc_program_state.hpp
         implementation/hc_raii_handle.hpp
         implementation/hc_type_support.hpp)
