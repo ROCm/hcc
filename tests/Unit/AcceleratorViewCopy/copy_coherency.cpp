@@ -1,4 +1,4 @@
-// RUN: %hc %s -o %t.out  -L/home/alexv/Programming/ROCR-Runtime/src/build -lhsa-runtime64 && %t.out
+// RUN: %hc %s -o %t.out && %t.out
 //
 // Test coherency and flushes.  Need to flush GPU caches before H2D copy
 

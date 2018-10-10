@@ -1,4 +1,4 @@
-// RUN: %hc %s -o %t.out  -L/home/alexv/Programming/ROCR-Runtime/src/build -lhsa-runtime64 && %t.out
+// RUN: %hc %s -o %t.out && %t.out
 //
 // Test "classic" GPU pattern of H2D copies, followed by Kernels, followed by
 // D2H.
