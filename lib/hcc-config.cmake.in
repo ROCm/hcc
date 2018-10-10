@@ -12,7 +12,6 @@ find_path(HSA_HEADER hsa/hsa.h
 find_library(HSA_LIBRARY hsa-runtime64
   PATHS
     /opt/rocm/lib
-    /home/alexv/Programming/ROCR-Runtime/src/build
 )
 
 add_library(hsa-runtime64 SHARED IMPORTED GLOBAL)
