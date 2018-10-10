@@ -650,13 +650,34 @@ public:
 
         workitem_vgpr_count = 0;
 
-        hsa_ven_amd_loader_1_00_pfn_t ext_table = {nullptr};
-        status = hsa_system_get_extension_table(HSA_EXTENSION_AMD_LOADER, 1, 0, &ext_table);
+        uint16_t ext_version_major = 1;
+        uint16_t ext_version_minor = 0;
+        bool ext_supported = false;
+        status =
+            hsa_system_major_extension_supported(
+                HSA_EXTENSION_AMD_LOADER,
+                ext_version_major,
+                &ext_version_minor,
+                &ext_supported);
+        STATUS_CHECK(status, __LINE__);
+        if(!ext_supported)
+            throw Kalmar::runtime_exception("HSA_EXTENSION_AMD_LOADER not supported.", 0);
+
+        hsa_ven_amd_loader_1_01_pfn_t ext_table = {nullptr};
+        status =
+            hsa_system_get_major_extension_table(
+                HSA_EXTENSION_AMD_LOADER,
+                1,
+                sizeof(ext_table),
+                &ext_table);
         STATUS_CHECK(status, __LINE__);
 
         if (nullptr != ext_table.hsa_ven_amd_loader_query_host_address) {
             const amd_kernel_code_t* akc = nullptr;
-            status = ext_table.hsa_ven_amd_loader_query_host_address(reinterpret_cast<const void*>(kernelCodeHandle), reinterpret_cast<const void**>(&akc));
+            status =
+                ext_table.hsa_ven_amd_loader_query_host_address(
+                    reinterpret_cast<const void*>(kernelCodeHandle),
+                    reinterpret_cast<const void**>(&akc));
             STATUS_CHECK(status, __LINE__);
 
             workitem_vgpr_count = akc->workitem_vgpr_count;
