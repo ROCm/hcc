@@ -132,7 +132,7 @@ _thinlto_path() {
     exit $ret
   fi
 
-  $LTO -thinlto -thinlto-action=import "${LINK_KERNEL_ARGS[@]}" -thinlto-index=$TEMP_DIR/kernel.thinlto.index -import-instr-limit=1048576 -force-import-weak
+  $LTO -thinlto -thinlto-action=import "${LINK_KERNEL_ARGS[@]}" -thinlto-index=$TEMP_DIR/kernel.thinlto.index -import-instr-limit=1048576
   ret=$?
   if [ $ret != 0 ]; then
     exit $ret
