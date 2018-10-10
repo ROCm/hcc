@@ -33,15 +33,35 @@ namespace hc
             std::vector<char> blob;
         };
 
-        class Bundled_code_header {
+        class Bundled_code_header_base {
+            friend class Bundled_code_header;
+
+            static
+            constexpr
+            const char* magic_string_()
+            {
+                return "__CLANG_OFFLOAD_BUNDLE__";
+            }
+            static
+            constexpr
+            std::size_t strlen_(
+                const char* ptr, std::size_t n = 0u) noexcept
+            {
+                return ptr ? (*ptr ? strlen_(ptr + 1, n + 1) : n) : n;
+            }
+        };
+
+        class Bundled_code_header : private Bundled_code_header_base {
+            using Bundled_code_header_base::strlen_;
+
             friend
             inline
             bool valid(const Bundled_code_header& x)
             {
                 return std::equal(
                     x.bundler_magic_string,
-                    x.bundler_magic_string + x.magic_string_sz,
-                    x.magic_string);
+                    x.bundler_magic_string + x.strlen_(x.magic_string_()),
+                    x.magic_string_());
             }
 
             friend
@@ -99,14 +119,9 @@ namespace hc
                     x);
             }
 
-            inline static constexpr const char magic_string[]{
-                "__CLANG_OFFLOAD_BUNDLE__"};
-            inline static constexpr std::size_t magic_string_sz{
-                sizeof(magic_string) - 1};
-
             union {
                 struct {
-                    char bundler_magic_string[magic_string_sz];
+                    char bundler_magic_string[strlen_(magic_string_())];
                     std::uint64_t bundle_cnt;
                 };
                 char cbuf[sizeof(bundler_magic_string) + sizeof(bundle_cnt)];

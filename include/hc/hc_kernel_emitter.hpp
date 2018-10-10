@@ -119,13 +119,17 @@ namespace hc
             friend
             class Kernel_emitter_base;
 
-            // IMPLEMENTATION - DATA - STATICS
-            inline static std::string name_{linker_name_for<Kernel>()};
-
             // IMPLEMENTATION - DATA
             hsa_executable_symbol_t kernel_{};
 
             // IMPLEMENTATION - STATICS
+            static
+            const std::string& name_()
+            {
+                static const std::string r{linker_name_for<Kernel>()};
+
+                return r;
+            }
             static
             std::string symbol_name_(hsa_executable_symbol_t x)
             {   // TODO: this uses deprecated HSA APIs because ROCr did not
@@ -175,11 +179,11 @@ namespace hc
             hsa_executable_symbol_t kernel_symbol_(hsa_agent_t x)
             {
                 for (auto&& kernel : Program_state::kernels()[x]) {
-                    if (name_ == symbol_name_(kernel)) return kernel;
+                    if (name_() == symbol_name_(kernel)) return kernel;
                 }
 
                 throw std::runtime_error{
-                    "Code for kernel " + name_ + " is unavailable."};
+                    "Code for kernel " + name_() + " is unavailable."};
             }
 
             static
