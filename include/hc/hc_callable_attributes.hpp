@@ -94,7 +94,7 @@ namespace hc
     namespace attr_impl
     {
         template<typename Callable, typename... Attrs>
-        class Callable_with_AMDGPU_attributes {
+        class Callable_with_AMDGPU_attributes : private Callable {
             struct Triple_ {
                 std::size_t m0;
                 std::size_t m1;
@@ -140,8 +140,6 @@ namespace hc
                 typename std::tuple_element<idxs_.m2, AttrTuple_>::type,
                 Waves_per_eu<>>::type;
 
-            Callable callable_{};
-
             template<typename, typename>
             friend struct detail::Kernel_emitter;
         public:
@@ -149,7 +147,7 @@ namespace hc
             Callable_with_AMDGPU_attributes() [[cpu, hc]] = default;
             explicit
             Callable_with_AMDGPU_attributes(Callable callable)
-                : callable_{std::move(callable)} {}
+                : Callable{std::move(callable)} {}
             Callable_with_AMDGPU_attributes(
                 const Callable_with_AMDGPU_attributes&) [[cpu, hc]] = default;
             Callable_with_AMDGPU_attributes(
@@ -157,11 +155,7 @@ namespace hc
             ~Callable_with_AMDGPU_attributes() [[cpu, hc]] = default;
 
             // ACCESSORS
-            template<typename T>
-            void operator()(T&& idx) const noexcept [[hc]]
-            {
-                callable_(std::forward<T>(idx));
-            }
+            using Callable::operator();
         };
     } // Namespace hc::attr_impl.
 
