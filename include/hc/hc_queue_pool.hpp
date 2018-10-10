@@ -29,10 +29,14 @@ namespace hc
             struct Deleter {
                 void operator()(hsa_queue_t* queue) const noexcept
                 {
-                    if (hsa_queue_destroy(queue) == HSA_STATUS_SUCCESS) return;
-
-                    std::cerr << "Failed to destroy queue; HC Runtime may be in"
-                        << " an inconsistent state." << std::endl;
+                    try {
+                        throwing_hsa_result_check(
+                            hsa_queue_destroy(queue),
+                            __FILE__, __func__, __LINE__);
+                    }
+                    catch (const std::exception& ex) {
+                        std::cerr << ex.what() << std::endl;
+                    }
                 }
             };
 
