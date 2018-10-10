@@ -25,14 +25,20 @@ namespace hc
             struct RAII_signal {
                 hsa_signal_t signal;
 
+                // CREATORS
                 ~RAII_signal()
                 {
-                    if (hsa_signal_destroy(signal) != HSA_STATUS_SUCCESS) {
-                        std::cerr << "Failed to destroy signal; HC Runtime may "
-                            << "be in an inconsistent state." << std::endl;
+                    try {
+                        throwing_hsa_result_check(
+                            hsa_signal_destroy(signal),
+                            __FILE__, __func__, __LINE__);
+                    }
+                    catch (const std::exception& ex) {
+                        std::cerr << ex.what() << std::endl;
                     }
                 }
 
+                // ACCESSORS
                 constexpr
                 operator hsa_signal_t() const noexcept { return signal; }
             };
@@ -41,14 +47,14 @@ namespace hc
             static constexpr hsa_signal_value_t init_value_{1};
             static constexpr std::size_t pool_size_{256u};
 
-            using PoolType = std::array<
-                std::pair<std::atomic_flag, RAII_signal>, pool_size_>;
+            using PoolType =
+                std::vector<std::pair<std::atomic_flag, RAII_signal>>;
 
             // IMPLEMENTATION - STATICS
             static
             PoolType& pool_()
             {
-                static PoolType r{};
+                static PoolType r{pool_size_};
                 static std::once_flag f;
 
                 std::call_once(f, []() {
