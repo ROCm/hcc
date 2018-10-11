@@ -4,6 +4,7 @@ if(NOT CMAKE_CXX_COMPILER MATCHES ".*hcc")
 endif()
 
 add_executable(cmake-test cmake-test.cpp)
+add_dependencies(cmake-test hc_am mcwamp_hsa mcwamp)
 
 # Explicitly set the GPU architecture so that
 # cmake_test could be cross-compiled on a system
