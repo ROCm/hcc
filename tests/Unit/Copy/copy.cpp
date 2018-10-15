@@ -1,3 +1,4 @@
+// XFAIL: *
 // RUN: %cxxamp %s -o %t.out && %t.out
 #include <hc.hpp>
 #include <stdlib.h>
