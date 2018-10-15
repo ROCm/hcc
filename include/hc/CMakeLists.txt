@@ -19,12 +19,7 @@ set(
         hc_runtime.hpp
         hc_short_vector.hpp
         hc_signal_pool.hpp
-        hc.hpp
-        implementation/hc_code_object_bundle.hpp
-        implementation/hc_n_way_set_associative_cache.hpp
-        implementation/hc_program_state.hpp
-        implementation/hc_raii_handle.hpp
-        implementation/hc_type_support.hpp)
+        hc.hpp)
 
 # Set location for output directory
 set(output_dir "${PROJECT_BINARY_DIR}/include/hc")
@@ -48,4 +43,6 @@ add_dependencies(world hc-headers)
 install(
     FILES ${HC_headers}
     PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
-    DESTINATION include)
+    DESTINATION include/hc)
+
+add_subdirectory(implementation)
