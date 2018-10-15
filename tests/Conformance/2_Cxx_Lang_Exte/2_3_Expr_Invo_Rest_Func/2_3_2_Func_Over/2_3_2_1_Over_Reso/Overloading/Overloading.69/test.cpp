@@ -13,7 +13,7 @@
 class c
 {
 public:
-    void f(int &v) restrict(amp,cpu)
+    void f(int &v) [[cpu, hc]]
     {
         v = 1;
     }

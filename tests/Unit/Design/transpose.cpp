@@ -1,3 +1,4 @@
+// XFAIL: *
 // RUN: %cxxamp %s -o %t.out && %t.out
 //----------------------------------------------------------------------------
 // File: transpose.cpp
@@ -5,21 +6,21 @@
 // Implement C++ AMP version of matrix transpose
 //----------------------------------------------------------------------------
 
-#include <amp.h>
+#include <hc.hpp>
 #include <cmath>
 #include <assert.h>
 #include <iostream>
 #include <sstream>
 
 
-using namespace concurrency;
+using namespace hc;
 
 
 //-----------------------------------------------------------------------------
 // Common utility functions and definitions
 //-----------------------------------------------------------------------------
 template <typename _2d_index_type>
-_2d_index_type transpose(const _2d_index_type& idx) restrict(cpu, amp) {
+_2d_index_type transpose(const _2d_index_type& idx) [[cpu, hc]] {
   return _2d_index_type(idx[1], idx[0]);
 }
 
@@ -32,7 +33,7 @@ void transpose_simple(const array_view<const _value_type, 2>& data,
   assert(data.get_extent() == transpose(data_transpose.get_extent()));
 
   data_transpose.discard_data();
-  parallel_for_each(data.get_extent(), [=] (index<2> idx) restrict(amp) {
+  parallel_for_each(data.get_extent(), [=] (index<2> idx) [[hc]] {
     data_transpose[transpose(idx)] = data[idx];
   });
 }
@@ -51,8 +52,8 @@ void transpose_tiled_even(const array_view<const _value_type, 2>& data,
   data_transpose.discard_data();
   extent<2> e = data.get_extent();
 
-  parallel_for_each(e.tile<_tile_size, _tile_size>(),
-      [=] (tiled_index<_tile_size, _tile_size> tidx) restrict(amp) {
+  parallel_for_each(e.tile(_tile_size, _tile_size),
+      [=] (tiled_index<2> tidx) [[hc]] {
     tile_static _value_type t1[_tile_size][_tile_size];
     t1[tidx.local[1]][tidx.local[0]] = data[tidx.global];
 
@@ -72,14 +73,14 @@ void transpose_tiled_even(const array_view<const _value_type, 2>& data,
 //-----------------------------------------------------------------------------
 template <typename _value_type>
 _value_type guarded_read(const array_view<const _value_type, 2>& data,
-                         const index<2>& idx) restrict(amp) {
+                         const index<2>& idx) [[hc]] {
   auto e = data.get_extent();
   return e.contains(idx) ? data[idx] : _value_type();
 }
 
 template <typename _value_type>
 void guarded_write(const array_view<_value_type, 2>& data, const index<2>& idx,
-                   const _value_type& val) restrict(amp) {
+                   const _value_type& val) [[hc]] {
   auto e = data.get_extent();
   if(e.contains(idx))
     data[idx] = val;
@@ -92,8 +93,8 @@ void transpose_tiled_pad(const array_view<const _value_type, 2>& data,
 
   data_transpose.discard_data();
   extent<2> e = data.get_extent();
-  parallel_for_each(e.tile<_tile_size, _tile_size>().pad(),
-      [=] (tiled_index<_tile_size, _tile_size> tidx) restrict(amp) {
+  parallel_for_each(e.tile(_tile_size, _tile_size).pad(),
+      [=] (tiled_index<2> tidx) [[hc]] {
     tile_static _value_type t1[_tile_size][_tile_size];
     t1[tidx.local[1]][tidx.local[0]] = guarded_read(data, tidx.global);
 
@@ -157,12 +158,11 @@ void transpose_tiled_truncate_option_a(
           const array_view<const _value_type, 2>& data,
           const array_view<_value_type, 2>& data_transpose) {
   extent<2> e = data.get_extent();
-  tiled_extent<_tile_size, _tile_size> e_truncated(e.tile<_tile_size,
-                                                   _tile_size>().truncate());
+  tiled_extent<2> e_truncated(e.tile(_tile_size, _tile_size).truncate());
 
   data_transpose.discard_data();
   parallel_for_each(e_truncated,
-      [=] (tiled_index<_tile_size, _tile_size> tidx) restrict(amp) {
+      [=] (tiled_index<2> tidx) [[hc]] {
     // Normal processing
     tile_static _value_type t1[_tile_size][_tile_size];
     t1[tidx.local[1]][tidx.local[0]] = data[tidx.global];
@@ -215,9 +215,8 @@ void transpose_tiled_truncate_option_b(
          const array_view<const _value_type, 2>& data,
          const array_view<_value_type, 2>& data_transpose) {
   extent<2> e = data.get_extent();
-  tiled_extent<_tile_size, _tile_size> e_tiled(e.tile<_tile_size,
-                                               _tile_size>());
-  tiled_extent<_tile_size, _tile_size> e_truncated(e_tiled.truncate());
+  tiled_extent<2> e_tiled(e.tile(_tile_size, _tile_size));
+  tiled_extent<2> e_truncated(e_tiled.truncate());
 
   // Transform matrix to be multiple of 16*16 and transpose.
   auto b  = data.section(index<2>(0,0), e_truncated);

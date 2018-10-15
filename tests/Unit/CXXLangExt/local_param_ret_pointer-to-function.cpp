@@ -2,7 +2,7 @@
 // RUN: %hc %s -o %t.out && %t.out
 
 #include <iostream>
-#include <amp.h>
+#include <hc.hpp>
 
 // added for checking HSA profile
 #include <hc.hpp>
@@ -10,7 +10,7 @@
 // test C++AMP with fine-grained SVM
 // requires HSA Full Profile to operate successfully
 
-int func(float arg1, char arg2, char arg3) restrict(amp, cpu) 
+int func(float arg1, char arg2, char arg3) [[cpu, hc]] 
 {
   return (int)(arg2 + arg3);
 }
@@ -23,8 +23,8 @@ bool test() {
   int *p_ans = &ans[0];
 
   parallel_for_each(
-    Concurrency::extent<1>(vecSize),
-    [=](Concurrency::index<1> idx) restrict(amp) {
+    hc::extent<1>(vecSize),
+    [=](hc::index<1> idx) [[hc]] {
 
     int (*pt2Function)(float, char, char) = &func;
     p_ans[idx[0]] = (*pt2Function)(0, (char)idx[0], (char)idx[0]);

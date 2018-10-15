@@ -17,7 +17,7 @@ int f(const int c::*)
     return 0;
 }
 
-int f(int c::*) restrict(amp,cpu)
+int f(int c::*) [[cpu, hc]]
 {
     return 1;
 }

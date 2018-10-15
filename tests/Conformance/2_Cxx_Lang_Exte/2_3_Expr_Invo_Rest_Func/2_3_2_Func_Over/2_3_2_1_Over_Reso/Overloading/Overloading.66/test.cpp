@@ -14,7 +14,7 @@ class c1
 {
 public:
 
-    operator c2() restrict(amp)
+    operator c2() [[hc]]
     {
         flag = 1;
         c2 o;

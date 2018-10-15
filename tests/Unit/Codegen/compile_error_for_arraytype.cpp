@@ -6,7 +6,7 @@
 //////////////////////////////////////////////////////////////////////////////////
 class baz {
  public:
-  void cho(void) restrict(amp) {};
+  void cho(void) [[hc]] {};
   int bar;
   int* n[10];
 };
@@ -15,7 +15,7 @@ class baz {
 // CHECK-NEXT: ^
 
 
-int kerker(void) restrict(amp,cpu) {
+int kerker(void) [[cpu, hc]] {
   baz bl;
   return 0;
 }

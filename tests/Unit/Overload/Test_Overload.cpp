@@ -1,13 +1,13 @@
 // RUN: %cxxamp %s -o %t.out && %t.out
-#include <amp.h>
-using namespace concurrency;
+#include <hc.hpp>
+using namespace hc;
 
 #define TEST_CPU
 #define TEST_ELIDED
 #define TEST_GPU
 #define TEST_BOTH
 
-int callee() restrict(amp)
+int callee() [[hc]]
 {
     return 1;
 }
@@ -44,7 +44,7 @@ bool Elided_Func()
 #endif
 
 #ifdef TEST_GPU
-bool AMP_Func() restrict(amp)
+bool AMP_Func() [[hc]]
 {
     if (callee() != 1)
     {
@@ -56,7 +56,7 @@ bool AMP_Func() restrict(amp)
 #endif
 
 #ifdef TEST_BOTH
-bool BOTH_CPU_AND_AMP() restrict(cpu,amp)
+bool BOTH_CPU_AND_AMP() [[cpu, hc]]
 {
 #if __KALMAR_ACCELERATOR__
     if (callee() != 1)
@@ -86,8 +86,8 @@ int main(int argc, char **argv)
     // directly called is not allowed, we use pfe
     {
       int result;
-      concurrency::array_view<int> gpu_resultsv(1, &result);
-      concurrency::parallel_for_each(gpu_resultsv.get_extent(), [=](concurrency::index<1> idx) restrict(amp)
+      hc::array_view<int> gpu_resultsv(1, &result);
+      hc::parallel_for_each(gpu_resultsv.get_extent(), [=](hc::index<1> idx) [[hc]]
       {
         gpu_resultsv[idx] = AMP_Func();
       });
@@ -99,8 +99,8 @@ int main(int argc, char **argv)
 #ifdef TEST_BOTH
     {
       int result;
-      concurrency::array_view<int> gpu_resultsv(1, &result);
-      concurrency::parallel_for_each(gpu_resultsv.get_extent(), [=](concurrency::index<1> idx) restrict(amp,cpu)
+      hc::array_view<int> gpu_resultsv(1, &result);
+      hc::parallel_for_each(gpu_resultsv.get_extent(), [=](hc::index<1> idx) [[cpu, hc]]
       {
         gpu_resultsv[idx] = BOTH_CPU_AND_AMP();
       });

@@ -1,13 +1,13 @@
 // RUN: %cxxamp %s -o %t.out && %t.out
-#include <amp.h>
+#include <hc.hpp>
 #include <stdlib.h>
 #include <iostream>
 #include <limits>
-#include <amp_math.h>
+#include <hc_math.hpp>
 #include <cmath>
 #include <cassert>
 
-using namespace concurrency;
+using namespace hc;
 
 template<typename _Tp>
 bool test() {
@@ -25,7 +25,7 @@ bool test() {
 
   parallel_for_each(
     e,
-    [=](index<1> idx) restrict(amp) {
+    [=](index<1> idx) [[hc]] {
     out[idx] = precise_math::isnormal(in[idx]);
   });
 

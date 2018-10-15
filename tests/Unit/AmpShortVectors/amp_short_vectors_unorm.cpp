@@ -1,40 +1,40 @@
 // RUN: %cxxamp %s -o %t.out && %t.out
-#include <amp.h>
-#include <amp_math.h>
-#include <amp_short_vectors.h>
+#include <hc.hpp>
+#include <hc_math.hpp>
+#include <hc_short_vector.hpp>
 
-using namespace concurrency;
-using namespace concurrency::graphics;
+using namespace hc;
+using namespace hc::short_vector;
 
 int main(void) {
   // Constructor
 
-  // unorm() restrict(cpu, amp);
+  // unorm() [[cpu, hc]];
   {
     unorm a;
   }
 
-  // explicit unorm(float v) restrict(cpu, amp);
+  // explicit unorm(float v) [[cpu, hc]];
   {
     unorm a(-0.5f), b(0.0f), c(0.5f), d(1.0f), e(2.0f);
     assert(a == b);
     assert(d == e);
   }
 
-  // explicit unorm(unsigned int v) restrict(cpu, amp);
+  // explicit unorm(unsigned int v) [[cpu, hc]];
   {
     unorm a(0u), b(1u), c(2u);
     assert(b == c);
   }
 
-  // explicit unorm(int v) restrict(cpu, amp);
+  // explicit unorm(int v) [[cpu, hc]];
   {
     unorm a(-1), b(0), c(1), d(2);
     assert(a == b);
     assert(c == d);
   }
 
-  // explicit unorm(double v) restrict(cpu, amp);
+  // explicit unorm(double v) [[cpu, hc]];
   {
     double a = -0.5f, b = 0.0f, c = 0.5f, d = 1.0f, e = 2.0f;
     unorm f(a), g(b), h(c), i(d), j(e);
@@ -42,14 +42,14 @@ int main(void) {
     assert(i == j);
   }
 
-  // unorm(const unorm& other) restrict(cpu, amp);
+  // unorm(const unorm& other) [[cpu, hc]];
   {
     unorm a(0.3f);
     unorm b(a);
     assert(a == b);
   }
 
-  // explicit unorm(const norm& other) restrict(cpu, amp);
+  // explicit unorm(const norm& other) [[cpu, hc]];
   {
     norm a(0.4f), b(-0.3f);
     unorm c(a), d(b);
@@ -57,21 +57,21 @@ int main(void) {
     assert(b != d);
   }
 
-  // unorm& operator=(const unorm& other) restrict(cpu, amp);
+  // unorm& operator=(const unorm& other) [[cpu, hc]];
   {
     unorm a(0.8f), b;
     b = a;
     assert(a == b);
   }
 
-  // operator float(void) const restrict(cpu, amp);
+  // operator float(void) const [[cpu, hc]];
   {
     unorm a(0.8f);
     float b = static_cast<float>(a);
     assert(b == 0.8f);
   }
 
-  // unorm& operator+=(const unorm& other) restrict(cpu, amp);
+  // unorm& operator+=(const unorm& other) [[cpu, hc]];
   {
     unorm a(0.8f), b(0.4f);
     a += b;
@@ -79,7 +79,7 @@ int main(void) {
     assert(c == 1.0f);
   }
 
-  // unorm& operator-=(const unorm& other) restrict(cpu, amp);
+  // unorm& operator-=(const unorm& other) [[cpu, hc]];
   {
     unorm a(0.8f);
     a -= a;
@@ -87,7 +87,7 @@ int main(void) {
     assert(b == 0.0f);
   }
 
-  // unorm& operator*=(const unorm& other) restrict(cpu, amp);
+  // unorm& operator*=(const unorm& other) [[cpu, hc]];
   {
     unorm a(1.0f), b(2.0f);
     a *= b;
@@ -95,7 +95,7 @@ int main(void) {
     assert(c == 1.0f);
   }
 
-  // unorm& operator/=(const unorm& other) restrict(cpu, amp);
+  // unorm& operator/=(const unorm& other) [[cpu, hc]];
   {
     unorm a(1.0f), b(2.0f);
     a /= b;
@@ -103,7 +103,7 @@ int main(void) {
     assert(c == 1.0f);
   }
 
-  // unorm& operator++() restrict(cpu, amp);
+  // unorm& operator++() [[cpu, hc]];
   {
     unorm a(0.5f);
     ++a;
@@ -111,7 +111,7 @@ int main(void) {
     assert(b == 1.0f);
   }
 
-  // unorm& operator++(int) restrict(cpu, amp);
+  // unorm& operator++(int) [[cpu, hc]];
   {
     unorm a(0.5f);
     a++;
@@ -119,7 +119,7 @@ int main(void) {
     assert(b == 1.0f);
   }
 
-  // unorm& operator--() restrict(cpu, amp);
+  // unorm& operator--() [[cpu, hc]];
   {
     unorm a(0.5f);
     --a;
@@ -127,7 +127,7 @@ int main(void) {
     assert(b == 0.0f);
   }
 
-  // unorm& operator--(int) restrict(cpu, amp);
+  // unorm& operator--(int) [[cpu, hc]];
   {
     unorm a(0.5f);
     a--;
@@ -135,7 +135,7 @@ int main(void) {
     assert(b == 0.0f);
   }
 
-  // unorm operator+(const unorm& lhs, const unorm& rhs) restrict(cpu, amp);
+  // unorm operator+(const unorm& lhs, const unorm& rhs) [[cpu, hc]];
   {
     unorm a(0.5f), b(0.6f);
     unorm c = a + b;
@@ -143,7 +143,7 @@ int main(void) {
     assert(d == 1.0f);
   }
 
-  // unorm operator-(const unorm& lhs, const unorm& rhs) restrict(cpu, amp);
+  // unorm operator-(const unorm& lhs, const unorm& rhs) [[cpu, hc]];
   {
     unorm a(0.5f), b(0.5f);
     unorm c = a - b;
@@ -151,7 +151,7 @@ int main(void) {
     assert(d == 0.0f);
   }
 
-  // unorm operator*(const unorm& lhs, const unorm& rhs) restrict(cpu, amp);
+  // unorm operator*(const unorm& lhs, const unorm& rhs) [[cpu, hc]];
   {
     unorm a(1.0f), b(-1.0f);
     unorm c = a * b;
@@ -159,7 +159,7 @@ int main(void) {
     assert(d == 0.0f);
   }
 
-  // unorm operator/(const unorm& lhs, const unorm& rhs) restrict(cpu, amp);
+  // unorm operator/(const unorm& lhs, const unorm& rhs) [[cpu, hc]];
   {
     unorm a(1.0f), b(0.5f);
     unorm c = a / b;
@@ -167,38 +167,38 @@ int main(void) {
     assert(d == 1.0f);
   }
 
-  // bool operator==(const unorm& lhs, const unorm& rhs) restrict(cpu, amp);
+  // bool operator==(const unorm& lhs, const unorm& rhs) [[cpu, hc]];
   {
     unorm a(0.5f), b(0.5f);
     assert(a == b);
   }
 
-  // bool operator!=(const unorm& lhs, const unorm& rhs) restrict(cpu, amp);
+  // bool operator!=(const unorm& lhs, const unorm& rhs) [[cpu, hc]];
   {
     unorm a(0.5f), b(0.6f);
     assert(a != b);
   }
 
-  // bool operator>(const unorm& lhs, const unorm& rhs) restrict(cpu, amp);
+  // bool operator>(const unorm& lhs, const unorm& rhs) [[cpu, hc]];
   {
     unorm a(0.6f), b(0.3f);
     assert(a > b);
   }
 
-  // bool operator<(const unorm& lhs, const unorm& rhs) restrict(cpu, amp);
+  // bool operator<(const unorm& lhs, const unorm& rhs) [[cpu, hc]];
   {
     unorm a(-0.6f), b(2.0f);
     assert(a < b);
   }
 
-  // bool operator>=(const unorm& lhs, const unorm& rhs) restrict(cpu, amp);
+  // bool operator>=(const unorm& lhs, const unorm& rhs) [[cpu, hc]];
   {
     unorm a(0.6f), b(-0.4f), c(-0.4f);
     assert(a >= b);
     assert(b >= c);
   }
 
-  // bool operator<=(const unorm& lhs, const unorm& rhs) restrict(cpu, amp);
+  // bool operator<=(const unorm& lhs, const unorm& rhs) [[cpu, hc]];
   {
     unorm a(0.6f), b(1.5f), c(2.0f);
     assert(a <= b);
@@ -251,7 +251,7 @@ int main(void) {
 
     parallel_for_each(
       e,
-      [=](index<1> idx) restrict(amp) {
+      [=](index<1> idx) [[hc]] {
       gc[idx] = ga[idx];
       gc[idx] += (ga[idx] + gb[idx]);
       gc[idx] -= (ga[idx] - gb[idx]);

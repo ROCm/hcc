@@ -2,11 +2,11 @@
 // RUN: %hc %s -o %t.out && %t.out
 
 #include <iostream>
-#include <amp.h>
+#include <hc.hpp>
 
 [[hc]] int flag;
 
-void foo(bool set) restrict(amp, cpu)
+void foo(bool set) [[cpu, hc]]
 {
     flag = set ? 1 : 0;
 }

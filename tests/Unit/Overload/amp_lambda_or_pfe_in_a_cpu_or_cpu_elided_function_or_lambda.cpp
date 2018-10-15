@@ -1,19 +1,19 @@
 // RUN: %cxxamp %s -o %t.out && %t.out
-#include <amp.h>
-using namespace concurrency;
+#include <hc.hpp>
+using namespace hc;
 
 int CPU_Func()
 {
-  auto a_lambda = []() restrict(amp)
+  auto a_lambda = []() [[hc]]
   {
 
   };
   return 0;
 }
 
-int CPU_Func_1() restrict(cpu)
+int CPU_Func_1() [[cpu]]
 {
-  auto a_lambda = []() restrict(amp)
+  auto a_lambda = []() [[hc]]
   {
 
   };
@@ -23,7 +23,7 @@ int CPU_Func_1() restrict(cpu)
 inline
 int CPU_Func_X()
 {
-  parallel_for_each(extent<1>(1), [](index<1>) restrict(amp)
+  parallel_for_each(extent<1>(1), [](index<1>) [[hc]]
   {
     // OK
   });
@@ -31,9 +31,9 @@ int CPU_Func_X()
 }
 
 inline
-int CPU_Func_Y() restrict(cpu)
+int CPU_Func_Y() [[cpu]]
 {
-  parallel_for_each(extent<1>(1), [](index<1>) restrict(amp)
+  parallel_for_each(extent<1>(1), [](index<1>) [[hc]]
   {
     // OK
   });
@@ -51,15 +51,15 @@ int main(void)
   CPU_Func_X();
   CPU_Func_Y();
 
-  auto a_lambda = [] () restrict(cpu) {
-    parallel_for_each(extent<1>(1), [](index<1>) restrict(amp)
+  auto a_lambda = [] () [[cpu]] {
+    parallel_for_each(extent<1>(1), [](index<1>) [[hc]]
     {
       // OK
     });
   };
 
-  auto a_lambda_1 = [] () restrict(cpu) {
-    auto a_lambda_AMP = [] () restrict(amp) {}; //OK
+  auto a_lambda_1 = [] () [[cpu]] {
+    auto a_lambda_AMP = [] () [[hc]] {}; //OK
   };
   return 0;
 }

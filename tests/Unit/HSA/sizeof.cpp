@@ -1,7 +1,7 @@
 
 // RUN: %hc %s -o %t.out && %t.out
 
-#include <amp.h>
+#include <hc.hpp>
 
 #include <iostream>
 
@@ -13,11 +13,11 @@
 
 template<typename T>
 bool test() {
-  using namespace concurrency;
+  using namespace hc;
 
   int width = 0;
 
-  auto k = [&width] (const index<1>& idx) restrict(amp) {
+  auto k = [&width] (const index<1>& idx) [[hc]] {
     width = sizeof(T);
   };
 

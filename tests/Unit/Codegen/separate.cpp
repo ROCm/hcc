@@ -4,7 +4,7 @@ extern "C" {
 int foo(void) {
 	return 42;
 }
-int bar(void) restrict(amp) {
+int bar(void) [[hc]] {
 	return 43;
 }
 }
@@ -15,11 +15,11 @@ class baz {
     return 44;
   }
   __attribute__((noinline))
-  int cho(void) restrict(amp) {
+  int cho(void) [[hc]] {
     return 45;
   }
 };
-int kerker(void) restrict(amp,cpu) {
+int kerker(void) [[cpu, hc]] {
   baz b1;
   return b1.cho()+b1.bzzt();
 }

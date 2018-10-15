@@ -25,7 +25,7 @@ hc::completion_future execute(hc::array_view<const int, 1>& av1,
                               hc::array_view<const int, 1>& av2,
                               hc::array_view<int, 1>& av3) {
   // run HC parallel_for_each
-  return hc::parallel_for_each(hc::tiled_extent<1>(grid_size, tile_size), [=](hc::tiled_index<1>& idx) restrict(amp) {
+  return hc::parallel_for_each(hc::tiled_extent<1>(grid_size, tile_size), [=](hc::tiled_index<1>& idx) [[hc]] {
     for (int i = 0; i < LOOP_COUNT; ++i) {
       av3(idx) = av1(idx) + av2(idx);
     }

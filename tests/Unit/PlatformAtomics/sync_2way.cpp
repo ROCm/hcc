@@ -7,7 +7,7 @@
 #include <atomic>
 #include <thread>
 #include <chrono>
-#include <amp.h>
+#include <hc.hpp>
 
 // added for checking HSA profile
 #include <hc.hpp>
@@ -61,10 +61,10 @@ bool test() {
   });
 
   // launch kernel
-  Concurrency::extent<1> e(vecSize);
+  hc::extent<1> e(vecSize);
   parallel_for_each(
     e,
-    [=](Concurrency::index<1> idx) restrict(amp) {
+    [=](hc::index<1> idx) [[hc]] {
 
     int tid = idx[0];
     int flag;

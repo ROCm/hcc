@@ -1,10 +1,10 @@
 // RUN: %cxxamp %s -o %t.out && %t.out
-#include <amp.h>
+#include <hc.hpp>
 #include <stdlib.h>
 #include <iostream>
 #include <math.h>
 
-using namespace concurrency;
+using namespace hc;
 
 #define T float
 #define INIT 0.5f
@@ -20,7 +20,7 @@ int main(void) {
   array_view<T, 2> av_a(e_a, va); 
 
   extent<2> compute_domain(e_a);
-  parallel_for_each(compute_domain.tile<tile_size, tile_size>(), [=] (tiled_index<tile_size, tile_size> tidx) restrict(amp,cpu) {
+  parallel_for_each(compute_domain.tile(tile_size, tile_size), [=] (tiled_index<2> tidx) [[hc]] {
     index<2> localIdx = tidx.local;
     index<2> globalIdx = tidx.global;
 
