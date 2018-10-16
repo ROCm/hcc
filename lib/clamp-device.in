@@ -206,10 +206,14 @@ if [ $KMDUMPLLVM == "1" ]; then
   cp $2.opt.bc ${KMDUMPDIR}/dump-$AMDGPU_TARGET.opt.bc
 fi
 
+
+# Disable code object v3, generate code object v2 for now
+CODE_OBJECT_FORMAT="-mattr=-code-object-v3"
+
 if [ $KMTHINLTO == "1" ]; then
-  $LLC $KMOPTLLC -mtriple amdgcn--amdhsa-amdgiz -mcpu=$AMDGPU_TARGET -filetype=obj -o $2 $2.opt.bc
+  $LLC $KMOPTLLC -mtriple amdgcn--amdhsa-amdgiz -mcpu=$AMDGPU_TARGET $CODE_OBJECT_FORMAT -filetype=obj -o $2 $2.opt.bc
 else
-  $LLC $KMOPTLLC -mtriple amdgcn--amdhsa-amdgiz -mcpu=$AMDGPU_TARGET -filetype=obj -o $2.isabin $2.opt.bc
+  $LLC $KMOPTLLC -mtriple amdgcn--amdhsa-amdgiz -mcpu=$AMDGPU_TARGET $CODE_OBJECT_FORMAT -filetype=obj -o $2.isabin $2.opt.bc
 fi
 
 # error handling for llc
@@ -225,7 +229,7 @@ if [ $KMDUMPISA == "1" ]; then
   else
     cp $2.isabin ./dump-$AMDGPU_TARGET.isabin
   fi
-  $LLC $KMOPTLLC -mtriple amdgcn--amdhsa-amdgiz -mcpu=$AMDGPU_TARGET -filetype=asm -o $2.isa $2.opt.bc
+  $LLC $KMOPTLLC -mtriple amdgcn--amdhsa-amdgiz -mcpu=$AMDGPU_TARGET $CODE_OBJECT_FORMAT -filetype=asm -o $2.isa $2.opt.bc
   mv $2.isa ${KMDUMPDIR}/dump-$AMDGPU_TARGET.isa
 fi
 
