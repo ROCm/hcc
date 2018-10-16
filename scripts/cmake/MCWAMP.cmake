@@ -63,7 +63,7 @@ macro(add_mcwamp_shared_library name )
   # LLVM and Clang shall be compiled beforehand
   target_link_libraries(${name} PUBLIC hsa-runtime64 dl)
   add_dependencies(${name} llvm-link opt clang rocdl)
-endmacro(add_mcwamp_library name )
+endmacro(add_mcwamp_shared_library name )
 
 ####################
 # C++AMP runtime (CPU implementation)
