@@ -2255,9 +2255,9 @@ public:
 
         this->rocrQueuesMutex.lock();
 
-        // TODO: Do we want the max queues for each priority to be different?
         // Allocate a new queue when we are below the HCC_MAX_QUEUES limit
-        if (rocrQueues[priority].size() < HCC_MAX_QUEUES) {
+        auto rqSize = rocrQueues[0].size()+rocrQueues[1].size()+rocrQueues[2].size();
+        if (rqSize < HCC_MAX_QUEUES) {
             foundRQ = new RocrQueue(agent, this->queue_size, thief, priority);
             rocrQueues[priority].push_back(foundRQ);
             DBOUT(DB_QUEUE, "Create new rocrQueue=" << foundRQ << " for thief=" << thief << "\n")
