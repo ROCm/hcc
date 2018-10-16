@@ -10,7 +10,7 @@
 
 // RUN: %clang_cc1 -std=c++amp -fsyntax-only %ampneg -verify %s
 
-void test() throw(...) restrict(cpu) // expected-error {{exception specifier is not allowed in C++AMP context}}
+void test() throw(...) [[cpu]] // expected-error {{exception specifier is not allowed in C++AMP context}}
 {}
 
 // Main entry point

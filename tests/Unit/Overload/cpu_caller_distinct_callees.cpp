@@ -1,9 +1,9 @@
 // RUN: %cxxamp %s -o %t.out && %t.out
-#include <amp.h>
-using namespace concurrency;
+#include <hc.hpp>
+using namespace hc;
 
 
-int f(int &) restrict(amp)
+int f(int &) [[hc]]
 {
     return 0;
 }

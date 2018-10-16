@@ -8,23 +8,17 @@
 #include "hc_rt_debug.h"
 #include "mcwamp_impl.hpp"
 
+#include <kalmar_runtime.h>
+
 #include <iostream>
 #include <string>
 #include <cassert>
 #include <cstddef>
 #include <tuple>
 
-#include <amp.h>
 #include <mutex>
 
 #include <dlfcn.h>
-
-namespace Concurrency {
-
-const wchar_t accelerator::cpu_accelerator[] = L"cpu";
-const wchar_t accelerator::default_accelerator[] = L"default";
-
-} // namespace Concurrency
 
 // weak symbols of kernel codes
 

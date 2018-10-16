@@ -21,7 +21,7 @@ public:
         return 0;
     }
 
-    int f(int c2::*) restrict(amp,cpu)
+    int f(int c2::*) [[cpu, hc]]
     {
         return 1;
     }

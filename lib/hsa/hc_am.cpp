@@ -279,7 +279,7 @@ auto_voidp am_aligned_alloc(std::size_t sizeBytes, hc::accelerator &acc, unsigne
                             ptr = NULL;
                         } else {
                             hc::AmPointerInfo ampi(ptr/*hostPointer*/, ptr /*devicePointer*/, unalignedPtr, sizeBytes, acc, false/*isDevice*/, true /*isAMManaged*/);
-                            g_amPointerTracker.insert(ptr,ampi);
+                            g_amPointerTracker.insert(unalignedPtr,ampi);
 
                             // Host memory is always mapped to all possible peers:
                             auto accs = hc::accelerator::get_all();
@@ -291,7 +291,7 @@ auto_voidp am_aligned_alloc(std::size_t sizeBytes, hc::accelerator &acc, unsigne
                         }
                     } else {
                         hc::AmPointerInfo ampi(NULL/*hostPointer*/, ptr /*devicePointer*/, unalignedPtr, sizeBytes, acc, true/*isDevice*/, true /*isAMManaged*/);
-                        g_amPointerTracker.insert(ptr,ampi);
+                        g_amPointerTracker.insert(unalignedPtr,ampi);
                     }
                 }
             }

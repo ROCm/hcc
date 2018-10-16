@@ -1,13 +1,13 @@
 // RUN: %cxxamp %s -o %t.out && %t.out
-#include <amp.h>
+#include <hc.hpp>
 #include <stdlib.h>
 #include <iostream>
-#include <amp_math.h>
+#include <hc_math.hpp>
 #include <random>
 
-using namespace concurrency;
+using namespace hc;
 
-float x(float *p) restrict(amp) {
+float x(float *p) [[hc]] {
     return fast_math::sin(*p);
 }
 
@@ -29,7 +29,7 @@ int main(void) {
 
   parallel_for_each(
     e,
-    [=](index<1> idx) restrict(amp) {
+    [=](index<1> idx) [[hc]] {
     gc[idx] = x(&ga[idx]);
   });
 

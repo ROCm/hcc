@@ -1,15 +1,15 @@
 // RUN: %cxxamp %s -o %t.out && %t.out
 
-#include <amp.h>
+#include <hc.hpp>
 
 int main() {
 
   int test[1] { 0 };
   
-  using namespace concurrency;
+  using namespace hc;
   array_view<int, 1> av(1, test);
 
-  parallel_for_each(extent<1>(1), [=](index<1> idx) restrict(amp) {
+  parallel_for_each(extent<1>(1), [=](index<1> idx) [[hc]] {
 #ifdef __HCC_CPU__
     av[idx] = 0;
 #else

@@ -132,10 +132,6 @@ int HCC_PROFILE_VERBOSE=0x1F;
 
 char * HCC_PROFILE_FILE=nullptr;
 
-int HCC_QUEUE_FLUSHING_RATIO=50;
-
-double QUEUE_FLUSHING_FRAC;
-
 // Profiler:
 // Use str::stream so output is atomic wrt other threads:
 #define LOG_PROFILE(op, start, end, type, tag, msg) \
@@ -652,13 +648,34 @@ public:
 
         workitem_vgpr_count = 0;
 
-        hsa_ven_amd_loader_1_00_pfn_t ext_table = {nullptr};
-        status = hsa_system_get_extension_table(HSA_EXTENSION_AMD_LOADER, 1, 0, &ext_table);
+        uint16_t ext_version_major = 1;
+        uint16_t ext_version_minor = 0;
+        bool ext_supported = false;
+        status =
+            hsa_system_major_extension_supported(
+                HSA_EXTENSION_AMD_LOADER,
+                ext_version_major,
+                &ext_version_minor,
+                &ext_supported);
+        STATUS_CHECK(status, __LINE__);
+        if(!ext_supported)
+            throw Kalmar::runtime_exception("HSA_EXTENSION_AMD_LOADER not supported.", 0);
+
+        hsa_ven_amd_loader_1_01_pfn_t ext_table = {nullptr};
+        status =
+            hsa_system_get_major_extension_table(
+                HSA_EXTENSION_AMD_LOADER,
+                1,
+                sizeof(ext_table),
+                &ext_table);
         STATUS_CHECK(status, __LINE__);
 
         if (nullptr != ext_table.hsa_ven_amd_loader_query_host_address) {
             const amd_kernel_code_t* akc = nullptr;
-            status = ext_table.hsa_ven_amd_loader_query_host_address(reinterpret_cast<const void*>(kernelCodeHandle), reinterpret_cast<const void**>(&akc));
+            status =
+                ext_table.hsa_ven_amd_loader_query_host_address(
+                    reinterpret_cast<const void*>(kernelCodeHandle),
+                    reinterpret_cast<const void**>(&akc));
             STATUS_CHECK(status, __LINE__);
 
             workitem_vgpr_count = akc->workitem_vgpr_count;
@@ -1160,8 +1177,23 @@ struct RocrQueue {
         STATUS_CHECK(status, __LINE__);
     }
 
-    RocrQueue(hsa_agent_t agent, size_t queue_size, HSAQueue *hccQueue)
+    RocrQueue(hsa_agent_t agent, size_t queue_size, HSAQueue *hccQueue, queue_priority priority)
+        : _priority(priority)
     {
+        // Map queue_priority to hsa_amd_queue_priority_t
+        hsa_amd_queue_priority_t queue_priority;
+        switch (priority) {
+            case priority_low:
+                queue_priority = HSA_AMD_QUEUE_PRIORITY_LOW;
+                break;
+            case priority_high:
+                queue_priority = HSA_AMD_QUEUE_PRIORITY_HIGH;
+                break;
+            case priority_normal:
+            default:
+                queue_priority = HSA_AMD_QUEUE_PRIORITY_NORMAL;
+                break;
+        }
 
         assert(queue_size != 0);
 
@@ -1169,7 +1201,11 @@ struct RocrQueue {
         hsa_status_t status = hsa_queue_create(agent, queue_size, HSA_QUEUE_TYPE_SINGLE, callbackQueue, NULL,
                                   UINT32_MAX, UINT32_MAX, &_hwQueue);
         DBOUT(DB_QUEUE, "  " <<  __func__ << ": created an HSA command queue: " << _hwQueue << "\n");
+        STATUS_CHECK(status, __LINE__);
 
+        // Set queue priority
+        status = hsa_amd_queue_set_priority(_hwQueue, queue_priority);
+        DBOUT(DB_QUEUE, "  " <<  __func__ << ": set priority for HSA command queue: " << _hwQueue << " to " << queue_priority << "\n");
         STATUS_CHECK(status, __LINE__);
 
         // TODO - should we provide a mechanism to conditionally enable profiling as a performance optimization?
@@ -1202,6 +1238,7 @@ struct RocrQueue {
     // Track profiling enabled state here. - no need now since all hw queues have profiling enabled.
 
     // Priority could be tracked here:
+    queue_priority _priority;
 };
 
 
@@ -1303,7 +1340,7 @@ private:
 
 
 public:
-    HSAQueue(KalmarDevice* pDev, hsa_agent_t agent, execute_order order) ;
+    HSAQueue(KalmarDevice* pDev, hsa_agent_t agent, execute_order order, queue_priority priority) ;
 
     bool nextKernelNeedsSysAcquire() const { return _nextKernelNeedsSysAcquire; };
     void setNextKernelNeedsSysAcquire(bool r) { _nextKernelNeedsSysAcquire = r; };
@@ -1399,6 +1436,7 @@ public:
         youngestCommandKind = op->getCommandKind();
         asyncOps.push_back(std::move(op));
 
+        drainingQueue_ = false;
 
         if (DBFLAG(DB_QUEUE)) {
             printAsyncOps(std::cerr);
@@ -1555,13 +1593,8 @@ public:
 
 
         bool foundFirstValidOp = false;
-        int oldAysncOpsSize = asyncOps.size();
-        int lastWaitOp = oldAysncOpsSize - 1;
-        if (drainingQueue_) {
-            lastWaitOp = (oldAysncOpsSize * QUEUE_FLUSHING_FRAC) - 1;
-        }
 
-        for (int i = lastWaitOp; i >= 0;  i--) {
+        for (int i = asyncOps.size()-1; i >= 0;  i--) {
             if (asyncOps[i] != nullptr) {
                 auto asyncOp = asyncOps[i];
                 if (!foundFirstValidOp) {
@@ -1577,16 +1610,7 @@ public:
             }
         }
         // clear async operations table
-        if (drainingQueue_) {
-            if (oldAysncOpsSize == asyncOps.size()) {
-                asyncOps.erase(asyncOps.begin(), asyncOps.begin() + lastWaitOp);
-            }
-        }
-        else {
-            asyncOps.clear();
-        }
-
-        drainingQueue_ = false;
+        asyncOps.clear();
    }
 
     void LaunchKernel(void *ker, size_t nr_dim, size_t *global, size_t *local) override {
@@ -2209,8 +2233,10 @@ private:
     std::mutex queues_mutex; // protects access to the queues vector:
     std::vector< std::weak_ptr<KalmarQueue> > queues;
 
+    // TODO: Do we need to maintain a different mutex for each queue priority?
+    // In which case HSAQueue::dispose needs to handle locking the appropriate mutex
     std::mutex                  rocrQueuesMutex; // protects rocrQueues
-    std::vector< RocrQueue *>    rocrQueues;
+    std::vector< RocrQueue *>    rocrQueues[3];
 
     pool_iterator ri;
 
@@ -2220,8 +2246,6 @@ private:
     uint16_t workgroup_max_dim[3];
 
     std::map<std::string, HSAExecutable*> executables;
-
-    hsa_isa_t agentISA;
 
     hcAgentProfile profile;
 
@@ -2245,15 +2269,16 @@ public:
     UnpinnedCopyEngine::CopyMode  copy_mode;
 
     // Creates or steals a rocrQueue and returns it in theif->rocrQueue
-    void createOrstealRocrQueue(Kalmar::HSAQueue *thief) {
+    void createOrstealRocrQueue(Kalmar::HSAQueue *thief, queue_priority priority = priority_normal) {
         RocrQueue *foundRQ = nullptr;
 
         this->rocrQueuesMutex.lock();
 
         // Allocate a new queue when we are below the HCC_MAX_QUEUES limit
-        if (rocrQueues.size() < HCC_MAX_QUEUES) {
-            foundRQ = new RocrQueue(agent, this->queue_size, thief);
-            rocrQueues.push_back(foundRQ);
+        auto rqSize = rocrQueues[0].size()+rocrQueues[1].size()+rocrQueues[2].size();
+        if (rqSize < HCC_MAX_QUEUES) {
+            foundRQ = new RocrQueue(agent, this->queue_size, thief, priority);
+            rocrQueues[priority].push_back(foundRQ);
             DBOUT(DB_QUEUE, "Create new rocrQueue=" << foundRQ << " for thief=" << thief << "\n")
         }
 
@@ -2268,7 +2293,7 @@ public:
             this->rocrQueuesMutex.lock();
 
             // First make a pass to see if we can find an unused queue
-            for (auto rq : rocrQueues) {
+            for (auto rq : rocrQueues[priority]) {
                 if (rq->_hccQueue == nullptr) {
                     DBOUT(DB_QUEUE, "Found unused rocrQueue=" << rq << " for thief=" << thief << ".  hwQueue=" << rq->_hwQueue << "\n")
                     foundRQ = rq;
@@ -2288,7 +2313,7 @@ public:
 
             // Second pass, try steal from a ROCR queue associated with an HCC queue, but with no active tasks
 
-            for (auto rq : rocrQueues) {
+            for (auto rq : rocrQueues[priority]) {
                 if (rq->_hccQueue != thief)  {
                     auto victimHccQueue = rq->_hccQueue;
                     // victimHccQueue==nullptr should be detected by above loop.
@@ -2332,12 +2357,16 @@ private:
         // This defers expensive queue deallocation if an hccQueue that holds an hwQueue is destroyed -
         // keep the hwqueue around until the number of hccQueues drops below the number of hwQueues
         // we have already allocated.
-        auto rqSize = rocrQueues.size();
+        // TODO: Do we want to track HCC queues independently for each priority?
+        // Or maybe modify queue stealing to steal unused HSA queue from other priority pools &
+        // change priority as required?
+        auto rqSize = rocrQueues[0].size()+rocrQueues[1].size()+rocrQueues[2].size();
         if (hccSize < rqSize) {
-            auto iter = std::find(rocrQueues.begin(), rocrQueues.end(), rocrQueue);
-            assert(iter != rocrQueues.end());
+            queue_priority priority = rocrQueue->_priority;
+            auto iter = std::find(rocrQueues[priority].begin(), rocrQueues[priority].end(), rocrQueue);
+            assert(iter != rocrQueues[priority].end());
             // Remove the pointer from the list:
-            rocrQueues.erase(iter);
+            rocrQueues[priority].erase(iter);
             DBOUT(DB_QUEUE, "removeRocrQueue-hard: rocrQueue=" << rocrQueue << " hccQueues/rocrQueues=" << hccSize << "/" << rqSize << "\n")
             delete rocrQueue; // this will delete the HSA HW queue.
         }
@@ -2694,19 +2723,34 @@ public:
 
         const auto isa{get_isa_name_from_triple(std::move(triple))};
 
-        hsa_isa_t co_isa{};
-        status = hsa_isa_from_name(isa.c_str(), &co_isa);
+        struct isa_comp_data {
+            hsa_isa_t isa_type;
+            bool is_compatible;
+        } co_data;
+
+        status = hsa_isa_from_name(isa.c_str(), &co_data.isa_type);
         STATUS_CHECK(status, __LINE__);
 
         // Check if the code object is compatible with ISA of the agent
-        bool isCompatible = false;
-        status = hsa_isa_compatible(co_isa, agentISA, &isCompatible);
+        co_data.is_compatible = false;
+        status =
+            hsa_agent_iterate_isas(
+                agent,
+                [](hsa_isa_t agent_isa, void* data) {
+                    isa_comp_data* co_data = static_cast<isa_comp_data*>(data);
+                    if (agent_isa == co_data->isa_type) {
+                        co_data->is_compatible = true;
+                        return HSA_STATUS_INFO_BREAK;
+                    }
+                    return HSA_STATUS_SUCCESS;
+                },
+                &co_data);
         STATUS_CHECK(status, __LINE__);
 
         // release allocated memory
         free(kernel_source);
 
-        return isCompatible;
+        return co_data.is_compatible;
     }
 
     void* CreateKernel(const char* fun, Kalmar::KalmarQueue *queue) override {
@@ -2866,8 +2910,8 @@ public:
         return dispatch;
     }
 
-    std::shared_ptr<KalmarQueue> createQueue(execute_order order = execute_in_order) override {
-        auto hsaAv = new HSAQueue(this, agent, order);
+    std::shared_ptr<KalmarQueue> createQueue(execute_order order = execute_in_order, queue_priority priority= priority_normal) override {
+        auto hsaAv = new HSAQueue(this, agent, order, priority);
         std::shared_ptr<KalmarQueue> q =  std::shared_ptr<KalmarQueue>(hsaAv);
         queues_mutex.lock();
         queues.push_back(q);
@@ -3716,15 +3760,6 @@ void HSAContext::ReadHccEnv()
     // Enable printf support
     GET_ENV_INT (HCC_ENABLE_PRINTF, "Enable hc::printf");
 
-    GET_ENV_INT (HCC_QUEUE_FLUSHING_RATIO, "Percentage of HCC's queue to be flushed when the space to dispatch a new kernel is not sufficient.  The percentage has to be greater than zero.  Any invalid value will be set to the default value.  Default=50");
-
-    if (HCC_QUEUE_FLUSHING_RATIO > 0 && HCC_QUEUE_FLUSHING_RATIO <= 100) {
-        QUEUE_FLUSHING_FRAC = HCC_QUEUE_FLUSHING_RATIO / 100.0;
-    }
-    else {
-        QUEUE_FLUSHING_FRAC = 0.5;
-    }
-
     GET_ENV_INT    (HCC_PROFILE,         "Enable HCC kernel and data profiling.  1=summary, 2=trace");
     GET_ENV_INT    (HCC_PROFILE_VERBOSE, "Bitmark to control profile verbosity and format. 0x1=default, 0x2=show begin/end, 0x4=show barrier");
     GET_ENV_STRING (HCC_PROFILE_FILE,    "Set file name for HCC_PROFILE mode.  Default=stderr");
@@ -3749,7 +3784,7 @@ HSADevice::HSADevice(hsa_agent_t a, hsa_agent_t host, int x_accSeqNum) :
                                KalmarDevice(get_access_type(a)),
                                agent(a), programs(), max_tile_static_size(0),
                                queue_size(0), queues(), queues_mutex(),
-                               rocrQueues(0/*empty*/), rocrQueuesMutex(),
+                               rocrQueues(/*empty*/), rocrQueuesMutex(),
                                ri(),
                                useCoarseGrainedRegion(false),
                                kernargPool(), kernargPoolFlag(), kernargCursor(0), kernargPoolMutex(),
@@ -3865,9 +3900,16 @@ HSADevice::HSADevice(hsa_agent_t a, hsa_agent_t host, int x_accSeqNum) :
 
     STATUS_CHECK(status, __LINE__);
 
-    /// Get ISA associated with the agent
-    status = hsa_agent_get_info(agent, HSA_AGENT_INFO_ISA, &agentISA);
+    /// Get the profile of the agent
+    hsa_profile_t agentProfile;
+    status = hsa_agent_get_info(agent, HSA_AGENT_INFO_PROFILE, &agentProfile);
     STATUS_CHECK(status, __LINE__);
+
+    if (agentProfile == HSA_PROFILE_BASE) {
+        profile = hcAgentProfileBase;
+    } else if (agentProfile == HSA_PROFILE_FULL) {
+        profile = hcAgentProfileFull;
+    }
 
     //---
     this->copy_mode = static_cast<UnpinnedCopyEngine::CopyMode> (HCC_UNPINNED_COPY_MODE);
@@ -3948,8 +3990,8 @@ std::ostream& operator<<(std::ostream& os, const HSAQueue & hav)
 
 
 
-HSAQueue::HSAQueue(KalmarDevice* pDev, hsa_agent_t agent, execute_order order) :
-    KalmarQueue(pDev, queuing_mode_automatic, order),
+HSAQueue::HSAQueue(KalmarDevice* pDev, hsa_agent_t agent, execute_order order, queue_priority priority) :
+    KalmarQueue(pDev, queuing_mode_automatic, order, priority),
     rocrQueue(nullptr),
     asyncOps(), drainingQueue_(false),
     valid(true), _nextSyncNeedsSysRelease(false), _nextKernelNeedsSysAcquire(false), bufferKernelMap(), kernelBufferMap()
@@ -3961,7 +4003,7 @@ HSAQueue::HSAQueue(KalmarDevice* pDev, hsa_agent_t agent, execute_order order) :
         std::lock_guard<std::recursive_mutex> l(this->qmutex);
 
         auto device = static_cast<Kalmar::HSADevice*>(this->getDev());
-        device->createOrstealRocrQueue(this);
+        device->createOrstealRocrQueue(this, priority);
     }
 
 

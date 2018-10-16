@@ -1,12 +1,13 @@
+// XFAIL: *
 // RUN: %cxxamp %s -o %t.out && %t.out
-#include <amp.h>
+#include <hc.hpp>
 #include <stdlib.h>
 #include <iostream>
 #include <vector>
 #include <numeric>
 #include <math.h>
 
-using namespace concurrency;
+using namespace hc;
 
 #define T int
 #define INIT 50
@@ -34,7 +35,8 @@ int main(void) {
 
   // Run in a separate thread
   std::thread t([&]() {
-     parallel_for_each(gpu_av, dest.get_extent(), [=, &dest, &tgt](index<1> idx) restrict(amp) {
+     parallel_for_each(
+       gpu_av, dest.get_extent(), [=, &dest, &tgt](hc::index<1> idx) [[hc]] {
      for(unsigned i = 0; i < vecSize; i++)
        for (unsigned j = 0; j < vecSize; j++)
          tgt[idx] = dest[i];

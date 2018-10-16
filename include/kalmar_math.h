@@ -53,7 +53,7 @@ extern "C" double __hc_copysign_double(double x, double y) restrict(amp);
 extern "C" __fp16 __hc_cos_half(__fp16 x) restrict(amp);
 extern "C" __fp16 __hc_cos_native_half(__fp16 x) restrict(amp);
 extern "C" float __hc_cos(float x) restrict(amp);
-extern "C" float __hc_cos_native(float x) restrict(amp);
+extern "C" float __hc_native_cos(float x) restrict(amp);
 extern "C" double __hc_cos_double(double x) restrict(amp);
 
 extern "C" __fp16 __hc_cosh_half(__fp16 x) restrict(amp);
@@ -406,7 +406,7 @@ namespace Kalmar
         float ceil(float x) { return fast_math::ceilf(x); }
 
         HCC_MATH_LIB_FN
-        float cosf(float x) { return __hc_cos_native(x); }
+        float cosf(float x) { return __hc_native_cos(x); }
 
         HCC_MATH_LIB_FN
         __fp16 cos(__fp16 x) { return __hc_cos_native_half(x); }

@@ -9,7 +9,7 @@
 // RUN: %cxxamp %s -o %t.out && %t.out
 
 #include <stdio.h>
-void f(int &v) restrict(amp,cpu)
+void f(int &v) [[cpu, hc]]
 {
     v = 1;
 }

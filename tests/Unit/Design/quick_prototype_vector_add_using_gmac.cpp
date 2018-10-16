@@ -1,6 +1,6 @@
 // RUN: %gtest_amp %s -o %t.out && %t.out
 
-#include <amp.h>
+#include <hc.hpp>
 #include <stdlib.h>
 #include <iostream>
 #ifndef __KALMAR_ACCELERATOR__
@@ -10,18 +10,18 @@
 class myVecAdd {
  public:
   // CPU-side constructor. Written by the user
-  myVecAdd(Concurrency::array_view<int>& a,
-    Concurrency::array_view<int> &b,
-    Concurrency::array_view<int> &c):
+  myVecAdd(hc::array_view<int>& a,
+    hc::array_view<int> &b,
+    hc::array_view<int> &c):
     a_(a), b_(b), c_(c) {
   }
-  void operator() (Concurrency::index<1> idx) restrict(amp) {
+  void operator() (hc::index<1> idx) [[hc]] {
     c_[idx] = a_[idx]+b_[idx];
   }
  private:
-  Concurrency::array_view<int> a_, b_, c_;
+  hc::array_view<int> a_, b_, c_;
 };
-void bar(void) restrict(amp,cpu) {
+void bar(void) [[cpu, hc]] {
   int* foo = reinterpret_cast<int*>(&myVecAdd::__cxxamp_trampoline);
 }
 #ifndef __KALMAR_ACCELERATOR__
@@ -29,23 +29,23 @@ TEST(Design, Final) {
   const int vecSize = 100;
 
   // Alloc & init input data
-  Concurrency::extent<1> e(vecSize);
-  Concurrency::array<int, 1> a(vecSize);
-  Concurrency::array<int, 1> b(vecSize);
-  Concurrency::array<int, 1> c(vecSize);
+  hc::extent<1> e(vecSize);
+  hc::array<int, 1> a(vecSize);
+  hc::array<int, 1> b(vecSize);
+  hc::array<int, 1> c(vecSize);
   int sum = 0;
 
 
-  Concurrency::array_view<int> ga(a);
-  Concurrency::array_view<int> gb(b);
-  Concurrency::array_view<int> gc(c);
-  for (Concurrency::index<1> i(0); i[0] < vecSize; i++) {
+  hc::array_view<int> ga(a);
+  hc::array_view<int> gb(b);
+  hc::array_view<int> gc(c);
+  for (hc::index<1> i(0); i[0] < vecSize; i++) {
     ga[i] = 100.0f * rand() / RAND_MAX;
     gb[i] = 100.0f * rand() / RAND_MAX;
     sum += a[i] + b[i];
   }
   myVecAdd mf(ga, gb, gc);
-  Concurrency::parallel_for_each(
+  hc::parallel_for_each(
     e,
     mf);
 

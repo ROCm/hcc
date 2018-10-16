@@ -1,13 +1,13 @@
 // RUN: %cxxamp %s -o %t.out && %t.out
 #include <iostream> 
-#include <amp.h> 
-using namespace concurrency; 
+#include <hc.hpp> 
+using namespace hc; 
 int main() 
 {
   int v[11] = {'G', 'd', 'k', 'k', 'n', 31, 'v', 'n', 'q', 'k', 'c'};
 
   array_view<int> av(11, v); 
-  parallel_for_each(av.get_extent(), [=](index<1> idx) restrict(amp) { 
+  parallel_for_each(av.get_extent(), [=](index<1> idx) [[hc]] { 
     av[idx] += 1; 
   });
 

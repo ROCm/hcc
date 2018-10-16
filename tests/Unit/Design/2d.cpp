@@ -1,6 +1,6 @@
 //_view RUN: %gtest_amp %s -o %t.out && %t.out
 
-#include <amp.h>
+#include <hc.hpp>
 #include <stdlib.h>
 #include <iostream>
 #ifndef __KALMAR_ACCELERATOR__
@@ -10,22 +10,22 @@
 class myVecAdd {
  public:
   // CPU-side constructor. Written by the user
-  myVecAdd(Concurrency::array_view<int, 2>& a,
-    Concurrency::array_view<int, 2> &b,
-    Concurrency::array_view<int, 2> &c):
+  myVecAdd(hc::array_view<int, 2>& a,
+    hc::array_view<int, 2> &b,
+    hc::array_view<int, 2> &c):
     a_(a), b_(b), c_(c) {
   }
-  void operator() (Concurrency::index<2> idx) restrict(amp) {
+  void operator() (hc::index<2> idx) [[hc]] {
     c_[idx] = a_[idx]+b_[idx];
   }
-  void operator() (Concurrency::tiled_index<4, 4> idx) restrict(amp) {
+  void operator() (hc::tiled_index<2> idx) [[hc]] {
     c_[idx] = a_[idx]+b_[idx];
   }
  private:
-  Concurrency::array_view<int, 2> &c_;
-  Concurrency::array_view<int, 2> a_, b_;
+  hc::array_view<int, 2> &c_;
+  hc::array_view<int, 2> a_, b_;
 };
-void bar(void) restrict(amp,cpu) {
+void bar(void) [[cpu, hc]] {
   int* foo = reinterpret_cast<int*>(&myVecAdd::__cxxamp_trampoline);
 }
 #ifndef __KALMAR_ACCELERATOR__
@@ -38,14 +38,14 @@ TEST(Design, Final) {
     vector_a[i] = 100.0f * rand() / RAND_MAX;
     vector_b[i] = 100.0f * rand() / RAND_MAX;
   }
-  Concurrency::extent<2> e(M, N);
-  concurrency::array_view<int, 2> av(e, vector_a);
+  hc::extent<2> e(M, N);
+  hc::array_view<int, 2> av(e, vector_a);
   EXPECT_EQ(vector_a[2], av(0,2));
-  concurrency::array_view<int, 2> bv(e, vector_b);
+  hc::array_view<int, 2> bv(e, vector_b);
   { // Test untiled version
-    concurrency::array_view<int, 2> c(e);
+    hc::array_view<int, 2> c(e);
     myVecAdd mf(av, bv, c);
-    Concurrency::parallel_for_each(e, mf);
+    hc::parallel_for_each(e, mf);
     int error=0;
     for(int i = 0; i < M; i++) {
       for(int j = 0; j < N; j++) {
@@ -59,9 +59,9 @@ TEST(Design, Final) {
   }
   {
    // Test tiled version
-    concurrency::array_view<int, 2> c(e);
+    hc::array_view<int, 2> c(e);
     myVecAdd mf(av, bv, c);
-    Concurrency::parallel_for_each(e.tile<4, 4>(), mf);
+    hc::parallel_for_each(e.tile(4, 4), mf);
     int error=0;
     for(int i = 0; i < M; i++) {
       for(int j = 0; j < N; j++) {

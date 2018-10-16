@@ -1,9 +1,9 @@
 // RUN: %cxxamp %s -o %t.out && %t.out
-#include <amp.h>
+#include <hc.hpp>
 #include <stdlib.h>
 #include <iostream>
 
-using namespace concurrency;
+using namespace hc;
 
 int main(void) {
   const int vecSize = 100;
@@ -18,7 +18,7 @@ int main(void) {
   array_view<int, 2> av_a(e_a, va); 
 
   extent<2> compute_domain(e_a);
-  parallel_for_each(compute_domain.tile<tile_size, tile_size>(), [=] (tiled_index<tile_size, tile_size> tidx) restrict(amp,cpu) {
+  parallel_for_each(compute_domain.tile(tile_size, tile_size), [=] (tiled_index<2> tidx) [[cpu, hc]] {
     index<2> localIdx = tidx.local;
     index<2> globalIdx = tidx.global;
     int v = 0;

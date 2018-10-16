@@ -1,7 +1,7 @@
 // XFAIL: *
 // RUN: %cxxamp %s -o %t.out && %t.out
-#include <amp.h>
-using namespace concurrency;
+#include <hc.hpp>
+using namespace hc;
 
 void foo()
 {
@@ -9,7 +9,7 @@ void foo()
 
 int main()
 {
-    parallel_for_each(extent<1>(1), [](index<1>) restrict(amp)
+    parallel_for_each(extent<1>(1), [](index<1>) [[hc]]
     {
         foo();  // Call from AMP to CPU. Caller: Lambda
     });

@@ -1,9 +1,9 @@
 // RUN: %cxxamp %s -o %t.out && %t.out
-#include <amp.h>
+#include <hc.hpp>
 #include <stdlib.h>
 #include <iostream>
 #include <vector>
-using namespace concurrency;
+using namespace hc;
 
 int main(void) {
   const int vecSize = 100;
@@ -15,7 +15,7 @@ int main(void) {
   }
   array<int, 1> count(vecSize, std::begin(init));
 
-  parallel_for_each(count.get_extent(), [=, &count](index<1> idx) restrict(amp) {
+  parallel_for_each(count.get_extent(), [=, &count](index<1> idx) [[hc]] {
     for(int i = 0; i < vecSize; i++) {
       atomic_fetch_and(&count[i], 1);
     }

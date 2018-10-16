@@ -3,7 +3,7 @@
 
 #include <vector>
 #include <iostream>
-#include <amp.h>
+#include <hc.hpp>
 #include <malloc.h>
 #include <string.h>
 
@@ -83,7 +83,7 @@ bool test() {
   list_data *newdata = (list_data*) malloc (sizeof(list_data));
   newdata->data16 = 10;
 
-  parallel_for_each(concurrency::extent<1>(1),[=, &sum_gpu](concurrency::index<1> idx) restrict(amp) {
+  parallel_for_each(hc::extent<1>(1),[=, &sum_gpu](hc::index<1> idx) [[hc]] {
 	list_head* l = llist;
 	list_insert_new(llist, newitem, newdata, NUM_LIST_NODES-1);
     for (int i = 0; i <= NUM_LIST_NODES; ++i) {

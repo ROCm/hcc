@@ -47,7 +47,7 @@ bool test() {
 #define ASYNC_KERNEL_DISPATCH(x, y) \
   hc::parallel_for_each( \
     e, \
-    [=](hc::index<3> idx) restrict(amp) { \
+    [=](hc::index<3> idx) [[hc]] { \
       const int offset = vecSize / (x) * (y); \
       const int fidx = idx[0] * dimSize * dimSize + idx[1] * dimSize + idx[2]; \
       for (int i = 0; i < LOOP_COUNT; ++i) \

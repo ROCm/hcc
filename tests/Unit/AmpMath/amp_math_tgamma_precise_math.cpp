@@ -1,13 +1,13 @@
 // RUN: %cxxamp %s -o %t.out && %t.out
-#include <amp.h>
-#include <amp_math.h>
+#include <hc.hpp>
+#include <hc_math.hpp>
 
 #include <iostream>
 #include <cmath>
 #include <cassert>
 #include <random>
 
-using namespace concurrency;
+using namespace hc;
 
 #define ERROR_THRESHOLD (1e-2)
 
@@ -36,7 +36,7 @@ bool test() {
 
   parallel_for_each(
     e,
-    [=](index<1> idx) restrict(amp) {
+    [=](index<1> idx) [[hc]] {
     gc[idx] = precise_math::tgamma(ga[idx]);
   });
 

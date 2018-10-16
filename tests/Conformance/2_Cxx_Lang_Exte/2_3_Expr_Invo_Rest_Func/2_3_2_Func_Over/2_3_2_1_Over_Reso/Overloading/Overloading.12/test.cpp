@@ -16,7 +16,7 @@ public:
         return 0;
     }
 
-    int f(const int *) restrict(amp,cpu)
+    int f(const int *) [[cpu, hc]]
     {
         return 1;
     }

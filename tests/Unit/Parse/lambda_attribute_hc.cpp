@@ -1,6 +1,6 @@
 // RUN: %cxxamp %s -o %t.out && %t.out
 
-#include <amp.h>
+#include <hc.hpp>
 
 #include <iostream>
 
@@ -9,7 +9,7 @@
 int main() {
 
   bool ret = true;
-  using namespace concurrency;
+  using namespace hc;
 
   array_view<int, 1> av(SIZE);
 

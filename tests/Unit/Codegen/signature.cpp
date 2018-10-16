@@ -7,7 +7,7 @@
 #endif
 class member {
  public:
-   void cho(void) restrict(amp) {};
+   void cho(void) [[hc]] {};
   member(int i) {
     _i = i+1;
   }
@@ -15,7 +15,7 @@ class member {
 };
 class base {
  public:
-  void cho(void) restrict(amp) {};
+  void cho(void) [[hc]] {};
   base(float f) {
     _f = f+1;
   }
@@ -23,7 +23,7 @@ class base {
 };
 class baz: public base {
  public:
-  void cho(void) restrict(amp) {};
+  void cho(void) [[hc]] {};
   // User-defined constructor with same signature as generated
   // deserializer
   baz(float f, int bar_, int i): base(f), bar(bar_), m(i){}
@@ -32,7 +32,7 @@ class baz: public base {
 };
 #ifdef __KALMAR_ACCELERATOR__
 __attribute__((annotate("user_deserialize")))
-float fake_use(void) restrict(amp) {
+float fake_use(void) [[hc]] {
   baz bll(1.1, 2, 1); // calls the deserializer
   return bll._f;
 }

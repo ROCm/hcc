@@ -11,7 +11,7 @@ template<typename T>
 bool test_norm() {
     extent<1> ex(GRID_SIZE);
     array_view<int, 1> av(GRID_SIZE);
-    parallel_for_each(ex, [=](index<1>& idx) restrict(amp) {
+    parallel_for_each(ex, [=](index<1>& idx) [[hc]] {
         T val;
         av[idx] = (int)val;
     }).wait();
@@ -24,7 +24,7 @@ template<typename T>
 bool test() {
     extent<1> ex(GRID_SIZE);
     array_view<int, 1> av(GRID_SIZE);
-    parallel_for_each(ex, [=](index<1>& idx) restrict(amp) {
+    parallel_for_each(ex, [=](index<1>& idx) [[hc]] {
         T val;
         av[idx] = (int)(val.get_x());
     }).wait();

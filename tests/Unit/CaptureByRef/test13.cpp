@@ -1,7 +1,7 @@
 
 // RUN: %hc %s -o %t.out && %t.out
 
-#include <amp.h>
+#include <hc.hpp>
 #include <iostream>
 #include <cstdlib>
 
@@ -15,18 +15,18 @@
 
 class POD {
 public:
-  int getFoo() restrict(cpu,amp) { return foo; }
-  int getBar() restrict(cpu,amp) { return bar; }
-  int getFooCrossBar() restrict(cpu,amp) { return foo * bar; }
-  void setFoo(int f) restrict(cpu) { foo = f; }
-  void setBar(int b) restrict(cpu) { bar = b; }
+  int getFoo() [[cpu, hc]] { return foo; }
+  int getBar() [[cpu, hc]] { return bar; }
+  int getFooCrossBar() [[cpu, hc]] { return foo * bar; }
+  void setFoo(int f) [[cpu]] { foo = f; }
+  void setBar(int b) [[cpu]] { bar = b; }
 private:
   int foo;
   int bar;
 };
 
 bool test() {
-  using namespace Concurrency;
+  using namespace hc;
 
   int table[VECTOR_SIZE];
   for (int i = 0; i < VECTOR_SIZE; ++i) {
@@ -38,7 +38,7 @@ bool test() {
   p.setBar(rand() % 15 + 1);
 
   extent<1> ex(VECTOR_SIZE);
-  parallel_for_each(ex, [&](index<1> idx) restrict(amp) {
+  parallel_for_each(ex, [&](index<1> idx) [[hc]] {
     // capture array type, and POD type by reference
     // use member function to access POD type
     table[idx[0]] *= (p.getFoo() * p.getBar());

@@ -157,7 +157,7 @@ elif [ $AMDGPU_TARGET == "gfx906" ]; then
   OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_906.amdgcn.bc"
   HCC_EXTRA_ARCH_FILE=$HCC_EXTRA_LIBRARIES_GFX906
 fi
-HCC_BC_LIBS="$ROCM_LIB/hc.amdgcn.bc $ROCM_LIB/opencl.amdgcn.bc $ROCM_LIB/ocml.amdgcn.bc $ROCM_LIB/ockl.amdgcn.bc $ROCM_LIB/irif.amdgcn.bc $OCLC_ISA_VERSION_LIB $ROCM_LIB/oclc_finite_only_off.amdgcn.bc $ROCM_LIB/oclc_daz_opt_off.amdgcn.bc $ROCM_LIB/oclc_correctly_rounded_sqrt_on.amdgcn.bc $ROCM_LIB/oclc_unsafe_math_off.amdgcn.bc"
+HCC_BC_LIBS="$ROCM_LIB/hc.amdgcn.bc $ROCM_LIB/hip.amdgcn.bc $ROCM_LIB/opencl.amdgcn.bc $ROCM_LIB/ocml.amdgcn.bc $ROCM_LIB/ockl.amdgcn.bc $OCLC_ISA_VERSION_LIB $ROCM_LIB/oclc_finite_only_off.amdgcn.bc $ROCM_LIB/oclc_daz_opt_off.amdgcn.bc $ROCM_LIB/oclc_correctly_rounded_sqrt_on.amdgcn.bc $ROCM_LIB/oclc_unsafe_math_off.amdgcn.bc"
 
 # include libraries specified through the HCC_EXTRA_LIBRARIES environment variable
 HCC_BC_LIBS="$HCC_BC_LIBS  $HCC_EXTRA_LIBRARIES $HCC_EXTRA_ARCH_FILE"
@@ -176,26 +176,15 @@ if [ $KMDUMPLLVM == "1" ]; then
 fi
 
 # Invoke HCC-specific opt passes
-$OPT -load $LIB/LLVMSelectAcceleratorCode@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+# Optimization notes:
+#  -disable-simplify-libcalls:  prevents transforming loops into library calls such as memset, memcopy on GPU
+$OPT -mtriple amdgcn--amdhsa-amdgiz -mcpu=$AMDGPU_TARGET \
+   -load $LIB/LLVMSelectAcceleratorCode@CMAKE_SHARED_LIBRARY_SUFFIX@ \
   -load $LIB/LLVMPromotePointerKernArgsToGlobal@CMAKE_SHARED_LIBRARY_SUFFIX@ \
   -select-accelerator-code -promote-pointer-kernargs-to-global \
   -dce -globaldce -always-inline -infer-address-spaces \
-  < $2.linked.bc -o $2.selected.bc
-
-# error handling for HCC-specific opt passes
-RETVAL=$?
-if [ $RETVAL != 0 ]; then
-  echo "Generating AMD GCN kernel failed in HCC-specific opt passes for target: $AMDGPU_TARGET"
-  exit $RETVAL
-fi
-
-if [ $KMDUMPLLVM == "1" ]; then
-  cp $2.selected.bc ${KMDUMPDIR}/dump.selected.bc
-fi
-
-# Optimization notes:
-#  -disable-simplify-libcalls:  prevents transforming loops into library calls such as memset, memcopy on GPU
-$OPT -mtriple amdgcn--amdhsa-amdgiz -mcpu=$AMDGPU_TARGET -amdgpu-internalize-symbols -disable-simplify-libcalls $KMOPTOPT -verify $2.selected.bc -o $2.opt.bc
+  -amdgpu-internalize-symbols -disable-simplify-libcalls $KMOPTOPT -verify \
+  < $2.linked.bc -o $2.opt.bc
 
 # error handling for opt
 RETVAL=$?
@@ -217,10 +206,14 @@ if [ $KMDUMPLLVM == "1" ]; then
   cp $2.opt.bc ${KMDUMPDIR}/dump-$AMDGPU_TARGET.opt.bc
 fi
 
+
+# Disable code object v3, generate code object v2 for now
+CODE_OBJECT_FORMAT="-mattr=-code-object-v3"
+
 if [ $KMTHINLTO == "1" ]; then
-  $LLC $KMOPTLLC -mtriple amdgcn--amdhsa-amdgiz -mcpu=$AMDGPU_TARGET -filetype=obj -o $2 $2.opt.bc
+  $LLC $KMOPTLLC -mtriple amdgcn--amdhsa-amdgiz -mcpu=$AMDGPU_TARGET $CODE_OBJECT_FORMAT -filetype=obj -o $2 $2.opt.bc
 else
-  $LLC $KMOPTLLC -mtriple amdgcn--amdhsa-amdgiz -mcpu=$AMDGPU_TARGET -filetype=obj -o $2.isabin $2.opt.bc
+  $LLC $KMOPTLLC -mtriple amdgcn--amdhsa-amdgiz -mcpu=$AMDGPU_TARGET $CODE_OBJECT_FORMAT -filetype=obj -o $2.isabin $2.opt.bc
 fi
 
 # error handling for llc
@@ -236,7 +229,7 @@ if [ $KMDUMPISA == "1" ]; then
   else
     cp $2.isabin ./dump-$AMDGPU_TARGET.isabin
   fi
-  $LLC $KMOPTLLC -mtriple amdgcn--amdhsa-amdgiz -mcpu=$AMDGPU_TARGET -filetype=asm -o $2.isa $2.opt.bc
+  $LLC $KMOPTLLC -mtriple amdgcn--amdhsa-amdgiz -mcpu=$AMDGPU_TARGET $CODE_OBJECT_FORMAT -filetype=asm -o $2.isa $2.opt.bc
   mv $2.isa ${KMDUMPDIR}/dump-$AMDGPU_TARGET.isa
 fi
 

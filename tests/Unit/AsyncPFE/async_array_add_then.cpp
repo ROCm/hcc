@@ -33,7 +33,7 @@ bool test() {
   hc::extent<1> e(vecSize);
   hc::completion_future fut = hc::parallel_for_each(
     e,
-    [=](hc::index<1> idx) restrict(amp) {
+    [=](hc::index<1> idx) [[hc]] {
       p_c[idx[0]] = p_a[idx[0]] + p_b[idx[0]];
 
   });
@@ -44,7 +44,7 @@ bool test() {
     std::cout << "async launch the 2nd kernel\n";
     hc::completion_future fut2 = hc::parallel_for_each(
       e,
-      [=](hc::index<1> idx) restrict(amp) {
+      [=](hc::index<1> idx) [[hc]] {
         p_c[idx[0]] += p_a[idx[0]] + p_b[idx[0]];
       });
 
@@ -53,7 +53,7 @@ bool test() {
       std::cout << "sync launch the 3rd kernel\n";
       parallel_for_each(
         e,
-        [=](hc::index<1> idx) restrict(amp) {
+        [=](hc::index<1> idx) [[hc]] {
           p_c[idx[0]] += p_a[idx[0]] + p_b[idx[0]];
         });
       done_promise.set_value();

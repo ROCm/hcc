@@ -1,12 +1,12 @@
 
 // RUN: %cxxamp %s -o %t.out && %t.out
-#include <amp.h>
+#include <hc.hpp>
 #include <stdlib.h>
 #include <iostream>
 #include <limits>
-#include <amp_math.h>
+#include <hc_math.hpp>
 
-using namespace concurrency;
+using namespace hc;
 
 int main(void) {
   const int vecSize = 2;
@@ -21,7 +21,7 @@ int main(void) {
 
   parallel_for_each(
     e,
-    [=](index<1> idx) restrict(amp) {
+    [=](index<1> idx) [[hc]] {
     out[idx] = fast_math::isinf(6.5f/in[idx]);
   });
 
