@@ -2695,8 +2695,10 @@ public:
                 agent,
                 [](hsa_isa_t agent_isa, void* data) {
                     isa_comp_data* co_data = static_cast<isa_comp_data*>(data);
-                    if (agent_isa == co_data->isa_type)
+                    if (agent_isa == co_data->isa_type) {
                         co_data->is_compatible = true;
+                        return HSA_STATUS_INFO_BREAK;
+                    }
                     return HSA_STATUS_SUCCESS;
                 },
                 &co_data);
