@@ -439,6 +439,7 @@ if (HCC_INTEGRATE_ROCDL)
   )
   # install ROCm Device Library in hcc
   install(DIRECTORY ${ROCDL_BUILD_DIR}/hc
+                    ${ROCDL_BUILD_DIR}/hip
                     ${ROCDL_BUILD_DIR}/irif
                     ${ROCDL_BUILD_DIR}/lib
                     ${ROCDL_BUILD_DIR}/ockl
