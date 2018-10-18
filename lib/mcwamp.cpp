@@ -8,13 +8,14 @@
 #include "hc_rt_debug.h"
 #include "mcwamp_impl.hpp"
 
+#include <kalmar_runtime.h>
+
 #include <iostream>
 #include <string>
 #include <cassert>
 #include <cstddef>
 #include <tuple>
 
-#include <hc.hpp>
 #include <mutex>
 
 #include <dlfcn.h>

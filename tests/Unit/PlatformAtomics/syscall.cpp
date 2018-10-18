@@ -6,7 +6,6 @@
 #include <iomanip>
 #include <atomic>
 #include <thread>
-#include <hc/hc.hpp>
 
 // added for checking HSA profile
 #include <hc/hc.hpp>

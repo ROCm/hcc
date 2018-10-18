@@ -1,8 +1,5 @@
 
 // RUN: %hc %s -o %t.out && %t.out
-
-#include <hc/hc.hpp>
-
 #include <iostream>
 
 // added for checking HSA profile

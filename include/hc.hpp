@@ -132,6 +132,11 @@ public:
     execute_order get_execute_order() const { return pQueue->get_execute_order(); }
 
     /**
+     * Returns the queue priority of this accelerator_view.
+     */
+    queue_priority get_queue_priority() const { return pQueue->get_queue_priority(); }
+
+    /**
      * Returns a boolean value indicating whether the accelerator view when
      * passed to a parallel_for_each would result in automatic selection of an
      * appropriate execution target by the runtime. In other words, this is the
@@ -737,8 +742,8 @@ public:
      *                  See "Queuing Mode". The default value would be
      *                  queueing_mdoe_automatic if not specified.
      */
-    accelerator_view create_view(execute_order order = execute_in_order, queuing_mode mode = queuing_mode_automatic) {
-        auto pQueue = pDev->createQueue(order);
+    accelerator_view create_view(execute_order order = execute_in_order, queuing_mode mode = queuing_mode_automatic, queue_priority priority = priority_normal) {
+        auto pQueue = pDev->createQueue(order, priority);
         pQueue->set_mode(mode);
         return pQueue;
     }
@@ -1815,6 +1820,267 @@ extern "C" uint64_t __clock_u64() __HC__;
  * Notice the return value of this function is implementation defined.
  */
 extern "C" uint64_t __cycle_u64() __HC__;
+
+/**
+ * Get the count of the number of earlier (in flattened
+ * work-item order) active work-items within the same wavefront.
+ *
+ * @return The result will be in the range 0 to WAVESIZE - 1.
+ */
+extern "C" unsigned int __activelaneid_u32() __HC__;
+
+/**
+ * Return a bit mask shows which active work-items in the
+ * wavefront have a non-zero input. The affected bit position within the
+ * registers of dest corresponds to each work-item's lane ID.
+ *
+ * The HSAIL instruction would return 4 64-bit registers but the current
+ * implementation would only return the 1st one and ignore the other 3 as
+ * right now all HSA agents have wavefront of size 64.
+ *
+ * @param[in] input An unsigned 32-bit integer.
+ * @return The bitmask calculated.
+ */
+extern "C" uint64_t __activelanemask_v4_b64_b1(unsigned int input) __HC__;
+
+/**
+ * Count the number of active work-items in the current
+ * wavefront that have a non-zero input.
+ *
+ * @param[in] input An unsigned 32-bit integer.
+ * @return The number of active work-items in the current wavefront that have
+ *         a non-zero input.
+ */
+extern "C" inline unsigned int __activelanecount_u32_b1(unsigned int input) __HC__ {
+ return  __popcount_u32_b64(__activelanemask_v4_b64_b1(input));
+}
+
+// ------------------------------------------------------------------------
+// Wavefront Vote Functions
+// ------------------------------------------------------------------------
+
+/**
+ * Evaluate predicate for all active work-items in the
+ * wavefront and return non-zero if and only if predicate evaluates to non-zero
+ * for any of them.
+ */
+extern "C" bool __ockl_wfany_i32(int) __HC__;
+extern "C" inline int __any(int predicate) __HC__ {
+    return __ockl_wfany_i32(predicate);
+}
+
+/**
+ * Evaluate predicate for all active work-items in the
+ * wavefront and return non-zero if and only if predicate evaluates to non-zero
+ * for all of them.
+ */
+extern "C" bool __ockl_wfall_i32(int) __HC__;
+extern "C" inline int __all(int predicate) __HC__ {
+    return __ockl_wfall_i32(predicate);
+}
+
+/**
+ * Evaluate predicate for all active work-items in the
+ * wavefront and return an integer whose Nth bit is set if and only if
+ * predicate evaluates to non-zero for the Nth work-item of the wavefront and
+ * the Nth work-item is active.
+ */
+
+// XXX from llvm/include/llvm/IR/InstrTypes.h
+#define ICMP_NE 33
+__attribute__((convergent))
+unsigned long long __llvm_amdgcn_icmp_i32(uint x, uint y, uint z) [[hc]] __asm("llvm.amdgcn.icmp.i32");
+extern "C" inline uint64_t __ballot(int predicate) __HC__ {
+    return __llvm_amdgcn_icmp_i32(predicate, 0, ICMP_NE);
+}
+
+// ------------------------------------------------------------------------
+// Wavefront Shuffle Functions
+// ------------------------------------------------------------------------
+
+extern "C" uint64_t __unpacklo_u16x4(uint64_t src0, uint64_t src1) __HC__;
+
+extern "C" uint64_t __unpacklo_u32x2(uint64_t src0, uint64_t src1) __HC__;
+
+extern "C" int __unpacklo_s8x4(int src0, int src1) __HC__;
+
+extern "C" int64_t __unpacklo_s8x8(int64_t src0, int64_t src1) __HC__;
+
+extern "C" int __unpacklo_s16x2(int src0, int src1) __HC__;
+
+extern "C" int64_t __unpacklo_s16x4(int64_t src0, int64_t src1) __HC__;
+
+extern "C" int64_t __unpacklo_s32x2(int64_t src0, int64_t src1) __HC__;
+/** @} */
+
+/** @{ */
+/**
+ * Copy and interleave the upper half of the elements from
+ * each source into the desitionation
+ *
+ * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/packed_data.htm">HSA PRM 5.9</a> for more detailed specification of these functions.
+ */
+extern "C" unsigned int __unpackhi_u8x4(unsigned int src0, unsigned int src1) __HC__;
+
+extern "C" uint64_t __unpackhi_u8x8(uint64_t src0, uint64_t src1) __HC__;
+
+extern "C" unsigned int __unpackhi_u16x2(unsigned int src0, unsigned int src1) __HC__;
+
+extern "C" uint64_t __unpackhi_u16x4(uint64_t src0, uint64_t src1) __HC__;
+
+extern "C" uint64_t __unpackhi_u32x2(uint64_t src0, uint64_t src1) __HC__;
+
+extern "C" int __unpackhi_s8x4(int src0, int src1) __HC__;
+
+extern "C" int64_t __unpackhi_s8x8(int64_t src0, int64_t src1) __HC__;
+
+extern "C" int __unpackhi_s16x2(int src0, int src1) __HC__;
+
+extern "C" int64_t __unpackhi_s16x4(int64_t src0, int64_t src1) __HC__;
+
+extern "C" int64_t __unpackhi_s32x2(int64_t src0, int64_t src1) __HC__;
+/** @} */
+
+/** @{ */
+/**
+ * Assign the elements of the packed value in src0, replacing
+ * the element specified by src2 with the value from src1
+ *
+ * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/packed_data.htm">HSA PRM 5.9</a> for more detailed specification of these functions.
+ */
+extern "C" unsigned int __pack_u8x4_u32(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
+
+extern "C" uint64_t __pack_u8x8_u32(uint64_t src0, unsigned int src1, unsigned int src2) __HC__;
+
+extern "C" unsigned __pack_u16x2_u32(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
+
+extern "C" uint64_t __pack_u16x4_u32(uint64_t src0, unsigned int src1, unsigned int src2) __HC__;
+
+extern "C" uint64_t __pack_u32x2_u32(uint64_t src0, unsigned int src1, unsigned int src2) __HC__;
+
+extern "C" int __pack_s8x4_s32(int src0, int src1, unsigned int src2) __HC__;
+
+extern "C" int64_t __pack_s8x8_s32(int64_t src0, int src1, unsigned int src2) __HC__;
+
+extern "C" int __pack_s16x2_s32(int src0, int src1, unsigned int src2) __HC__;
+
+extern "C" int64_t __pack_s16x4_s32(int64_t src0, int src1, unsigned int src2) __HC__;
+
+extern "C" int64_t __pack_s32x2_s32(int64_t src0, int src1, unsigned int src2) __HC__;
+
+extern "C" double __pack_f32x2_f32(double src0, float src1, unsigned int src2) __HC__;
+/** @} */
+
+/** @{ */
+/**
+ * Assign the elements specified by src1 from the packed value in src0
+ *
+ * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/packed_data.htm">HSA PRM 5.9</a> for more detailed specification of these functions.
+ */
+extern "C" unsigned int __unpack_u32_u8x4(unsigned int src0, unsigned int src1) __HC__;
+
+extern "C" unsigned int __unpack_u32_u8x8(uint64_t src0, unsigned int src1) __HC__;
+
+extern "C" unsigned int __unpack_u32_u16x2(unsigned int src0, unsigned int src1) __HC__;
+
+extern "C" unsigned int __unpack_u32_u16x4(uint64_t src0, unsigned int src1) __HC__;
+
+extern "C" unsigned int __unpack_u32_u32x2(uint64_t src0, unsigned int src1) __HC__;
+
+extern "C" int __unpack_s32_s8x4(int src0, unsigned int src1) __HC__;
+
+extern "C" int __unpack_s32_s8x8(int64_t src0, unsigned int src1) __HC__;
+
+extern "C" int __unpack_s32_s16x2(int src0, unsigned int src1) __HC__;
+
+extern "C" int __unpack_s32_s16x4(int64_t src0, unsigned int src1) __HC__;
+
+extern "C" int __unpack_s32_s3x2(int64_t src0, unsigned int src1) __HC__;
+
+extern "C" float __unpack_f32_f32x2(double src0, unsigned int src1) __HC__;
+/** @} */
+
+/**
+ * Align 32 bits within 64 bits of data on an arbitrary bit boundary
+ *
+ * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/multimedia.htm">HSA PRM 5.15</a> for more detailed specification.
+ */
+extern "C" unsigned int __bitalign_b32(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
+
+/**
+ * Align 32 bits within 64 bis of data on an arbitrary byte boundary
+ *
+ * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/multimedia.htm">HSA PRM 5.15</a> for more detailed specification.
+ */
+extern "C" unsigned int __bytealign_b32(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
+
+/**
+ * Do linear interpolation and computes the unsigned 8-bit average of packed
+ * data
+ *
+ * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/multimedia.htm">HSA PRM 5.15</a> for more detailed specification.
+ */
+extern "C" unsigned int __lerp_u8x4(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
+
+/**
+ * Takes four floating-point number, convers them to
+ * unsigned integer values, and packs them into a packed u8x4 value
+ *
+ * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/multimedia.htm">HSA PRM 5.15</a> for more detailed specification.
+ */
+extern "C" unsigned int __packcvt_u8x4_f32(float src0, float src1, float src2, float src3) __HC__;
+
+/**
+ * Unpacks a single element from a packed u8x4 value and converts it to an f32.
+ *
+ * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/multimedia.htm">HSA PRM 5.15</a> for more detailed specification.
+ */
+extern "C" float __unpackcvt_f32_u8x4(unsigned int src0, unsigned int src1) __HC__;
+
+/** @{ */
+/**
+ * Computes the sum of the absolute differences of src0 and
+ * src1 and then adds src2 to the result
+ *
+ * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/multimedia.htm">HSA PRM 5.15</a> for more detailed specification.
+ */
+extern "C" unsigned int __sad_u32_u32(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
+
+extern "C" unsigned int __sad_u32_u16x2(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
+
+extern "C" unsigned int __sad_u32_u8x4(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
+/** @} */
+
+/**
+ * This function is mostly the same as sad except the sum of absolute
+ * differences is added to the most significant 16 bits of the result
+ *
+ * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/multimedia.htm">HSA PRM 5.15</a> for more detailed specification.
+ */
+extern "C" unsigned int __sadhi_u16x2_u8x4(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
+
+/**
+ * Get system timestamp
+ */
+extern "C" __attribute__((always_inline))
+std::uint64_t __ockl_memrealtime_u64(void);
+
+extern "C" inline __attribute((always_inline)) std::uint64_t __clock_u64() __HC__ {
+  return __ockl_memrealtime_u64();
+}
+
+
+/**
+ * Get hardware cycle count
+ *
+ * Notice the return value of this function is implementation defined.
+ */
+extern "C" __attribute__((always_inline))
+std::uint64_t __ockl_memtime_u64(void);
+
+extern "C" inline __attribute((always_inline)) std::uint64_t __cycle_u64() __HC__ {
+  return __ockl_memtime_u64();
+}
 
 /**
  * Get the count of the number of earlier (in flattened

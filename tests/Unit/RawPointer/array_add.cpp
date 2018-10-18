@@ -3,7 +3,6 @@
 
 #include <iostream>
 #include <random>
-#include <hc/hc.hpp>
 
 // added for checking HSA profile
 #include <hc/hc.hpp>
