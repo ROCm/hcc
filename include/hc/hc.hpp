@@ -6890,7 +6890,7 @@ namespace hc
     //ND parallel_for_each, nontiled
     template<typename Kernel, int n>
     inline
-    __attribute__((annotate("__HC_PFE__")))
+    __attribute__((annotate("__HC_PFE__"), warn_unused_result))
     completion_future parallel_for_each(
         const accelerator_view& av,
         const hc::extent<n>& compute_domain,
@@ -6955,7 +6955,7 @@ namespace hc
     //ND parallel_for_each, tiled
     template <typename Kernel, int n>
     inline
-    __attribute__((annotate("__HC_PFE__")))
+    __attribute__((annotate("__HC_PFE__"), warn_unused_result))
     completion_future parallel_for_each(
         const accelerator_view& av,
         const tiled_extent<n>& compute_domain,
