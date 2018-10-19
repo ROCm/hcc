@@ -18,6 +18,7 @@ SOFTLINKS=(
   "bin" "bin" "hcc-config"
   "$LIBRARY_DIR" "lib" "libhc_am.so"
   "$LIBRARY_DIR" "lib" "libmcwamp.a"
+  "$LIBRARY_DIR" "lib" "libmcwamp.so"
   "$LIBRARY_DIR" "lib" "libmcwamp_atomic.a"
   "$LIBRARY_DIR" "lib" "libmcwamp_cpu.so"
   "$LIBRARY_DIR" "lib" "libmcwamp_hsa.so"
@@ -50,8 +51,10 @@ do_softlinks() {
     DEST_DIR=${SOFTLINKS[i+1]}
     FILE=${SOFTLINKS[i+2]}
 
-    if [ ! -e $ROCM_PATH/$DEST_DIR/$FILE ] ; then
-      ln -sf $ROCM_PATH/hcc/$SOURCE_DIR/$FILE $ROCM_PATH/$DEST_DIR/$FILE
+    if [ -e $ROCM_PATH/hcc/$SOURCE_DIR/$FILE ] ; then
+      if [ ! -e $ROCM_PATH/$DEST_DIR/$FILE ] ; then
+        ln -sf $ROCM_PATH/hcc/$SOURCE_DIR/$FILE $ROCM_PATH/$DEST_DIR/$FILE
+      fi
     fi
   done
 }

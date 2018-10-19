@@ -56,7 +56,6 @@ if [ ! -f $1 ]; then
 fi
 
 BINDIR=$(dirname $0)
-EMBED=$BINDIR/clamp-embed
 AS=$BINDIR/llvm-as
 OPT=$BINDIR/opt
 LLC=$BINDIR/llc
