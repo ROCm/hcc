@@ -359,6 +359,7 @@ public:
      */
     void copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, const hc::accelerator *copyAcc, bool forceUnpinnedCopy);
 
+    int copy2d_ext(const void *src, void *dst, size_t width, size_t height, size_t srcPitch, size_t dstPitch, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, const hc::accelerator *copyAcc, bool forceUnpinnedCopy);
 
     // TODO - this form is deprecated, provided for use with older HIP runtimes.
     void copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, bool forceUnpinnedCopy) ;
@@ -407,7 +408,9 @@ public:
     completion_future copy_async_ext(const void *src, void *dst, size_t size_bytes, 
                                      hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, 
                                      const hc::accelerator *copyAcc);
-
+    int copy2d_async_ext(const void *src, void *dst, size_t width, size_t height, size_t srcPith, size_t dstPitch,
+                                     hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo,
+                                     const hc::accelerator *copyAcc);
     /**
      * Compares "this" accelerator_view with the passed accelerator_view object
      * to determine if they represent the same underlying object.
@@ -1548,6 +1551,10 @@ inline void accelerator_view::copy_ext(const void *src, void *dst, size_t size_b
     pQueue->copy_ext(src, dst, size_bytes, copyDir, srcInfo, dstInfo, forceHostCopyEngine);
 };
 
+inline int accelerator_view::copy2d_ext(const void *src, void *dst, size_t width, size_t height, size_t srcPitch, size_t dstPitch, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, const hc::accelerator *copyAcc, bool forceUnpinnedCopy) {
+    return pQueue->copy2d_ext(src, dst, width, height, srcPitch, dstPitch, copyDir, srcInfo, dstInfo, copyAcc ? copyAcc->pDev : nullptr, forceUnpinnedCopy);
+};
+
 inline completion_future
 accelerator_view::copy_async(const void *src, void *dst, size_t size_bytes) {
     return completion_future(pQueue->EnqueueAsyncCopy(src, dst, size_bytes));
@@ -1562,6 +1569,18 @@ accelerator_view::copy_async_ext(const void *src, void *dst, size_t size_bytes,
     return completion_future(pQueue->EnqueueAsyncCopyExt(src, dst, size_bytes, copyDir, srcInfo, dstInfo, copyAcc ? copyAcc->pDev : nullptr));
 };
 
+inline int
+accelerator_view::copy2d_async_ext(const void *src, void *dst, size_t width, size_t height, size_t srcPitch, size_t dstPitch,
+                             hcCommandKind copyDir,
+                             const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo,
+                             const hc::accelerator *copyAcc)
+{
+    int retVal = -1;
+    auto retPtr = pQueue->EnqueueAsyncCopy2dExt(src, dst, width, height, srcPitch, dstPitch, copyDir, srcInfo, dstInfo, copyAcc ? copyAcc->pDev : nullptr);
+    if(retPtr != nullptr)
+        retVal = 0;
+    return retVal;
+};
 
 // ------------------------------------------------------------------------
 // extent
