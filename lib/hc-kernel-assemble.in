@@ -10,6 +10,9 @@ KMDUMPLLVM="${KMDUMPLLVM:=0}"
 
 AMDGPU_OBJ_CODEGEN="${AMDGPU_OBJ_CODEGEN:=0}"
 
+# inject additional GPU archs through an env var
+HCC_EXTRA_GPU_ARCH="${HCC_EXTRA_GPU_ARCH:=0}"
+
 if [ $KMDBSCRIPT == "1" ]
 then
   set -x
@@ -65,6 +68,12 @@ if [ "$#" -lt 2 ]; then
 fi
 
 AMDGPU_TARGET_ARRAY=()
+if [ $HCC_EXTRA_GPU_ARCH != "0" ]
+ then
+  AMDGPU_TARGET_ARRAY+=("$HCC_EXTRA_GPU_ARCH")
+fi
+
+
 for ARG in "$@"
 do
   case $ARG in
