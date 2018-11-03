@@ -54,14 +54,14 @@ namespace hc2
         template<typename RandomAccessIterator>
         friend
         inline
-        bool read(
+        size_t read(
             RandomAccessIterator f,
             RandomAccessIterator l,
-            Bundled_code_header& x,
-            size_t* read_size)
+            Bundled_code_header& x)
         {
+            size_t read_size = 0;
             std::copy_n(f, sizeof(x.cbuf), x.cbuf);
-            std::uint64_t max_offset = sizeof(x.cbuf);
+            size_t max_offset = sizeof(x.cbuf);
             if (valid(x)) {
                 x.bundles.resize(x.bundle_cnt);
 
@@ -77,23 +77,22 @@ namespace hc2
                     max_offset = std::max(max_offset, y.offset + y.bundle_sz);
                     it += y.triple_sz;
                 }
-                if (read_size) *read_size = (size_t) max_offset;
-                return true;
+                read_size = max_offset;
             }
-            if (read_size) *read_size = (size_t) max_offset;
-            return false;
+            read_size = max_offset;
+            return read_size;
         }
 
         friend
         inline
-        bool read(const std::vector<char>& blob, Bundled_code_header& x, size_t* read_size=nullptr)
+        size_t read(const std::vector<char>& blob, Bundled_code_header& x)
         {
-            return read(blob.cbegin(), blob.cend(), x, read_size);
+            return read(blob.cbegin(), blob.cend(), x);
         }
 
         friend
         inline
-        bool read(std::istream& is, Bundled_code_header& x)
+        size_t read(std::istream& is, Bundled_code_header& x)
         {
             return read(std::vector<char>{
                 std::istreambuf_iterator<char>{is},
@@ -112,22 +111,25 @@ namespace hc2
             char cbuf[sizeof(bundler_magic_string) + sizeof(bundle_cnt)];
         };
         std::vector<Bundled_code> bundles;
+        size_t size_;
     public:
         Bundled_code_header() = default;
         Bundled_code_header(const Bundled_code_header&) = default;
         Bundled_code_header(Bundled_code_header&&) = default;
 
         template<typename RandomAccessIterator>
-        Bundled_code_header(RandomAccessIterator f, RandomAccessIterator l, size_t* read_size=nullptr)
+        Bundled_code_header(RandomAccessIterator f, RandomAccessIterator l)
             : Bundled_code_header{}
         {
-            read(f, l, *this, read_size);
+            size_ = read(f, l, *this);
         }
 
         explicit
-        Bundled_code_header(const std::vector<char>& blob, size_t* read_size=nullptr)
-            : Bundled_code_header{blob.cbegin(), blob.cend(), read_size}
+        Bundled_code_header(const std::vector<char>& blob)
+            : Bundled_code_header{blob.cbegin(), blob.cend()}
         {}
+
+        size_t size() { return size_; }
     };
     constexpr const char Bundled_code_header::magic_string[];
 

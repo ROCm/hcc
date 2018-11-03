@@ -266,66 +266,56 @@ static void read_code_bundles(std::vector<_code_bundle>& bundles) {
 
   const char* bundles_data_start = (const char *)kernel_bundle_source;
 
-  while (1) {
+  while (true) {
 
-    constexpr char OFFLOAD_BUNDLER_MAGIC_STR[] = "__CLANG_OFFLOAD_BUNDLE__";
-    constexpr size_t OFFLOAD_BUNDLER_MAGIC_STR_LENGTH = sizeof(OFFLOAD_BUNDLER_MAGIC_STR)-1;
-    auto detect_bundle_magic = [&](const char* b) {
-      for (int i = 0; i < OFFLOAD_BUNDLER_MAGIC_STR_LENGTH; ++i) {
-        if (b[i] != OFFLOAD_BUNDLER_MAGIC_STR[i])
-          return false;
+    static const std::string OFFLOAD_BUNDLER_MAGIC_STR("__CLANG_OFFLOAD_BUNDLE__");
+    std::string bundle_magic(bundles_data_start, OFFLOAD_BUNDLER_MAGIC_STR.length());
+    if (!std::equal(OFFLOAD_BUNDLER_MAGIC_STR.begin(),
+                    OFFLOAD_BUNDLER_MAGIC_STR.end(),
+                    bundle_magic.begin())) return;
+
+    // skip the magic string
+    const char* bundles_data_ptr = bundles_data_start + 
+                                   OFFLOAD_BUNDLER_MAGIC_STR.length();
+    
+    // where this bundle ends
+    size_t bundle_end = 0;
+
+    // get number of bundles
+    uint64_t num_bundles;
+    std::memcpy(&num_bundles, bundles_data_ptr, sizeof(num_bundles));
+    bundles_data_ptr += sizeof(num_bundles);
+    for (uint64_t i = 0; i < num_bundles; ++i) {
+
+      _code_bundle b = {};
+ 
+      std::memcpy(&b.offset, bundles_data_ptr, sizeof(b.offset));
+      bundles_data_ptr += sizeof(b.offset);
+
+      std::memcpy(&b.size, bundles_data_ptr, sizeof(b.size));
+      bundles_data_ptr += sizeof(b.size);
+
+      std::memcpy(&b.triple_size, bundles_data_ptr, sizeof(b.triple_size));
+      bundles_data_ptr += sizeof(b.triple_size);
+
+      b.triple = bundles_data_ptr;
+      bundles_data_ptr += b.triple_size;
+
+      b.device_binary = bundles_data_start + b.offset;
+      bundle_end = std::max(bundle_end, b.offset + b.size);
+
+      static const std::string hcc_triple_prefix("hcc-amdgcn-amd-amdhsa--");
+      std::string triple(b.triple, b.triple_size);
+      if (std::equal(hcc_triple_prefix.begin(),
+                     hcc_triple_prefix.end(),
+                     triple.begin())) {
+                     bundles.push_back(std::move(b));
       }
-      return true;
-    };
-
-    if (detect_bundle_magic(bundles_data_start)) {
-
-      auto read_uint64 = [](const char* p) {
-        return *reinterpret_cast<const uint64_t*>(p);
-      };
-
-      // skip the magic string
-      const char* bundles_data_ptr = bundles_data_start + OFFLOAD_BUNDLER_MAGIC_STR_LENGTH;
-
-      // get number of bundles
-      uint64_t num_bundles = read_uint64(bundles_data_ptr);
-      bundles_data_ptr+=8;
-
-      size_t bundle_end = 0;
-      for (uint64_t i = 0; i < num_bundles; ++i) {
-
-        _code_bundle b = {0};
-        b.offset = read_uint64(bundles_data_ptr);
-        bundles_data_ptr+=8;
-        b.size = read_uint64(bundles_data_ptr);
-        bundles_data_ptr+=8;
-        b.triple_size = read_uint64(bundles_data_ptr);
-        bundles_data_ptr+=8;
-        b.triple = bundles_data_ptr;
-        bundles_data_ptr+=b.triple_size;
-        b.device_binary = bundles_data_start + b.offset;
-        bundle_end = std::max(bundle_end, b.offset + b.size);
-
-        auto detect_hcc_code = [](_code_bundle& b) {
-          constexpr char HCC_TRIPLE_PREFIX[] = "hcc-amdgcn-amd-amdhsa--";
-          constexpr size_t HCC_TRIPLE_PREFIX_LENGTH = sizeof(HCC_TRIPLE_PREFIX)-1;
-          return (b.triple_size >= HCC_TRIPLE_PREFIX_LENGTH
-                  && std::memcmp(b.triple, HCC_TRIPLE_PREFIX,
-                                   HCC_TRIPLE_PREFIX_LENGTH) == 0);
-        };
-        if (detect_hcc_code(b)) bundles.push_back(std::move(b));
-      }
-
-      // bump to read the next group of bundles
-      bundles_data_start += bundle_end;
     }
-    else {
-      // no more device code objects, exit
-      break;
-    }
+    // bump to read the next group of bundles
+    bundles_data_start += bundle_end;
   }
 }
-
 
 void LoadInMemoryProgram(KalmarQueue* pQueue) {
 
