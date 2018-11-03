@@ -411,7 +411,7 @@ do
       fi
 
       # detect whether the objects in the static library contain a .kernel section
-      KERNEL_UNDETECTED=`objdump -t "$DETECTED_STATIC_LIBRARY" | grep -q "\.kernel"; echo $?`
+      KERNEL_UNDETECTED=`objdump -t "$DETECTED_STATIC_LIBRARY" 2> /dev/null | grep -q "\.kernel"; echo $?`
       if [[ $KERNEL_UNDETECTED == "0" ]]; then
 
         # .kernel section detected, extract the objects from the archieve
@@ -480,7 +480,7 @@ do
     fi
 
     # detect whether the objects in the static library contain a .kernel section
-    KERNEL_UNDETECTED=`objdump -t "$OBJ" | grep -q "\.kernel"; echo $?`
+    KERNEL_UNDETECTED=`objdump -t "$OBJ" 2> /dev/null | grep -q "\.kernel"; echo $?`
     if [[ $KERNEL_UNDETECTED == "0" ]]; then
 
       FILE=`basename "$OBJ"` # remove path
