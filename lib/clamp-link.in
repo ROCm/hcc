@@ -7,6 +7,9 @@ then
   set -x
 fi
 
+# directory where files are dumped
+KMDUMPDIR="${KMDUMPDIR:=.}"
+
 # dump the isa
 KMDUMPISA="${KMDUMPISA:=0}"
 
