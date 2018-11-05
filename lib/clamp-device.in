@@ -224,9 +224,9 @@ fi
 
 if [ $KMDUMPISA == "1" ]; then
   if [ $KMTHINLTO == "1" ]; then
-    cp $2 ./dump-$AMDGPU_TARGET.isabin
+    cp $2 ${KMDUMPDIR}/dump-$AMDGPU_TARGET.isabin
   else
-    cp $2.isabin ./dump-$AMDGPU_TARGET.isabin
+    cp $2.isabin ${KMDUMPDIR}/dump-$AMDGPU_TARGET.isabin
   fi
   $LLC $KMOPTLLC -mtriple amdgcn--amdhsa-amdgiz -mcpu=$AMDGPU_TARGET $CODE_OBJECT_FORMAT -filetype=asm -o $2.isa $2.opt.bc
   mv $2.isa ${KMDUMPDIR}/dump-$AMDGPU_TARGET.isa
