@@ -121,8 +121,8 @@ public:
         if (_callback_fun != NULL) {
             op_record_t record {
                 Domain,                               // domain id
-                _op_id,                               // operation kind
-                (activity_kind_t)command_id,          // command id
+                (activity_kind_t)command_id,          // activity kind
+                _op_id,                               // operation id
                 _record_id,                           // activity correlation id
                 _timer->timestamp_to_ns(begin_ts),    // begin timestamp, ns
                 _timer->timestamp_to_ns(end_ts),      // end timestamp, ns
