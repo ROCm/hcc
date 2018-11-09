@@ -68,12 +68,14 @@ LLD=$BINDIR/ld.lld
 # Determine the ROCm device libs path
 ################
 
-ROCM_DEVICE_LIBS_SEARCH_PATHS="@ROCM_DEVICE_LIB_PATHS@"
+
+HCC_BIN_PATH=$(dirname -- "$(readlink -f -- "$BASH_SOURCE")")
+ROCM_DEVICE_LIBS_SEARCH_PATHS="$HCC_BIN_PATH/../../rocdl/lib;$HCC_BIN_PATH/../rocdl/lib;@ROCM_DEVICE_LIB_PATHS@"
 ROCM_LIB=""
 for SEARCH_PATH in $(echo $ROCM_DEVICE_LIBS_SEARCH_PATHS | tr ";" "\n")
 do
   if [ -f "$SEARCH_PATH/ocml.amdgcn.bc" ]; then
-    ROCM_LIB=$SEARCH_PATH
+    ROCM_LIB="$(readlink -f -- "$SEARCH_PATH")"
     break
   fi
 done
