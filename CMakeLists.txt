@@ -461,14 +461,6 @@ if (HCC_INTEGRATE_ROCDL)
           PATTERN transformed_src EXCLUDE
           PATTERN utils EXCLUDE
   )
-
-  # create search paths for ROCDL
-  list(APPEND ROCM_DEVICE_LIB_PATHS ${ROCDL_BUILD_DIR}/lib)
-  if (NOT CPACK_SET_DESTDIR)
-    list(APPEND ROCM_DEVICE_LIB_PATHS ${CPACK_PACKAGING_INSTALL_PREFIX}/rocdl/lib)
-  endif(NOT CPACK_SET_DESTDIR)
-  list(APPEND ROCM_DEVICE_LIB_PATHS ${CMAKE_INSTALL_PREFIX}/rocdl/lib)
-
 endif(HCC_INTEGRATE_ROCDL)
 
 add_subdirectory(hcc_config)
@@ -552,7 +544,7 @@ set(CPACK_DEBIAN_PACKAGE_SECTION "devel")
 set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA
   "${PROJECT_BINARY_DIR}/packaging/debian/postinst;${PROJECT_BINARY_DIR}/packaging/debian/prerm")
 
-set(HCC_GENERAL_DEBIAN_DEP "g++-multilib, gcc-multilib, findutils, libelf1, libpci3, file")
+set(HCC_GENERAL_DEBIAN_DEP "coreutils, g++-multilib, gcc-multilib, findutils, libelf1, libpci3, file")
 
 if ( USE_LIBCXX )
   set(HCC_LIBCXX_DEBIAN_DEP ", libc++1, libc++-dev, libc++abi1, libc++abi-dev")
@@ -582,7 +574,7 @@ set(CPACK_RPM_PRE_UNINSTALL_SCRIPT_FILE "${PROJECT_BINARY_DIR}/packaging/debian/
 # disable automatic shared libraries dependency detection
 set(CPACK_RPM_PACKAGE_AUTOREQ 0)
 
-set(HCC_GENERAL_RPM_DEP "findutils, elfutils-libelf, pciutils-libs, file, pth")
+set(HCC_GENERAL_RPM_DEP "coreutils, findutils, elfutils-libelf, pciutils-libs, file, pth")
 if ( USE_LIBCXX )
   set(HCC_LIBCXX_RPM_DEP ", libcxx, libcxxabi")
 else ( USE_LIBCXX )
