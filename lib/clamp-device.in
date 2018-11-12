@@ -37,6 +37,9 @@ KMHACKLLVM="${KMHACKLLVM:=0}"
 # enable ThinLTO
 KMTHINLTO="${KMTHINLTO:=0}"
 
+# flag for early finalization
+AMDGPU_OBJ_CODEGEN="0"
+
 if [ $KMDBSCRIPT == "1" ]
 then
   set -x
@@ -97,6 +100,11 @@ do
   case $ARG in
     --amdgpu-target=*)
     AMDGPU_TARGET="${ARG#*=}"
+    continue
+    ;;
+    --early-finalize)
+    AMDGPU_OBJ_CODEGEN="1"
+    KMTHINLTO="0"
     continue
     ;;
     --hcc-extra-libs=*)

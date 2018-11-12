@@ -139,7 +139,7 @@ if [ $AMDGPU_OBJ_CODEGEN == 1 ]; then
   declare -a pids
   # for each GPU target, lower to GCN ISA in HSACO format
   for AMDGPU_TARGET in ${AMDGPU_TARGET_ARRAY[@]}; do
-    { $CLAMP_DEVICE "$KERNEL_INPUT" "$TEMP_DIR/kernel-$AMDGPU_TARGET.hsaco" --amdgpu-target=$AMDGPU_TARGET; } &
+    { $CLAMP_DEVICE "$KERNEL_INPUT" "$TEMP_DIR/kernel-$AMDGPU_TARGET.hsaco" --amdgpu-target=$AMDGPU_TARGET --early-finalize ; } &
 
     # error handling
     pids+=("${pids[@]}" "$!")
