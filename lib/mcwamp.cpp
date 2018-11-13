@@ -31,6 +31,10 @@ struct RuntimeImpl {
     m_PushArgImpl(nullptr),
     m_PushArgPtrImpl(nullptr),
     m_GetContextImpl(nullptr),
+    m_SetActivityRecordImpl(nullptr),
+    m_GetActivityCoordImpl(nullptr),
+    m_SetActivityCallbackImpl(nullptr),
+    m_GetCmdNameImpl(nullptr),
     isCPU(false) {
     //std::cout << "dlopen(" << libraryName << ")\n";
     m_RuntimeHandle = dlopen(libraryName, RTLD_LAZY|RTLD_NODELETE);
@@ -52,6 +56,10 @@ struct RuntimeImpl {
     m_PushArgImpl = (PushArgImpl_t) dlsym(m_RuntimeHandle, "PushArgImpl");
     m_PushArgPtrImpl = (PushArgPtrImpl_t) dlsym(m_RuntimeHandle, "PushArgPtrImpl");
     m_GetContextImpl= (GetContextImpl_t) dlsym(m_RuntimeHandle, "GetContextImpl");
+    m_SetActivityRecordImpl = (SetActivityRecordImpl_t) dlsym(m_RuntimeHandle, "SetActivityRecordImpl");
+    m_GetActivityCoordImpl = (GetActivityCoordImpl_t) dlsym(m_RuntimeHandle, "GetActivityCoordImpl");
+    m_SetActivityCallbackImpl = (SetActivityCallbackImpl_t) dlsym(m_RuntimeHandle, "SetActivityCallbackImpl");
+    m_GetCmdNameImpl = (GetCmdNameImpl_t) dlsym(m_RuntimeHandle, "GetCmdNameImpl");
   }
 
   void set_cpu() { isCPU = true; }
@@ -62,6 +70,13 @@ struct RuntimeImpl {
   PushArgImpl_t m_PushArgImpl;
   PushArgPtrImpl_t m_PushArgPtrImpl;
   GetContextImpl_t m_GetContextImpl;
+
+  // Activity profiling routines
+  SetActivityRecordImpl_t m_SetActivityRecordImpl;
+  GetActivityCoordImpl_t m_GetActivityCoordImpl;
+  SetActivityCallbackImpl_t m_SetActivityCallbackImpl;
+  GetCmdNameImpl_t m_GetCmdNameImpl;
+
   bool isCPU;
 };
 
@@ -341,6 +356,20 @@ void PushArg(void *k_, int idx, size_t sz, const void *s) {
 }
 void PushArgPtr(void *k_, int idx, size_t sz, const void *s) {
   GetOrInitRuntime()->m_PushArgPtrImpl(k_, idx, sz, s);
+}
+
+// Activity profiling routines
+void SetActivityRecord(record_id_t record_id) {
+  GetOrInitRuntime()->m_SetActivityRecordImpl(record_id);
+}
+void GetActivityCoord(int* device_id, uint64_t* queue_id) {
+  GetOrInitRuntime()->m_GetActivityCoordImpl(device_id, queue_id);
+}
+bool SetActivityCallback(uint32_t op, void* callback, void* arg) {
+  return GetOrInitRuntime()->m_SetActivityCallbackImpl(op, callback, arg);
+}
+const char* GetCmdName(uint32_t id) {
+  return GetOrInitRuntime()->m_GetCmdNameImpl(id);
 }
 
 } // namespace CLAMP
