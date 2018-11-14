@@ -1,4 +1,6 @@
 // RUN: %hc %s -o %t.out && %t.out
+// XFAIL: *
+// SWDEV-170201
 
 #include <hc.hpp>
 #include <string>
