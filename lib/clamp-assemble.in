@@ -11,22 +11,28 @@ fi
 BINDIR=$(dirname $0)
 EMBED=$BINDIR/clamp-embed
 
+# Add error handling functions
+. $BINDIR/error-check
+
 if [ "$#" -ne 3 ]; then
   echo "Usage: $0 kernel-bitcode object elf_section_name" >&2
-  exit 1
+  exit -1
 fi
 
 if [ ! -f "$1" ]; then
   echo "kernel-bitcode $1 is not valid" >&2
-  exit 1
+  exit -1
 fi
 
 if [ -f "$2" ]; then
   mv "$2" "$2.host.o"
   $EMBED "$1" "$2.kernel.o" "$3"
+  check_exit_status $EMBED
   ld -r "$2.kernel.o" "$2.host.o" -o "$2"
+  check_exit_status ld
   rm "$2.kernel.o" "$2.host.o"
 else
   $EMBED "$1" "$2" "$3"
+  check_exit_status $EMBED
 fi
 
