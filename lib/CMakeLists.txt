@@ -42,6 +42,7 @@ install(PROGRAMS ${PROJECT_BINARY_DIR}/compiler/bin/clamp-device
     ${PROJECT_BINARY_DIR}/compiler/bin/clamp-embed
     ${PROJECT_BINARY_DIR}/compiler/bin/clamp-assemble
     ${PROJECT_BINARY_DIR}/compiler/bin/clamp-link
+    ${PROJECT_BINARY_DIR}/compiler/bin/error-check
     ${PROJECT_BINARY_DIR}/compiler/bin/hc-kernel-assemble
     ${PROJECT_BINARY_DIR}/compiler/bin/hc-host-assemble
     DESTINATION bin)

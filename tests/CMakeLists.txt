@@ -36,6 +36,10 @@ configure_file(
   ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-assemble @ONLY)
 
 configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/../lib/error-check.in
+  ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/error-check @ONLY)
+
+configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/../lib/hc-kernel-assemble.in
   ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/hc-kernel-assemble @ONLY)
 
