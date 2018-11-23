@@ -5639,13 +5639,6 @@ std::ostream& operator<<(std::ostream& os, const HSAOp & op)
 
 extern "C" void SetActivityRecordImpl(unsigned long record_id) {
     activity_prof::current.record_id = record_id;
-    activity_prof::current.device_id = -1;
-    activity_prof::current.queue_id = 0;
-}
-
-extern "C" void GetActivityCoordImpl(int* device_id, uint64_t* queue_id) {
-    *device_id = activity_prof::current.device_id;
-    *queue_id = activity_prof::current.queue_id;
 }
 
 extern "C" bool SetActivityCallbackImpl(unsigned op, void* callback, void* arg) {

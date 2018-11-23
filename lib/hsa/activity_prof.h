@@ -39,8 +39,6 @@ typedef Kalmar::hcCommandKind command_id_t;
 // Current thread local data
 struct current_t {
     record_id_t record_id;
-    int device_id;
-    uint64_t queue_id;
 };
 
 // Activity callbacks
@@ -108,9 +106,6 @@ public:
         callbacks.get(_op_id, &_callback_fun, &_callback_arg);
         if (_callback_fun != NULL) {
             _record_id = current.record_id;
-            current.device_id = _op_coord._deviceId;
-            current.queue_id = _op_coord._queueId;
-
             if (_timer == NULL) _timer = new timer_t;
         }
     }

@@ -32,7 +32,6 @@ struct RuntimeImpl {
     m_PushArgPtrImpl(nullptr),
     m_GetContextImpl(nullptr),
     m_SetActivityRecordImpl(nullptr),
-    m_GetActivityCoordImpl(nullptr),
     m_SetActivityCallbackImpl(nullptr),
     m_GetCmdNameImpl(nullptr),
     isCPU(false) {
@@ -57,7 +56,6 @@ struct RuntimeImpl {
     m_PushArgPtrImpl = (PushArgPtrImpl_t) dlsym(m_RuntimeHandle, "PushArgPtrImpl");
     m_GetContextImpl= (GetContextImpl_t) dlsym(m_RuntimeHandle, "GetContextImpl");
     m_SetActivityRecordImpl = (SetActivityRecordImpl_t) dlsym(m_RuntimeHandle, "SetActivityRecordImpl");
-    m_GetActivityCoordImpl = (GetActivityCoordImpl_t) dlsym(m_RuntimeHandle, "GetActivityCoordImpl");
     m_SetActivityCallbackImpl = (SetActivityCallbackImpl_t) dlsym(m_RuntimeHandle, "SetActivityCallbackImpl");
     m_GetCmdNameImpl = (GetCmdNameImpl_t) dlsym(m_RuntimeHandle, "GetCmdNameImpl");
   }
@@ -73,7 +71,6 @@ struct RuntimeImpl {
 
   // Activity profiling routines
   SetActivityRecordImpl_t m_SetActivityRecordImpl;
-  GetActivityCoordImpl_t m_GetActivityCoordImpl;
   SetActivityCallbackImpl_t m_SetActivityCallbackImpl;
   GetCmdNameImpl_t m_GetCmdNameImpl;
 
@@ -361,9 +358,6 @@ void PushArgPtr(void *k_, int idx, size_t sz, const void *s) {
 // Activity profiling routines
 void SetActivityRecord(record_id_t record_id) {
   GetOrInitRuntime()->m_SetActivityRecordImpl(record_id);
-}
-void GetActivityCoord(int* device_id, uint64_t* queue_id) {
-  GetOrInitRuntime()->m_GetActivityCoordImpl(device_id, queue_id);
 }
 bool SetActivityCallback(uint32_t op, void* callback, void* arg) {
   return GetOrInitRuntime()->m_SetActivityCallbackImpl(op, callback, arg);
