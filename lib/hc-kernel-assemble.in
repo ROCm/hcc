@@ -29,6 +29,9 @@ CLAMP_ASM=$BINDIR/clamp-assemble
 LIBPATH=$BINDIR/../lib
 CLANG_OFFLOAD_BUNDLER=$BINDIR/clang-offload-bundler
 
+# Add error handling functions
+. $BINDIR/error-check
+
 # At build directory, HCC compiler tools are placed under compiler/bin/, and
 # header files are placed under include/. At install directory, HCC compiler
 # tools are placed under bin/, and header files are placed under include/.
@@ -64,7 +67,7 @@ esac
 
 if [ "$#" -lt 2 ]; then
   echo "Usage: $0 kernel-bitcode object" >&2
-  exit 1
+  exit -1
 fi
 
 AMDGPU_TARGET_ARRAY=()
@@ -101,7 +104,7 @@ fi
 
 if [ ! -f "$KERNEL_INPUT" ]; then
   echo "kernel-bitcode $KERNEL_INPUT is not valid" >&2
-  exit 1
+  exit -1
 fi
 
 CO="-c -o"
@@ -117,9 +120,11 @@ KERNEL_SECTION=".kernel"
 # hip-kernel-assemble goes after hip-host-assemble, so attempt to link object from host
 if [ -f "$2" ]; then
   mv "$2" "$TEMP_DIR/$BASENAME.tmp.o"
+  check_exit_status mv
 fi
 
 cp $KERNEL_INPUT "$TEMP_NAME.bc"
+check_exit_status cp
 if [ $KMDUMPLLVM == "1" ]; then
   $LLVM_DIS "$TEMP_NAME.bc" -o "$TEMP_NAME.ll"
   cp "$TEMP_NAME.ll" ./dump.kernel_input.ll
@@ -156,25 +161,30 @@ if [ $AMDGPU_OBJ_CODEGEN == 1 ]; then
     wait $pid || ret=$((ret+$?))
   done
   if [ $ret != 0 ]; then
-    exit $ret
+    exit -1
   fi
 
   # invoke clang-offload-bundler
   $CLANG_OFFLOAD_BUNDLER -type=o $CLANG_OFFLOAD_BUNDLER_INPUTS_ARGS $CLANG_OFFLOAD_BUNDLER_TARGETS_ARGS -outputs=$TEMP_DIR/kernel.bundle
+  check_exit_status $CLANG_OFFLOAD_BUNDLER
 
   OLD_PWD=$PWD
   cd $TEMP_DIR
   $CLAMP_ASM "kernel.bundle" "$TEMP_NAME.camp.o" "$KERNEL_SECTION"
+  check_exit_status $CLAMP_ASM
   cd $OLD_PWD
 else
   ln -s "$KERNEL_INPUT" "$1.bc"
   $CLAMP_ASM "$1.bc" "$TEMP_NAME.camp.o" "$KERNEL_IR_SECTION"
+  check_exit_status $CLAMP_ASM
 fi
 
 if [ -f "$TEMP_DIR/$BASENAME.tmp.o" ]; then
   ld -r --allow-multiple-definition "$TEMP_DIR/$BASENAME.tmp.o" "$TEMP_NAME.camp.o" -o "$2"
+  check_exit_status ld
 else
   mv "$TEMP_NAME.camp.o" "$2"
+  check_exit_status mv
 fi
 
 rm -rf "$TEMP_DIR"
