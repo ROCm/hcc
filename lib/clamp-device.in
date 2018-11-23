@@ -159,14 +159,11 @@ elif [ $AMDGPU_TARGET == "gfx803" ]; then
 elif [ $AMDGPU_TARGET == "gfx900" ]; then
   OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_900.amdgcn.bc"
   HCC_EXTRA_ARCH_FILE=$HCC_EXTRA_LIBRARIES_GFX900
-elif [ $AMDGPU_TARGET == "gfx901" ]; then
-  OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_901.amdgcn.bc"
-  HCC_EXTRA_ARCH_FILE=$HCC_EXTRA_LIBRARIES_GFX901
 elif [ $AMDGPU_TARGET == "gfx906" ]; then
   OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_906.amdgcn.bc"
   HCC_EXTRA_ARCH_FILE=$HCC_EXTRA_LIBRARIES_GFX906
 fi
-HCC_BC_LIBS="$ROCM_LIB/hc.amdgcn.bc $ROCM_LIB/hip.amdgcn.bc $ROCM_LIB/opencl.amdgcn.bc $ROCM_LIB/ocml.amdgcn.bc $ROCM_LIB/ockl.amdgcn.bc $OCLC_ISA_VERSION_LIB $ROCM_LIB/oclc_finite_only_off.amdgcn.bc $ROCM_LIB/oclc_daz_opt_off.amdgcn.bc $ROCM_LIB/oclc_correctly_rounded_sqrt_on.amdgcn.bc $ROCM_LIB/oclc_unsafe_math_off.amdgcn.bc"
+HCC_BC_LIBS="$ROCM_LIB/hc.amdgcn.bc $ROCM_LIB/hip.amdgcn.bc $ROCM_LIB/opencl.amdgcn.bc $ROCM_LIB/ocml.amdgcn.bc $ROCM_LIB/ockl.amdgcn.bc $OCLC_ISA_VERSION_LIB $ROCM_LIB/oclc_finite_only_off.amdgcn.bc $ROCM_LIB/oclc_daz_opt_off.amdgcn.bc $ROCM_LIB/oclc_correctly_rounded_sqrt_on.amdgcn.bc $ROCM_LIB/oclc_unsafe_math_off.amdgcn.bc $ROCM_LIB/irif.amdgcn.bc" 
 
 # include libraries specified through the HCC_EXTRA_LIBRARIES environment variable
 HCC_BC_LIBS="$HCC_BC_LIBS  $HCC_EXTRA_LIBRARIES $HCC_EXTRA_ARCH_FILE"
