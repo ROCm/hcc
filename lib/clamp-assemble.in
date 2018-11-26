@@ -16,12 +16,12 @@ EMBED=$BINDIR/clamp-embed
 
 if [ "$#" -ne 3 ]; then
   echo "Usage: $0 kernel-bitcode object elf_section_name" >&2
-  exit -1
+  exit_with_code -1
 fi
 
 if [ ! -f "$1" ]; then
   echo "kernel-bitcode $1 is not valid" >&2
-  exit -1
+  exit_with_code -1
 fi
 
 if [ -f "$2" ]; then

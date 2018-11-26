@@ -42,7 +42,7 @@ CXXFLAGS="-std=c++amp -I$BINDIR/../include -I$BINDIR/../../include -fPIC"
 # Add additional flags if using libc++ for C++ runtime
 USE_LIBCXX=@USE_LIBCXX@
 if [ "$USE_LIBCXX" == "ON" ]; then
- CXXFLAGS+=" -stdlib=libc++ -I@LIBCXX_HEADER@" 
+ CXXFLAGS+=" -stdlib=libc++ -I@LIBCXX_HEADER@"
 fi
 
 # Set additional CXXFLAGS based on CMAKE_BUILD_TYPE
@@ -67,7 +67,7 @@ esac
 
 if [ "$#" -lt 2 ]; then
   echo "Usage: $0 kernel-bitcode object" >&2
-  exit -1
+  exit_with_code -1
 fi
 
 AMDGPU_TARGET_ARRAY=()
@@ -104,7 +104,7 @@ fi
 
 if [ ! -f "$KERNEL_INPUT" ]; then
   echo "kernel-bitcode $KERNEL_INPUT is not valid" >&2
-  exit -1
+  exit_with_code -1
 fi
 
 CO="-c -o"
@@ -161,7 +161,7 @@ if [ $AMDGPU_OBJ_CODEGEN == 1 ]; then
     wait $pid || ret=$((ret+$?))
   done
   if [ $ret != 0 ]; then
-    exit -1
+    exit_with_code -1
   fi
 
   # invoke clang-offload-bundler

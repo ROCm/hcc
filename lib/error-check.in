@@ -23,3 +23,12 @@ check_exit_status ()
   fi
   return 0;
 }
+
+exit_with_code ()
+{
+  local code="${@}"
+  local src_lineno="${BASH_SOURCE[1]##*/}[${BASH_LINENO[0]}]"
+
+  echo "Error: $src_lineno: failed with status $code"
+  exit -1
+}
