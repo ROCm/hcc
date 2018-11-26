@@ -20,6 +20,8 @@ THE SOFTWARE.
 #ifndef ACTIVITY_PROF_H
 #define ACTIVITY_PROF_H
 
+#include <mutex>
+
 #include "kalmar_runtime.h"
 
 #define ACTIVITY_PROF_INSTANCES(current, callbacks)                      \
@@ -46,23 +48,25 @@ template <typename Fun>
 class ActivityCallbacksTableTempl {
     public:
     typedef Fun callback_fun_t;
-    typedef std::atomic<Fun> fun_ptr_t;
+    typedef std::recursive_mutex mutex_t;
 
     ActivityCallbacksTableTempl() {
+        std::lock_guard<mutex_t> lck(_mutex);
         for (op_id_t i = 0; i < hc::HSA_OP_ID_NUM; ++i) {
-          _arg[i] = NULL;
-          _fun[i].store(NULL);
+            _arg[i] = NULL;
+            _fun[i] = NULL;
         }
     }
 
     bool set(const op_id_t& op_id, const callback_fun_t& fun, const callback_arg_t& arg) {
+        std::lock_guard<mutex_t> lck(_mutex);
         if (op_id == hc::HSA_OP_ID_ANY) {
             for (op_id_t i = 0; i < hc::HSA_OP_ID_NUM; ++i) {
                 set(i, fun, arg);
             }
         } else if (op_id < hc::HSA_OP_ID_NUM) {
             _arg[op_id] = arg;
-            _fun[op_id].store(fun, std::memory_order_release);
+            _fun[op_id] = fun;
         } else {
           return false;
         }
@@ -70,13 +74,15 @@ class ActivityCallbacksTableTempl {
     }
 
     void get(const op_id_t& op_id, callback_fun_t* fun, callback_arg_t* arg) const {
-        *fun = _fun[op_id].load(std::memory_order_acquire);
+        std::lock_guard<mutex_t> lck(*const_cast<mutex_t*>(&_mutex));
+        *fun = _fun[op_id];
         *arg = _arg[op_id];
     }
 
     private:
-    fun_ptr_t _fun[hc::HSA_OP_ID_NUM];
+    callback_fun_t _fun[hc::HSA_OP_ID_NUM];
     callback_arg_t _arg[hc::HSA_OP_ID_NUM];
+    mutex_t _mutex;
 };
 
 // Activity profile class
