@@ -123,7 +123,7 @@ if [ -f "$2" ]; then
   check_exit_status mv
 fi
 
-cp $KERNEL_INPUT "$TEMP_NAME.bc"
+cp "$KERNEL_INPUT" "$TEMP_NAME.bc"
 check_exit_status cp
 if [ $KMDUMPLLVM == "1" ]; then
   $LLVM_DIS "$TEMP_NAME.bc" -o "$TEMP_NAME.ll"
