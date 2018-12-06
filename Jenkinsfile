@@ -9,7 +9,8 @@ properties([buildDiscarder(logRotator(
     numToKeepStr: '10')),
     disableConcurrentBuilds(),
     parameters([booleanParam( name: 'run_hip_integration_testing', defaultValue: false, description: 'Build hip with this compiler and run hip unit tests' ),
-                string( name: 'hip_integration_branch', defaultValue: 'ROCm-Developer-Tools/HIP/master', description: 'Path to hip branch to build & test' )]),
+                string( name: 'hip_integration_branch', defaultValue: 'ROCm-Developer-Tools/HIP/master', description: 'Path to hip branch to build & test' ),
+                choice ( name: 'build_os', choices: "ubuntu-16.04\ncentos-7", description: '')]),
     [$class: 'CopyArtifactPermissionProperty', projectNames: '*']
   ])
 
@@ -61,10 +62,10 @@ node( 'hcctest' )
   }
 
   def hcc_build_image = null
-  stage('ubuntu-16.04 image')
+  stage('Build docker image')
   {
     def build_org = "hcc-lc"
-    def build_type_name = "build-ubuntu-16.04"
+    def build_type_name = "build-${params.build_os}"
     def dockerfile_name = "dockerfile-${build_type_name}"
     def build_image_name = "${build_type_name}"
     dir('docker')
@@ -145,7 +146,7 @@ node( 'hcctest' )
   stage('artifactory')
   {
     def artifactory_org = "${env.JOB_NAME}".toLowerCase()
-    def image_name = "hcc-lc-ubuntu-16.04"
+    def image_name = "hcc-lc-${params.build_os}"
 
     dir("${build_dir_release_abs}/docker")
     {
