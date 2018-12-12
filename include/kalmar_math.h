@@ -486,10 +486,18 @@ namespace Kalmar
         float fmod(float x, float y) { return fast_math::fmodf(x, y); }
 
         HCC_MATH_LIB_FN
-        float frexpf(float x, int *exp) { return __ocml_frexp_f32(x, (__attribute__((address_space(5))) int*)exp); }
+        float frexpf(float x, int *exp) {
+        	int e;
+        	float ret = __ocml_frexp_f32(x, (__attribute__((address_space(5))) int*) &e);
+        	*exp = e; return ret;
+        }
 
         HCC_MATH_LIB_FN
-        _Float16 frexp(_Float16 x, int *exp) { return __ocml_frexp_f16(x, (__attribute__((address_space(5))) int*) exp); }
+        _Float16 frexp(_Float16 x, int *exp) {
+        	int e;
+        	_Float16 ret = __ocml_frexp_f16(x, (__attribute__((address_space(5))) int*) &e);
+            *exp = e; return ret;
+        }
 
         HCC_MATH_LIB_FN
         float frexp(float x, int *exp) { return fast_math::frexpf(x, exp); }
@@ -568,11 +576,16 @@ namespace Kalmar
         float log2(float x) { return fast_math::log2f(x); }
 
         HCC_MATH_LIB_FN
-        float modff(float x, float *iptr) { return __ocml_modf_f32(x, (__attribute__((address_space(5))) float*)iptr); }
+        float modff(float x, float *iptr) {
+        	float i;  float ret = __ocml_modf_f32(x, (__attribute__((address_space(5))) float*)&i);
+        	*iptr = i; return ret;
+        }
 
         HCC_MATH_LIB_FN
-        _Float16 modf(_Float16 x, _Float16 *iptr) { return __ocml_modf_f16(x, (__attribute__((address_space(5))) _Float16*)iptr); }
-
+        _Float16 modf(_Float16 x, _Float16 *iptr) {
+        	_Float16 i; _Float16 ret = __ocml_modf_f16(x, (__attribute__((address_space(5))) _Float16*) &i);
+        	*iptr = i; return ret;
+        }
 
         HCC_MATH_LIB_FN
         float modf(float x, float *iptr) { return fast_math::modff(x, iptr); }
@@ -623,12 +636,18 @@ namespace Kalmar
         float sin(float x) { return fast_math::sinf(x); }
 
         HCC_MATH_LIB_FN
-        void sincosf(float x, float *s, float *c) { *s = __ocml_sincos_f32(x, (__attribute__((address_space(5))) float*)c); }
+        void sincosf(float x, float *s, float *c) {
+        	float lc;
+        	*s = __ocml_sincos_f32(x, (__attribute__((address_space(5))) float*)&lc);
+        	*c=lc;
+        }
 
         HCC_MATH_LIB_FN
         void sincos(_Float16 x, _Float16 *s, _Float16 *c)
         {
-            *s = __ocml_sincos_f16(x, (__attribute__((address_space(5))) _Float16*) c);
+        	_Float16 lc;
+            *s = __ocml_sincos_f16(x, (__attribute__((address_space(5))) _Float16*) &lc);
+            *c = lc;
         }
 
         HCC_MATH_LIB_FN
@@ -1154,16 +1173,22 @@ namespace Kalmar
         int fpclassify(double x) { return __ocml_fpclassify_f64(x); }
 
         HCC_MATH_LIB_FN
-        float frexpf(float x, int *exp) { return __ocml_frexp_f32(x, (__attribute__((address_space(5))) int*) exp); }
+        float frexpf(float x, int *exp) {
+        	int e; float ret =__ocml_frexp_f32(x, (__attribute__((address_space(5))) int*) &e);
+            *exp = e;  return ret;
+        }
 
         HCC_MATH_LIB_FN
-        _Float16 frexp(_Float16 x, int* exp) { return __ocml_frexp_f16(x, (__attribute__((address_space(5))) int*) exp); }
+        _Float16 frexp(_Float16 x, int* exp) {
+        	int e; _Float16 ret = __ocml_frexp_f16(x, (__attribute__((address_space(5))) int*) &e);
+        	*exp = e; return ret;
+        }
 
         HCC_MATH_LIB_FN
-        float frexp(float x, int *exp) { return __ocml_frexp_f32(x, (__attribute__((address_space(5))) int*) exp); }
+        float frexp(float x, int *exp) { return precise_math::frexpf(x, exp); }
 
         HCC_MATH_LIB_FN
-        double frexp(double x, int *exp) { return __ocml_frexp_f64(x, (__attribute__((address_space(5))) int*) exp); }
+        double frexp(double x, int *exp) { return precise_math::frexpf(x, exp); }
 
         HCC_MATH_LIB_FN
         float hypotf(float x, float y) { return __ocml_hypot_f32(x, y); }
@@ -1310,16 +1335,25 @@ namespace Kalmar
         double logb(double x) { return __ocml_logb_f64(x); }
 
         HCC_MATH_LIB_FN
-        float modff(float x, float *iptr) { return __ocml_modf_f32(x, (__attribute__((address_space(5))) float*)iptr); }
+        float modff(float x, float *iptr) {
+        	float i;  float ret = __ocml_modf_f32(x, (__attribute__((address_space(5))) float*)&i);
+        	*iptr = i; return ret;
+        }
 
         HCC_MATH_LIB_FN
-        _Float16 modf(_Float16 x, _Float16* p) { return __ocml_modf_f16(x, (__attribute__((address_space(5))) _Float16*) p); }
+        _Float16 modf(_Float16 x, _Float16* p) {
+        	_Float16 lp; _Float16 ret = __ocml_modf_f16(x, (__attribute__((address_space(5))) _Float16*) &lp);
+        	*p = lp; return ret;
+        }
 
         HCC_MATH_LIB_FN
-        float modf(float x, float* p) { return __ocml_modf_f32(x, (__attribute__((address_space(5))) float*)p); }
+        float modf(float x, float* p) { return precise_math::modff(x, p); }
 
         HCC_MATH_LIB_FN
-        double modf(double x, double* p) { return __ocml_modf_f64(x, (__attribute__((address_space(5))) double*) p); }
+        double modf(double x, double* p) {
+        	double lp; double ret = __ocml_modf_f64(x, (__attribute__((address_space(5))) double*) &lp);
+        	*p = lp; return ret;
+        }
 
         HCC_MATH_LIB_FN
         _Float16 nanh(int x) { return __ocml_nan_f16(x); }
@@ -1414,25 +1448,25 @@ namespace Kalmar
         HCC_MATH_LIB_FN
         float remquof(float x, float y, int *quo)
         {
-            return __ocml_remquo_f32(x, y, (__attribute__((address_space(5))) int*)quo);
+        	int lq; float ret = __ocml_remquo_f32(x, y, (__attribute__((address_space(5))) int*) &lq);
+        	*quo = lq; return ret;
         }
 
         HCC_MATH_LIB_FN
         _Float16 remquo(_Float16 x, _Float16 y, int* q)
         {
-            return __ocml_remquo_f16(x, y, (__attribute__((address_space(5))) int*) q);
+        	int lq; _Float16 ret = __ocml_remquo_f16(x, y, (__attribute__((address_space(5))) int*) &lq);
+        	*q = lq; return ret;
         }
 
         HCC_MATH_LIB_FN
-        float remquo(float x, float y, int *quo)
-        {
-            return __ocml_remquo_f32(x, y, (__attribute__((address_space(5))) int*) quo);
-        }
+        float remquo(float x, float y, int *quo) { return precise_math::remquof(x, y, quo); }
 
         HCC_MATH_LIB_FN
         double remquo(double x, double y, int *quo)
         {
-            return __ocml_remquo_f64(x, y, (__attribute__((address_space(5))) int*) quo);
+        	int lq; double ret = __ocml_remquo_f64(x, y, (__attribute__((address_space(5))) int*) &lq);
+        	*quo = lq; return ret;
         }
 
         HCC_MATH_LIB_FN
@@ -1520,24 +1554,26 @@ namespace Kalmar
         double sin(double x) { return __ocml_sin_f64(x); }
 
         HCC_MATH_LIB_FN
-        void sincosf(float x, float *s, float *c) { *s = __ocml_sincos_f32(x, (__attribute__((address_space(5))) float*) c); }
+        void sincosf(float x, float *s, float *c) {
+        	float lc; *s = __ocml_sincos_f32(x, (__attribute__((address_space(5))) float*) &lc);
+        	*c = lc;
+        }
 
         HCC_MATH_LIB_FN
         void sincos(_Float16 x, _Float16* s, _Float16* c)
         {
-            *s = __ocml_sincos_f16(x, (__attribute__((address_space(5))) _Float16*) c);
+            _Float16 lc; *s = __ocml_sincos_f16(x, (__attribute__((address_space(5))) _Float16*) &lc);
+            *c = lc;
         }
 
         HCC_MATH_LIB_FN
-        void sincos(float x, float *s, float *c)
-        {
-        	sincosf(x, s, c);
-        }
-
+        void sincos(float x, float *s, float *c) { precise_math::sincosf(x, s, c); }
+       
         HCC_MATH_LIB_FN
         void sincos(double x, double *s, double *c)
         {
-            *s = __ocml_sincos_f64(x, (__attribute__((address_space(5))) double*) c);
+        	double lc; *s = __ocml_sincos_f64(x, (__attribute__((address_space(5))) double*) &lc);
+        	*c = lc;
         }
 
         HCC_MATH_LIB_FN
