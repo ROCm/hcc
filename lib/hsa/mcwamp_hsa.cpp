@@ -4293,9 +4293,6 @@ HSAQueue::dispatch_hsa_kernel(const hsa_kernel_dispatch_packet_t *aql,
     Kalmar::HSADevice* device = static_cast<Kalmar::HSADevice*>(this->getDev());
 
     std::shared_ptr<HSADispatch> sp_dispatch = std::make_shared<HSADispatch>(device, this/*queue*/, nullptr, aql);
-    if (HCC_OPT_FLUSH) {
-        sp_dispatch->overrideAcquireFenceIfNeeded();
-    }
 
     HSADispatch *dispatch = sp_dispatch.get();
     waitForStreamDeps(dispatch);
@@ -4602,6 +4599,8 @@ HSADispatch::dispatchKernelWaitComplete() {
         // extract hsa_queue_t from HSAQueue
         hsa_queue_t* rocrQueue = hsaQueue()->acquireLockedRocrQueue();
 
+        overrideAcquireFenceIfNeeded();
+
         // dispatch kernel
         status = dispatchKernel(rocrQueue, arg_vec.data(), arg_vec.size(), true);
         STATUS_CHECK(status, __LINE__);
@@ -4643,6 +4642,8 @@ HSADispatch::dispatchKernelAsync(const void *hostKernarg, int hostKernargSize, b
     {
         // extract hsa_queue_t from HSAQueue
         hsa_queue_t* rocrQueue = hsaQueue()->acquireLockedRocrQueue();
+
+        overrideAcquireFenceIfNeeded();
 
         // dispatch kernel
         status = dispatchKernel(rocrQueue, hostKernarg, hostKernargSize, allocSignal);
@@ -4854,7 +4855,6 @@ HSADispatch::setLaunchConfiguration(const int dims, size_t *globalDims, size_t *
     if (HCC_OPT_FLUSH) {
         aql.header = ((HSA_FENCE_SCOPE_AGENT) << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
                      ((HSA_FENCE_SCOPE_AGENT) << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
-        overrideAcquireFenceIfNeeded();
     } else {
         aql.header = ((HSA_FENCE_SCOPE_SYSTEM) << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
                      ((HSA_FENCE_SCOPE_SYSTEM) << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
@@ -4896,10 +4896,26 @@ HSABarrier::waitComplete() {
 // TODO - remove hsaQueue parm.
 inline hsa_status_t
 HSABarrier::enqueueAsync(hc::memory_scope fenceScope) {
+    hc::memory_scope toDoReleaseFenceScope = fenceScope;
+    hc::memory_scope toDoAcquireFenceScope = fenceScope;
 
-    if (fenceScope == hc::system_scope) {
-        hsaQueue()->setNextSyncNeedsSysRelease(false);
+    hsa_queue_t* rocrQueue = hsaQueue()->acquireLockedRocrQueue();
+
+    if ( hsaQueue()->nextSyncNeedsSysRelease() ) {
+         toDoReleaseFenceScope = hc::system_scope;
+         DBOUTL( DB_CMD2, "absorb System Scope Release Fencing request from the HSAQueue") ;
     };
+
+    if ( toDoReleaseFenceScope == hc::system_scope )
+         hsaQueue()->setNextSyncNeedsSysRelease(false);
+
+    if ( hsaQueue()->nextKernelNeedsSysAcquire() ) {
+         toDoAcquireFenceScope = hc::system_scope;
+         DBOUTL( DB_CMD2, "absorb System Scope Acquire Fencing request from the HSAQueue") ;
+    };
+
+    if ( toDoAcquireFenceScope == hc::system_scope )
+         hsaQueue()->setNextKernelNeedsSysAcquire(false);
 
     if (fenceScope > _acquire_scope) {
         DBOUTL( DB_CMD2, "  marker overriding acquireScope(old:" << _acquire_scope << ") to match fenceScope = " << fenceScope);
@@ -4909,7 +4925,7 @@ HSABarrier::enqueueAsync(hc::memory_scope fenceScope) {
     // set acquire scope:
     unsigned fenceBits = 0;
 
-    switch (_acquire_scope) {
+    switch (toDoAcquireFenceScope) {
         case hc::no_scope:
             fenceBits |= ((HSA_FENCE_SCOPE_NONE) << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE);
             break;
@@ -4923,7 +4939,7 @@ HSABarrier::enqueueAsync(hc::memory_scope fenceScope) {
             STATUS_CHECK(HSA_STATUS_ERROR_INVALID_ARGUMENT, __LINE__);
     }
 
-    switch (fenceScope) {
+    switch (toDoReleaseFenceScope) {
         case hc::no_scope:
             fenceBits |= ((HSA_FENCE_SCOPE_NONE) << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
             break;
@@ -4994,6 +5010,8 @@ HSABarrier::enqueueAsync(hc::memory_scope fenceScope) {
 
         hsaQueue()->releaseLockedRocrQueue();
     }
+
+    hsaQueue()->releaseLockedRocrQueue();
 
     isDispatched = true;
 
