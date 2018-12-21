@@ -50,8 +50,8 @@ extern "C" __attribute__((const,amp)) uint32_t amp_get_group_id(unsigned int n);
 #define tile_static __attribute__((tile_static))
 #endif
 
-extern "C" __attribute__((noduplicate,hc)) void hc_barrier(unsigned int n);
-extern "C" __attribute__((noduplicate,amp)) void amp_barrier(unsigned int n) ;
+extern "C" __attribute__((convergent,hc)) void hc_barrier(unsigned int n);
+extern "C" __attribute__((convergent,amp)) void amp_barrier(unsigned int n) ;
 
 /// macro to set if we want default queue be thread-local or not
 #define TLS_QUEUE (1)
