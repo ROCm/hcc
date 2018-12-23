@@ -1,5 +1,5 @@
 
-// RUN: %hc %s -lhc_am -o %t.out && %t.out
+// RUN: %hc %s  -o %t.out && %t.out
 
 #include <cstdlib>
 #include <cstdio>
@@ -63,8 +63,8 @@ int main()
 
 
         char *a = am_alloc(10000, defaultAcc, 0);
-        char *b = am_alloc(20000, defaultAcc, amHostPinned);
-        char *c = am_alloc(cSize, defaultAcc, amHostCoherent);
+        char *b = am_alloc(20000, defaultAcc, am_host_pinned);
+        char *c = am_alloc(cSize, defaultAcc, am_host_coherent);
 
         // Simple tests to verify that the memory allocations to all 3 regions succeeded.
         assert(a);
@@ -88,7 +88,7 @@ int main()
             if (!a->get_is_emulated()) {
 
                 int *hostPtr = nullptr;
-                hostPtr = am_alloc(sizeElements, *a, amHostCoherent);
+                hostPtr = am_alloc(sizeElements, *a, am_host_coherent);
                 assert(hostPtr);
 
                 std::cout << "test: alloc coherent host mem on accelerator#" << a->get_seqnum() << " + accelerator_view::wait()\n";
@@ -103,7 +103,7 @@ int main()
                 assert (hc::am_free(hostPtr) == AM_SUCCESS);
 
 
-                hostPtr = am_alloc(sizeElements, *a, amHostPinned);
+                hostPtr = am_alloc(sizeElements, *a, am_host_pinned);
                 assert(hostPtr);
                 std::cout << "test: alloc non-coherent host mem on accelerator#" << a->get_seqnum() << " + accelerator_view::wait()\n";
                 accessFromAllAccs(numElements, hostPtr, WAIT_ACCELERATOR_VIEW);

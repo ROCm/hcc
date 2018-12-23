@@ -4,7 +4,6 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-
 #pragma once
 
 #include "hc_defines.hpp"
@@ -292,10 +291,10 @@ extern "C" _Float16 __ocml_trunc_f16(_Float16 x) [[hc]];
 extern "C" float __ocml_trunc_f32(float x) [[hc]];
 extern "C" double __ocml_trunc_f64(double x) [[hc]];
 
-#define HCC_MATH_LIB_FN inline __attribute__((used, hc))
-namespace detail
+#define HCC_MATH_LIB_FN inline __attribute__((used, hc, nothrow))
+namespace hc
 {
-    namespace fast_math
+    namespace detail
     {
         using std::acos;
         using ::acosf;
@@ -439,8 +438,11 @@ namespace detail
         HCC_MATH_LIB_FN
         _Float16 exp2(_Float16 x) { return __ocml_native_exp2_f16(x); }
 
-        HCC_MATH_LIB_FN
-        float exp2(float x) { return fast_math::exp2f(x); }
+            HCC_MATH_LIB_FN
+            _Float16 exp(_Float16 x)
+            {
+                return __hc_exp2_native_half(M_LOG2E * x);
+            }
 
         HCC_MATH_LIB_FN
         float fabsf(float x) { return __ocml_fabs_f32(x); }
@@ -448,8 +450,8 @@ namespace detail
         HCC_MATH_LIB_FN
         _Float16 fabs(_Float16 x) { return __ocml_fabs_f16(x); }
 
-        HCC_MATH_LIB_FN
-        float fabs(float x) { return fast_math::fabsf(x); }
+            HCC_MATH_LIB_FN
+            _Float16 exp2(_Float16 x) { return __hc_exp2_native_half(x); }
 
         HCC_MATH_LIB_FN
         float floorf(float x) { return __ocml_floor_f32(x); }
@@ -457,8 +459,8 @@ namespace detail
         HCC_MATH_LIB_FN
         _Float16 floor(_Float16 x) { return __ocml_floor_f16(x); }
 
-        HCC_MATH_LIB_FN
-        float floor(float x) { return fast_math::floorf(x); }
+            HCC_MATH_LIB_FN
+            _Float16 fabs(_Float16 x) { return __hc_fabs_half(x); }
 
         HCC_MATH_LIB_FN
         float fmaxf(float x, float y) { return __ocml_fmax_f32(x, y); }
@@ -466,8 +468,8 @@ namespace detail
         HCC_MATH_LIB_FN
         _Float16 fmax(_Float16 x, _Float16 y) { return __ocml_fmax_f16(x, y); }
 
-        HCC_MATH_LIB_FN
-        float fmax(float x, float y) { return fast_math::fmaxf(x, y); }
+            HCC_MATH_LIB_FN
+            _Float16 floor(_Float16 x) { return __hc_floor_half(x); }
 
         HCC_MATH_LIB_FN
         float fminf(float x, float y) { return __ocml_fmin_f32(x, y); }
@@ -475,8 +477,11 @@ namespace detail
         HCC_MATH_LIB_FN
         _Float16 fmin(_Float16 x, _Float16 y) { return __ocml_fmin_f16(x, y); }
 
-        HCC_MATH_LIB_FN
-        float fmin(float x, float y) { return fast_math::fminf(x, y); }
+            HCC_MATH_LIB_FN
+            _Float16 fmax(_Float16 x, _Float16 y)
+            {
+                return __hc_fmax_half(x, y);
+            }
 
         HCC_MATH_LIB_FN
         float fmodf(float x, float y) { return __ocml_fmod_f32(x, y); }
@@ -484,8 +489,11 @@ namespace detail
         HCC_MATH_LIB_FN
         _Float16 fmod(_Float16 x, _Float16 y) { return __ocml_fmod_f16(x, y); }
 
-        HCC_MATH_LIB_FN
-        float fmod(float x, float y) { return fast_math::fmodf(x, y); }
+            HCC_MATH_LIB_FN
+            _Float16 fmin(_Float16 x, _Float16 y)
+            {
+                return __hc_fmin_half(x, y);
+            }
 
         HCC_MATH_LIB_FN
         float frexpf(float x, int *exp) {
@@ -501,8 +509,11 @@ namespace detail
             *exp = e; return ret;
         }
 
-        HCC_MATH_LIB_FN
-        float frexp(float x, int *exp) { return fast_math::frexpf(x, exp); }
+            HCC_MATH_LIB_FN
+            _Float16 fmod(_Float16 x, _Float16 y)
+            {
+                return __hc_fmod_half(x, y);
+            }
 
         HCC_MATH_LIB_FN
         int isfinite(_Float16 x) { return __ocml_isfinite_f16(x); }
@@ -553,8 +564,8 @@ namespace detail
             return __ocml_native_log2_f16(x) * static_cast<_Float16>(M_RLOG2_E_F);
         }
 
-        HCC_MATH_LIB_FN
-        float log(float x) { return fast_math::logf(x); }
+            HCC_MATH_LIB_FN
+            int isnan(_Float16 x) { return __hc_isnan_half(x); }
 
         HCC_MATH_LIB_FN
         float log10f(float x) { return __ocml_native_log2_f32(x) * M_RLOG2_10_F; }
@@ -565,8 +576,11 @@ namespace detail
             return __ocml_native_log2_f16(x) * static_cast<_Float16>(M_RLOG2_10_F);
         }
 
-        HCC_MATH_LIB_FN
-        float log10(float x) { return fast_math::log10f(x); }
+            HCC_MATH_LIB_FN
+            _Float16 ldexp(_Float16 x, std::uint16_t exp)
+            {
+                return __hc_ldexp_half(x, exp);
+            }
 
         HCC_MATH_LIB_FN
         float log2f(float x) { return __ocml_native_log2_f32(x); }
@@ -574,8 +588,8 @@ namespace detail
         HCC_MATH_LIB_FN
         _Float16 log2(_Float16 x) { return __ocml_native_log2_f16(x); }
 
-        HCC_MATH_LIB_FN
-        float log2(float x) { return fast_math::log2f(x); }
+            HCC_MATH_LIB_FN
+            float logf(float x) { return __hc_log2_native(x) * M_RLOG2_E_F; }
 
         HCC_MATH_LIB_FN
         float modff(float x, float *iptr) {
@@ -589,8 +603,13 @@ namespace detail
         	*iptr = i; return ret;
         }
 
-        HCC_MATH_LIB_FN
-        float modf(float x, float *iptr) { return fast_math::modff(x, iptr); }
+            HCC_MATH_LIB_FN
+            _Float16 log10(_Float16 x)
+            {
+                return
+                    __hc_log2_native_half(x) *
+                    static_cast<_Float16>(M_RLOG2_10_F);
+            }
 
         HCC_MATH_LIB_FN
         float powf(float x, float y) { return __ocml_pow_f32(x, y); }
@@ -598,8 +617,8 @@ namespace detail
         HCC_MATH_LIB_FN
         _Float16 pow(_Float16 x, _Float16 y) { return __ocml_pow_f16(x, y); }
 
-        HCC_MATH_LIB_FN
-        float pow(float x, float y) { return fast_math::powf(x, y); }
+            HCC_MATH_LIB_FN
+            _Float16 log2(_Float16 x) { return __hc_log2_native_half(x); }
 
         HCC_MATH_LIB_FN
         float roundf(float x) { return __ocml_round_f32(x); }
@@ -607,8 +626,11 @@ namespace detail
         HCC_MATH_LIB_FN
         _Float16 round(_Float16 x) { return __ocml_round_f16(x); }
 
-        HCC_MATH_LIB_FN
-        float round(float x) { return fast_math::roundf(x); }
+            HCC_MATH_LIB_FN
+            _Float16 modf(_Float16 x, _Float16 *iptr)
+            {
+                return __hc_modf_half(x, iptr);
+            }
 
         HCC_MATH_LIB_FN
         float rsqrtf(float x) { return __ocml_native_rsqrt_f32(x); }
@@ -616,8 +638,8 @@ namespace detail
         HCC_MATH_LIB_FN
         _Float16 rsqrt(_Float16 x) { return __ocml_native_rsqrt_f16(x); }
 
-        HCC_MATH_LIB_FN
-        float rsqrt(float x) { return fast_math::rsqrtf(x); }
+            HCC_MATH_LIB_FN
+            _Float16 pow(_Float16 x, _Float16 y) { return __hc_pow_half(x, y); }
 
         HCC_MATH_LIB_FN
         int signbitf(float x) { return __ocml_signbit_f32(x); }
@@ -625,8 +647,8 @@ namespace detail
         HCC_MATH_LIB_FN
         int signbit(_Float16 x) { return __ocml_signbit_f16(x); }
 
-        HCC_MATH_LIB_FN
-        int signbit(float x) { return fast_math::signbitf(x); }
+            HCC_MATH_LIB_FN
+            _Float16 round(_Float16 x) { return __hc_round_half(x); }
 
         HCC_MATH_LIB_FN
         float sinf(float x) { return __ocml_native_sin_f32(x); }
@@ -634,8 +656,8 @@ namespace detail
         HCC_MATH_LIB_FN
         _Float16 sin(_Float16 x) { return __ocml_native_sin_f16(x); }
 
-        HCC_MATH_LIB_FN
-        float sin(float x) { return fast_math::sinf(x); }
+            HCC_MATH_LIB_FN
+            _Float16 rsqrt(_Float16 x) { return __hc_rsqrt_native_half(x); }
 
         HCC_MATH_LIB_FN
         void sincosf(float x, float *s, float *c) {
@@ -652,11 +674,8 @@ namespace detail
             *c = lc;
         }
 
-        HCC_MATH_LIB_FN
-        void sincos(float x, float *s, float *c)
-        {
-            fast_math::sincosf(x, s, c);
-        }
+            HCC_MATH_LIB_FN
+            int signbit(_Float16 x) { return __hc_signbit_half(x); }
 
         HCC_MATH_LIB_FN
         float sinhf(float x) { return __ocml_sinh_f32(x); }
@@ -664,8 +683,8 @@ namespace detail
         HCC_MATH_LIB_FN
         _Float16 sinh(_Float16 x) { return __ocml_sinh_f16(x); }
 
-        HCC_MATH_LIB_FN
-        float sinh(float x) { return fast_math::sinhf(x); }
+            HCC_MATH_LIB_FN
+            _Float16 sin(_Float16 x) { return __hc_sin_native_half(x); }
 
         HCC_MATH_LIB_FN
         float sqrtf(float x) { return __ocml_native_sqrt_f32(x); }
@@ -673,8 +692,11 @@ namespace detail
         HCC_MATH_LIB_FN
         _Float16 sqrt(_Float16 x) { return __ocml_native_sqrt_f16(x); }
 
-        HCC_MATH_LIB_FN
-        float sqrt(float x) { return fast_math::sqrtf(x); }
+            HCC_MATH_LIB_FN
+            void sincos(_Float16 x, _Float16 *s, _Float16 *c)
+            {
+                *s = __hc_sincos_half(x, c);
+            }
 
         HCC_MATH_LIB_FN
         float tanf(float x) { return __ocml_tan_f32(x); }
@@ -686,8 +708,8 @@ namespace detail
                 __hc_rcp_native_f16(__ocml_native_cos_f16(x));
         }
 
-        HCC_MATH_LIB_FN
-        float tan(float x) { return fast_math::tanf(x); }
+            HCC_MATH_LIB_FN
+            _Float16 sinh(_Float16 x) { return __hc_sinh_half(x); }
 
         HCC_MATH_LIB_FN
         float tanhf(float x) { return __ocml_tanh_f32(x); }
@@ -695,8 +717,8 @@ namespace detail
         HCC_MATH_LIB_FN
         _Float16 tanh(_Float16 x) { return __ocml_tanh_f16(x); }
 
-        HCC_MATH_LIB_FN
-        float tanh(float x) { return fast_math::tanhf(x); }
+            HCC_MATH_LIB_FN
+            _Float16 sqrt(_Float16 x) { return __hc_sqrt_native_half(x); }
 
         HCC_MATH_LIB_FN
         float truncf(float x) { return __ocml_trunc_f32(x); }
@@ -704,9 +726,12 @@ namespace detail
         HCC_MATH_LIB_FN
         _Float16 trunc(_Float16 x) { return __ocml_trunc_f16(x); }
 
-        HCC_MATH_LIB_FN
-        float trunc(float x) { return fast_math::truncf(x); }
-    } // namespace fast_math
+            HCC_MATH_LIB_FN
+            _Float16 tan(_Float16 x)
+            {
+                return __hc_sin_native_half(x) *
+                    __hc_rcp_native_half(__hc_native_cos_half(x));
+            }
 
     namespace precise_math
     {
@@ -1186,8 +1211,8 @@ namespace detail
         	*exp = e; return ret;
         }
 
-        HCC_MATH_LIB_FN
-        float frexp(float x, int *exp) { return precise_math::frexpf(x, exp); }
+            HCC_MATH_LIB_FN
+            float fmod(float x, float y) { return precise_math::fmodf(x, y); }
 
         HCC_MATH_LIB_FN
         double frexp(double x, int *exp) { return precise_math::frexpf(x, exp); }
@@ -1348,8 +1373,8 @@ namespace detail
         	*p = lp; return ret;
         }
 
-        HCC_MATH_LIB_FN
-        float modf(float x, float* p) { return precise_math::modff(x, p); }
+            HCC_MATH_LIB_FN
+            double log1p(double x) { return __hc_log1p(x); }
 
         HCC_MATH_LIB_FN
         double modf(double x, double* p) {

@@ -1,4 +1,4 @@
-// RUN: %hc %s -o %t.out -lhc_am && %t.out
+// RUN: %hc %s -o %t.out  && %t.out
 
 // Test hc::acclerator_view::copy()
 // with GPU buffers having offsets from the result of am_alloc

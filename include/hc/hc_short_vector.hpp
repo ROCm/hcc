@@ -1,7 +1,13 @@
+//===----------------------------------------------------------------------===//
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
 #pragma once
 
-#include "hc_defines.h"
-#include "hc_norm_unorm.hpp"
+#include <hc/hc_defines.hpp>
+#include <hc/hc_norm_unorm.hpp>
 
 #include <type_traits>
 

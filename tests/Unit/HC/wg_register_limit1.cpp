@@ -5,7 +5,7 @@
 #include <hc/hc.hpp>
 #include <string>
 #include <cmath>
-#include <hc/hc_math.hpp.hpp>
+#include <hc/hc_math.hpp>
 
 int main() {
   bool pass = false;
@@ -48,7 +48,7 @@ int main() {
       }
     });
 
-  } catch (detail::runtime_exception e) {
+  } catch (hc::detail::runtime_exception e) {
     std::string err_str = e.what();
     pass = err_str.find("The number of work items") != std::string::npos &&
     err_str.find("per work group exceeds the limit") != std::string::npos;

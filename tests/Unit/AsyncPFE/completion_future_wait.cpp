@@ -3,10 +3,11 @@
 
 #include <hc/hc.hpp>
 
+#include <hsa/hsa.h>
+
 #include <iostream>
 #include <random>
-
-#include <hsa/hsa.h>
+#include <vector>
 
 #define LOOP_COUNT (1024)
 
@@ -65,42 +66,11 @@ int main() {
   // launch kernel
   hc::completion_future fut = execute<1024, 16>(av1, av2, av3);
 
-  // obtain native handle
-  void* handle = fut.get_native_handle();
-
-  // retrieve HSA signal value
-  hsa_signal_value_t signal_value;
-  signal_value = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(handle));
-#if TEST_DEBUG
-  std::cout << "signal value: " << signal_value << "\n";
-#endif
-
   // wait on the future
   fut.wait();
-
-  // after completion_future::wait(), the signal shall become 0 because the
-  // kernel is completed
-  signal_value = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(handle));
-#if TEST_DEBUG
-  std::cout << "signal value: " << signal_value << "\n";
-#endif
-  // signal value shall be 0 after the kernel is completed
-  ret &= (signal_value == 0);
-
-  // wait on the future again
-  // the signal values should still be 0
-  fut.wait();
-
-  signal_value = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(handle));
-#if TEST_DEBUG
-  std::cout << "signal value: " << signal_value << "\n";
-#endif
-  // signal value shall be 0 after the kernel is completed
-  ret &= (signal_value == 0);
 
   // verify computation result
   ret &= verify<1024>(av1, av2, av3);
 
   return !(ret == true);
 }
-

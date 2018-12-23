@@ -1,5 +1,9 @@
 #pragma once
 
+#if !defined(__HIPCC__)
+  #warning "This header is only intended for HIP usage, and not for direct inclusion."
+#endif
+
 #include "hc_am.hpp"
 
 namespace hc {

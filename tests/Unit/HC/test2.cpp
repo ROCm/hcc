@@ -42,7 +42,7 @@ int main() {
     for (int i = 0; i < LOOP_COUNT; ++i)
       av3(idx) = av1(idx) + av2(idx);
   });
-  
+
   accelerator_view.create_marker();
 
   hc::parallel_for_each(hc::extent<1>(GRID_SIZE), [=](hc::index<1>& idx) [[hc]] {
@@ -62,9 +62,12 @@ int main() {
   // wait for async operations to complete
   hc::accelerator().get_default_view().wait();
 
-  // now there must be 0 pending async operations for the accelerator_view
-  ret &= (accelerator_view.get_pending_async_ops() == 0);
+  for (decltype(GRID_SIZE) i = 0; i != GRID_SIZE; ++i) {
+    if (av3[i] != 2 * i) return EXIT_FAILURE;
+    if (av4[i] != 2 * i) return EXIT_FAILURE;
+    if (av5[i] != 2 * i) return EXIT_FAILURE;
+  }
 
-  return !(ret == true);
+  return EXIT_SUCCESS;
 }
 

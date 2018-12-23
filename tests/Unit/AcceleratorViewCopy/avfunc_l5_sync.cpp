@@ -1,4 +1,4 @@
-// RUN: %hc %s -o %t.out -lhc_am && %t.out 
+// RUN: %hc %s -o %t.out  && %t.out 
 #include <stdlib.h>
 #include <iostream>
 

@@ -1,4 +1,4 @@
-// RUN: %hc %s -I/home/alexv/Programming/ROCR-Runtime/src/inc -L/home/alexv/Programming/ROCR-Runtime/src/build -lhsa-runtime64 -o %t.out && %t.out
+// RUN: %hc %s -lhsa-runtime64 -o %t.out && %t.out
 
 #include <hc/hc.hpp>
 
@@ -81,75 +81,10 @@ bool test() {
   hc::accelerator_view av = hc::accelerator().get_default_view();
   hc::completion_future fut5 = av.create_blocking_marker({fut0, fut1, fut2, fut3, fut4}, hc::system_scope);
 
-  void* nativeHandle0 = fut0.get_native_handle();
-  void* nativeHandle1 = fut1.get_native_handle();
-  void* nativeHandle2 = fut2.get_native_handle();
-  void* nativeHandle3 = fut3.get_native_handle();
-  void* nativeHandle4 = fut4.get_native_handle();
-  void* nativeHandle5 = fut5.get_native_handle();
-
-#if TEST_DEBUG
-  std::cout << nativeHandle0 << "\n";
-  std::cout << nativeHandle1 << "\n";
-  std::cout << nativeHandle2 << "\n";
-  std::cout << nativeHandle3 << "\n";
-  std::cout << nativeHandle4 << "\n";
-  std::cout << nativeHandle5 << "\n";
-#endif
-
-  hsa_signal_value_t signal_value0;
-  hsa_signal_value_t signal_value1;
-  hsa_signal_value_t signal_value2;
-  hsa_signal_value_t signal_value3;
-  hsa_signal_value_t signal_value4;
-  hsa_signal_value_t signal_value5;
-
-  signal_value0 = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(nativeHandle0));
-  signal_value1 = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(nativeHandle1));
-  signal_value2 = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(nativeHandle2));
-  signal_value3 = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(nativeHandle3));
-  signal_value4 = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(nativeHandle4));
-#if TEST_DEBUG
-  std::cout << "kernel signal value: " << signal_value0 << "\n";
-  std::cout << "kernel signal value: " << signal_value1 << "\n";
-  std::cout << "kernel signal value: " << signal_value2 << "\n";
-  std::cout << "kernel signal value: " << signal_value3 << "\n";
-  std::cout << "kernel signal value: " << signal_value4 << "\n";
-#endif
-
-  signal_value5 = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(nativeHandle5));
-#if TEST_DEBUG
-  std::cout << "blocking barrier signal value: " << signal_value5 << "\n";
-#endif
-
   // wait on the barrier packet
   fut5.wait();
 
   // the barrier packet would ensure all previous packets were processed
-
-  signal_value0 = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(nativeHandle0));
-  signal_value1 = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(nativeHandle1));
-  signal_value2 = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(nativeHandle2));
-  signal_value3 = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(nativeHandle3));
-  signal_value4 = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(nativeHandle4));
-#if TEST_DEBUG
-  std::cout << "kernel signal value: " << signal_value0 << "\n";
-  std::cout << "kernel signal value: " << signal_value1 << "\n";
-  std::cout << "kernel signal value: " << signal_value2 << "\n";
-  std::cout << "kernel signal value: " << signal_value3 << "\n";
-  std::cout << "kernel signal value: " << signal_value4 << "\n";
-#endif
-  ret &= (signal_value0 == 0);
-  ret &= (signal_value1 == 0);
-  ret &= (signal_value2 == 0);
-  ret &= (signal_value3 == 0);
-  ret &= (signal_value4 == 0);
-
-  signal_value5 = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(nativeHandle5));
-#if TEST_DEBUG
-  std::cout << "barrier signal value: " << signal_value5 << "\n";
-#endif
-  ret &= (signal_value5 == 0);
 
   // verify
   int error = 0;

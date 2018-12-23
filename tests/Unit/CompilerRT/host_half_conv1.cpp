@@ -1,7 +1,7 @@
 // RUN: %hc %s -o %t.out && %t.out
 
 #include <hc/hc.hpp>
-#include <hc/hc_defines.h>
+#include <hc/hc_defines.hpp>
 #include <iostream>
 
 int main() {

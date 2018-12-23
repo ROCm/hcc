@@ -2,7 +2,7 @@
 #include <hc/hc.hpp>
 #include <stdlib.h>
 #include <iostream>
-#include <hc/hc_math.hpp.hpp>
+#include <hc/hc_math.hpp>
 #include <random>
 
 using namespace hc;

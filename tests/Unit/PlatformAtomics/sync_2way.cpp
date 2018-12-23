@@ -7,7 +7,6 @@
 #include <atomic>
 #include <thread>
 #include <chrono>
-#include <hc/hc.hpp>
 
 // added for checking HSA profile
 #include <hc/hc.hpp>
@@ -121,7 +120,7 @@ int main() {
   // only conduct the test in case we are running on a HSA full profile stack
   hc::accelerator acc;
   if (acc.is_hsa_accelerator() &&
-      acc.get_profile() == hc::hcAgentProfileFull) {
+      acc.get_profile() == hc::accelerator_profile_full) {
     ret &= test();
   }
 

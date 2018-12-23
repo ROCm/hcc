@@ -1,4 +1,4 @@
-// RUN: %hc %s -o %t.out -lhc_am -L/home/alexv/Programming/ROCR-Runtime/src/build -lhsa-runtime64 && %t.out
+// RUN: %hc %s -o %t.out && %t.out
 //
 // Test "classic" GPU pattern of H2D copies, followed by Kernels, followed by
 // D2H.
@@ -31,10 +31,11 @@ std::unique_ptr<T[], decltype(hc::am_free)*> hostAlloc(
             hc::am_alloc(
                 sizeof(T) * cnt,
                 const_cast<hc::accelerator&>(acc),
-                amHostPinned))
+                am_host_pinned))
                     : new T[cnt],
         host_pinned ? hc::am_free
-                    : [](void* p) { delete [] static_cast<T*>(p); return 0; }};
+                    : [](void* p) {
+                        delete [] static_cast<T*>(p); return AM_SUCCESS; }};
 
     return p;
 }

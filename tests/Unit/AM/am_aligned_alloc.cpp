@@ -1,4 +1,4 @@
-// RUN: %hc %s -lhc_am -o %t.out && %t.out
+// RUN: %hc %s -o %t.out && %t.out
 
 #include <cstdlib>
 #include <cstdio>
@@ -28,9 +28,9 @@ int main()
     TRACKER_PRINT(a);
     TRACKER_PRINT(b);
     hc::AmPointerInfo amPointerInfo(NULL, NULL, NULL, 0, acc, 0, 0);
-    am_status_t status = hc::am_memtracker_getinfo(&amPointerInfo, b);
+    am_status_t status = hc::am_memtracker_get_info(&amPointerInfo, b);
     if (status == AM_SUCCESS) {
-       if (amPointerInfo._hostPointer == NULL) {
+       if (amPointerInfo.host_pointer == NULL) {
            hc::am_free(b);
        }
        else { 
@@ -42,9 +42,9 @@ int main()
            ret = false;
     }
 
-    status = hc::am_memtracker_getinfo(&amPointerInfo, a);
+    status = hc::am_memtracker_get_info(&amPointerInfo, a);
     if (status == AM_SUCCESS) {
-       if (amPointerInfo._hostPointer == NULL)
+       if (amPointerInfo.host_pointer == NULL)
            hc::am_free(a);
        else {
            printf("Failed device pointer check for a\n");

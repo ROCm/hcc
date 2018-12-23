@@ -366,14 +366,16 @@ add_custom_command(TARGET clang_links POST_BUILD
 )
 
 # install certain LLVM libraries needed by HIP
+# TODO: why HIP needs this random soup is unclear; the HC specific passes are
+#       definitely not "certain LLVM libraries needed by HIP".
 install(PROGRAMS $<TARGET_FILE:LLVMAMDGPUDesc>
                  $<TARGET_FILE:LLVMAMDGPUUtils>
                  $<TARGET_FILE:LLVMMC>
                  $<TARGET_FILE:LLVMCore>
                  $<TARGET_FILE:LLVMSupport>
-                 $<TARGET_FILE:LLVMSelectAcceleratorCode>
                  $<TARGET_FILE:LLVMPromotePointerKernArgsToGlobal>
-                 $<TARGET_FILE:LLVMHello>
+                 $<TARGET_FILE:LLVMSelectAcceleratorCode>
+                 $<TARGET_FILE:LLVMUndefineGlobalsInAcceleratorCode>
         DESTINATION lib
         COMPONENT compiler
 )
@@ -475,7 +477,6 @@ endif(HCC_INTEGRATE_ROCDL)
 add_subdirectory(hcc_config)
 add_subdirectory(lib)
 add_subdirectory(utils)
-add_subdirectory(src)
 add_subdirectory(tests)
 add_subdirectory(stl-test)
 add_subdirectory(cmake-tests)

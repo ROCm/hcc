@@ -152,7 +152,7 @@ int main() {
   // only conduct the test in case we are running on a HSA full profile stack
   hc::accelerator acc;
   if (acc.is_hsa_accelerator() &&
-      acc.get_profile() == hc::hcAgentProfileFull) {
+      acc.get_profile() == hc::accelerator_profile_full) {
 
     ret &= test1<int, SIZE>(user_functor<int>());
     ret &= test1<unsigned, SIZE>(user_functor<unsigned>());

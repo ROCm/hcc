@@ -17,7 +17,7 @@ bool test_scalar()
 
     if (read_scalar[0] != namespace_scalar) return false;
 
-    parallel_for_each(hc::extent<1>{1}, [=](index<1>) [[hc]] {
+    parallel_for_each(hc::extent<1>{1}, [](index<1>) [[hc]] {
         ++namespace_scalar;
     });
 
@@ -46,7 +46,7 @@ bool test_array()
         return false;
     }
 
-    parallel_for_each(hc::extent<1>{1}, [=](index<1>) [[hc]] {
+    parallel_for_each(hc::extent<1>{1}, [](index<1>) [[hc]] {
         for (auto&& x : namespace_array) ++x;
     });
 

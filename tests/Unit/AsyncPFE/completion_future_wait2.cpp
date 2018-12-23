@@ -61,14 +61,14 @@ bool test(bool useWaitMode, hc::hcWaitMode mode = hc::hcWaitModeBlocked) {
   if (!useWaitMode) {
     fut.wait();
   } else {
-    fut.wait(mode);
+    fut.wait();
   }
 
   // wait on the future again
   if (!useWaitMode) {
     fut.wait();
   } else {
-    fut.wait(mode);
+    fut.wait();
   }
 
   // verify computation result

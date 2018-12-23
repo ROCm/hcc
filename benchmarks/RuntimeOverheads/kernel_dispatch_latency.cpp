@@ -1,7 +1,7 @@
-// RUN: %hc %s -lhc_am -o %t.out && %t.out
+// RUN: %hc %s -o %t.out && %t.out
 
-#include <hc.hpp>
-#include <hc_am.hpp>
+#include <hc/hc.hpp>
+#include <hc/hc_am.hpp>
 
 #include <iostream>
 #include <random>

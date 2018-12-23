@@ -1,4 +1,4 @@
-// RUN: %hc %s -o %t.out -lhc_am -L/home/alexv/Programming/ROCR-Runtime/src/build -lhsa-runtime64 && %t.out
+// RUN: %hc %s -o %t.out && %t.out
 //
 // Test coherency and flushes.  Need to flush GPU caches before H2D copy
 
@@ -44,8 +44,8 @@ void test(int numElements)
 
     int * B  = hc::am_alloc(sizeElements, acc, 0);
     int * C  = hc::am_alloc(sizeElements, acc, 0);
-    int * Bh = hc::am_alloc(sizeElements, acc, amHostPinned);
-    int * Ch = hc::am_alloc(sizeElements, acc, amHostPinned);
+    int * Bh = hc::am_alloc(sizeElements, acc, am_host_pinned);
+    int * Ch = hc::am_alloc(sizeElements, acc, am_host_pinned);
 
     const int expected = 42;
     memsetIntKernel(av, Bh, expected, numElements);

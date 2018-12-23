@@ -14,7 +14,7 @@ bool test() {
   bool ret = true;
 
   // check if the queue is HSA
-  ret &= av.is_hsa_accelerator();
+  ret &= av.get_accelerator().is_hsa_accelerator();
 
   std::cout << ret << "\n";
 
@@ -22,11 +22,12 @@ bool test() {
   void* native_agent = acc.get_hsa_agent();
   ret &= (native_agent != nullptr);
 
-  void* native_agent2 = av.get_hsa_agent();
+  void* native_agent2 = av.get_accelerator().get_hsa_agent();
   ret &= (native_agent2 != nullptr);
 
   // native_agent and native_agent2 should point to the same agent
-  ret &= (native_agent == native_agent2);
+  ret &= static_cast<hsa_agent_t*>(native_agent)->handle ==
+    static_cast<hsa_agent_t*>(native_agent2)->handle;
 
   std::cout << ret << "\n";
 

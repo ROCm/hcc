@@ -1,5 +1,5 @@
 
-// RUN: %hc %s -lhc_am -o %t.out && %t.out
+// RUN: %hc %s  -o %t.out && %t.out
 
 #include <hc/hc_am.hpp>
 #include <hc/hc.hpp>
@@ -8,7 +8,7 @@ int main()
 {
     hc::accelerator acc;
 
-    void* host_ptr = am_alloc(1, acc, amHostPinned);
+    void* host_ptr = am_alloc(1, acc, am_host_pinned);
 
     // allocation fails if return NULL.
     if(host_ptr == NULL)

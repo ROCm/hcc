@@ -1,4 +1,4 @@
-// RUN: %hc %s -lhc_am -o %t.out && %t.out | %FileCheck -allow-empty %s
+// RUN: %hc %s  -o %t.out && %t.out | %FileCheck -allow-empty %s
 
 #include <hc/hc.hpp>
 #include <hc/hc_printf.hpp>

@@ -16,10 +16,10 @@ bool test() {
   if (acc.is_hsa_accelerator()) {
 
     // check if we can get its profile
-    hc::hcAgentProfile profile = acc.get_profile();
+    hc::accelerator_profile profile = acc.get_profile();
 
     // an HSA agent must have its profile specified
-    ret &= (profile != hc::hcAgentProfileNone);
+    ret &= (profile != hc::accelerator_profile_none);
   }
 
   return ret;

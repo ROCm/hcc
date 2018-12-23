@@ -30,7 +30,7 @@ bool test1D() {
   // dependency graph
   // pfe1: av1 + av2 -> av3
   // pfe2: av1 + av2 -> av4
-  // pfe3: av1 + av2 -> av5 
+  // pfe3: av1 + av2 -> av5
   // pfe1, pfe2, pfe3 are all independent
 
   std::vector<int> table1(grid_size);
@@ -66,12 +66,6 @@ bool test1D() {
   std::cout << "after pfe1\n";
 #endif
 
-  void* handle1 = fut1.get_native_handle();
-  hsa_signal_value_t signal_value1;
-#if TEST_DEBUG
-  std::cout << "signal value #1: " << signal_value1 << "\n";
-#endif
-
 #if TEST_DEBUG
   std::cout << "launch pfe2\n";
 #endif
@@ -88,11 +82,6 @@ bool test1D() {
   std::cout << "after pfe2\n";
 #endif
 
-  void* handle2 = fut2.get_native_handle();
-  hsa_signal_value_t signal_value2;
-#if TEST_DEBUG
-  std::cout << "launch pfe3\n";
-#endif
 
   // this kernel dispatch shall NOT implicitly wait for the previous one to complete
   // because the array_view written is NOT used by the previous kernels
@@ -106,34 +95,8 @@ bool test1D() {
   std::cout << "after pfe3\n";
 #endif
 
-  void* handle3 = fut3.get_native_handle();
-  hsa_signal_value_t signal_value3;
-  signal_value1 = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(handle1));
-  signal_value2 = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(handle2));
-  signal_value3 = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(handle3));
-#if TEST_DEBUG
-  std::cout << "signal value #1: " << signal_value1 << "\n";
-  std::cout << "signal value #2: " << signal_value2 << "\n";
-  std::cout << "signal value #3: " << signal_value3 << "\n";
-#endif
-
   // wait on all kernels to be completed
   hc::accelerator().get_default_view().wait();
-
-  signal_value1 = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(handle1));
-  signal_value2 = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(handle2));
-  signal_value3 = hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(handle3));
-#if TEST_DEBUG
-  std::cout << "signal value #1: " << signal_value1 << "\n";
-  std::cout << "signal value #2: " << signal_value2 << "\n";
-  std::cout << "signal value #3: " << signal_value3 << "\n";
-#endif
-  // signal_value1 MUST be 0 because all kernels are finished at this point
-  ret &= (signal_value1 == 0);
-  // signal_value2 MUST be 0 because all kernels are finished at this point
-  ret &= (signal_value2 == 0);
-  // signal_value3 MUST be 0 because all kernels are finished at this point
-  ret &= (signal_value3 == 0);
 
 #define SHOW_CONTENT_1D(str,av,table) \
   { \
@@ -188,4 +151,3 @@ int main() {
 
   return !(ret == true);
 }
-

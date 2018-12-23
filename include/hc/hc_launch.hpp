@@ -4,19 +4,24 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-
 #pragma once
 
 #include "hc_callable_attributes.hpp"
 #include "hc_index.hpp"
+#include "hc_kernel_emitter.hpp"
+#include "hc_queue_pool.hpp"
 #include "hc_runtime.hpp"
+#include "hc_signal_pool.hpp"
 
-#include <elfio/elfio.hpp>
+#include <hsa/hsa.h>
+#include <hsa/hsa_ext_amd.h>
 
 #include <link.h>
 
 #include <array>
 #include <cstdint>
+#include <future>
+#include <memory>
 #include <mutex>
 #include <stdexcept>
 #include <string>
@@ -26,300 +31,265 @@
 
 namespace hc
 {
+    class accelerator_view;
     template<int> class tiled_extent;
     template<int> class tiled_index;
 }
 
 /** \cond HIDDEN_SYMBOLS */
-namespace detail {
-
-struct Indexer {
-    template<int n>
-    operator index<n>() const [[hc]]
+namespace hc
+{
+    namespace detail
     {
-        int tmp[n]{};
-        for (auto i = 0; i != n; ++i) {
-            tmp[n - i - 1] = hc_get_workitem_absolute_id(i);
+        template<typename T>
+        struct Index_type;
+
+        template<int n>
+        struct Index_type<hc::extent<n>> {
+            using index_type = index<n>;
+        };
+
+        template<int n>
+        struct Index_type<hc::tiled_extent<n>> {
+            using index_type = hc::tiled_index<n>;
+        };
+
+        template<typename T>
+        using IndexType = typename Index_type<T>::index_type;
+
+        template<typename Kernel>
+        inline
+        std::unique_ptr<void, void (*)(void*)>  make_kernel_state(
+            const Kernel& f)
+        {
+            static const auto del = [](void* p) {
+                if (hsa_amd_memory_unlock(p) != HSA_STATUS_SUCCESS) {
+                    std::cerr << "Failed to unlock locked kernel memory; "
+                        << "HC Runtime may be in an inconsistent state."
+                        << std::endl;
+                }
+
+                delete static_cast<Kernel*>(p);
+            };
+
+            return std::unique_ptr<void, decltype(del)>{new Kernel{f}, del};
         }
 
-        return index<n>{tmp};
-    }
+        constexpr
+        inline
+        std::array<std::uint16_t, 1> local_dimensions(const hc::extent<1>&)
+        {
+            return std::array<std::uint16_t, 1>{64};
+        }
+        constexpr
+        inline
+        std::array<std::uint16_t, 2> local_dimensions(const hc::extent<2>&)
+        {
+            return std::array<std::uint16_t, 2>{8, 8};
+        }
+        constexpr
+        inline
+        std::array<std::uint16_t, 3> local_dimensions(const hc::extent<3>&)
+        {
+            return std::array<std::uint16_t, 3>{4, 4, 4};
+        }
 
-    template<int n>
-    operator hc::tiled_index<n>() const [[hc]]
-    {
-        return {};
-    }
-};
+        template<int n>
+        inline
+        std::array<std::uint16_t, n> local_dimensions(
+            const hc::tiled_extent<n>& domain)
+        {
+            std::array<std::uint16_t, n> r{};
+            for (auto i = 0; i != n; ++i) r[i] = domain.tile_dim[i];
 
-template<typename Index, typename Kernel>
-struct Kernel_emitter_base {
-    // TODO: this validation should be done further above, in pfe itself, for
-    //       more clarity. It is also a placeholder.
-    static
-    std::false_type is_callable(...) [[cpu, hc]];
-    template<typename I, typename K>
-    static
-    auto is_callable(I* idx, const K* f) [[cpu, hc]]
-        -> decltype((*f)(*idx), std::true_type{});
+            return r;
+        }
 
-    static_assert(
-        decltype(is_callable(
-            std::declval<Index*>(), std::declval<const Kernel*>())){},
-        "Invalid Callable passed to parallel_for_each.");
-};
+        template<typename T>
+        constexpr
+        inline
+        std::uint32_t dynamic_lds(const T&) noexcept
+        {
+            return 0;
+        }
 
-template<typename Index, typename Kernel>
-struct Kernel_emitter : public Kernel_emitter_base<Index, Kernel> {
-    static
-    __attribute__((used, annotate("__HCC_KERNEL__")))
-    void entry_point(Kernel f) [[cpu, hc]]
-    {
-        #if __HCC_ACCELERATOR__ != 0
-            Index tmp = Indexer{};
-            f(tmp);
-        #else
-            struct { void operator()(const Kernel&) {} } tmp{};
-            tmp(f);
-        #endif
-    }
-};
+        template<int n>
+        inline
+        std::uint32_t dynamic_lds(const hc::tiled_extent<n>& domain) noexcept
+        {
+            return domain.get_dynamic_group_segment_size();
+        }
 
-template<typename Kernel, typename... Attrs>
-using Kernel_with_attributes =
-    hc::attr_impl::Callable_with_AMDGPU_attributes<Kernel, Attrs...>;
+        template<typename Domain>
+        inline
+        std::pair<
+            std::array<std::uint32_t, Domain::rank>,
+            std::array<std::uint16_t, Domain::rank>> dimensions(
+                const Domain& domain)
+        {   // TODO: optimise.
+            using R = std::pair<
+                std::array<std::uint32_t, Domain::rank>,
+                std::array<std::uint16_t, Domain::rank>>;
 
-template<typename Index, typename Kernel, typename... Attrs>
-struct Kernel_emitter<Index, Kernel_with_attributes<Kernel, Attrs...>> :
-    public Kernel_emitter_base<
-        Index, Kernel_with_attributes<Kernel, Attrs...>> {
-    using K = Kernel_with_attributes<Kernel, Attrs...>;
-
-    static
-    __attribute__((
-        used,
-        annotate("__HCC_KERNEL__"),
-        amdgpu_flat_work_group_size(
-            K::Flat_wg_size_::minimum(), K::Flat_wg_size_::maximum()),
-        amdgpu_waves_per_eu(
-            K::Waves_per_EU_::minimum(), K::Waves_per_EU_::maximum())))
-    void entry_point(K f) [[cpu, hc]]
-    {
-        #if __HCC_ACCELERATOR__ != 0
-            Index tmp = Indexer{};
-            f(tmp);
-        #else
-            struct { void operator()(const K&) {} } tmp{};
-            tmp(f);
-        #endif
-    }
-};
-
-template<typename Kernel>
-inline
-const char* linker_name_for()
-{
-    static std::once_flag f{};
-    static std::string r{};
-
-    // TODO: this should be fused with the one used in mcwamp_hsa.cpp as a
-    //       for_each_elf(...) function.
-    std::call_once(f, [&]() {
-        dl_iterate_phdr([](dl_phdr_info* info, std::size_t, void* pr) {
-            const auto base = info->dlpi_addr;
-            ELFIO::elfio elf;
-
-            if (!elf.load(base ? info->dlpi_name : "/proc/self/exe")) return 0;
-
-            struct Symbol {
-                std::string name;
-                ELFIO::Elf64_Addr value;
-                ELFIO::Elf_Xword size;
-                unsigned char bind;
-                unsigned char type;
-                ELFIO::Elf_Half section_index;
-                unsigned char other;
-            } tmp{};
-            for (auto&& section : elf.sections) {
-                if (section->get_type() != SHT_SYMTAB) continue;
-
-                ELFIO::symbol_section_accessor fn{elf, section};
-
-                auto n = fn.get_symbols_num();
-                while (n--) {
-                    fn.get_symbol(
-                      n,
-                      tmp.name,
-                      tmp.value,
-                      tmp.size,
-                      tmp.bind,
-                      tmp.type,
-                      tmp.section_index,
-                      tmp.other);
-
-                    if (tmp.type != STT_FUNC) continue;
-
-                    static const auto k_addr =
-                        reinterpret_cast<std::uintptr_t>(&Kernel::entry_point);
-                    if (tmp.value + base == k_addr) {
-                        *static_cast<std::string*>(pr) = tmp.name;
-
-                        return 1;
-                    }
-                }
+            R r{};
+            auto tmp = local_dimensions(domain);
+            for (auto i = 0; i != Domain::rank; ++i) {
+                r.first[i] = domain[i];
+                r.second[i] = tmp[i];
             }
 
-            return 0;
-        }, &r);
-    });
+            return r;
+        }
 
-    if (r.empty()) {
-        throw std::runtime_error{
-            std::string{"Kernel: "} +
-            typeid(&Kernel::entry_point).name() +
-            " is not available."};
-    }
+        enum Packet_type{ barrier, kernel, n };
 
-    return r.c_str();
-}
+        template<Packet_type packet>
+        inline
+        std::uint16_t make_packet_header() noexcept
+        {
+            constexpr std::array<std::uint16_t, Packet_type::n> type{{
+                HSA_PACKET_TYPE_BARRIER_AND << HSA_PACKET_HEADER_TYPE,
+                HSA_PACKET_TYPE_KERNEL_DISPATCH << HSA_PACKET_HEADER_TYPE
+            }};
+            constexpr std::uint16_t fence_scope{
+                (HSA_FENCE_SCOPE_SYSTEM <<
+                    HSA_PACKET_HEADER_SCACQUIRE_FENCE_SCOPE) |
+                (HSA_FENCE_SCOPE_SYSTEM <<
+                    HSA_PACKET_HEADER_SCRELEASE_FENCE_SCOPE)};
+            constexpr std::uint16_t barrier{
+                (packet == Packet_type::barrier) << HSA_PACKET_HEADER_BARRIER};
 
-template<typename T>
-struct Index_type;
+            return type[packet] | fence_scope | barrier;
+        }
 
-template<int n>
-struct Index_type<hc::extent<n>> {
-    using index_type = index<n>;
-};
+        template<typename Kernel, typename Domain>
+        inline
+        hsa_signal_t make_kernel_dispatch(
+            const Domain& domain,
+            hsa_kernel_dispatch_packet_t* slot,
+            hsa_agent_t agent,
+            void* locked_kernel) noexcept
+        {
+            if (!locked_kernel || !slot) return {};
 
-template<int n>
-struct Index_type<hc::tiled_extent<n>> {
-    using index_type = hc::tiled_index<n>;
-};
+            *slot = {};
 
-template<typename T>
-using IndexType = typename Index_type<T>::index_type;
+            slot->header = HSA_PACKET_TYPE_INVALID;
+            slot->setup =
+                Domain::rank << HSA_KERNEL_DISPATCH_PACKET_SETUP_DIMENSIONS;
 
-template<typename Domain, typename Kernel>
-inline
-void* make_registered_kernel(
-    const std::shared_ptr<HCCQueue>& q, const Kernel& f)
-{
-    struct Deleter {
-        void operator()(void* p) const { delete static_cast<Kernel*>(p); }
-    };
+            const auto dims = dimensions(domain);
 
-    using K = detail::Kernel_emitter<IndexType<Domain>, Kernel>;
+            slot->grid_size_x = dims.first[Domain::rank - 1];
+            slot->grid_size_y =
+                (Domain::rank > 1) ? dims.first[Domain::rank - 2] : 1;
+            slot->grid_size_z =
+                (Domain::rank > 2) ? dims.first[Domain::rank - 3] : 1;
+            slot->workgroup_size_x = std::min<std::uint32_t>(
+                dims.second[Domain::rank - 1], slot->grid_size_x);
+            slot->workgroup_size_y = std::min<std::uint32_t>(
+                (Domain::rank > 1) ? dims.second[Domain::rank - 2] : 1,
+                slot->grid_size_y);
+            slot->workgroup_size_z = std::min<std::uint32_t>(
+                (Domain::rank > 2) ? dims.second[Domain::rank - 3] : 1,
+                slot->grid_size_z);
 
-    std::unique_ptr<void, void (*)(void*)> tmp{
-        new Kernel{f}, [](void* p) { delete static_cast<Kernel*>(p); }};
-    void* kernel{CLAMP::CreateKernel(
-        linker_name_for<K>(), q.get(), std::move(tmp), sizeof(Kernel))};
+            using K = Kernel_emitter<IndexType<Domain>, Kernel>;
 
-    return kernel;
-}
+            slot->private_segment_size = K::kernel()[agent].private_size;
+            slot->group_segment_size =
+                K::kernel()[agent].group_size + dynamic_lds(domain);
+            slot->kernel_object = K::kernel()[agent].kernel_object;
+            slot->kernarg_address = locked_kernel;
 
-template<typename T>
-constexpr
-inline
-std::array<std::size_t, T::rank> local_dimensions(const T&)
-{
-    return std::array<std::size_t, T::rank>{};
-}
+            slot->reserved2 = make_packet_header<Packet_type::kernel>();
+            slot->completion_signal = Signal_pool::allocate();
 
-template<int n>
-inline
-std::array<std::size_t, n> local_dimensions(const hc::tiled_extent<n>& domain)
-{
-    std::array<std::size_t, n> r{};
-    for (auto i = 0; i != n; ++i) r[i] = domain.tile_dim[i];
+            return slot->completion_signal;
+        }
 
-    return r;
-}
+        template<typename AcceleratorView, typename Domain, typename Kernel>
+        inline
+        void launch_kernel(
+            const AcceleratorView& av,
+            const Domain& domain,
+            const Kernel& f)
+        {
+            launch_kernel_async(av, domain, f).wait();
+        }
 
-template<typename Domain>
-inline
-std::pair<
-    std::array<std::size_t, Domain::rank>,
-    std::array<std::size_t, Domain::rank>> dimensions(const Domain& domain)
-{   // TODO: optimise.
-    using R = std::pair<
-        std::array<std::size_t, Domain::rank>,
-        std::array<std::size_t, Domain::rank>>;
+        template<typename Kernel>
+        inline
+        void* lock_callable(hsa_agent_t agent, void* ptr)
+        {
+            throwing_hsa_result_check(
+                hsa_amd_memory_lock(ptr, sizeof(Kernel), &agent, 1, &ptr),
+                __FILE__, __func__, __LINE__);
 
-    R r{};
-    auto tmp = local_dimensions(domain);
-    for (auto i = 0; i != Domain::rank; ++i) {
-        r.first[i] = domain[i];
-        r.second[i] = tmp[i];
-    }
+            return ptr;
+        }
 
-    return r;
-}
+        template<typename AcceleratorView, typename Domain, typename Kernel>
+        inline
+        std::pair<std::shared_future<void>, hsa_signal_t> launch_kernel_async(
+            const AcceleratorView& av,
+            const Domain& domain,
+            const Kernel& f)
+        {
+            const auto agent = *static_cast<hsa_agent_t*>(
+                av.get_accelerator().get_hsa_agent());
+            auto queue = static_cast<hsa_queue_t*>(av.get_hsa_queue());
 
-template<typename Domain, typename Kernel>
-inline
-std::shared_ptr<HCCAsyncOp> launch_kernel_async(
-    const std::shared_ptr<HCCQueue>& q,
-    const Domain& domain,
-    const Kernel& f)
-{
-  const auto dims{dimensions(domain)};
+            auto ks = make_kernel_state(f);
+            auto slot = Queue_pool::queue_slot(queue);
+            auto signal = make_kernel_dispatch<Kernel>(
+                domain,
+                static_cast<hsa_kernel_dispatch_packet_t*>(slot.first),
+                agent,
+                lock_callable<Kernel>(agent, ks.get()));
+            Queue_pool::enable(slot, queue);
 
-  return q->LaunchKernelAsync(
-        make_registered_kernel<Domain>(q, f),
-        Domain::rank,
-        dims.first.data(),
-        dims.second.data());
-}
+            return {
+                std::async([=](decltype(ks)) {
+                    Signal_pool::wait(signal);
+                    Signal_pool::deallocate(signal);
+                }, std::move(ks)).share(),
+                signal};
+        }
 
-template<typename Domain, typename Kernel>
-inline
-void launch_kernel(
-    const std::shared_ptr<HCCQueue>& q,
-    const Domain& domain,
-    const Kernel& f)
-{
-    const auto dims{dimensions(domain)};
+        inline
+        hsa_signal_t make_barrier(hsa_barrier_and_packet_t* slot) noexcept
+        {
+            if (!slot) return {};
 
-    q->LaunchKernel(
-        make_registered_kernel<Domain>(q, f),
-        Domain::rank,
-        dims.first.data(),
-        dims.second.data());
-}
+            *slot = {};
 
-template<typename Domain, typename Kernel>
-inline
-void launch_kernel_with_dynamic_group_memory(
-    const std::shared_ptr<HCCQueue>& q,
-    const Domain& domain,
-    const Kernel& f)
-{
-    const auto dims{dimensions(domain)};
+            slot->header = HSA_PACKET_TYPE_INVALID;
+            slot->reserved2 = make_packet_header<Packet_type::barrier>();
+            slot->completion_signal = Signal_pool::allocate();
 
-    q->LaunchKernelWithDynamicGroupMemory(
-        make_registered_kernel<Domain>(q, f),
-        Domain::rank,
-        dims.first.data(),
-        dims.second.data(),
-        domain.dynamic_group_segment_size());
-}
+            return slot->completion_signal;
+        }
 
-template<typename Domain, typename Kernel>
-inline
-std::shared_ptr<HCCAsyncOp> launch_kernel_with_dynamic_group_memory_async(
-  const std::shared_ptr<HCCQueue>& q,
-  const Domain& domain,
-  const Kernel& f)
-{
-    const auto dims{dimensions(domain)};
+        template<typename AcceleratorView>
+        inline
+        std::pair<std::shared_future<void>, hsa_signal_t> insert_barrier(
+            const AcceleratorView& av)
+        {
+            auto slot = Queue_pool::queue_slot(
+                static_cast<hsa_queue_t*>(av.get_hsa_queue()));
+            auto signal = make_barrier(
+                static_cast<hsa_barrier_and_packet_t*>(slot.first));
+            Queue_pool::enable(
+                slot, static_cast<hsa_queue_t*>(av.get_hsa_queue()));
 
-    return q->LaunchKernelWithDynamicGroupMemoryAsync(
-        make_registered_kernel<Domain>(q, f),
-        Domain::rank,
-        dims.first.data(),
-        dims.second.data(),
-        domain.get_dynamic_group_segment_size());
-}
-} // namespace detail
+            return {
+                std::async([=]() {
+                    Signal_pool::wait(signal);
+                    Signal_pool::deallocate(signal);
+                }).share(),
+                signal};
+        }
+    } // Namespace hc::detail.
+} // Namespace hc.
 /** \endcond */

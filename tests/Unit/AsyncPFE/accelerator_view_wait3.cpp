@@ -90,7 +90,7 @@ bool test(bool useWaitMode, hc::hcWaitMode mode = hc::hcWaitModeBlocked) {
   if (!useWaitMode) {
     hc::accelerator().get_default_view().wait();
   } else {
-    hc::accelerator().get_default_view().wait(mode);
+    hc::accelerator().get_default_view().wait();
   }
 
   ret &= verify<1>(av1, av2, av3);

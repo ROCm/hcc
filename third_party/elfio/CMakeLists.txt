@@ -30,10 +30,10 @@ endforeach()
 
 # Create target for hcc-headers and set dependencies
 add_custom_target(elfio-headers ALL DEPENDS ${out_files})
-add_dependencies(world hc-headers)
+add_dependencies(world hc-headers hc-impl-headers)
 
 # Install command for headers
 install(
     FILES ${elfio_headers}
     PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
-    DESTINATION include)
+    DESTINATION third_party/elfio)

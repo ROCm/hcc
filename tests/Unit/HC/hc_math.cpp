@@ -2,7 +2,7 @@
 // RUN: %hc %s -o %t.out && %t.out
 
 #include <hc/hc.hpp>
-#include <hc/hc_math.hpp.hpp>
+#include <hc/hc_math.hpp>
 
 #include <algorithm>
 #include <iostream>
@@ -61,6 +61,7 @@ bool test()
 {   // TODO: ideally this should be refactored to use iteration through the
     //       collection of tested functions, as opposed to this verbose form.
     using namespace hc;
+    using namespace precise_math;
 
     return test_math_fn<T, grid_sz>(
         "sqrt",

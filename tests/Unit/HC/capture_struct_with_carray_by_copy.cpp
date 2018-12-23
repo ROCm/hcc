@@ -1,5 +1,4 @@
-// XFAIL: *
-// RUN: %hc -lhc_am %s -o %t.out && %t.out
+// RUN: %hc  %s -o %t.out && %t.out
 #include <hc/hc.hpp>
 #include <hc/hc_am.hpp>
 

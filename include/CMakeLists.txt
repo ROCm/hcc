@@ -2,6 +2,8 @@
 # Put all hcc headers into the hcc-headers target
 # .h and .hpp headers
 set(HCC_headers
+    array_view
+    coordinate
     hc_am_internal.hpp
     hc_am.hpp
     hc_defines.h
@@ -37,6 +39,9 @@ install(
     FILES ${HCC_headers}
     PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
     DESTINATION include)
+
+# Handle pSTL
+add_subdirectory(experimental)
 
 # Handle HC Next (post ROCm 2.0)
 add_subdirectory(hc)

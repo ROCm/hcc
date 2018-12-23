@@ -37,11 +37,11 @@ int main(int argc, char* argv[]) {
   constexpr int n = 1024 * 4;
   hc::accelerator acc;
 
-  hc_am_buffer<int> pinned_host_a(acc, n, amHostPinned);
+  hc_am_buffer<int> pinned_host_a(acc, n, am_host_pinned);
   hc_am_buffer<int> device_buffer_a(acc, n);
   hc_am_buffer<int> device_buffer_b(acc, n);
   hc_am_buffer<int> device_buffer_c(acc, n);
-  hc_am_buffer<int> pinned_host_b(acc, n, amHostPinned);
+  hc_am_buffer<int> pinned_host_b(acc, n, am_host_pinned);
 
   std::generate_n(pinned_host_a(), n, []() {
     static int n = 0;
