@@ -1,8 +1,6 @@
 
 // RUN: %hc %s -o %t.out && %t.out
 
-#include <hc/hc.hpp>
-
 #include <atomic>
 #include <iostream>
 #include <random>

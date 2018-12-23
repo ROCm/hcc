@@ -598,7 +598,9 @@ am_status_t am_memory_host_lock(hc::accelerator &ac, void *hostPtr, std::size_t 
     if(hsa_status == HSA_STATUS_SUCCESS)
     {
        hc::AmPointerInfo ampi(hostPtr, devPtr, devPtr, size, ac, false, false);
+       hc::AmPointerInfo ampi2(hostPtr, devPtr, devPtr, size, ac, true, false);
        g_amPointerTracker.insert(hostPtr, ampi);
+       g_amPointerTracker.insert(devPtr, ampi2);
        am_status = AM_SUCCESS;
     }
     return am_status;
@@ -614,6 +616,8 @@ am_status_t am_memory_host_unlock(hc::accelerator &ac, void *hostPtr)
         hsa_status_t hsa_status = hsa_amd_memory_unlock(hostPtr);
         if (hsa_status == HSA_STATUS_SUCCESS) {
             am_status = am_memtracker_remove(hostPtr);
+            if ( amPointerInfo._devicePointer )
+                am_status = am_memtracker_remove(amPointerInfo._devicePointer);
         } else {
             am_status = AM_ERROR_MISC;
         }

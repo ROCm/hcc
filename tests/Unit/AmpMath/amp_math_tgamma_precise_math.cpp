@@ -1,6 +1,6 @@
 // RUN: %cxxamp %s -o %t.out && %t.out
 #include <hc/hc.hpp>
-#include <hc/hc_math.hpp.hpp>
+#include <hc/hc_math.hpp>
 
 #include <iostream>
 #include <cmath>

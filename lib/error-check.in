@@ -1,0 +1,34 @@
+#!/bin/bash
+
+# Clang Driver requires exit code -1 for failure and -2 for crash
+# Report exit code status if non-zero for Linux or kill signal
+
+check_exit_status ()
+{
+  local status="$?"
+  local signal=""
+  local orig_msg="${@}"
+  if [ ${status} -ne 0 ]; then
+    local src_lineno="${BASH_SOURCE[1]##*/}[${BASH_LINENO[0]}]"
+    if [ $((${status} < 128)) -ne 0 ]; then
+      echo "Error: $src_lineno: $orig_msg failed with status $status"
+      exit -1
+    else
+      signal="$(builtin kill -l $((${status} - 128)) 2>/dev/null)"
+      if [ "$signal" ]; then
+        echo "Error: $src_lineno: $orig_msg failed by kill signal $signal"
+      fi
+      exit -2
+    fi
+  fi
+  return 0;
+}
+
+exit_with_code ()
+{
+  local code="${@}"
+  local src_lineno="${BASH_SOURCE[1]##*/}[${BASH_LINENO[0]}]"
+
+  echo "Error: $src_lineno: failed with status $code"
+  exit -1
+}

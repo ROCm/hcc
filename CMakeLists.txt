@@ -212,7 +212,7 @@ endif( )
 
 # define HCC version information
 SET(HCC_VERSION_MAJOR "1")
-SET(HCC_VERSION_MINOR "2")
+SET(HCC_VERSION_MINOR "3")
 
 include(GenerateVersionFromGit)
 
@@ -421,10 +421,10 @@ if (HCC_INTEGRATE_ROCDL)
   file(MAKE_DIRECTORY ${ROCDL_BUILD_DIR}/lib)
   add_custom_target(rocdl_links DEPENDS ${AMDGCN_LIB_TARGETS})
   add_custom_command(TARGET rocdl_links POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E create_symlink ../irif/irif.amdgcn.bc                              irif.amdgcn.bc
     COMMAND ${CMAKE_COMMAND} -E create_symlink ../opencl/opencl.amdgcn.bc                          opencl.amdgcn.bc
     COMMAND ${CMAKE_COMMAND} -E create_symlink ../ockl/ockl.amdgcn.bc                              ockl.amdgcn.bc
     COMMAND ${CMAKE_COMMAND} -E create_symlink ../hc/hc.amdgcn.bc                                  hc.amdgcn.bc
+    COMMAND ${CMAKE_COMMAND} -E create_symlink ../hip/hip.amdgcn.bc                                hip.amdgcn.bc
     COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_isa_version_701.amdgcn.bc              oclc_isa_version_701.amdgcn.bc
     COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_isa_version_802.amdgcn.bc              oclc_isa_version_802.amdgcn.bc
     COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_isa_version_810.amdgcn.bc              oclc_isa_version_810.amdgcn.bc
@@ -449,6 +449,7 @@ if (HCC_INTEGRATE_ROCDL)
   )
   # install ROCm Device Library in hcc
   install(DIRECTORY ${ROCDL_BUILD_DIR}/hc
+                    ${ROCDL_BUILD_DIR}/hip
                     ${ROCDL_BUILD_DIR}/irif
                     ${ROCDL_BUILD_DIR}/lib
                     ${ROCDL_BUILD_DIR}/ockl
@@ -469,14 +470,6 @@ if (HCC_INTEGRATE_ROCDL)
           PATTERN transformed_src EXCLUDE
           PATTERN utils EXCLUDE
   )
-
-  # create search paths for ROCDL
-  list(APPEND ROCM_DEVICE_LIB_PATHS ${ROCDL_BUILD_DIR}/lib)
-  if (NOT CPACK_SET_DESTDIR)
-    list(APPEND ROCM_DEVICE_LIB_PATHS ${CPACK_PACKAGING_INSTALL_PREFIX}/rocdl/lib)
-  endif(NOT CPACK_SET_DESTDIR)
-  list(APPEND ROCM_DEVICE_LIB_PATHS ${CMAKE_INSTALL_PREFIX}/rocdl/lib)
-
 endif(HCC_INTEGRATE_ROCDL)
 
 add_subdirectory(hcc_config)
@@ -560,7 +553,7 @@ set(CPACK_DEBIAN_PACKAGE_SECTION "devel")
 set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA
   "${PROJECT_BINARY_DIR}/packaging/debian/postinst;${PROJECT_BINARY_DIR}/packaging/debian/prerm")
 
-set(HCC_GENERAL_DEBIAN_DEP "g++-multilib, gcc-multilib, findutils, libelf1, libpci3, file")
+set(HCC_GENERAL_DEBIAN_DEP "coreutils, g++-multilib, gcc-multilib, findutils, libelf1, libpci3, file")
 
 if ( USE_LIBCXX )
   set(HCC_LIBCXX_DEBIAN_DEP ", libc++1, libc++-dev, libc++abi1, libc++abi-dev")
@@ -590,7 +583,7 @@ set(CPACK_RPM_PRE_UNINSTALL_SCRIPT_FILE "${PROJECT_BINARY_DIR}/packaging/debian/
 # disable automatic shared libraries dependency detection
 set(CPACK_RPM_PACKAGE_AUTOREQ 0)
 
-set(HCC_GENERAL_RPM_DEP "findutils, elfutils-libelf, pciutils-libs, file, pth")
+set(HCC_GENERAL_RPM_DEP "coreutils, findutils, elfutils-libelf, pciutils-libs, file, pth")
 if ( USE_LIBCXX )
   set(HCC_LIBCXX_RPM_DEP ", libcxx, libcxxabi")
 else ( USE_LIBCXX )

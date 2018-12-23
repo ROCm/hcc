@@ -37,6 +37,14 @@ enum execute_order
     execute_any_order
 };
 
+/// NOTE: This enum is used for indexing into an array.
+/// So any modifications to this need to be done with caution.
+enum queue_priority
+{
+    priority_high = 0,
+    priority_normal = 1,
+    priority_low = 2
+};
 
 // Flags to specify visibility of previous commands after a marker is executed.
 enum memory_scope
@@ -191,8 +199,8 @@ class KalmarQueue
 {
 public:
 
-  KalmarQueue(KalmarDevice* pDev, queuing_mode mode = queuing_mode_automatic, execute_order order = execute_in_order)
-      : pDev(pDev), mode(mode), order(order), opSeqNums(0) {}
+  KalmarQueue(KalmarDevice* pDev, queuing_mode mode = queuing_mode_automatic, execute_order order = execute_in_order, queue_priority priority = priority_normal)
+      : pDev(pDev), mode(mode), order(order), priority(priority), opSeqNums(0) {}
 
   virtual ~KalmarQueue() {}
 
@@ -239,6 +247,8 @@ public:
 
   execute_order get_execute_order() const { return order; }
 
+  queue_priority get_queue_priority() const { return priority; }
+
   /// get number of pending async operations in the queue
   virtual int getPendingAsyncOps() { return 0; }
 
@@ -278,6 +288,9 @@ public:
   virtual std::shared_ptr<KalmarAsyncOp> EnqueueAsyncCopyExt(const void* src, void* dst, size_t size_bytes, 
                                                              hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, 
                                                              const Kalmar::KalmarDevice *copyDevice) { return nullptr; };
+  virtual std::shared_ptr<KalmarAsyncOp> EnqueueAsyncCopy2dExt(const void* src, void* dst, size_t width, size_t height, size_t srcPitch, size_t dstPitch,
+                                                             hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo,
+                                                             const Kalmar::KalmarDevice *copyDevice) { return nullptr; };
 
   // Copy src to dst synchronously
   virtual void copy(const void *src, void *dst, size_t size_bytes) { }
@@ -287,7 +300,7 @@ public:
   virtual void copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, bool forceUnpinnedCopy) { };
   virtual void copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, 
                         const Kalmar::KalmarDevice *copyDev, bool forceUnpinnedCopy) { };
-
+  virtual void copy2d_ext(const void *src, void *dst, size_t width, size_t height, size_t srcPitch, size_t dstPitch, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo,const Kalmar::KalmarDevice *copyDev, bool forceUnpinnedCopy) { };
   /// cleanup internal resource
   /// this function is usually called by dtor of the implementation classes
   /// in rare occasions it may be called by other functions to ensure proper
@@ -310,6 +323,7 @@ private:
   KalmarDevice* pDev;
   queuing_mode mode;
   execute_order order;
+  queue_priority priority;
 
   uint64_t      opSeqNums; // last seqnum assigned to an op in this queue
 };
@@ -385,7 +399,7 @@ public:
     virtual bool check(size_t* size, size_t dim_ext) { return true; }
 
     /// create KalmarQueue from current device
-    virtual std::shared_ptr<KalmarQueue> createQueue(execute_order order = execute_in_order) = 0;
+    virtual std::shared_ptr<KalmarQueue> createQueue(execute_order order = execute_in_order, queue_priority priority = priority_normal) = 0;
     virtual ~KalmarDevice() {}
 
     std::shared_ptr<KalmarQueue> get_default_queue() {
@@ -479,7 +493,7 @@ public:
     bool is_emulated() const override { return true; }
     uint32_t get_version() const override { return 0; }
 
-    std::shared_ptr<KalmarQueue> createQueue(execute_order order = execute_in_order) override { return std::shared_ptr<KalmarQueue>(new CPUQueue(this)); }
+    std::shared_ptr<KalmarQueue> createQueue(execute_order order = execute_in_order, queue_priority priority = priority_normal) override { return std::shared_ptr<KalmarQueue>(new CPUQueue(this)); }
     void* create(size_t count, struct rw_info* /* not used */ ) override { return kalmar_aligned_alloc(0x1000, count); }
     void release(void* ptr, struct rw_info* /* nout used */) override { kalmar_aligned_free(ptr); }
     void* CreateKernel(const char* fun, KalmarQueue *queue) override { return nullptr; }

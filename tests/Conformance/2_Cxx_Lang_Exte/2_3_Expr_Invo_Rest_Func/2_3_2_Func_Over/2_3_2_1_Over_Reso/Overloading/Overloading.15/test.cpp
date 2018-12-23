@@ -8,7 +8,7 @@
 
 // RUN: %cxxamp %s -o %t.out && %t.out
 
-int f(int &) [[hc]]
+int f(int &) [[hc]] 
 {
     return 0;
 }

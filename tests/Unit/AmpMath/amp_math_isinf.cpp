@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <iostream>
 #include <limits>
-#include <hc/hc_math.hpp.hpp>
+#include <hc/hc_math.hpp>
 
 using namespace hc;
 

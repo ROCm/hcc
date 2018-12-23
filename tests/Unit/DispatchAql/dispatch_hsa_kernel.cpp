@@ -25,12 +25,15 @@ const char *hsaco_filename = NULL;
 bool test() {
   bool ret = true;
 
-
   hc::accelerator acc = hc::accelerator();
+
+  // The pre-compiled GPU object that this test uses only 
+  // works for gfx803 
+  if (acc.get_description().find(L"gfx803") == std::wstring::npos)
+    return true;
+
   hc::accelerator_view av = acc.get_default_view();
-
   Kernel k = load_hsaco(&av, hsaco_filename, "hello_world");
-
 
   //int bufferElements = 1024*1024;
   int bufferElements = 1024;

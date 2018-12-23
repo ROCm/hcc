@@ -21,7 +21,6 @@ class myVecAdd {
  private:
   hc::array_view<int> a_, b_, c_;
 };
-
 TEST(Design, Final) {
   const int vecSize = 100;
 

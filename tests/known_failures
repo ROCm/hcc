@@ -29,6 +29,4 @@
     CPPAMP :: Unit/HC/accelerator_get_all_views_mt.cpp
 
 # Disable these test TEMPORARILY (as of June 22nd, 2018) until we get fixes for them:
-    CPPAMP :: Unit/AmpShortVectors/amp_short_vectors_2files.cpp
-    CPPAMP :: Unit/AmpShortVectors/amp_short_vectors_2files_1.cpp
     CPPAMP :: Unit/Codegen/deser_def_body_compound_support_inheritclass.cpp

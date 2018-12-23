@@ -12,287 +12,285 @@
 #include <cmath>
 #include <stdexcept>
 
-extern "C" _Float16 __hc_acos_half(_Float16 x) [[hc]];
-extern "C" float __hc_acos(float x) [[hc]];
-extern "C" double __hc_acos_double(double x) [[hc]];
+extern "C" _Float16 __ocml_acos_f16(_Float16 x) [[hc]];
+extern "C" float __ocml_acos_f32(float x) [[hc]];
+extern "C" double __ocml_acos_f64(double x) [[hc]];
 
-extern "C" _Float16 __hc_acosh_half(_Float16 x) [[hc]];
-extern "C" float __hc_acosh(float x) [[hc]];
-extern "C" double __hc_acosh_double(double x) [[hc]];
+extern "C" _Float16 __ocml_acosh_f16(_Float16 x) [[hc]];
+extern "C" float __ocml_acosh_f32(float x) [[hc]];
+extern "C" double __ocml_acosh_f64(double x) [[hc]];
 
-extern "C" _Float16 __hc_asin_half(_Float16 x) [[hc]];
-extern "C" float __hc_asin(float x) [[hc]];
-extern "C" double __hc_asin_double(double x) [[hc]];
+extern "C" _Float16 __ocml_asin_f16(_Float16 x) [[hc]];
+extern "C" float __ocml_asin_f32(float x) [[hc]];
+extern "C" double __ocml_asin_f64(double x) [[hc]];
 
-extern "C" _Float16 __hc_asinh_half(_Float16 x) [[hc]];
-extern "C" float __hc_asinh(float x) [[hc]];
-extern "C" double __hc_asinh_double(double x) [[hc]];
+extern "C" _Float16 __ocml_asinh_f16(_Float16 x) [[hc]];
+extern "C" float __ocml_asinh_f32(float x) [[hc]];
+extern "C" double __ocml_asinh_f64(double x) [[hc]];
 
-extern "C" _Float16 __hc_atan_half(_Float16 x) [[hc]];
-extern "C" float __hc_atan(float x) [[hc]];
-extern "C" double __hc_atan_double(double x) [[hc]];
+extern "C" _Float16 __ocml_atan_f16(_Float16 x) [[hc]];
+extern "C" float __ocml_atan_f32(float x) [[hc]];
+extern "C" double __ocml_atan_f64(double x) [[hc]];
 
-extern "C" _Float16 __hc_atanh_half(_Float16 x) [[hc]];
-extern "C" float __hc_atanh(float x) [[hc]];
-extern "C" double __hc_atanh_double(double x) [[hc]];
+extern "C" _Float16 __ocml_atanh_f16(_Float16 x) [[hc]];
+extern "C" float __ocml_atanh_f32(float x) [[hc]];
+extern "C" double __ocml_atanh_f64(double x) [[hc]];
 
-extern "C" _Float16 __hc_atan2_half(_Float16 y, _Float16 x) [[hc]];
-extern "C" float __hc_atan2(float y, float x) [[hc]];
-extern "C" double __hc_atan2_double(double y, double x) [[hc]];
+extern "C" _Float16 __ocml_atan2_f16(_Float16 y, _Float16 x) [[hc]];
+extern "C" float __ocml_atan2_f32(float y, float x) [[hc]];
+extern "C" double __ocml_atan2_f64(double y, double x) [[hc]];
 
-extern "C" _Float16 __hc_cbrt_half(_Float16 x) [[hc]];
-extern "C" float __hc_cbrt(float x) [[hc]];
-extern "C" double __hc_cbrt_double(double x) [[hc]];
+extern "C" _Float16 __ocml_cbrt_f16(_Float16 x) [[hc]];
+extern "C" float __ocml_cbrt_f32(float x) [[hc]];
+extern "C" double __ocml_cbrt_f64(double x) [[hc]];
 
-extern "C" _Float16 __hc_ceil_half(_Float16 x) [[hc]];
-extern "C" float __hc_ceil(float x) [[hc]];
-extern "C" double __hc_ceil_double(double x) [[hc]];
+extern "C" _Float16 __ocml_ceil_f16(_Float16 x) [[hc]];
+extern "C" float __ocml_ceil_f32(float x) [[hc]];
+extern "C" double __ocml_ceil_f64(double x) [[hc]];
 
-extern "C" _Float16 __hc_copysign_half(_Float16 x, _Float16 y) [[hc]];
-extern "C" float __hc_copysign(float x, float y) [[hc]];
-extern "C" double __hc_copysign_double(double x, double y) [[hc]];
+extern "C" _Float16 __ocml_copysign_f16(_Float16 x, _Float16 y) [[hc]];
+extern "C" float __ocml_copysign_f32(float x, float y) [[hc]];
+extern "C" double __ocml_copysign_f64(double x, double y) [[hc]];
 
-extern "C" _Float16 __hc_cos_half(_Float16 x) [[hc]];
-extern "C" _Float16 __hc_native_cos_half(_Float16 x) [[hc]];
-extern "C" float __hc_cos(float x) [[hc]];
-extern "C" float __hc_native_cos(float x) [[hc]];
-extern "C" double __hc_cos_double(double x) [[hc]];
+extern "C" _Float16 __ocml_cos_f16(_Float16 x) [[hc]];
+extern "C" _Float16 __ocml_native_cos_f16(_Float16 x) [[hc]];
+extern "C" float __ocml_cos_f32(float x) [[hc]];
+extern "C" float __ocml_native_cos_f32(float x) [[hc]];
+extern "C" double __ocml_cos_f64(double x) [[hc]];
 
-extern "C" _Float16 __hc_cosh_half(_Float16 x) [[hc]];
-extern "C" float __hc_cosh(float x) [[hc]];
-extern "C" double __hc_cosh_double(double x) [[hc]];
+extern "C" _Float16 __ocml_cosh_f16(_Float16 x) [[hc]];
+extern "C" float __ocml_cosh_f32(float x) [[hc]];
+extern "C" double __ocml_cosh_f64(double x) [[hc]];
 
-extern "C" _Float16 __hc_cospi_half(_Float16 x) [[hc]];
-extern "C" float __hc_cospi(float x) [[hc]];
-extern "C" double __hc_cospi_double(double x) [[hc]];
+extern "C" _Float16 __ocml_cospi_f16(_Float16 x) [[hc]];
+extern "C" float __ocml_cospi_f32(float x) [[hc]];
+extern "C" double __ocml_cospi_f64(double x) [[hc]];
 
-extern "C" _Float16 __hc_erf_half(_Float16 x) [[hc]];
-extern "C" float __hc_erf(float x) [[hc]];
-extern "C" double __hc_erf_double(double x) [[hc]];
+extern "C" _Float16 __ocml_erf_f16(_Float16 x) [[hc]];
+extern "C" float __ocml_erf_f32(float x) [[hc]];
+extern "C" double __ocml_erf_f64(double x) [[hc]];
 
-extern "C" _Float16 __hc_erfc_half(_Float16 x) [[hc]];
-extern "C" float __hc_erfc(float x) [[hc]];
-extern "C" double __hc_erfc_double(double x) [[hc]];
+extern "C" _Float16 __ocml_erfc_f16(_Float16 x) [[hc]];
+extern "C" float __ocml_erfc_f32(float x) [[hc]];
+extern "C" double __ocml_erfc_f64(double x) [[hc]];
 
-extern "C" _Float16 __hc_erfcinv_half(_Float16 x) [[hc]];
-extern "C" float __hc_erfcinv(float x) [[hc]];
-extern "C" double __hc_erfcinv_double(double x) [[hc]];
+extern "C" _Float16 __ocml_erfcinv_f16(_Float16 x) [[hc]];
+extern "C" float __ocml_erfcinv_f32(float x) [[hc]];
+extern "C" double __ocml_erfcinv_f64(double x) [[hc]];
 
-extern "C" _Float16 __hc_erfinv_half(_Float16 x) [[hc]];
-extern "C" float __hc_erfinv(float x) [[hc]];
-extern "C" double __hc_erfinv_double(double x) [[hc]];
+extern "C" _Float16 __ocml_erfinv_f16(_Float16 x) [[hc]];
+extern "C" float __ocml_erfinv_f32(float x) [[hc]];
+extern "C" double __ocml_erfinv_f64(double x) [[hc]];
 
-extern "C" _Float16 __hc_exp_half(_Float16 x) [[hc]];
-extern "C" float __hc_exp(float x) [[hc]];
-extern "C" double __hc_exp_double(double x) [[hc]];
+extern "C" _Float16 __ocml_exp_f16(_Float16 x) [[hc]];
+extern "C" float __ocml_exp_f32(float x) [[hc]];
+extern "C" double __ocml_exp_f64(double x) [[hc]];
 
-extern "C" _Float16 __hc_exp10_half(_Float16 x) [[hc]];
-extern "C" float __hc_exp10(float x) [[hc]];
-extern "C" double __hc_exp10_double(double x) [[hc]];
+extern "C" _Float16 __ocml_exp10_f16(_Float16 x) [[hc]];
+extern "C" float __ocml_exp10_f32(float x) [[hc]];
+extern "C" double __ocml_exp10_f64(double x) [[hc]];
 
-extern "C" _Float16 __hc_exp2_native_half(_Float16 x) [[hc]];
-extern "C" _Float16 __hc_exp2_half(_Float16 x) [[hc]];
-extern "C" float __hc_exp2(float x) [[hc]];
-extern "C" float __hc_exp2_native(float x) [[hc]];
-extern "C" double __hc_exp2_double(double x) [[hc]];
+extern "C" _Float16 __ocml_native_exp2_f16(_Float16 x) [[hc]];
+extern "C" _Float16 __ocml_exp2_f16(_Float16 x) [[hc]];
+extern "C" float __ocml_exp2_f32(float x) [[hc]];
+extern "C" float __ocml_native_exp2_f32(float x) [[hc]];
+extern "C" double __ocml_exp2_f64(double x) [[hc]];
 
-extern "C" _Float16 __hc_expm1_half(_Float16 x) [[hc]];
-extern "C" float __hc_expm1(float x) [[hc]];
-extern "C" double __hc_expm1_double(double x) [[hc]];
+extern "C" _Float16 __ocml_expm1_f16(_Float16 x) [[hc]];
+extern "C" float __ocml_expm1_f32(float x) [[hc]];
+extern "C" double __ocml_expm1_f64(double x) [[hc]];
 
-extern "C" _Float16 __hc_fabs_half(_Float16 x) [[hc]];
-extern "C" float __hc_fabs(float x) [[hc]];
-extern "C" double __hc_fabs_double(double x) [[hc]];
+extern "C" _Float16 __ocml_fabs_f16(_Float16 x) [[hc]];
+extern "C" float __ocml_fabs_f32(float x) [[hc]];
+extern "C" double __ocml_fabs_f64(double x) [[hc]];
 
-extern "C" _Float16 __hc_fdim_half(_Float16 x, _Float16 y) [[hc]];
-extern "C" float __hc_fdim(float x, float y) [[hc]];
-extern "C" double __hc_fdim_double(double x, double y) [[hc]];
+extern "C" _Float16 __ocml_fdim_f16(_Float16 x, _Float16 y) [[hc]];
+extern "C" float __ocml_fdim_f32(float x, float y) [[hc]];
+extern "C" double __ocml_fdim_f64(double x, double y) [[hc]];
 
-extern "C" _Float16 __hc_floor_half(_Float16 x) [[hc]];
-extern "C" float __hc_floor(float x) [[hc]];
-extern "C" double __hc_floor_double(double x) [[hc]];
+extern "C" _Float16 __ocml_floor_f16(_Float16 x) [[hc]];
+extern "C" float __ocml_floor_f32(float x) [[hc]];
+extern "C" double __ocml_floor_f64(double x) [[hc]];
 
-extern "C" _Float16 __hc_fma_half(
-    _Float16 x, _Float16 y, _Float16 z) [[hc]];
-extern "C" float __hc_fma(float x, float y, float z) [[hc]];
-extern "C" double __hc_fma_double(double x, double y, double z) [[hc]];
+extern "C" _Float16 __ocml_fma_f16(_Float16 x, _Float16 y, _Float16 z) [[hc]];
+extern "C" float __ocml_fma_f32(float x, float y, float z) [[hc]];
+extern "C" double __ocml_fma_f64(double x, double y, double z) [[hc]];
 
-extern "C" _Float16 __hc_fmax_half(_Float16 x, _Float16 y) [[hc]];
-extern "C" float __hc_fmax(float x, float y) [[hc]];
-extern "C" double __hc_fmax_double(double x, double y) [[hc]];
+extern "C" _Float16 __ocml_fmax_f16(_Float16 x, _Float16 y) [[hc]];
+extern "C" float __ocml_fmax_f32(float x, float y) [[hc]];
+extern "C" double __ocml_fmax_f64(double x, double y) [[hc]];
 
-extern "C" _Float16 __hc_fmin_half(_Float16 x, _Float16 y) [[hc]];
-extern "C" float __hc_fmin(float x, float y) [[hc]];
-extern "C" double __hc_fmin_double(double x, double y) [[hc]];
+extern "C" _Float16 __ocml_fmin_f16(_Float16 x, _Float16 y) [[hc]];
+extern "C" float __ocml_fmin_f32(float x, float y) [[hc]];
+extern "C" double __ocml_fmin_f64(double x, double y) [[hc]];
 
-extern "C" _Float16 __hc_fmod_half(_Float16 x, _Float16 y) [[hc]];
-extern "C" float __hc_fmod(float x, float y) [[hc]];
-extern "C" double __hc_fmod_double(double x, double y) [[hc]];
+extern "C" _Float16 __ocml_fmod_f16(_Float16 x, _Float16 y) [[hc]];
+extern "C" float __ocml_fmod_f32(float x, float y) [[hc]];
+extern "C" double __ocml_fmod_f64(double x, double y) [[hc]];
 
-extern "C" int __hc_fpclassify_half(_Float16 x) [[hc]];
-extern "C" int __hc_fpclassify(float x) [[hc]];
-extern "C" int __hc_fpclassify_double(double x) [[hc]];
+extern "C" int __ocml_fpclassify_f16(_Float16 x) [[hc]];
+extern "C" int __ocml_fpclassify_f32(float x) [[hc]];
+extern "C" int __ocml_fpclassify_f64(double x) [[hc]];
 
-extern "C" _Float16 __hc_frexp_half(_Float16 x, int *exp) [[hc]];
-extern "C" float __hc_frexp(float x, int *exp) [[hc]];
-extern "C" double __hc_frexp_double(double x, int *exp) [[hc]];
+extern "C" _Float16 __ocml_frexp_f16(_Float16 x, __attribute__((address_space(5))) int *exp) [[hc]];
+extern "C" float __ocml_frexp_f32(float x, __attribute__((address_space(5))) int *exp) [[hc]];
+extern "C" double __ocml_frexp_f64(double x, __attribute__((address_space(5))) int *exp) [[hc]];
 
-extern "C" _Float16 __hc_hypot_half(_Float16 x, _Float16 y) [[hc]];
-extern "C" float __hc_hypot(float x, float y) [[hc]];
-extern "C" double __hc_hypot_double(double x, double y) [[hc]];
+extern "C" _Float16 __ocml_hypot_f16(_Float16 x, _Float16 y) [[hc]];
+extern "C" float __ocml_hypot_f32(float x, float y) [[hc]];
+extern "C" double __ocml_hypot_f64(double x, double y) [[hc]];
 
-extern "C" int __hc_ilogb_half(_Float16 x) [[hc]];
-extern "C" int __hc_ilogb(float x) [[hc]];
-extern "C" int __hc_ilogb_double(double x) [[hc]];
+extern "C" int __ocml_ilogb_f16(_Float16 x) [[hc]];
+extern "C" int __ocml_ilogb_f32(float x) [[hc]];
+extern "C" int __ocml_ilogb_f64(double x) [[hc]];
 
-extern "C" int __hc_isfinite_half(_Float16 x) [[hc]];
-extern "C" int __hc_isfinite(float x) [[hc]];
-extern "C" int __hc_isfinite_double(double x) [[hc]];
+extern "C" int __ocml_isfinite_f16(_Float16 x) [[hc]];
+extern "C" int __ocml_isfinite_f32(float x) [[hc]];
+extern "C" int __ocml_isfinite_f64(double x) [[hc]];
 
-extern "C" int __hc_isinf_half(_Float16 x) [[hc]];
-extern "C" int __hc_isinf(float x) [[hc]];
-extern "C" int __hc_isinf_double(double x) [[hc]];
+extern "C" int __ocml_isinf_f16(_Float16 x) [[hc]];
+extern "C" int __ocml_isinf_f32(float x) [[hc]];
+extern "C" int __ocml_isinf_f64(double x) [[hc]];
 
-extern "C" int __hc_isnan_half(_Float16 x) [[hc]];
-extern "C" int __hc_isnan(float x) [[hc]];
-extern "C" int __hc_isnan_double(double x) [[hc]];
+extern "C" int __ocml_isnan_f16(_Float16 x) [[hc]];
+extern "C" int __ocml_isnan_f32(float x) [[hc]];
+extern "C" int __ocml_isnan_f64(double x) [[hc]];
 
-extern "C" int __hc_isnormal_half(_Float16 x) [[hc]];
-extern "C" int __hc_isnormal(float x) [[hc]];
-extern "C" int __hc_isnormal_double(double x) [[hc]];
+extern "C" int __ocml_isnormal_f16(_Float16 x) [[hc]];
+extern "C" int __ocml_isnormal_f32(float x) [[hc]];
+extern "C" int __ocml_isnormal_f64(double x) [[hc]];
 
-extern "C" _Float16 __hc_ldexp_half(_Float16 x, std::int16_t exp) [[hc]];
-extern "C" float __hc_ldexp(float x, int exp) [[hc]];
-extern "C" double __hc_ldexp_double(double x, int exp) [[hc]];
+extern "C" _Float16 __ocml_ldexp_f16(_Float16 x, std::int16_t exp) [[hc]];
+extern "C" float __ocml_ldexp_f32(float x, int exp) [[hc]];
+extern "C" double __ocml_ldexp_f64(double x, int exp) [[hc]];
 
-extern "C" _Float16 __hc_lgamma_half(_Float16 x) [[hc]];
-extern "C" float __hc_lgamma(float x) [[hc]];
-extern "C" double __hc_lgamma_double(double x) [[hc]];
+extern "C" _Float16 __ocml_lgamma_f16(_Float16 x) [[hc]];
+extern "C" float __ocml_lgamma_f32(float x) [[hc]];
+extern "C" double __ocml_lgamma_f64(double x) [[hc]];
 
-extern "C" _Float16 __hc_log_half(_Float16 x) [[hc]];
-extern "C" float __hc_log(float x) [[hc]];
-extern "C" float __hc_log_native(float x) [[hc]];
-extern "C" double __hc_log_double(double x) [[hc]];
+extern "C" _Float16 __ocml_log_f16(_Float16 x) [[hc]];
+extern "C" float __ocml_log_f32(float x) [[hc]];
+extern "C" double __ocml_log_f64(double x) [[hc]];
 
-extern "C" _Float16 __hc_log10_half(_Float16 x) [[hc]];
-extern "C" float __hc_log10(float x) [[hc]];
-extern "C" double __hc_log10_double(double x) [[hc]];
+extern "C" _Float16 __ocml_log10_f16(_Float16 x) [[hc]];
+extern "C" float __ocml_log10_f32(float x) [[hc]];
+extern "C" double __ocml_log10_f64(double x) [[hc]];
 
-extern "C" _Float16 __hc_log2_half(_Float16 x) [[hc]];
-extern "C" _Float16 __hc_log2_native_half(_Float16 x) [[hc]];
-extern "C" float __hc_log2(float x) [[hc]];
-extern "C" float __hc_log2_native(float x) [[hc]];
-extern "C" double __hc_log2_double(double x) [[hc]];
+extern "C" _Float16 __ocml_log2_f16(_Float16 x) [[hc]];
+extern "C" _Float16 __ocml_native_log2_f16(_Float16 x) [[hc]];
+extern "C" float __ocml_log2_f32(float x) [[hc]];
+extern "C" float __ocml_native_log2_f32(float x) [[hc]];
+extern "C" double __ocml_log2_f64(double x) [[hc]];
 
-extern "C" _Float16 __hc_log1p_half(_Float16 x) [[hc]];
-extern "C" float __hc_log1p(float x) [[hc]];
-extern "C" double __hc_log1p_double(double x) [[hc]];
+extern "C" _Float16 __ocml_log1p_f16(_Float16 x) [[hc]];
+extern "C" float __ocml_log1p_f32(float x) [[hc]];
+extern "C" double __ocml_log1p_f64(double x) [[hc]];
 
-extern "C" _Float16 __hc_logb_half(_Float16 x) [[hc]];
-extern "C" float __hc_logb(float x) [[hc]];
-extern "C" double __hc_logb_double(double x) [[hc]];
+extern "C" _Float16 __ocml_logb_f16(_Float16 x) [[hc]];
+extern "C" float __ocml_logb_f32(float x) [[hc]];
+extern "C" double __ocml_logb_f64(double x) [[hc]];
 
-extern "C" _Float16 __hc_modf_half(_Float16 x, _Float16 *iptr) [[hc]];
-extern "C" float __hc_modf(float x, float *iptr) [[hc]];
-extern "C" double __hc_modf_double(double x, double *iptr) [[hc]];
+extern "C" _Float16 __ocml_modf_f16(_Float16 x, __attribute__((address_space(5))) _Float16 *iptr) [[hc]];
+extern "C" float __ocml_modf_f32(float x, __attribute__((address_space(5))) float *iptr) [[hc]];
+extern "C" double __ocml_modf_f64(double x, __attribute__((address_space(5))) double *iptr) [[hc]];
 
-extern "C" _Float16 __hc_nan_half(int tagp) [[hc]];
-extern "C" float __hc_nan(int tagp) [[hc]];
-extern "C" double __hc_nan_double(unsigned long tagp) [[hc]];
+extern "C" _Float16 __ocml_nan_f16(int tagp) [[hc]];
+extern "C" float __ocml_nan_f32(int tagp) [[hc]];
+extern "C" double __ocml_nan_f64(unsigned long tagp) [[hc]];
 
-extern "C" _Float16 __hc_nearbyint_half(_Float16 x) [[hc]];
-extern "C" float __hc_nearbyint(float x) [[hc]];
-extern "C" double __hc_nearbyint_double(double x) [[hc]];
+extern "C" _Float16 __ocml_nearbyint_f16(_Float16 x) [[hc]];
+extern "C" float __ocml_nearbyint_f32(float x) [[hc]];
+extern "C" double __ocml_nearbyint_f64(double x) [[hc]];
 
-extern "C" _Float16 __hc_nextafter_half(_Float16 x, _Float16 y) [[hc]];
-extern "C" float __hc_nextafter(float x, float y) [[hc]];
-extern "C" double __hc_nextafter_double(double x, double y) [[hc]];
+extern "C" _Float16 __ocml_nextafter_f16(_Float16 x, _Float16 y) [[hc]];
+extern "C" float __ocml_nextafter_f32(float x, float y) [[hc]];
+extern "C" double __ocml_nextafter_f64(double x, double y) [[hc]];
 
-extern "C" _Float16 __hc_pow_half(_Float16 x, _Float16 y) [[hc]];
-extern "C" float __hc_pow(float x, float y) [[hc]];
-extern "C" double __hc_pow_double(double x, double y) [[hc]];
+extern "C" _Float16 __ocml_pow_f16(_Float16 x, _Float16 y) [[hc]];
+extern "C" float __ocml_pow_f32(float x, float y) [[hc]];
+extern "C" double __ocml_pow_f64(double x, double y) [[hc]];
 
-extern "C" _Float16 __hc_rcbrt_half(_Float16 x) [[hc]];
-extern "C" float __hc_rcbrt(float x) [[hc]];
-extern "C" double __hc_rcbrt_double(double x) [[hc]];
+extern "C" _Float16 __ocml_rcbrt_f16(_Float16 x) [[hc]];
+extern "C" float __ocml_rcbrt_f32(float x) [[hc]];
+extern "C" double __ocml_rcbrt_f64(double x) [[hc]];
 
 // TODO: rcp is implementation only, it does not have a public interface.
-extern "C" _Float16 __hc_rcp_native_half(_Float16 x) [[hc]];
+extern "C" _Float16 __hc_rcp_native_f16(_Float16 x) [[hc]];
 extern "C" float __hc_rcp_native(float x) [[hc]];
 
-extern "C" _Float16 __hc_remainder_half(_Float16 x, _Float16 y) [[hc]];
-extern "C" float __hc_remainder(float x, float y) [[hc]];
-extern "C" double __hc_remainder_double(double x, double y) [[hc]];
+extern "C" _Float16 __ocml_remainder_f16(_Float16 x, _Float16 y) [[hc]];
+extern "C" float __ocml_remainder_f32(float x, float y) [[hc]];
+extern "C" double __ocml_remainder_f64(double x, double y) [[hc]];
 
-extern "C" _Float16 __hc_remquo_half(_Float16 x, _Float16 y, int *quo) [[hc]];
-extern "C" float __hc_remquo(float x, float y, int *quo) [[hc]];
-extern "C" double __hc_remquo_double(double x, double y, int *quo) [[hc]];
+extern "C" _Float16 __ocml_remquo_f16(_Float16 x, _Float16 y, __attribute__((address_space(5))) int *quo) [[hc]];
+extern "C" float __ocml_remquo_f32(float x, float y, __attribute__((address_space(5))) int *quo) [[hc]];
+extern "C" double __ocml_remquo_f64(double x, double y, __attribute__((address_space(5))) int *quo) [[hc]];
 
-extern "C" _Float16 __hc_round_half(_Float16 x) [[hc]];
-extern "C" float __hc_round(float x) [[hc]];
-extern "C" double __hc_round_double(double x) [[hc]];
+extern "C" _Float16 __ocml_round_f16(_Float16 x) [[hc]];
+extern "C" float __ocml_round_f32(float x) [[hc]];
+extern "C" double __ocml_round_f64(double x) [[hc]];
 
-extern "C" _Float16 __hc_rsqrt_half(_Float16 x) [[hc]];
-extern "C" _Float16 __hc_rsqrt_native_half(_Float16 x) [[hc]];
-extern "C" float __hc_rsqrt(float x) [[hc]];
-extern "C" float __hc_rsqrt_native(float x) [[hc]];
-extern "C" double __hc_rsqrt_double(double x) [[hc]];
+extern "C" _Float16 __ocml_rsqrt_f16(_Float16 x) [[hc]];
+extern "C" _Float16 __ocml_native_rsqrt_f16(_Float16 x) [[hc]];
+extern "C" float __ocml_rsqrt_f32(float x) [[hc]];
+extern "C" float __ocml_native_rsqrt_f32(float x) [[hc]];
+extern "C" double __ocml_rsqrt_f64(double x) [[hc]];
 
-extern "C" _Float16 __hc_scalb_half(_Float16 x, _Float16 exp) [[hc]];
-extern "C" float __hc_scalb(float x, float exp) [[hc]];
-extern "C" double __hc_scalb_double(double x, double exp) [[hc]];
+extern "C" _Float16 __ocml_scalb_f16(_Float16 x, _Float16 exp) [[hc]];
+extern "C" float __ocml_scalb_f32(float x, float exp) [[hc]];
+extern "C" double __ocml_scalb_f64(double x, double exp) [[hc]];
 
-extern "C" _Float16 __hc_scalbn_half(_Float16 x, int exp) [[hc]];
-extern "C" float __hc_scalbn(float x, int exp) [[hc]];
-extern "C" double __hc_scalbn_double(double x, int exp) [[hc]];
+extern "C" _Float16 __ocml_scalbn_f16(_Float16 x, int exp) [[hc]];
+extern "C" float __ocml_scalbn_f32(float x, int exp) [[hc]];
+extern "C" double __ocml_scalbn_f64(double x, int exp) [[hc]];
 
-extern "C" _Float16 __hc_sinpi_half(_Float16 x) [[hc]];
-extern "C" float __hc_sinpi(float x) [[hc]];
-extern "C" double __hc_sinpi_double(double x) [[hc]];
+extern "C" _Float16 __ocml_sinpi_f16(_Float16 x) [[hc]];
+extern "C" float __ocml_sinpi_f32(float x) [[hc]];
+extern "C" double __ocml_sinpi_f64(double x) [[hc]];
 
-extern "C" int __hc_signbit_half(_Float16 x) [[hc]];
-extern "C" int __hc_signbit(float x) [[hc]];
-extern "C" int __hc_signbit_double(double x) [[hc]];
+extern "C" int __ocml_signbit_f16(_Float16 x) [[hc]];
+extern "C" int __ocml_signbit_f32(float x) [[hc]];
+extern "C" int __ocml_signbit_f64(double x) [[hc]];
 
-extern "C" _Float16 __hc_sin_half(_Float16 x) [[hc]];
-extern "C" _Float16 __hc_sin_native_half(_Float16 x) [[hc]];
-extern "C" float __hc_sin(float x) [[hc]];
-extern "C" float __hc_sin_native(float x) [[hc]];
-extern "C" double __hc_sin_double(double x) [[hc]];
+extern "C" _Float16 __ocml_sin_f16(_Float16 x) [[hc]];
+extern "C" _Float16 __ocml_native_sin_f16(_Float16 x) [[hc]];
+extern "C" float __ocml_sin_f32(float x) [[hc]];
+extern "C" float __ocml_native_sin_f32(float x) [[hc]];
+extern "C" double __ocml_sin_f64(double x) [[hc]];
 
-extern "C" _Float16 __hc_sincos_half(_Float16 x, _Float16 *c) [[hc]];
-extern "C" float __hc_sincos(float x, float *c) [[hc]];
-extern "C" double __hc_sincos_double(double x, double *c) [[hc]];
+extern "C" _Float16 __ocml_sincos_f16(_Float16 x, __attribute__((address_space(5))) _Float16 *c) [[hc]];
+extern "C" float __ocml_sincos_f32(float x, __attribute__((address_space(5))) float *c) [[hc]];
+extern "C" double __ocml_sincos_f64(double x, __attribute__((address_space(5))) double *c) [[hc]];
 
-extern "C" _Float16 __hc_sinh_half(_Float16 x) [[hc]];
-extern "C" float __hc_sinh(float x) [[hc]];
-extern "C" double __hc_sinh_double(double x) [[hc]];
+extern "C" _Float16 __ocml_sinh_f16(_Float16 x) [[hc]];
+extern "C" float __ocml_sinh_f32(float x) [[hc]];
+extern "C" double __ocml_sinh_f64(double x) [[hc]];
 
-extern "C" _Float16 __hc_sqrt_half(_Float16 x) [[hc]];
-extern "C" _Float16 __hc_sqrt_native_half(_Float16 x) [[hc]];
-extern "C" float __hc_sqrt(float x) [[hc]];
-extern "C" float __hc_sqrt_native(float x) [[hc]];
-extern "C" double __hc_sqrt_double(double x) [[hc]];
+extern "C" _Float16 __ocml_sqrt_f16(_Float16 x) [[hc]];
+extern "C" _Float16 __ocml_native_sqrt_f16(_Float16 x) [[hc]];
+extern "C" float __ocml_sqrt_f32(float x) [[hc]];
+extern "C" float __ocml_native_sqrt_f32(float x) [[hc]];
+extern "C" double __ocml_sqrt_f64(double x) [[hc]];
 
-extern "C" _Float16 __hc_tgamma_half(_Float16 x) [[hc]];
-extern "C" float __hc_tgamma(float x) [[hc]];
-extern "C" double __hc_tgamma_double(double x) [[hc]];
+extern "C" _Float16 __ocml_tgamma_f16(_Float16 x) [[hc]];
+extern "C" float __ocml_tgamma_f32(float x) [[hc]];
+extern "C" double __ocml_tgamma_f64(double x) [[hc]];
 
-extern "C" _Float16 __hc_tan_half(_Float16 x) [[hc]];
-extern "C" float __hc_tan(float x) [[hc]];
-extern "C" double __hc_tan_double(double x) [[hc]];
+extern "C" _Float16 __ocml_tan_f16(_Float16 x) [[hc]];
+extern "C" float __ocml_tan_f32(float x) [[hc]];
+extern "C" double __ocml_tan_f64(double x) [[hc]];
 
-extern "C" _Float16 __hc_tanh_half(_Float16 x) [[hc]];
-extern "C" float __hc_tanh(float x) [[hc]];
-extern "C" double __hc_tanh_double(double x) [[hc]];
+extern "C" _Float16 __ocml_tanh_f16(_Float16 x) [[hc]];
+extern "C" float __ocml_tanh_f32(float x) [[hc]];
+extern "C" double __ocml_tanh_f64(double x) [[hc]];
 
-extern "C" _Float16 __hc_tanpi_half(_Float16 x) [[hc]];
-extern "C" float __hc_tanpi(float x) [[hc]];
-extern "C" double __hc_tanpi_double(double x) [[hc]];
+extern "C" _Float16 __ocml_tanpi_f16(_Float16 x) [[hc]];
+extern "C" float __ocml_tanpi_f32(float x) [[hc]];
+extern "C" double __ocml_tanpi_f64(double x) [[hc]];
 
-extern "C" _Float16 __hc_trunc_half(_Float16 x) [[hc]];
-extern "C" float __hc_trunc(float x) [[hc]];
-extern "C" double __hc_trunc_double(double x) [[hc]];
+extern "C" _Float16 __ocml_trunc_f16(_Float16 x) [[hc]];
+extern "C" float __ocml_trunc_f32(float x) [[hc]];
+extern "C" double __ocml_trunc_f64(double x) [[hc]];
 
 #define HCC_MATH_LIB_FN inline __attribute__((used, hc))
 namespace detail
@@ -364,165 +362,173 @@ namespace detail
         using ::truncf;
 
         HCC_MATH_LIB_FN
-        float acosf(float x) { return __hc_acos(x); }
+        float acosf(float x) { return __ocml_acos_f32(x); }
 
         HCC_MATH_LIB_FN
-        _Float16 acos(_Float16 x) { return __hc_acos_half(x); }
+        _Float16 acos(_Float16 x) { return __ocml_acos_f16(x); }
 
         HCC_MATH_LIB_FN
         float acos(float x) { return fast_math::acosf(x); }
 
         HCC_MATH_LIB_FN
-        float asinf(float x) { return __hc_asin(x); }
+        float asinf(float x) { return __ocml_asin_f32(x); }
 
         HCC_MATH_LIB_FN
-        _Float16 asin(_Float16 x) { return __hc_asin_half(x); }
+        _Float16 asin(_Float16 x) { return __ocml_asin_f16(x); }
 
         HCC_MATH_LIB_FN
         float asin(float x) { return fast_math::asinf(x); }
 
         HCC_MATH_LIB_FN
-        float atanf(float x) { return __hc_atan(x); }
+        float atanf(float x) { return __ocml_atan_f32(x); }
 
         HCC_MATH_LIB_FN
-        _Float16 atan(_Float16 x) { return __hc_atan_half(x); }
+        _Float16 atan(_Float16 x) { return __ocml_atan_f16(x); }
 
         HCC_MATH_LIB_FN
         float atan(float x) { return fast_math::atanf(x); }
 
         HCC_MATH_LIB_FN
-        float atan2f(float y, float x) { return __hc_atan2(y, x); }
+        float atan2f(float y, float x) { return __ocml_atan2_f32(y, x); }
 
         HCC_MATH_LIB_FN
-        _Float16 atan2(_Float16 y, _Float16 x) { return __hc_atan2_half(y, x); }
+        _Float16 atan2(_Float16 y, _Float16 x) { return __ocml_atan2_f16(y, x); }
 
         HCC_MATH_LIB_FN
         float atan2(float y, float x) { return fast_math::atan2f(y, x); }
 
         HCC_MATH_LIB_FN
-        float ceilf(float x) { return __hc_ceil(x); }
+        float ceilf(float x) { return __ocml_ceil_f32(x); }
 
         HCC_MATH_LIB_FN
-        _Float16 ceil(_Float16 x) { return __hc_ceil_half(x); }
+        _Float16 ceil(_Float16 x) { return __ocml_ceil_f16(x); }
 
         HCC_MATH_LIB_FN
         float ceil(float x) { return fast_math::ceilf(x); }
 
         HCC_MATH_LIB_FN
-        float cosf(float x) { return __hc_native_cos(x); }
+        float cosf(float x) { return __ocml_native_cos_f32(x); }
 
         HCC_MATH_LIB_FN
-        _Float16 cos(_Float16 x) { return __hc_native_cos_half(x); }
+        _Float16 cos(_Float16 x) { return __ocml_native_cos_f16(x); }
 
         HCC_MATH_LIB_FN
         float cos(float x) { return fast_math::cosf(x); }
 
         HCC_MATH_LIB_FN
-        float coshf(float x) { return __hc_cosh(x); }
+        float coshf(float x) { return __ocml_cosh_f32(x); }
 
         HCC_MATH_LIB_FN
-        _Float16 cosh(_Float16 x) { return __hc_cosh_half(x); }
+        _Float16 cosh(_Float16 x) { return __ocml_cosh_f16(x); }
 
         HCC_MATH_LIB_FN
         float cosh(float x) { return fast_math::coshf(x); }
 
         HCC_MATH_LIB_FN
-        float expf(float x) { return __hc_exp2_native(M_LOG2E * x); }
+        float expf(float x) { return __ocml_native_exp2_f32(M_LOG2E * x); }
 
         HCC_MATH_LIB_FN
-        _Float16 exp(_Float16 x) { return __hc_exp2_native_half(M_LOG2E * x); }
+        _Float16 exp(_Float16 x) { return __ocml_native_exp2_f16(M_LOG2E * x); }
 
         HCC_MATH_LIB_FN
         float exp(float x) { return fast_math::expf(x); }
 
         HCC_MATH_LIB_FN
-        float exp2f(float x) { return __hc_exp2_native(x); }
+        float exp2f(float x) { return __ocml_native_exp2_f32(x); }
 
         HCC_MATH_LIB_FN
-        _Float16 exp2(_Float16 x) { return __hc_exp2_native_half(x); }
+        _Float16 exp2(_Float16 x) { return __ocml_native_exp2_f16(x); }
 
         HCC_MATH_LIB_FN
         float exp2(float x) { return fast_math::exp2f(x); }
 
         HCC_MATH_LIB_FN
-        float fabsf(float x) { return __hc_fabs(x); }
+        float fabsf(float x) { return __ocml_fabs_f32(x); }
 
         HCC_MATH_LIB_FN
-        _Float16 fabs(_Float16 x) { return __hc_fabs_half(x); }
+        _Float16 fabs(_Float16 x) { return __ocml_fabs_f16(x); }
 
         HCC_MATH_LIB_FN
         float fabs(float x) { return fast_math::fabsf(x); }
 
         HCC_MATH_LIB_FN
-        float floorf(float x) { return __hc_floor(x); }
+        float floorf(float x) { return __ocml_floor_f32(x); }
 
         HCC_MATH_LIB_FN
-        _Float16 floor(_Float16 x) { return __hc_floor_half(x); }
+        _Float16 floor(_Float16 x) { return __ocml_floor_f16(x); }
 
         HCC_MATH_LIB_FN
         float floor(float x) { return fast_math::floorf(x); }
 
         HCC_MATH_LIB_FN
-        float fmaxf(float x, float y) { return __hc_fmax(x, y); }
+        float fmaxf(float x, float y) { return __ocml_fmax_f32(x, y); }
 
         HCC_MATH_LIB_FN
-        _Float16 fmax(_Float16 x, _Float16 y) { return __hc_fmax_half(x, y); }
+        _Float16 fmax(_Float16 x, _Float16 y) { return __ocml_fmax_f16(x, y); }
 
         HCC_MATH_LIB_FN
         float fmax(float x, float y) { return fast_math::fmaxf(x, y); }
 
         HCC_MATH_LIB_FN
-        float fminf(float x, float y) { return __hc_fmin(x, y); }
+        float fminf(float x, float y) { return __ocml_fmin_f32(x, y); }
 
         HCC_MATH_LIB_FN
-        _Float16 fmin(_Float16 x, _Float16 y) { return __hc_fmin_half(x, y); }
+        _Float16 fmin(_Float16 x, _Float16 y) { return __ocml_fmin_f16(x, y); }
 
         HCC_MATH_LIB_FN
         float fmin(float x, float y) { return fast_math::fminf(x, y); }
 
         HCC_MATH_LIB_FN
-        float fmodf(float x, float y) { return __hc_fmod(x, y); }
+        float fmodf(float x, float y) { return __ocml_fmod_f32(x, y); }
 
         HCC_MATH_LIB_FN
-        _Float16 fmod(_Float16 x, _Float16 y) { return __hc_fmod_half(x, y); }
+        _Float16 fmod(_Float16 x, _Float16 y) { return __ocml_fmod_f16(x, y); }
 
         HCC_MATH_LIB_FN
         float fmod(float x, float y) { return fast_math::fmodf(x, y); }
 
         HCC_MATH_LIB_FN
-        float frexpf(float x, int *exp) { return __hc_frexp(x, exp); }
+        float frexpf(float x, int *exp) {
+        	int e;
+        	float ret = __ocml_frexp_f32(x, (__attribute__((address_space(5))) int*) &e);
+        	*exp = e; return ret;
+        }
 
         HCC_MATH_LIB_FN
-        _Float16 frexp(_Float16 x, int *exp) { return __hc_frexp_half(x, exp); }
+        _Float16 frexp(_Float16 x, int *exp) {
+        	int e;
+        	_Float16 ret = __ocml_frexp_f16(x, (__attribute__((address_space(5))) int*) &e);
+            *exp = e; return ret;
+        }
 
         HCC_MATH_LIB_FN
         float frexp(float x, int *exp) { return fast_math::frexpf(x, exp); }
 
         HCC_MATH_LIB_FN
-        int isfinite(_Float16 x) { return __hc_isfinite_half(x); }
+        int isfinite(_Float16 x) { return __ocml_isfinite_f16(x); }
 
         HCC_MATH_LIB_FN
-        int isfinite(float x) { return __hc_isfinite(x); }
+        int isfinite(float x) { return __ocml_isfinite_f32(x); }
 
         HCC_MATH_LIB_FN
-        int isinf(_Float16 x) { return __hc_isinf_half(x); }
+        int isinf(_Float16 x) { return __ocml_isinf_f16(x); }
 
         HCC_MATH_LIB_FN
-        int isinf(float x) { return __hc_isinf(x); }
+        int isinf(float x) { return __ocml_isinf_f32(x); }
 
         HCC_MATH_LIB_FN
-        int isnan(_Float16 x) { return __hc_isnan_half(x); }
+        int isnan(_Float16 x) { return __ocml_isnan_f16(x); }
 
         HCC_MATH_LIB_FN
-        int isnan(float x) { return __hc_isnan(x); }
+        int isnan(float x) { return __ocml_isnan_f32(x); }
 
         HCC_MATH_LIB_FN
-        float ldexpf(float x, int exp) { return __hc_ldexp(x,exp); }
+        float ldexpf(float x, int exp) { return __ocml_ldexp_f32(x,exp); }
 
         HCC_MATH_LIB_FN
         _Float16 ldexp(_Float16 x, std::uint16_t exp)
         {
-            return __hc_ldexp_half(x, exp);
+            return __ocml_ldexp_f16(x, exp);
         }
 
         HCC_MATH_LIB_FN
@@ -539,102 +545,111 @@ namespace detail
         }
 
         HCC_MATH_LIB_FN
-        float logf(float x) { return __hc_log2_native(x) * M_RLOG2_E_F; }
+        float logf(float x) { return __ocml_native_log2_f32(x) * M_RLOG2_E_F; }
 
         HCC_MATH_LIB_FN
         _Float16 log(_Float16 x)
         {
-            return
-                __hc_log2_native_half(x) * static_cast<_Float16>(M_RLOG2_E_F);
+            return __ocml_native_log2_f16(x) * static_cast<_Float16>(M_RLOG2_E_F);
         }
 
         HCC_MATH_LIB_FN
         float log(float x) { return fast_math::logf(x); }
 
         HCC_MATH_LIB_FN
-        float log10f(float x) { return __hc_log2_native(x) * M_RLOG2_10_F; }
+        float log10f(float x) { return __ocml_native_log2_f32(x) * M_RLOG2_10_F; }
 
         HCC_MATH_LIB_FN
         _Float16 log10(_Float16 x)
         {
-            return
-                __hc_log2_native_half(x) * static_cast<_Float16>(M_RLOG2_10_F);
+            return __ocml_native_log2_f16(x) * static_cast<_Float16>(M_RLOG2_10_F);
         }
 
         HCC_MATH_LIB_FN
         float log10(float x) { return fast_math::log10f(x); }
 
         HCC_MATH_LIB_FN
-        float log2f(float x) { return __hc_log2_native(x); }
+        float log2f(float x) { return __ocml_native_log2_f32(x); }
 
         HCC_MATH_LIB_FN
-        _Float16 log2(_Float16 x) { return __hc_log2_native_half(x); }
+        _Float16 log2(_Float16 x) { return __ocml_native_log2_f16(x); }
 
         HCC_MATH_LIB_FN
         float log2(float x) { return fast_math::log2f(x); }
 
         HCC_MATH_LIB_FN
-        float modff(float x, float *iptr) { return __hc_modf(x, iptr); }
+        float modff(float x, float *iptr) {
+        	float i;  float ret = __ocml_modf_f32(x, (__attribute__((address_space(5))) float*)&i);
+        	*iptr = i; return ret;
+        }
 
         HCC_MATH_LIB_FN
-        _Float16 modf(_Float16 x, _Float16 *iptr) { return __hc_modf_half(x, iptr); }
-
+        _Float16 modf(_Float16 x, _Float16 *iptr) {
+        	_Float16 i; _Float16 ret = __ocml_modf_f16(x, (__attribute__((address_space(5))) _Float16*) &i);
+        	*iptr = i; return ret;
+        }
 
         HCC_MATH_LIB_FN
         float modf(float x, float *iptr) { return fast_math::modff(x, iptr); }
 
         HCC_MATH_LIB_FN
-        float powf(float x, float y) { return __hc_pow(x, y); }
+        float powf(float x, float y) { return __ocml_pow_f32(x, y); }
 
         HCC_MATH_LIB_FN
-        _Float16 pow(_Float16 x, _Float16 y) { return __hc_pow_half(x, y); }
+        _Float16 pow(_Float16 x, _Float16 y) { return __ocml_pow_f16(x, y); }
 
         HCC_MATH_LIB_FN
         float pow(float x, float y) { return fast_math::powf(x, y); }
 
         HCC_MATH_LIB_FN
-        float roundf(float x) { return __hc_round(x); }
+        float roundf(float x) { return __ocml_round_f32(x); }
 
         HCC_MATH_LIB_FN
-        _Float16 round(_Float16 x) { return __hc_round_half(x); }
+        _Float16 round(_Float16 x) { return __ocml_round_f16(x); }
 
         HCC_MATH_LIB_FN
         float round(float x) { return fast_math::roundf(x); }
 
         HCC_MATH_LIB_FN
-        float rsqrtf(float x) { return __hc_rsqrt_native(x); }
+        float rsqrtf(float x) { return __ocml_native_rsqrt_f32(x); }
 
         HCC_MATH_LIB_FN
-        _Float16 rsqrt(_Float16 x) { return __hc_rsqrt_native_half(x); }
+        _Float16 rsqrt(_Float16 x) { return __ocml_native_rsqrt_f16(x); }
 
         HCC_MATH_LIB_FN
         float rsqrt(float x) { return fast_math::rsqrtf(x); }
 
         HCC_MATH_LIB_FN
-        int signbitf(float x) { return __hc_signbit(x); }
+        int signbitf(float x) { return __ocml_signbit_f32(x); }
 
         HCC_MATH_LIB_FN
-        int signbit(_Float16 x) { return __hc_signbit_half(x); }
+        int signbit(_Float16 x) { return __ocml_signbit_f16(x); }
 
         HCC_MATH_LIB_FN
         int signbit(float x) { return fast_math::signbitf(x); }
 
         HCC_MATH_LIB_FN
-        float sinf(float x) { return __hc_sin_native(x); }
+        float sinf(float x) { return __ocml_native_sin_f32(x); }
 
         HCC_MATH_LIB_FN
-        _Float16 sin(_Float16 x) { return __hc_sin_native_half(x); }
+        _Float16 sin(_Float16 x) { return __ocml_native_sin_f16(x); }
 
         HCC_MATH_LIB_FN
         float sin(float x) { return fast_math::sinf(x); }
 
         HCC_MATH_LIB_FN
-        void sincosf(float x, float *s, float *c) { *s = __hc_sincos(x, c); }
+        void sincosf(float x, float *s, float *c) {
+        	float lc;
+        	*s = __ocml_sincos_f32(x, (__attribute__((address_space(5))) float*)&lc);
+        	*c=lc;
+        }
 
         HCC_MATH_LIB_FN
         void sincos(_Float16 x, _Float16 *s, _Float16 *c)
         {
-            *s = __hc_sincos_half(x, c);
+        	_Float16 lc;
+            *s = __ocml_sincos_f16(x, (__attribute__((address_space(5))) _Float16*) &lc);
+            *c = lc;
         }
 
         HCC_MATH_LIB_FN
@@ -644,50 +659,50 @@ namespace detail
         }
 
         HCC_MATH_LIB_FN
-        float sinhf(float x) { return __hc_sinh(x); }
+        float sinhf(float x) { return __ocml_sinh_f32(x); }
 
         HCC_MATH_LIB_FN
-        _Float16 sinh(_Float16 x) { return __hc_sinh_half(x); }
+        _Float16 sinh(_Float16 x) { return __ocml_sinh_f16(x); }
 
         HCC_MATH_LIB_FN
         float sinh(float x) { return fast_math::sinhf(x); }
 
         HCC_MATH_LIB_FN
-        float sqrtf(float x) { return __hc_sqrt_native(x); }
+        float sqrtf(float x) { return __ocml_native_sqrt_f32(x); }
 
         HCC_MATH_LIB_FN
-        _Float16 sqrt(_Float16 x) { return __hc_sqrt_native_half(x); }
+        _Float16 sqrt(_Float16 x) { return __ocml_native_sqrt_f16(x); }
 
         HCC_MATH_LIB_FN
         float sqrt(float x) { return fast_math::sqrtf(x); }
 
         HCC_MATH_LIB_FN
-        float tanf(float x) { return __hc_tan(x); }
+        float tanf(float x) { return __ocml_tan_f32(x); }
 
         HCC_MATH_LIB_FN
         _Float16 tan(_Float16 x)
         {
-            return __hc_sin_native_half(x) *
-                __hc_rcp_native_half(__hc_native_cos_half(x));
+            return __ocml_native_sin_f16(x) *
+                __hc_rcp_native_f16(__ocml_native_cos_f16(x));
         }
 
         HCC_MATH_LIB_FN
         float tan(float x) { return fast_math::tanf(x); }
 
         HCC_MATH_LIB_FN
-        float tanhf(float x) { return __hc_tanh(x); }
+        float tanhf(float x) { return __ocml_tanh_f32(x); }
 
         HCC_MATH_LIB_FN
-        _Float16 tanh(_Float16 x) { return __hc_tanh_half(x); }
+        _Float16 tanh(_Float16 x) { return __ocml_tanh_f16(x); }
 
         HCC_MATH_LIB_FN
         float tanh(float x) { return fast_math::tanhf(x); }
 
         HCC_MATH_LIB_FN
-        float truncf(float x) { return __hc_trunc(x); }
+        float truncf(float x) { return __ocml_trunc_f32(x); }
 
         HCC_MATH_LIB_FN
-        _Float16 trunc(_Float16 x) { return __hc_trunc_half(x); }
+        _Float16 trunc(_Float16 x) { return __ocml_trunc_f16(x); }
 
         HCC_MATH_LIB_FN
         float trunc(float x) { return fast_math::truncf(x); }
@@ -800,840 +815,851 @@ namespace detail
         using ::truncf;
 
         HCC_MATH_LIB_FN
-        float acosf(float x) { return __hc_acos(x); }
+        float acosf(float x) { return __ocml_acos_f32(x); }
 
         HCC_MATH_LIB_FN
-        _Float16 acos(_Float16 x) { return __hc_acos_half(x); }
+        _Float16 acos(_Float16 x) { return __ocml_acos_f16(x); }
 
         HCC_MATH_LIB_FN
-        float acos(float x) { return precise_math::acosf(x); }
+        float acos(float x) { return __ocml_acos_f32(x); }
 
         HCC_MATH_LIB_FN
-        double acos(double x) { return __hc_acos_double(x); }
+        double acos(double x) { return __ocml_acos_f64(x); }
 
         HCC_MATH_LIB_FN
-        float acoshf(float x) { return __hc_acosh(x); }
+        float acoshf(float x) { return __ocml_acosh_f32(x); }
 
         HCC_MATH_LIB_FN
-        _Float16 acosh(_Float16 x) { return __hc_acosh_half(x); }
+        _Float16 acosh(_Float16 x) { return __ocml_acosh_f16(x); }
 
         HCC_MATH_LIB_FN
-        float acosh(float x) { return precise_math::acoshf(x); }
+        float acosh(float x) { return __ocml_acosh_f32(x); }
 
         HCC_MATH_LIB_FN
-        double acosh(double x) { return __hc_acosh_double(x); }
+        double acosh(double x) { return __ocml_acosh_f64(x); }
 
         HCC_MATH_LIB_FN
-        float asinf(float x) { return __hc_asin(x); }
+        float asinf(float x) { return __ocml_asin_f32(x); }
 
         HCC_MATH_LIB_FN
-        _Float16 asin(_Float16 x) { return __hc_asin_half(x); }
+        _Float16 asin(_Float16 x) { return __ocml_asin_f16(x); }
 
         HCC_MATH_LIB_FN
-        float asin(float x) { return precise_math::asinf(x); }
+        float asin(float x) { return __ocml_asin_f32(x); }
 
         HCC_MATH_LIB_FN
-        double asin(double x) { return __hc_asin_double(x); }
+        double asin(double x) { return __ocml_asin_f64(x); }
 
         HCC_MATH_LIB_FN
-        float asinhf(float x) { return __hc_asinh(x); }
+        float asinhf(float x) { return __ocml_asinh_f32(x); }
 
         HCC_MATH_LIB_FN
-        _Float16 asinh(_Float16 x) { return __hc_asinh_half(x); }
+        _Float16 asinh(_Float16 x) { return __ocml_asinh_f16(x); }
 
         HCC_MATH_LIB_FN
-        float asinh(float x) { return precise_math::asinhf(x); }
+        float asinh(float x) { return __ocml_asinh_f32(x); }
 
         HCC_MATH_LIB_FN
-        double asinh(double x) { return __hc_asinh_double(x); }
+        double asinh(double x) { return __ocml_asinh_f64(x); }
 
         HCC_MATH_LIB_FN
-        float atanf(float x) { return __hc_atan(x); }
+        float atanf(float x) { return __ocml_atan_f32(x); }
 
         HCC_MATH_LIB_FN
-        _Float16 atan(_Float16 x) { return __hc_atan_half(x); }
+        _Float16 atan(_Float16 x) { return __ocml_atan_f16(x); }
 
         HCC_MATH_LIB_FN
-        float atan(float x) { return precise_math::atanf(x); }
+        float atan(float x) { return __ocml_atan_f32(x); }
 
         HCC_MATH_LIB_FN
-        double atan(double x) { return __hc_atan_double(x); }
+        double atan(double x) { return __ocml_atan_f64(x); }
 
         HCC_MATH_LIB_FN
-        float atanhf(float x) { return __hc_atanh(x); }
+        float atanhf(float x) { return __ocml_atanh_f32(x); }
 
         HCC_MATH_LIB_FN
-        _Float16 atanh(_Float16 x) { return __hc_atanh_half(x); }
+        _Float16 atanh(_Float16 x) { return __ocml_atanh_f16(x); }
 
         HCC_MATH_LIB_FN
-        float atanh(float x) { return precise_math::atanhf(x); }
+        float atanh(float x) { return __ocml_atanh_f32(x); }
 
         HCC_MATH_LIB_FN
-        double atanh(double x) { return __hc_atanh_double(x); }
+        double atanh(double x) { return __ocml_atanh_f64(x); }
 
         HCC_MATH_LIB_FN
-        float atan2f(float y, float x) { return __hc_atan2(y, x); }
+        float atan2f(float y, float x) { return __ocml_atan2_f32(y, x); }
 
         HCC_MATH_LIB_FN
-        _Float16 atan2(_Float16 x, _Float16 y) { return __hc_atan2_half(x, y); }
+        _Float16 atan2(_Float16 x, _Float16 y) { return __ocml_atan2_f16(x, y); }
 
         HCC_MATH_LIB_FN
-        float atan2(float y, float x) { return precise_math::atan2f(y, x); }
+        float atan2(float y, float x) { return __ocml_atan2_f32(y, x); }
 
         HCC_MATH_LIB_FN
-        double atan2(double y, double x) { return __hc_atan2_double(y, x); }
+        double atan2(double y, double x) { return __ocml_atan2_f64(y, x); }
 
         HCC_MATH_LIB_FN
-        float cbrtf(float x) { return __hc_cbrt(x); }
+        float cbrtf(float x) { return __ocml_cbrt_f32(x); }
 
         HCC_MATH_LIB_FN
-        _Float16 cbrt(_Float16 x) { return __hc_cbrt_half(x); }
+        _Float16 cbrt(_Float16 x) { return __ocml_cbrt_f16(x); }
 
         HCC_MATH_LIB_FN
-        float cbrt(float x) { return precise_math::cbrtf(x); }
+        float cbrt(float x) { return __ocml_cbrt_f32(x); }
 
         HCC_MATH_LIB_FN
-        double cbrt(double x) { return __hc_cbrt_double(x); }
+        double cbrt(double x) { return __ocml_cbrt_f64(x); }
 
         HCC_MATH_LIB_FN
-        float ceilf(float x) { return __hc_ceil(x); }
+        float ceilf(float x) { return __ocml_ceil_f32(x); }
 
         HCC_MATH_LIB_FN
-        _Float16 ceil(_Float16 x) { return __hc_ceil_half(x); }
+        _Float16 ceil(_Float16 x) { return __ocml_ceil_f16(x); }
 
         HCC_MATH_LIB_FN
-        float ceil(float x) { return precise_math::ceilf(x); }
+        float ceil(float x) { return __ocml_ceil_f32(x); }
 
         HCC_MATH_LIB_FN
-        double ceil(double x) { return __hc_ceil_double(x); }
+        double ceil(double x) { return __ocml_ceil_f64(x); }
 
         HCC_MATH_LIB_FN
-        float copysignf(float x, float y) { return __hc_copysign(x, y); }
+        float copysignf(float x, float y) { return __ocml_copysign_f32(x, y); }
 
         HCC_MATH_LIB_FN
-        _Float16 copysign(_Float16 x, _Float16 y)
-        {
-            return __hc_copysign_half(x, y);
-        }
+        _Float16 copysign(_Float16 x, _Float16 y) { return __ocml_copysign_f16(x, y); }
 
         HCC_MATH_LIB_FN
         float copysign(float x, float y)
         {
-            return precise_math::copysignf(x, y);
+            return __ocml_copysign_f32(x, y);
         }
 
         HCC_MATH_LIB_FN
         double copysign(double x, double y)
         {
-            return __hc_copysign_double(x, y);
+            return __ocml_copysign_f64(x, y);
         }
 
         HCC_MATH_LIB_FN
-        float cosf(float x) { return __hc_cos(x); }
+        float cosf(float x) { return __ocml_cos_f32(x); }
 
         HCC_MATH_LIB_FN
-        _Float16 cos(_Float16 x) { return __hc_cos_half(x); }
+        _Float16 cos(_Float16 x) { return __ocml_cos_f16(x); }
 
         HCC_MATH_LIB_FN
-        float cos(float x) { return precise_math::cosf(x); }
+        float cos(float x) { return __ocml_cos_f32(x); }
 
         HCC_MATH_LIB_FN
-        double cos(double x) { return __hc_cos_double(x); }
+        double cos(double x) { return __ocml_cos_f64(x); }
 
         HCC_MATH_LIB_FN
-        float coshf(float x) { return __hc_cosh(x); }
+        float coshf(float x) { return __ocml_cosh_f32(x); }
 
         HCC_MATH_LIB_FN
-        _Float16 cosh(_Float16 x) { return __hc_cosh_half(x); }
+        _Float16 cosh(_Float16 x) { return __ocml_cosh_f16(x); }
 
         HCC_MATH_LIB_FN
-        float cosh(float x) { return precise_math::coshf(x); }
+        float cosh(float x) { return __ocml_cosh_f32(x); }
 
         HCC_MATH_LIB_FN
-        double cosh(double x) { return __hc_cosh_double(x); }
+        double cosh(double x) { return __ocml_cosh_f64(x); }
 
         HCC_MATH_LIB_FN
-        float cospif(float x) { return __hc_cospi(x); }
+        float cospif(float x) { return __ocml_cospi_f32(x); }
 
         HCC_MATH_LIB_FN
-        _Float16 cospi(_Float16 x) { return __hc_cospi_half(x); }
+        _Float16 cospi(_Float16 x) { return __ocml_cospi_f16(x); }
 
         HCC_MATH_LIB_FN
-        float cospi(float x) { return precise_math::cospif(x); }
+        float cospi(float x) { return __ocml_cospi_f32(x); }
 
         HCC_MATH_LIB_FN
-        double cospi(double x) { return __hc_cospi_double(x); }
+        double cospi(double x) { return __ocml_cospi_f64(x); }
 
         HCC_MATH_LIB_FN
-        float erff(float x) { return __hc_erf(x); }
+        float erff(float x) { return __ocml_erf_f32(x); }
 
         HCC_MATH_LIB_FN
-        _Float16 erf(_Float16 x) { return __hc_erf_half(x); }
+        _Float16 erf(_Float16 x) { return __ocml_erf_f16(x); }
 
         HCC_MATH_LIB_FN
-        float erf(float x) { return precise_math::erff(x); }
+        float erf(float x) { return __ocml_erf_f32(x); }
 
         HCC_MATH_LIB_FN
-        double erf(double x) { return __hc_erf_double(x); }
+        double erf(double x) { return __ocml_erf_f64(x); }
 
         HCC_MATH_LIB_FN
-        float erfcf(float x) { return __hc_erfc(x); }
+        float erfcf(float x) { return __ocml_erfc_f32(x); }
 
         HCC_MATH_LIB_FN
-        _Float16 erfc(_Float16 x) { return __hc_erfc_half(x); }
+        _Float16 erfc(_Float16 x) { return __ocml_erfc_f16(x); }
 
         HCC_MATH_LIB_FN
-        float erfc(float x) { return precise_math::erfcf(x); }
+        float erfc(float x) { return __ocml_erfc_f32(x); }
 
         HCC_MATH_LIB_FN
-        double erfc(double x) { return __hc_erfc_double(x); }
+        double erfc(double x) { return __ocml_erfc_f64(x); }
 
         HCC_MATH_LIB_FN
-        float erfcinvf(float x) { return __hc_erfcinv(x); }
+        float erfcinvf(float x) { return __ocml_erfcinv_f32(x); }
 
         HCC_MATH_LIB_FN
-        _Float16 erfcinv(_Float16 x) { return __hc_erfcinv_half(x); }
+        _Float16 erfcinv(_Float16 x) { return __ocml_erfcinv_f16(x); }
 
         HCC_MATH_LIB_FN
-        float erfcinv(float x) { return precise_math::erfcinvf(x); }
+        float erfcinv(float x) { return __ocml_erfcinv_f32(x); }
 
         HCC_MATH_LIB_FN
-        double erfcinv(double x) { return __hc_erfcinv_double(x); }
+        double erfcinv(double x) { return __ocml_erfcinv_f64(x); }
 
         HCC_MATH_LIB_FN
-        float erfinvf(float x) { return __hc_erfinv(x); }
+        float erfinvf(float x) { return __ocml_erfinv_f32(x); }
 
         HCC_MATH_LIB_FN
-        _Float16 erfinv(_Float16 x) { return __hc_erfinv_half(x); }
+        _Float16 erfinv(_Float16 x) { return __ocml_erfinv_f16(x); }
 
         HCC_MATH_LIB_FN
-        float erfinv(float x) { return precise_math::erfinvf(x); }
+        float erfinv(float x) { return __ocml_erfinv_f32(x); }
 
         HCC_MATH_LIB_FN
-        double erfinv(double x) { return __hc_erfinv_double(x); }
+        double erfinv(double x) { return __ocml_erfinv_f64(x); }
 
         HCC_MATH_LIB_FN
-        float expf(float x) { return __hc_exp(x); }
+        float expf(float x) { return __ocml_exp_f32(x); }
 
         HCC_MATH_LIB_FN
-        _Float16 exp(_Float16 x) { return __hc_exp_half(x); }
+        _Float16 exp(_Float16 x) { return __ocml_exp_f16(x); }
 
         HCC_MATH_LIB_FN
-        float exp(float x) { return precise_math::expf(x); }
+        float exp(float x) { return __ocml_exp_f32(x); }
 
         HCC_MATH_LIB_FN
-        double exp(double x) { return __hc_exp_double(x); }
+        double exp(double x) { return __ocml_exp_f64(x); }
 
         HCC_MATH_LIB_FN
-        float exp2f(float x) { return __hc_exp2(x); }
+        float exp2f(float x) { return __ocml_exp2_f32(x); }
 
         HCC_MATH_LIB_FN
-        _Float16 exp2(_Float16 x) { return __hc_exp2_half(x); }
+        _Float16 exp2(_Float16 x) { return __ocml_exp2_f16(x); }
 
         HCC_MATH_LIB_FN
-        float exp2(float x) { return precise_math::exp2f(x); }
+        float exp2(float x) { return __ocml_exp2_f32(x); }
 
         HCC_MATH_LIB_FN
-        double exp2(double x) { return __hc_exp2_double(x); }
+        double exp2(double x) { return __ocml_exp2_f64(x); }
 
         HCC_MATH_LIB_FN
-        float exp10f(float x) { return __hc_exp10(x); }
+        float exp10f(float x) { return __ocml_exp10_f32(x); }
 
         HCC_MATH_LIB_FN
-        _Float16 exp10(_Float16 x) { return __hc_exp10_half(x); }
+        _Float16 exp10(_Float16 x) { return __ocml_exp10_f16(x); }
 
         HCC_MATH_LIB_FN
-        float exp10(float x) { return precise_math::exp10f(x); }
+        float exp10(float x) { return __ocml_exp10_f32(x); }
 
         HCC_MATH_LIB_FN
-        double exp10(double x) { return __hc_exp10_double(x); }
+        double exp10(double x) { return __ocml_exp10_f64(x); }
 
         HCC_MATH_LIB_FN
-        float expm1f(float x) { return __hc_expm1(x); }
+        float expm1f(float x) { return __ocml_expm1_f32(x); }
 
         HCC_MATH_LIB_FN
-        _Float16 expm1(_Float16 x) { return __hc_expm1_half(x); }
+        _Float16 expm1(_Float16 x) { return __ocml_expm1_f16(x); }
 
         HCC_MATH_LIB_FN
-        float expm1(float x) { return precise_math::expm1f(x); }
+        float expm1(float x) { return __ocml_expm1_f32(x); }
 
         HCC_MATH_LIB_FN
-        double expm1(double x) { return __hc_expm1_double(x); }
+        double expm1(double x) { return __ocml_expm1_f64(x); }
 
         HCC_MATH_LIB_FN
-        float fabsf(float x) { return __hc_fabs(x); }
+        float fabsf(float x) { return __ocml_fabs_f32(x); }
 
         HCC_MATH_LIB_FN
-        _Float16 fabs(_Float16 x) { return __hc_fabs_half(x); }
+        _Float16 fabs(_Float16 x) { return __ocml_fabs_f16(x); }
 
         HCC_MATH_LIB_FN
-        float fabs(float x) { return precise_math::fabsf(x); }
+        float fabs(float x) { return __ocml_fabs_f32(x); }
 
         HCC_MATH_LIB_FN
-        double fabs(double x) { return __hc_fabs_double(x); }
+        double fabs(double x) { return __ocml_fabs_f64(x); }
 
         HCC_MATH_LIB_FN
-        float fdimf(float x, float y) { return __hc_fdim(x, y); }
+        float fdimf(float x, float y) { return __ocml_fdim_f32(x, y); }
 
         HCC_MATH_LIB_FN
-        _Float16 fdim(_Float16 x, _Float16 y) { return __hc_fdim_half(x, y); }
+        _Float16 fdim(_Float16 x, _Float16 y) { return __ocml_fdim_f16(x, y); }
 
         HCC_MATH_LIB_FN
-        float fdim(float x, float y) { return precise_math::fdimf(x, y); }
+        float fdim(float x, float y) { return __ocml_fdim_f32(x, y); }
 
         HCC_MATH_LIB_FN
-        double fdim(double x, double y) { return __hc_fdim_double(x, y); }
+        double fdim(double x, double y) { return __ocml_fdim_f64(x, y); }
 
         HCC_MATH_LIB_FN
-        float floorf(float x) { return __hc_floor(x); }
+        float floorf(float x) { return __ocml_floor_f32(x); }
 
         HCC_MATH_LIB_FN
-        _Float16 floor(_Float16 x) { return __hc_floor_half(x); }
+        _Float16 floor(_Float16 x) { return __ocml_floor_f16(x); }
 
         HCC_MATH_LIB_FN
-        float floor(float x) { return precise_math::floorf(x); }
+        float floor(float x) { return __ocml_floor_f32(x); }
 
         HCC_MATH_LIB_FN
-        double floor(double x) { return __hc_floor_double(x); }
+        double floor(double x) { return __ocml_floor_f64(x); }
 
         HCC_MATH_LIB_FN
-        float fmaf(float x, float y, float z) { return __hc_fma(x, y, z); }
+        float fmaf(float x, float y, float z) { return __ocml_fma_f32(x, y, z); }
 
         HCC_MATH_LIB_FN
         _Float16 fma(_Float16 x, _Float16 y, _Float16 z)
         {
-            return __hc_fma_half(x, y, z);
+            return __ocml_fma_f16(x, y, z);
         }
 
         HCC_MATH_LIB_FN
         float fma(float x, float y, float z)
         {
-            return precise_math::fmaf(x, y, z);
+            return __ocml_fma_f32(x, y, z);
         }
 
         HCC_MATH_LIB_FN
         double fma(double x, double y, double z)
         {
-            return __hc_fma_double(x, y, z);
+            return __ocml_fma_f64(x, y, z);
         }
 
         HCC_MATH_LIB_FN
-        float fmaxf(float x, float y) { return __hc_fmax(x, y); }
+        float fmaxf(float x, float y) { return __ocml_fmax_f32(x, y); }
 
         HCC_MATH_LIB_FN
-        _Float16 fmax(_Float16 x, _Float16 y) { return __hc_fmax_half(x, y); }
+        _Float16 fmax(_Float16 x, _Float16 y) { return __ocml_fmax_f16(x, y); }
 
         HCC_MATH_LIB_FN
-        float fmax(float x, float y) { return precise_math::fmaxf(x, y); }
+        float fmax(float x, float y) { return __ocml_fmax_f32(x, y); }
 
         HCC_MATH_LIB_FN
-        double fmax(double x, double y) { return __hc_fmax_double(x, y); }
+        double fmax(double x, double y) { return __ocml_fmax_f64(x, y); }
 
         HCC_MATH_LIB_FN
-        float fminf(float x, float y) { return __hc_fmin(x, y); }
+        float fminf(float x, float y) { return __ocml_fmin_f32(x, y); }
 
         HCC_MATH_LIB_FN
-        _Float16 fmin(_Float16 x, _Float16 y) { return __hc_fmin_half(x, y); }
+        _Float16 fmin(_Float16 x, _Float16 y) { return __ocml_fmin_f16(x, y); }
 
         HCC_MATH_LIB_FN
-        float fmin(float x, float y) { return precise_math::fminf(x, y); }
+        float fmin(float x, float y) { return __ocml_fmin_f32(x, y); }
 
         HCC_MATH_LIB_FN
-        double fmin(double x, double y) { return __hc_fmin_double(x, y); }
+        double fmin(double x, double y) { return __ocml_fmin_f64(x, y); }
 
         HCC_MATH_LIB_FN
-        float fmodf(float x, float y) { return __hc_fmod(x, y); }
+        float fmodf(float x, float y) { return __ocml_fmod_f32(x, y); }
 
         HCC_MATH_LIB_FN
-        _Float16 fmod(_Float16 x, _Float16 y) { return __hc_fmod_half(x, y); }
+        _Float16 fmod(_Float16 x, _Float16 y) { return __ocml_fmod_f16(x, y); }
 
         HCC_MATH_LIB_FN
-        float fmod(float x, float y) { return precise_math::fmodf(x, y); }
+        float fmod(float x, float y) { return __ocml_fmod_f32(x, y); }
 
         HCC_MATH_LIB_FN
-        double fmod(double x, double y) { return __hc_fmod_double(x, y); }
+        double fmod(double x, double y) { return __ocml_fmod_f64(x, y); }
 
         HCC_MATH_LIB_FN
-        int fpclassify(_Float16 x) { return __hc_fpclassify_half(x); }
+        int fpclassify(_Float16 x) { return __ocml_fpclassify_f16(x); }
 
         HCC_MATH_LIB_FN
-        int fpclassify(float x) { return __hc_fpclassify(x); }
+        int fpclassify(float x) { return __ocml_fpclassify_f32(x); }
 
         HCC_MATH_LIB_FN
-        int fpclassify(double x) { return __hc_fpclassify_double(x); }
+        int fpclassify(double x) { return __ocml_fpclassify_f64(x); }
 
         HCC_MATH_LIB_FN
-        float frexpf(float x, int *exp) { return __hc_frexp(x, exp); }
+        float frexpf(float x, int *exp) {
+        	int e; float ret =__ocml_frexp_f32(x, (__attribute__((address_space(5))) int*) &e);
+            *exp = e;  return ret;
+        }
 
         HCC_MATH_LIB_FN
-        _Float16 frexp(_Float16 x, int* exp) { return __hc_frexp_half(x, exp); }
+        _Float16 frexp(_Float16 x, int* exp) {
+        	int e; _Float16 ret = __ocml_frexp_f16(x, (__attribute__((address_space(5))) int*) &e);
+        	*exp = e; return ret;
+        }
 
         HCC_MATH_LIB_FN
         float frexp(float x, int *exp) { return precise_math::frexpf(x, exp); }
 
         HCC_MATH_LIB_FN
-        double frexp(double x, int *exp) { return __hc_frexp_double(x, exp); }
+        double frexp(double x, int *exp) { return precise_math::frexpf(x, exp); }
 
         HCC_MATH_LIB_FN
-        float hypotf(float x, float y) { return __hc_hypot(x, y); }
+        float hypotf(float x, float y) { return __ocml_hypot_f32(x, y); }
 
         HCC_MATH_LIB_FN
-        _Float16 hypot(_Float16 x, _Float16 y) { return __hc_hypot_half(x, y); }
+        _Float16 hypot(_Float16 x, _Float16 y) { return __ocml_hypot_f16(x, y); }
 
         HCC_MATH_LIB_FN
-        float hypot(float x, float y) { return precise_math::hypotf(x, y); }
+        float hypot(float x, float y) { return __ocml_hypot_f32(x, y); }
 
         HCC_MATH_LIB_FN
-        double hypot(double x, double y) { return __hc_hypot_double(x, y); }
+        double hypot(double x, double y) { return __ocml_hypot_f64(x, y); }
 
         HCC_MATH_LIB_FN
-        int ilogbf(float x) { return __hc_ilogb(x); }
+        int ilogbf(float x) { return __ocml_ilogb_f32(x); }
 
         HCC_MATH_LIB_FN
-        int ilogb(_Float16 x) { return __hc_ilogb_half(x); }
+        int ilogb(_Float16 x) { return __ocml_ilogb_f16(x); }
 
         HCC_MATH_LIB_FN
-        int ilogb(float x) { return precise_math::ilogbf(x); }
+        int ilogb(float x) { return __ocml_ilogb_f32(x); }
 
         HCC_MATH_LIB_FN
-        int ilogb(double x) { return __hc_ilogb_double(x); }
+        int ilogb(double x) { return __ocml_ilogb_f64(x); }
 
         HCC_MATH_LIB_FN
-        int isfinite(_Float16 x) { return __hc_isfinite_half(x); }
+        int isfinite(_Float16 x) { return __ocml_isfinite_f16(x); }
 
         HCC_MATH_LIB_FN
-        int isfinite(float x) { return __hc_isfinite(x); }
+        int isfinite(float x) { return __ocml_isfinite_f32(x); }
 
         HCC_MATH_LIB_FN
-        int isfinite(double x) { return __hc_isfinite_double(x); }
+        int isfinite(double x) { return __ocml_isfinite_f64(x); }
 
         HCC_MATH_LIB_FN
-        int isinf(_Float16 x) { return __hc_isinf_half(x); }
+        int isinf(_Float16 x) { return __ocml_isinf_f16(x); }
 
         HCC_MATH_LIB_FN
-        int isinf(float x) { return __hc_isinf(x); }
+        int isinf(float x) { return __ocml_isinf_f32(x); }
 
         HCC_MATH_LIB_FN
-        int isinf(double x) { return __hc_isinf_double(x); }
+        int isinf(double x) { return __ocml_isinf_f64(x); }
 
         HCC_MATH_LIB_FN
-        int isnan(_Float16 x) { return __hc_isnan_half(x); }
+        int isnan(_Float16 x) { return __ocml_isnan_f16(x); }
 
         HCC_MATH_LIB_FN
-        int isnan(float x) { return __hc_isnan(x); }
+        int isnan(float x) { return __ocml_isnan_f32(x); }
 
         HCC_MATH_LIB_FN
-        int isnan(double x) { return __hc_isnan_double(x); }
+        int isnan(double x) { return __ocml_isnan_f64(x); }
 
         HCC_MATH_LIB_FN
-        int isnormal(_Float16 x) { return __hc_isnormal_half(x); }
+        int isnormal(_Float16 x) { return __ocml_isnormal_f16(x); }
 
         HCC_MATH_LIB_FN
-        int isnormal(float x) { return __hc_isnormal(x); }
+        int isnormal(float x) { return __ocml_isnormal_f32(x); }
 
         HCC_MATH_LIB_FN
-        int isnormal(double x) { return __hc_isnormal_double(x); }
+        int isnormal(double x) { return __ocml_isnormal_f64(x); }
 
         HCC_MATH_LIB_FN
-        float ldexpf(float x, int exp) { return __hc_ldexp(x, exp); }
+        float ldexpf(float x, int exp) { return __ocml_ldexp_f32(x, exp); }
 
         HCC_MATH_LIB_FN
-        _Float16 ldexp(_Float16 x, std::int16_t e)
-        {
-            return __hc_ldexp_half(x, e);
+        _Float16 ldexp(_Float16 x, std::int16_t e) { return __ocml_ldexp_f16(x, e); }
+
+        HCC_MATH_LIB_FN
+        float ldexp(float x, int exp) { return __ocml_ldexp_f32(x, exp); }
+
+        HCC_MATH_LIB_FN
+        double ldexp(double x, int exp) { return __ocml_ldexp_f64(x,exp); }
+
+        HCC_MATH_LIB_FN
+        float lgammaf(float x) { return __ocml_lgamma_f32(x); }
+
+        HCC_MATH_LIB_FN
+        _Float16 lgamma(_Float16 x) { return __ocml_lgamma_f16(x); }
+
+        HCC_MATH_LIB_FN
+        float lgamma(float x) { return __ocml_lgamma_f32(x); }
+
+        HCC_MATH_LIB_FN
+        double lgamma(double x) { return __ocml_lgamma_f64(x); }
+
+        HCC_MATH_LIB_FN
+        float logf(float x) { return __ocml_log_f32(x); }
+
+        HCC_MATH_LIB_FN
+        _Float16 log(_Float16 x) { return __ocml_log_f16(x); }
+
+        HCC_MATH_LIB_FN
+        float log(float x) { return __ocml_log_f32(x); }
+
+        HCC_MATH_LIB_FN
+        double log(double x) { return __ocml_log_f64(x); }
+
+        HCC_MATH_LIB_FN
+        float log10f(float x) { return __ocml_log10_f32(x); }
+
+        HCC_MATH_LIB_FN
+        _Float16 log10(_Float16 x) { return __ocml_log10_f16(x); }
+
+        HCC_MATH_LIB_FN
+        float log10(float x) { return __ocml_log10_f32(x); }
+
+        HCC_MATH_LIB_FN
+        double log10(double x) { return __ocml_log10_f64(x); }
+
+        HCC_MATH_LIB_FN
+        float log2f(float x) { return __ocml_log2_f32(x); }
+
+        HCC_MATH_LIB_FN
+        _Float16 log2(_Float16 x) { return __ocml_log2_f16(x); }
+
+        HCC_MATH_LIB_FN
+        float log2(float x) { return __ocml_log2_f32(x); }
+
+        HCC_MATH_LIB_FN
+        double log2(double x) { return __ocml_log2_f64(x); }
+
+        HCC_MATH_LIB_FN
+        float log1pf(float x) { return __ocml_log1p_f32(x); }
+
+        HCC_MATH_LIB_FN
+        _Float16 log1p(_Float16 x) { return __ocml_log1p_f16(x); }
+
+        HCC_MATH_LIB_FN
+        float log1p(float x) { return __ocml_log1p_f32(x); }
+
+        HCC_MATH_LIB_FN
+        double log1p(double x) { return __ocml_log1p_f32(x); }
+
+        HCC_MATH_LIB_FN
+        float logbf(float x) { return __ocml_logb_f32(x); }
+
+        HCC_MATH_LIB_FN
+        _Float16 logb(_Float16 x) { return __ocml_logb_f16(x); }
+
+        HCC_MATH_LIB_FN
+        float logb(float x) { return __ocml_logb_f32(x); }
+
+        HCC_MATH_LIB_FN
+        double logb(double x) { return __ocml_logb_f64(x); }
+
+        HCC_MATH_LIB_FN
+        float modff(float x, float *iptr) {
+        	float i;  float ret = __ocml_modf_f32(x, (__attribute__((address_space(5))) float*)&i);
+        	*iptr = i; return ret;
         }
 
         HCC_MATH_LIB_FN
-        float ldexp(float x, int exp) { return precise_math::ldexpf(x, exp); }
-
-        HCC_MATH_LIB_FN
-        double ldexp(double x, int exp) { return __hc_ldexp_double(x,exp); }
-
-        HCC_MATH_LIB_FN
-        float lgammaf(float x) { return __hc_lgamma(x); }
-
-        HCC_MATH_LIB_FN
-        _Float16 lgamma(_Float16 x) { return __hc_lgamma_half(x); }
-
-        HCC_MATH_LIB_FN
-        float lgamma(float x) { return precise_math::lgammaf(x); }
-
-        HCC_MATH_LIB_FN
-        double lgamma(double x) { return __hc_lgamma_double(x); }
-
-        HCC_MATH_LIB_FN
-        float logf(float x) { return __hc_log(x); }
-
-        HCC_MATH_LIB_FN
-        _Float16 log(_Float16 x) { return __hc_log_half(x); }
-
-        HCC_MATH_LIB_FN
-        float log(float x) { return precise_math::logf(x); }
-
-        HCC_MATH_LIB_FN
-        double log(double x) { return __hc_log_double(x); }
-
-        HCC_MATH_LIB_FN
-        float log10f(float x) { return __hc_log10(x); }
-
-        HCC_MATH_LIB_FN
-        _Float16 log10(_Float16 x) { return __hc_log10_half(x); }
-
-        HCC_MATH_LIB_FN
-        float log10(float x) { return precise_math::log10f(x); }
-
-        HCC_MATH_LIB_FN
-        double log10(double x) { return __hc_log10_double(x); }
-
-        HCC_MATH_LIB_FN
-        float log2f(float x) { return __hc_log2(x); }
-
-        HCC_MATH_LIB_FN
-        _Float16 log2(_Float16 x) { return __hc_log2_half(x); }
-
-        HCC_MATH_LIB_FN
-        float log2(float x) { return precise_math::log2f(x); }
-
-        HCC_MATH_LIB_FN
-        double log2(double x) { return __hc_log2_double(x); }
-
-        HCC_MATH_LIB_FN
-        float log1pf(float x) { return __hc_log1p(x); }
-
-        HCC_MATH_LIB_FN
-        _Float16 log1p(_Float16 x) { return __hc_log1p_half(x); }
-
-        HCC_MATH_LIB_FN
-        float log1p(float x) { return precise_math::log1pf(x); }
-
-        HCC_MATH_LIB_FN
-        double log1p(double x) { return __hc_log1p(x); }
-
-        HCC_MATH_LIB_FN
-        float logbf(float x) { return __hc_logb(x); }
-
-        HCC_MATH_LIB_FN
-        _Float16 logb(_Float16 x) { return __hc_logb_half(x); }
-
-        HCC_MATH_LIB_FN
-        float logb(float x) { return precise_math::logbf(x); }
-
-        HCC_MATH_LIB_FN
-        double logb(double x) { return __hc_logb_double(x); }
-
-        HCC_MATH_LIB_FN
-        float modff(float x, float *iptr) { return __hc_modf(x, iptr); }
-
-        HCC_MATH_LIB_FN
-        _Float16 modf(_Float16 x, _Float16* p) { return __hc_modf_half(x, p); }
+        _Float16 modf(_Float16 x, _Float16* p) {
+        	_Float16 lp; _Float16 ret = __ocml_modf_f16(x, (__attribute__((address_space(5))) _Float16*) &lp);
+        	*p = lp; return ret;
+        }
 
         HCC_MATH_LIB_FN
         float modf(float x, float* p) { return precise_math::modff(x, p); }
 
         HCC_MATH_LIB_FN
-        double modf(double x, double* p) { return __hc_modf_double(x, p); }
+        double modf(double x, double* p) {
+        	double lp; double ret = __ocml_modf_f64(x, (__attribute__((address_space(5))) double*) &lp);
+        	*p = lp; return ret;
+        }
 
         HCC_MATH_LIB_FN
-        _Float16 nanh(int x) { return __hc_nan_half(x); }
+        _Float16 nanh(int x) { return __ocml_nan_f16(x); }
 
         HCC_MATH_LIB_FN
-        float nanf(int tagp) { return __hc_nan(tagp); }
+        float nanf(int tagp) { return __ocml_nan_f32(tagp); }
 
         HCC_MATH_LIB_FN
         double nan(int tagp)
         {
-            return __hc_nan_double(static_cast<unsigned long>(tagp));
+            return __ocml_nan_f64(static_cast<unsigned long>(tagp));
         }
 
         HCC_MATH_LIB_FN
-        float nearbyintf(float x) { return __hc_nearbyint(x); }
+        float nearbyintf(float x) { return __ocml_nearbyint_f32(x); }
 
         HCC_MATH_LIB_FN
-        _Float16 nearbyint(_Float16 x) { return __hc_nearbyint_half(x); }
+        _Float16 nearbyint(_Float16 x) { return __ocml_nearbyint_f16(x); }
 
         HCC_MATH_LIB_FN
-        float nearbyint(float x) { return precise_math::nearbyintf(x); }
+        float nearbyint(float x) { return __ocml_nearbyint_f32(x); }
 
         HCC_MATH_LIB_FN
-        double nearbyint(double x) { return __hc_nearbyint_double(x); }
+        double nearbyint(double x) { return __ocml_nearbyint_f64(x); }
 
         HCC_MATH_LIB_FN
-        float nextafterf(float x, float y) { return __hc_nextafter(x, y); }
+        float nextafterf(float x, float y) { return __ocml_nextafter_f32(x, y); }
 
         HCC_MATH_LIB_FN
         _Float16 nextafter(_Float16 x, _Float16 y)
         {
-            return __hc_nextafter_half(x, y);
+            return __ocml_nextafter_f16(x, y);
         }
 
         HCC_MATH_LIB_FN
         float nextafter(float x, float y)
         {
-            return precise_math::nextafterf(x, y);
+            return __ocml_nextafter_f32(x, y);
         }
 
         HCC_MATH_LIB_FN
         double nextafter(double x, double y)
         {
-            return __hc_nextafter_double(x, y);
+            return __ocml_nextafter_f64(x, y);
         }
 
         HCC_MATH_LIB_FN
-        float powf(float x, float y) { return __hc_pow(x, y); }
+        float powf(float x, float y) { return __ocml_pow_f32(x, y); }
 
         HCC_MATH_LIB_FN
-        _Float16 pow(_Float16 x, _Float16 y) { return __hc_pow_half(x, y); }
+        _Float16 pow(_Float16 x, _Float16 y) { return __ocml_pow_f16(x, y); }
 
         HCC_MATH_LIB_FN
-        float pow(float x, float y) { return precise_math::powf(x, y); }
+        float pow(float x, float y) { return __ocml_pow_f32(x, y); }
 
         HCC_MATH_LIB_FN
-        double pow(double x, double y) { return __hc_pow_double(x, y); }
+        double pow(double x, double y) { return __ocml_pow_f64(x, y); }
 
         HCC_MATH_LIB_FN
-        float rcbrtf(float x) { return __hc_rcbrt(x); }
+        float rcbrtf(float x) { return __ocml_rcbrt_f32(x); }
 
         HCC_MATH_LIB_FN
-        _Float16 rcbrt(_Float16 x) { return __hc_rcbrt_half(x); }
+        _Float16 rcbrt(_Float16 x) { return __ocml_rcbrt_f16(x); }
 
         HCC_MATH_LIB_FN
-        float rcbrt(float x) { return precise_math::rcbrtf(x); }
+        float rcbrt(float x) { return __ocml_rcbrt_f32(x); }
 
         HCC_MATH_LIB_FN
-        double rcbrt(double x) { return __hc_rcbrt_double(x); }
+        double rcbrt(double x) { return __ocml_rcbrt_f64(x); }
 
         HCC_MATH_LIB_FN
-        float remainderf(float x, float y) { return __hc_remainder(x, y); }
+        float remainderf(float x, float y) { return __ocml_remainder_f32(x, y); }
 
         HCC_MATH_LIB_FN
         _Float16 remainder(_Float16 x, _Float16 y)
         {
-            return __hc_remainder_half(x, y);
+            return __ocml_remainder_f16(x, y);
         }
 
         HCC_MATH_LIB_FN
         float remainder(float x, float y)
         {
-            return precise_math::remainderf(x, y);
+            return __ocml_remainder_f32(x, y);
         }
 
         HCC_MATH_LIB_FN
         double remainder(double x, double y)
         {
-            return __hc_remainder_double(x, y);
+            return __ocml_remainder_f64(x, y);
         }
 
         HCC_MATH_LIB_FN
         float remquof(float x, float y, int *quo)
         {
-            return __hc_remquo(x, y, quo);
+        	int lq; float ret = __ocml_remquo_f32(x, y, (__attribute__((address_space(5))) int*) &lq);
+        	*quo = lq; return ret;
         }
 
         HCC_MATH_LIB_FN
         _Float16 remquo(_Float16 x, _Float16 y, int* q)
         {
-            return __hc_remquo_half(x, y, q);
+        	int lq; _Float16 ret = __ocml_remquo_f16(x, y, (__attribute__((address_space(5))) int*) &lq);
+        	*q = lq; return ret;
         }
 
         HCC_MATH_LIB_FN
-        float remquo(float x, float y, int *quo)
-        {
-            return precise_math::remquof(x, y, quo);
-        }
+        float remquo(float x, float y, int *quo) { return precise_math::remquof(x, y, quo); }
 
         HCC_MATH_LIB_FN
         double remquo(double x, double y, int *quo)
         {
-            return __hc_remquo_double(x, y, quo);
+        	int lq; double ret = __ocml_remquo_f64(x, y, (__attribute__((address_space(5))) int*) &lq);
+        	*quo = lq; return ret;
         }
 
         HCC_MATH_LIB_FN
-        float roundf(float x) { return __hc_round(x); }
+        float roundf(float x) { return __ocml_round_f32(x); }
 
         HCC_MATH_LIB_FN
-        _Float16 round(_Float16 x) { return __hc_round_half(x); }
+        _Float16 round(_Float16 x) { return __ocml_round_f16(x); }
 
         HCC_MATH_LIB_FN
-        float round(float x) { return precise_math::roundf(x); }
+        float round(float x) { return __ocml_round_f32(x); }
 
         HCC_MATH_LIB_FN
-        double round(double x) { return __hc_round_double(x); }
+        double round(double x) { return __ocml_round_f64(x); }
 
         HCC_MATH_LIB_FN
-        float rsqrtf(float x) { return __hc_rsqrt(x); }
+        float rsqrtf(float x) { return __ocml_rsqrt_f32(x); }
 
         HCC_MATH_LIB_FN
-        _Float16 rsqrt(_Float16 x) { return __hc_rsqrt_half(x); }
+        _Float16 rsqrt(_Float16 x) { return __ocml_rsqrt_f16(x); }
 
         HCC_MATH_LIB_FN
-        float rsqrt(float x) { return precise_math::rsqrtf(x); }
+        float rsqrt(float x) { return __ocml_rsqrt_f32(x); }
 
         HCC_MATH_LIB_FN
-        double rsqrt(double x) { return __hc_rsqrt_double(x); }
+        double rsqrt(double x) { return __ocml_rsqrt_f64(x); }
 
         HCC_MATH_LIB_FN
-        float sinpif(float x) { return __hc_sinpi(x); }
+        float sinpif(float x) { return __ocml_sinpi_f32(x); }
 
         HCC_MATH_LIB_FN
-        _Float16 sinpi(_Float16 x) { return __hc_sinpi_half(x); }
+        _Float16 sinpi(_Float16 x) { return __ocml_sinpi_f16(x); }
 
         HCC_MATH_LIB_FN
-        float sinpi(float x) { return precise_math::sinpif(x); }
+        float sinpi(float x) { return __ocml_sinpi_f32(x); }
 
         HCC_MATH_LIB_FN
-        double sinpi(double x) { return __hc_sinpi_double(x); }
+        double sinpi(double x) { return __ocml_sinpi_f64(x); }
 
         HCC_MATH_LIB_FN
-        float scalbf(float x, float exp) { return __hc_scalb(x, exp); }
+        float scalbf(float x, float exp) { return __ocml_scalb_f32(x, exp); }
 
         HCC_MATH_LIB_FN
-        _Float16 scalb(_Float16 x, _Float16 y) { return __hc_scalb_half(x, y); }
+        _Float16 scalb(_Float16 x, _Float16 y) { return __ocml_scalb_f16(x, y); }
 
         HCC_MATH_LIB_FN
-        float scalb(float x, float exp) { return precise_math::scalbf(x, exp); }
+        float scalb(float x, float exp) { return __ocml_scalb_f32(x, exp); }
 
         HCC_MATH_LIB_FN
-        double scalb(double x, double exp) { return __hc_scalb_double(x, exp); }
+        double scalb(double x, double exp) { return __ocml_scalb_f64(x, exp); }
 
         HCC_MATH_LIB_FN
-        float scalbnf(float x, int exp) { return __hc_scalbn(x, exp); }
+        float scalbnf(float x, int exp) { return __ocml_scalbn_f32(x, exp); }
 
         HCC_MATH_LIB_FN
-        _Float16 scalbn(_Float16 x, int e) { return __hc_scalbn_half(x, e); }
+        _Float16 scalbn(_Float16 x, int e) { return __ocml_scalbn_f16(x, e); }
 
         HCC_MATH_LIB_FN
-        float scalbn(float x, int exp) { return precise_math::scalbnf(x, exp); }
+        float scalbn(float x, int exp) { return __ocml_scalbn_f32(x, exp); }
 
         HCC_MATH_LIB_FN
-        double scalbn(double x, int exp) { return __hc_scalbn_double(x, exp); }
+        double scalbn(double x, int exp) { return __ocml_scalbn_f64(x, exp); }
 
         HCC_MATH_LIB_FN
-        int signbitf(float x) { return __hc_signbit(x); }
+        int signbitf(float x) { return __ocml_signbit_f32(x); }
 
         HCC_MATH_LIB_FN
-        int signbit(_Float16 x) { return __hc_signbit_half(x); }
+        int signbit(_Float16 x) { return __ocml_signbit_f16(x); }
 
         HCC_MATH_LIB_FN
-        int signbit(float x) { return precise_math::signbitf(x); }
+        int signbit(float x) { return __ocml_signbit_f32(x); }
 
         HCC_MATH_LIB_FN
-        int signbit(double x) { return __hc_signbit_double(x); }
+        int signbit(double x) { return __ocml_signbit_f64(x); }
 
         HCC_MATH_LIB_FN
-        float sinf(float x) { return __hc_sin(x); }
+        float sinf(float x) { return __ocml_sin_f32(x); }
 
         HCC_MATH_LIB_FN
-        _Float16 sin(_Float16 x) { return __hc_sin_half(x); }
+        _Float16 sin(_Float16 x) { return __ocml_sin_f16(x); }
 
         HCC_MATH_LIB_FN
-        float sin(float x) { return precise_math::sinf(x); }
+        float sin(float x) { return __ocml_sin_f32(x); }
 
         HCC_MATH_LIB_FN
-        double sin(double x) { return __hc_sin_double(x); }
+        double sin(double x) { return __ocml_sin_f64(x); }
 
         HCC_MATH_LIB_FN
-        void sincosf(float x, float *s, float *c) { *s = __hc_sincos(x, c); }
+        void sincosf(float x, float *s, float *c) {
+        	float lc; *s = __ocml_sincos_f32(x, (__attribute__((address_space(5))) float*) &lc);
+        	*c = lc;
+        }
 
         HCC_MATH_LIB_FN
         void sincos(_Float16 x, _Float16* s, _Float16* c)
         {
-            *s = __hc_sincos_half(x, c);
+            _Float16 lc; *s = __ocml_sincos_f16(x, (__attribute__((address_space(5))) _Float16*) &lc);
+            *c = lc;
         }
 
         HCC_MATH_LIB_FN
-        void sincos(float x, float *s, float *c)
-        {
-            precise_math::sincosf(x, s, c);
-        }
-
+        void sincos(float x, float *s, float *c) { precise_math::sincosf(x, s, c); }
+       
         HCC_MATH_LIB_FN
         void sincos(double x, double *s, double *c)
         {
-            *s = __hc_sincos_double(x, c);
+        	double lc; *s = __ocml_sincos_f64(x, (__attribute__((address_space(5))) double*) &lc);
+        	*c = lc;
         }
 
         HCC_MATH_LIB_FN
-        float sinhf(float x) { return __hc_sinh(x); }
+        float sinhf(float x) { return __ocml_sinh_f32(x); }
 
         HCC_MATH_LIB_FN
-        _Float16 sinh(_Float16 x) { return __hc_sinh_half(x); }
+        _Float16 sinh(_Float16 x) { return __ocml_sinh_f16(x); }
 
         HCC_MATH_LIB_FN
-        float sinh(float x) { return precise_math::sinhf(x); }
+        float sinh(float x) { return __ocml_sinh_f32(x); }
 
         HCC_MATH_LIB_FN
-        double sinh(double x) { return __hc_sinh_double(x); }
+        double sinh(double x) { return __ocml_sinh_f64(x); }
 
         HCC_MATH_LIB_FN
-        float sqrtf(float x) { return __hc_sqrt(x); }
+        float sqrtf(float x) { return __ocml_sqrt_f32(x); }
 
         HCC_MATH_LIB_FN
-        _Float16 sqrt(_Float16 x) { return __hc_sqrt_half(x); }
+        _Float16 sqrt(_Float16 x) { return __ocml_sqrt_f16(x); }
 
         HCC_MATH_LIB_FN
-        float sqrt(float x) { return precise_math::sqrtf(x); }
+        float sqrt(float x) { return __ocml_sqrt_f32(x); }
 
         HCC_MATH_LIB_FN
-        double sqrt(double x) { return __hc_sqrt_double(x); }
+        double sqrt(double x) { return __ocml_sqrt_f64(x); }
 
         HCC_MATH_LIB_FN
-        float tgammaf(float x) { return __hc_tgamma(x); }
+        float tgammaf(float x) { return __ocml_tgamma_f32(x); }
 
         HCC_MATH_LIB_FN
-        _Float16 tgamma(_Float16 x) { return __hc_tgamma_half(x); }
+        _Float16 tgamma(_Float16 x) { return __ocml_tgamma_f16(x); }
 
         HCC_MATH_LIB_FN
-        float tgamma(float x) { return precise_math::tgammaf(x); }
+        float tgamma(float x) { return __ocml_tgamma_f32(x); }
 
         HCC_MATH_LIB_FN
-        double tgamma(double x) { return __hc_tgamma_double(x); }
+        double tgamma(double x) { return __ocml_tgamma_f64(x); }
 
         HCC_MATH_LIB_FN
-        float tanf(float x) { return __hc_tan(x); }
+        float tanf(float x) { return __ocml_tan_f32(x); }
 
         HCC_MATH_LIB_FN
-        _Float16 tan(_Float16 x) { return __hc_tan_half(x); }
+        _Float16 tan(_Float16 x) { return __ocml_tan_f16(x); }
 
         HCC_MATH_LIB_FN
-        float tan(float x) { return precise_math::tanf(x); }
+        float tan(float x) { return __ocml_tan_f32(x); }
 
         HCC_MATH_LIB_FN
-        double tan(double x) { return __hc_tan_double(x); }
+        double tan(double x) { return __ocml_tan_f64(x); }
 
         HCC_MATH_LIB_FN
-        float tanhf(float x) { return __hc_tanh(x); }
+        float tanhf(float x) { return __ocml_tanh_f32(x); }
 
         HCC_MATH_LIB_FN
-        _Float16 tanh(_Float16 x) { return __hc_tanh_half(x); }
+        _Float16 tanh(_Float16 x) { return __ocml_tanh_f16(x); }
 
         HCC_MATH_LIB_FN
-        float tanh(float x) { return precise_math::tanhf(x); }
+        float tanh(float x) { return __ocml_tanh_f32(x); }
 
         HCC_MATH_LIB_FN
-        double tanh(double x) { return __hc_tanh(x); }
+        double tanh(double x) { return __ocml_tanh_f32(x); }
 
         HCC_MATH_LIB_FN
-        float tanpif(float x) { return __hc_tanpi(x); }
+        float tanpif(float x) { return __ocml_tanpi_f32(x); }
 
         HCC_MATH_LIB_FN
-        _Float16 tanpi(_Float16 x) { return __hc_tanpi_half(x); }
+        _Float16 tanpi(_Float16 x) { return __ocml_tanpi_f16(x); }
 
         HCC_MATH_LIB_FN
-        float tanpi(float x) { return precise_math::tanpif(x); }
+        float tanpi(float x) { return __ocml_tanpi_f32(x); }
 
         HCC_MATH_LIB_FN
-        double tanpi(double x) { return __hc_tanpi_double(x); }
+        double tanpi(double x) { return __ocml_tanpi_f64(x); }
 
         HCC_MATH_LIB_FN
-        float truncf(float x) { return __hc_trunc(x); }
+        float truncf(float x) { return __ocml_trunc_f32(x); }
 
         HCC_MATH_LIB_FN
-        _Float16 trunc(_Float16 x) { return __hc_trunc_half(x); }
+        _Float16 trunc(_Float16 x) { return __ocml_trunc_f16(x); }
 
         HCC_MATH_LIB_FN
-        float trunc(float x) { return precise_math::truncf(x); }
+        float trunc(float x) { return __ocml_trunc_f32(x); }
 
         HCC_MATH_LIB_FN
-        double trunc(double x) { return __hc_trunc_double(x); }
+        double trunc(double x) { return __ocml_trunc_f64(x); }
     } // namespace precise_math
 } // namespace detail

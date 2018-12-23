@@ -20,14 +20,17 @@ LLVM_AS=$BINDIR/llvm-as
 LLVM_DIS=$BINDIR/llvm-dis
 LIBPATH=$BINDIR/../lib
 
+# Add error handling functions
+. $BINDIR/error-check
+
 if [ "$#" -lt 2 ]; then
   echo "Usage: $0 kernel-bitcode object (options)" >&2
-  exit 1
+  exit_with_code -1
 fi
 
 if [ ! -f "$1" ]; then
   echo "kernel-bitcode $1 is not valid" >&2
-  exit 1
+  exit_with_code -1
 fi
 
 CXXFLAGS=
@@ -46,3 +49,4 @@ CO="-c -o"
 
 ln -s "$1" "$1.bc"
 eval "$CLANG $CXXFLAGS \"$1.bc\" $CO \"$2\" "
+check_exit_status "eval $CLANG"

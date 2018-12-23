@@ -3,7 +3,6 @@
 
 #include <stdlib.h>
 #include <vector>
-
 using namespace hc;
 
 int main(void) {

@@ -30,7 +30,6 @@
 
 // RUN: %hc -DTYPE="wchar_t"  %s -o %t.out && %t.out
 
-#include <hc/hc.hpp>
 // added for checking HSA profile
 #include <hc/hc.hpp>
 
