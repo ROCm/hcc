@@ -2,7 +2,7 @@
 
 #include <iostream>
 #include <cstdlib>
-#include <hc.hpp>
+#include <hc/hc.hpp>
 
 int main(int argc, char* argv[]) {
   hc::array<int, 1> a(1);

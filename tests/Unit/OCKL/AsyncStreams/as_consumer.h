@@ -1,7 +1,7 @@
 #ifndef __AS_CONSUMER_H__
 #define __AS_CONSUMER_H__
 
-#include <hc.hpp>
+#include <hc/hc.hpp>
 #include <hsa/hsa.h>
 
 #include <iostream>

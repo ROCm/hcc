@@ -3638,8 +3638,8 @@ namespace hc
             }
 
             void* tmp{nullptr};
-
             auto s = hsa_memory_allocate(*r, extent_.size() * sizeof(T), &tmp);
+
             if (s != HSA_STATUS_SUCCESS) {
                 throw std::runtime_error{"Failed to allocate array storage."};
             }
@@ -5046,12 +5046,14 @@ namespace hc
 
             if (it != cache_().cend()) return it->second;
 
-            static const accelerator acc{};
+            hsa_amd_pointer_info_t info{};
+            info.size = sizeof(info);
+
+            static const accelerator cpu{accelerator::cpu_accelerator()};
 
             void* tmp{nullptr};
             auto s = hsa_memory_allocate(
-                *static_cast<hsa_region_t*>(acc.get_hsa_am_system_region()),
-                    //acc.get_hsa_am_finegrained_system_region()),
+                *static_cast<hsa_region_t*>(cpu.get_hsa_am_system_region()),
                 byte_cnt,
                 &tmp);
 
@@ -5085,7 +5087,8 @@ namespace hc
             std::lock_guard<std::mutex> lck{mutex_()};
 
             return cache_().emplace(
-                std::piecewise_construct, std::make_tuple(ptr),
+                std::piecewise_construct,
+                std::make_tuple(ptr),
                 std::make_tuple(ptr, hsa_memory_free)).first->second;
         }
 
@@ -5240,13 +5243,11 @@ namespace hc
             static const auto accs = accelerator::get_all();
 
             for (auto&& acc : accs) {
-                if (acc != src.get_accelerator_view().get_accelerator()) continue;
-
-                owner_ = &acc;
-                break;
+                if (acc == src.get_accelerator_view().get_accelerator()) {
+                    owner_ = &acc;
+                    break;
+                }
             }
-
-            copy(src, base_ptr_); // TODO: could directly re-use the array storage.
         }
         array_view(hc::array<T, N>& src) [[hc]]
             : array_view{src.get_extent(), src.data()}
@@ -5836,10 +5837,13 @@ namespace hc
             access_type type = access_type_read) const
         {
             if (type == access_type_none || type == access_type_write) {
-                return  completion_future{
+                return completion_future{
                     std::async(std::launch::deferred, [](){}).share()};
             }
-            if (owner_ && av.get_accelerator() == *owner_) return {};
+            if (owner_ && av.get_accelerator() == *owner_) {
+                return completion_future{
+                    std::async(std::launch::deferred, [](){}).share()};
+            }
 
             return synchronize_async(type);
         }
@@ -6839,7 +6843,7 @@ namespace hc
     template<typename Kernel>
     inline
     std::forward_list<std::shared_future<void>> predecessors_for(
-        const Kernel& f)
+        const Kernel&)
     {   // TODO: cleanup & optimise; the iteration can be collapsed.
         using AR = array_base;
         using AV = array_view_base;
@@ -6896,8 +6900,6 @@ namespace hc
         const hc::extent<n>& compute_domain,
         const Kernel& f)
     {   // TODO: unify with tiled, everything is essentially tiled
-        array_view_base::captured_().clear();
-
         if (compute_domain.size() == 0) {
             return completion_future{
                 std::async(std::launch::deferred, [](){}).share()};

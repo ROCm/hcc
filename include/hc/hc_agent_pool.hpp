@@ -396,8 +396,6 @@ namespace hc
         inline
         hsa_agent_t Agent_pool::default_agent_()
         {
-            using T = decltype(*pool().cbegin());
-
             std::vector<HSA_agent> tmp;
             for (auto&& x : pool()) tmp.push_back(x.second);
 
