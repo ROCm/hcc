@@ -1459,6 +1459,15 @@ accelerator_view::copy_async_ext(const void *src, void *dst, size_t size_bytes,
     return completion_future(pQueue->EnqueueAsyncCopyExt(src, dst, size_bytes, copyDir, srcInfo, dstInfo, copyAcc ? copyAcc->pDev : nullptr));
 };
 
+inline completion_future
+accelerator_view::copy2d_async_ext(const void *src, void *dst, size_t width, size_t height, size_t srcPitch, size_t dstPitch,
+                             hcCommandKind copyDir,
+                             const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo,
+                             const hc::accelerator *copyAcc)
+{
+    return completion_future(pQueue->EnqueueAsyncCopy2dExt(src, dst, width, height, srcPitch, dstPitch, copyDir, srcInfo, dstInfo, copyAcc ? copyAcc->pDev : nullptr));
+};
+
 // ------------------------------------------------------------------------
 // Intrinsic functions for HSAIL instructions
 // ------------------------------------------------------------------------
