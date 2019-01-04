@@ -125,6 +125,20 @@ This ThinLTO implementation which will use llvm-lto LLVM tool to replace
 clamp-device bash script. It adds an optllc option into ThinLTOGenerator,
 which will perform in-program opt and codegen in parallel.
 
+To use HCC Printf Functions
+===========================
+Set up environmental variable:
+```bash
+export HCC_ENABLE_PRINTF=1
+```
+
+Then compile the printf kernel with HCC_ENABLE_ACCELERATOR_PRINTF macro defined.
+```bash
+~/build/bin/hcc -hc -DHCC_ENABLE_ACCELERATOR_PRINTF -lhc_am -o printf.out ~/hcc/tests/Unit/HSA/printf.cpp
+```
+
+For more examples on how to use printf, see tests in `tests/Unit/HSA/printf*.cpp`.
+
 [//]: # (References)
 [1]: https://github.com/RadeonOpenCompute/hcc/wiki
 [2]: https://git-scm.com/book/en/v2/Git-Tools-Submodules
