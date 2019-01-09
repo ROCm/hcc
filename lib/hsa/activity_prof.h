@@ -33,7 +33,7 @@ THE SOFTWARE.
     } // activity_prof
 
 namespace activity_prof {
-using Kalmar::CLAMP::record_id_t;
+typedef uint64_t record_id_t;
 typedef void* callback_arg_t;
 typedef uint32_t op_id_t;
 typedef uint32_t activity_kind_t;
