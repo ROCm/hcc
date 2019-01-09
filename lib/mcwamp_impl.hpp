@@ -10,4 +10,5 @@ typedef void* (*GetContextImpl_t)();
 typedef void (*SetActivityRecordImpl_t)(unsigned long);
 typedef void (*GetActivityCoordImpl_t)(int*, uint64_t*);
 typedef bool (*SetActivityCallbackImpl_t)(unsigned, void*, void*);
+typedef bool (*SetActivityIdCallbackImpl_t)(void*);
 typedef const char* (*GetCmdNameImpl_t)(unsigned);

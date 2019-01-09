@@ -31,8 +31,8 @@ struct RuntimeImpl {
     m_PushArgImpl(nullptr),
     m_PushArgPtrImpl(nullptr),
     m_GetContextImpl(nullptr),
-    m_SetActivityRecordImpl(nullptr),
     m_SetActivityCallbackImpl(nullptr),
+    m_SetActivityIdCallbackImpl(nullptr),
     m_GetCmdNameImpl(nullptr),
     isCPU(false) {
     //std::cout << "dlopen(" << libraryName << ")\n";
@@ -55,8 +55,8 @@ struct RuntimeImpl {
     m_PushArgImpl = (PushArgImpl_t) dlsym(m_RuntimeHandle, "PushArgImpl");
     m_PushArgPtrImpl = (PushArgPtrImpl_t) dlsym(m_RuntimeHandle, "PushArgPtrImpl");
     m_GetContextImpl= (GetContextImpl_t) dlsym(m_RuntimeHandle, "GetContextImpl");
-    m_SetActivityRecordImpl = (SetActivityRecordImpl_t) dlsym(m_RuntimeHandle, "SetActivityRecordImpl");
     m_SetActivityCallbackImpl = (SetActivityCallbackImpl_t) dlsym(m_RuntimeHandle, "SetActivityCallbackImpl");
+    m_SetActivityIdCallbackImpl = (SetActivityIdCallbackImpl_t) dlsym(m_RuntimeHandle, "SetActivityIdCallbackImpl");
     m_GetCmdNameImpl = (GetCmdNameImpl_t) dlsym(m_RuntimeHandle, "GetCmdNameImpl");
   }
 
@@ -70,8 +70,8 @@ struct RuntimeImpl {
   GetContextImpl_t m_GetContextImpl;
 
   // Activity profiling routines
-  SetActivityRecordImpl_t m_SetActivityRecordImpl;
   SetActivityCallbackImpl_t m_SetActivityCallbackImpl;
+  SetActivityIdCallbackImpl_t m_SetActivityIdCallbackImpl;
   GetCmdNameImpl_t m_GetCmdNameImpl;
 
   bool isCPU;
@@ -356,11 +356,11 @@ void PushArgPtr(void *k_, int idx, size_t sz, const void *s) {
 }
 
 // Activity profiling routines
-void SetActivityRecord(record_id_t record_id) {
-  GetOrInitRuntime()->m_SetActivityRecordImpl(record_id);
-}
 bool SetActivityCallback(uint32_t op, void* callback, void* arg) {
   return GetOrInitRuntime()->m_SetActivityCallbackImpl(op, callback, arg);
+}
+bool SetActivityIdCallback(void* callback) {
+  return GetOrInitRuntime()->m_SetActivityIdCallbackImpl(callback);
 }
 const char* GetCmdName(uint32_t id) {
   return GetOrInitRuntime()->m_GetCmdNameImpl(id);

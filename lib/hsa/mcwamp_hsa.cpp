@@ -711,7 +711,7 @@ struct HSAOpCoord
 };
 
 // Base class for the other HSA ops:
-class HSAOp : public Kalmar::KalmarAsyncOp, protected activity_prof::ActivityProf<HSAOpCoord> {
+class HSAOp : public Kalmar::KalmarAsyncOp {
 public:
     typedef activity_prof::ActivityProf<HSAOpCoord> ActivityProf;
 
@@ -738,6 +738,8 @@ protected:
     int          _signalIndex;
 
     hsa_agent_t  _agent;
+
+    ActivityProf _activity_prof;
 };
 std::ostream& operator<<(std::ostream& os, const HSAOp & op);
 
@@ -4629,7 +4631,7 @@ HSADispatch::dispose() {
         //LOG_PROFILE(this, start, end, "kernel", kname.c_str(), std::hex << "kernel="<< kernel << " " << (kernel? kernel->kernelCodeHandle:0x0) << " aql.kernel_object=" << aql.kernel_object << std::dec);
         LOG_PROFILE(this, start, end, "kernel", getKernelName(), "");
     }
-    ActivityProf::callback(getCommandKind(), getBeginTimestamp(), getEndTimestamp());
+    if (HCC_PROFILE) _activity_prof.callback(getCommandKind(), getBeginTimestamp(), getEndTimestamp());
     Kalmar::ctx.releaseSignal(_signal, _signalIndex);
 
     if (future != nullptr) {
@@ -4987,7 +4989,7 @@ HSABarrier::dispose() {
         };
         LOG_PROFILE(this, start, end, "barrier", "depcnt=" + std::to_string(depCount) + ",acq=" + fenceToString(acqBits) + ",rel=" + fenceToString(relBits), depss.str())
     }
-    ActivityProf::callback(getCommandKind(), getBeginTimestamp(), getEndTimestamp());
+    if (HCC_PROFILE) _activity_prof.callback(getCommandKind(), getBeginTimestamp(), getEndTimestamp());
     Kalmar::ctx.releaseSignal(_signal, _signalIndex);
 
     // Release referecne to our dependent ops:
@@ -5017,7 +5019,7 @@ HSABarrier::getEndTimestamp() override {
 
 
 // Activity profiling instantiation
-ACTIVITY_PROF_INSTANCES(current, callbacks);
+ACTIVITY_PROF_INSTANCES();
 
 // ----------------------------------------------------------------------
 // member function implementation of HSAOp
@@ -5029,16 +5031,18 @@ HSAOpCoord::HSAOpCoord(Kalmar::HSAQueue *queue) :
 
 HSAOp::HSAOp(hc::HSAOpId id, Kalmar::KalmarQueue *queue, hc::hcCommandKind commandKind) :
     KalmarAsyncOp(queue, commandKind),
-    ActivityProf(id, _opCoord),
     _opCoord(static_cast<Kalmar::HSAQueue*> (queue)),
     _asyncOpsIndex(-1),
 
     _signalIndex(-1),
-    _agent(static_cast<Kalmar::HSADevice*>(hsaQueue()->getDev())->getAgent())
+    _agent(static_cast<Kalmar::HSADevice*>(hsaQueue()->getDev())->getAgent()),
+
+    _activity_prof(id, _opCoord)
 {
     _signal.handle=0;
     apiStartTick = Kalmar::ctx.getSystemTicks();
-    ActivityProf::initialize(activity_prof::current, activity_prof::callbacks);
+
+    if (HCC_PROFILE) _activity_prof.initialize(activity_prof::callbacks);
 };
 
 Kalmar::HSAQueue *HSAOp::hsaQueue() const 
@@ -5377,7 +5381,7 @@ HSACopy::dispose() {
 
             LOG_PROFILE(this, start, end, "copy", getCopyCommandString(),  "\t" << sizeBytes << " bytes;\t" << sizeBytes/1024.0/1024 << " MB;\t" << bw << " GB/s;");
         }
-        ActivityProf::callback(getCommandKind(), getBeginTimestamp(), getEndTimestamp(), sizeBytes);
+        if (HCC_PROFILE) _activity_prof.callback(getCommandKind(), getBeginTimestamp(), getEndTimestamp(), sizeBytes);
         Kalmar::ctx.releaseSignal(_signal, _signalIndex);
     } else {
         if (HCC_PROFILE & HCC_PROFILE_TRACE) {
@@ -5386,7 +5390,7 @@ HSACopy::dispose() {
             double bw = (double)(sizeBytes)/(end-start) * (1000.0/1024.0) * (1000.0/1024.0);
             LOG_PROFILE(this, start, end, "copyslo", getCopyCommandString(),  "\t" << sizeBytes << " bytes;\t" << sizeBytes/1024.0/1024 << " MB;\t" << bw << " GB/s;");
         }
-        ActivityProf::callback(getCommandKind(), apiStartTick, Kalmar::ctx.getSystemTicks(), sizeBytes);
+        if (HCC_PROFILE) _activity_prof.callback(getCommandKind(), apiStartTick, Kalmar::ctx.getSystemTicks(), sizeBytes);
     }
 
     if (future != nullptr) {
@@ -5637,8 +5641,8 @@ std::ostream& operator<<(std::ostream& os, const HSAOp & op)
 
 // Profiling routines
 
-extern "C" void SetActivityRecordImpl(unsigned long record_id) {
-    activity_prof::current.record_id = record_id;
+extern "C" void SetActivityIdCallbackImpl(void* callback) {
+    activity_prof::callbacks.set_id_callback(reinterpret_cast<activity_prof::id_callback_fun_t>(callback));
 }
 
 extern "C" bool SetActivityCallbackImpl(unsigned op, void* callback, void* arg) {
