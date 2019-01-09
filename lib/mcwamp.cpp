@@ -359,8 +359,8 @@ void PushArgPtr(void *k_, int idx, size_t sz, const void *s) {
 bool SetActivityCallback(uint32_t op, void* callback, void* arg) {
   return GetOrInitRuntime()->m_SetActivityCallbackImpl(op, callback, arg);
 }
-bool SetActivityIdCallback(void* callback) {
-  return GetOrInitRuntime()->m_SetActivityIdCallbackImpl(callback);
+void SetActivityIdCallback(void* callback) {
+  GetOrInitRuntime()->m_SetActivityIdCallbackImpl(callback);
 }
 const char* GetCmdName(uint32_t id) {
   return GetOrInitRuntime()->m_GetCmdNameImpl(id);
