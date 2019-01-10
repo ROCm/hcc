@@ -144,11 +144,15 @@ private:
 } // namespace activity_prof
 
 #else
-#define ACTIVITY_PROF_INSTANCES() do {} while(0)
+#define ACTIVITY_PROF_INSTANCES()
 
 namespace activity_prof {
+typedef uint32_t op_id_t;
+typedef Kalmar::hcCommandKind command_id_t;
+
 typedef void* id_callback_fun_t;
 typedef void* callback_fun_t;
+typedef void* callback_arg_t;
 
 struct CallbacksTable {
     static void set_id_callback(const id_callback_fun_t& fun) {}
