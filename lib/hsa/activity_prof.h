@@ -24,99 +24,90 @@ THE SOFTWARE.
 
 #include "kalmar_runtime.h"
 
-#define ACTIVITY_PROF_INSTANCES()                                        \
-    namespace activity_prof {                                            \
-        static activity_id_callback_t activity_id_callback;              \
-        static ActivityCallbacksTable callbacks;                         \
+#if USE_PROF_API
+#include "prof_protocol.h"
+#include "hsa_rt_utils.hpp"
+
+#define ACTIVITY_PROF_INSTANCES()                                                    \
+    namespace activity_prof {                                                        \
+        CallbacksTable::table_t CallbacksTable::_table{};                            \
+        CallbacksTable::mutex_t CallbacksTable::_mutex;                              \
         template<> HSAOp::ActivityProf::timer_t* HSAOp::ActivityProf::_timer = NULL; \
         template<> std::atomic<record_id_t> HSAOp::ActivityProf::_glob_record_id(0); \
     } // activity_prof
 
 namespace activity_prof {
 typedef uint64_t record_id_t;
-typedef void* callback_arg_t;
 typedef uint32_t op_id_t;
 typedef uint32_t activity_kind_t;
 typedef Kalmar::hcCommandKind command_id_t;
 
-// Activity callbacks
-template <typename IdCb, typename Fun>
-class ActivityCallbacksTableTempl {
+typedef activity_id_callback_t id_callback_fun_t;
+typedef activity_async_callback_t callback_fun_t;
+typedef void* callback_arg_t;
+
+class CallbacksTable {
     public:
-    typedef IdCb id_callback_fun_t;
-    typedef Fun callback_fun_t;
+    struct table_t {
+        id_callback_fun_t id_callback;
+        callback_fun_t fun[hc::HSA_OP_ID_NUM];
+        callback_arg_t arg[hc::HSA_OP_ID_NUM];
+    };
     typedef std::recursive_mutex mutex_t;
 
-    ActivityCallbacksTableTempl() {
-        std::lock_guard<mutex_t> lck(_mutex);
-        for (op_id_t i = 0; i < hc::HSA_OP_ID_NUM; ++i) {
-            _arg[i] = NULL;
-            _fun[i] = NULL;
-        }
-    }
-
-    void set_id_callback(const id_callback_fun_t& fun) { _id_callback = fun; }
-    id_callback_fun_t get_id_callback() const { return _id_callback; }
-
-    bool set(const op_id_t& op_id, const callback_fun_t& fun, const callback_arg_t& arg) {
+    static void set_id_callback(const id_callback_fun_t& fun) { _table.id_callback = fun; }
+    static id_callback_fun_t get_id_callback() { return _table.id_callback; }
+    
+    static bool set_async_callback(const op_id_t& op_id, const callback_fun_t& fun, const callback_arg_t& arg) {
         std::lock_guard<mutex_t> lck(_mutex);
         if (op_id == hc::HSA_OP_ID_ANY) {
             for (op_id_t i = 0; i < hc::HSA_OP_ID_NUM; ++i) {
-                set(i, fun, arg);
+                set_async_callback(i, fun, arg);
             }
         } else if (op_id < hc::HSA_OP_ID_NUM) {
-            _arg[op_id] = arg;
-            _fun[op_id] = fun;
+            _table.fun[op_id] = fun;
+            _table.arg[op_id] = arg;
         } else {
           return false;
         }
         return true;
     }
-
-    void get(const op_id_t& op_id, callback_fun_t* fun, callback_arg_t* arg) const {
-        std::lock_guard<mutex_t> lck(*const_cast<mutex_t*>(&_mutex));
-        *fun = _fun[op_id];
-        *arg = _arg[op_id];
+    
+    static void get_async_callback(const op_id_t& op_id, callback_fun_t* fun, callback_arg_t* arg) {
+        std::lock_guard<mutex_t> lck(_mutex);
+        *fun = _table.fun[op_id];
+        *arg = _table.arg[op_id];
     }
 
     private:
-    id_callback_fun_t _id_callback;
-    callback_fun_t _fun[hc::HSA_OP_ID_NUM];
-    callback_arg_t _arg[hc::HSA_OP_ID_NUM];
-    mutex_t _mutex;
+    static table_t _table;
+    static mutex_t _mutex;
 };
 
 // Activity profile class
-template <int Domain, typename OpCoord, typename IdCb, typename Fun, typename Record, typename Timer>
-class ActivityProfTempl {
+template <typename OpCoord>
+class ActivityProf {
 public:
-    // Activity ID callback type
-    typedef IdCb id_callback_fun_t;
-    // Activity callback type
-    typedef Fun callback_fun_t;
-    // Activity record type
-    typedef Record op_record_t;
-    // Callbacks table type
-    typedef ActivityCallbacksTableTempl<id_callback_fun_t, callback_fun_t> ActivityCallbacksTable;
+    // Domain ID
+    static const int ACTIVITY_DOMAIN_ID = ACTIVITY_DOMAIN_HCC_OPS;
     // Timeer type
-    typedef Timer timer_t;
+    typedef hsa_rt_utils::Timer timer_t;
 
-    ActivityProfTempl(const op_id_t& op_id, const OpCoord& op_coord, timer_t* &timer) :
+    ActivityProf(const op_id_t& op_id, const OpCoord& op_coord) :
         _op_id(op_id),
         _op_coord(op_coord),
         _callback_fun(NULL),
         _callback_arg(NULL),
-        _record_id(0),
-        _timer(timer)
+        _record_id(0)
     {}
 
     // Initialization
-    void initialize(std::atomic<record_id_t>& record_id_ref, const ActivityCallbacksTable& callbacks) {
-        callbacks.get(_op_id, &_callback_fun, &_callback_arg);
+    void initialize() {
+        CallbacksTable::get_async_callback(_op_id, &_callback_fun, &_callback_arg);
         if (_callback_fun != NULL) {
             if (_timer == NULL) _timer = new timer_t;
-            _record_id = record_id_ref.fetch_add(1, std::memory_order_relaxed);
-            (callbacks.get_id_callback())(_record_id);
+            _record_id = _glob_record_id.fetch_add(1, std::memory_order_relaxed);
+            (CallbacksTable::get_id_callback())(_record_id);
         }
     }
 
@@ -124,8 +115,8 @@ public:
     inline void callback(const command_id_t& command_id, const uint64_t& begin_ts, const uint64_t& end_ts,
                          const size_t& bytes = 0) {
         if (_callback_fun != NULL) {
-            op_record_t record {
-                Domain,                               // domain id
+            activity_record_t record {
+                ACTIVITY_DOMAIN_ID,                   // domain id
                 (activity_kind_t)command_id,          // activity kind
                 _op_id,                               // operation id
                 _record_id,                           // activity correlation id
@@ -142,73 +133,35 @@ public:
 private:
     const op_id_t _op_id;
     const OpCoord& _op_coord;
-    callback_fun_t _callback_fun;
+    activity_async_callback_t _callback_fun;
     callback_arg_t _callback_arg;
     record_id_t _record_id;
-    timer_t*& _timer;
-};
 
-} // namespace activity_prof
-
-#if USE_PROF_API
-#include "prof_protocol.h"
-#include "hsa_rt_utils.hpp"
-
-namespace activity_prof {
-
-typedef ActivityCallbacksTableTempl<activity_id_callback_t, activity_async_callback_t> ActivityCallbacksTable;
-template <typename OpCoord>
-class ActivityProf : public ActivityProfTempl<ACTIVITY_DOMAIN_HCC_OPS,
-                                              OpCoord,
-                                              activity_id_callback_t,
-                                              activity_async_callback_t,
-                                              activity_record_t,
-                                              hsa_rt_utils::Timer> {
-public:
-    typedef ActivityProfTempl<ACTIVITY_DOMAIN_HCC_OPS,
-                             OpCoord,
-                             activity_id_callback_t,
-                             activity_async_callback_t,
-                             activity_record_t,
-                             hsa_rt_utils::Timer> parent_t;
-    typedef hsa_rt_utils::Timer timer_t;
-
-    ActivityProf(const op_id_t& op_id, const OpCoord& op_coord) : parent_t(op_id, op_coord, _timer) {}
-    inline void initialize(const ActivityCallbacksTable& callbacks) {
-      parent_t::initialize(_glob_record_id, callbacks);
-    }
-
-private:
     static timer_t* _timer;
     static std::atomic<record_id_t> _glob_record_id;
 };
 
-typedef ActivityCallbacksTable::id_callback_fun_t id_callback_fun_t;
-typedef ActivityCallbacksTable::callback_fun_t callback_fun_t;
-
 } // namespace activity_prof
 
 #else
+#define ACTIVITY_PROF_INSTANCES() do {} while(0)
 
 namespace activity_prof {
 typedef void* id_callback_fun_t;
 typedef void* callback_fun_t;
 
-class ActivityCallbacksTable {
-    public:
-    void set_id_callback(const id_callback_fun_t& fun) {}
-    bool set(const op_id_t& op_id, const callback_fun_t& fun, const callback_arg_t& arg) { return true; }
+struct CallbacksTable {
+    static void set_id_callback(const id_callback_fun_t& fun) {}
+    static bool set_async_callback(const op_id_t& op_id, const callback_fun_t& fun, const callback_arg_t& arg) { return true; }
 };
 
 template <typename OpCoord>
 class ActivityProf {
 public:
     ActivityProf(const op_id_t& op_id, const OpCoord& op_coord) {}
-    inline void initialize(const ActivityCallbacksTable& callbacks) {}
+    inline void initialize() {}
     inline void callback(const command_id_t& command_id, const uint64_t& begin_ts, const uint64_t& end_ts,
                          const size_t& bytes = 0) {}
-    typedef void* timer_t;
-    static timer_t* _timer;
 };
 
 } // namespace activity_prof

@@ -5042,7 +5042,7 @@ HSAOp::HSAOp(hc::HSAOpId id, Kalmar::KalmarQueue *queue, hc::hcCommandKind comma
     _signal.handle=0;
     apiStartTick = Kalmar::ctx.getSystemTicks();
 
-    if (HCC_PROFILE) _activity_prof.initialize(activity_prof::callbacks);
+    if (HCC_PROFILE) _activity_prof.initialize();
 };
 
 Kalmar::HSAQueue *HSAOp::hsaQueue() const 
@@ -5642,11 +5642,11 @@ std::ostream& operator<<(std::ostream& os, const HSAOp & op)
 // Profiling routines
 
 extern "C" void SetActivityIdCallbackImpl(void* callback) {
-    activity_prof::callbacks.set_id_callback(reinterpret_cast<activity_prof::id_callback_fun_t>(callback));
+    activity_prof::CallbacksTable::set_id_callback(reinterpret_cast<activity_prof::id_callback_fun_t>(callback));
 }
 
 extern "C" bool SetActivityCallbackImpl(unsigned op, void* callback, void* arg) {
-    return activity_prof::callbacks.set(op, reinterpret_cast<activity_prof::callback_fun_t>(callback), arg);
+    return activity_prof::CallbacksTable::set_async_callback(op, reinterpret_cast<activity_prof::callback_fun_t>(callback), arg);
 }
 
 extern "C" const char* GetCmdNameImpl(unsigned id) {
