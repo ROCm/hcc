@@ -32,8 +32,8 @@ THE SOFTWARE.
     namespace activity_prof {                                                        \
         CallbacksTable::table_t CallbacksTable::_table{};                            \
         CallbacksTable::mutex_t CallbacksTable::_mutex;                              \
-        template<> HSAOp::ActivityProf::timer_t* HSAOp::ActivityProf::_timer = NULL; \
-        template<> std::atomic<record_id_t> HSAOp::ActivityProf::_glob_record_id(0); \
+        ActivityProf::timer_t* ActivityProf::_timer = NULL;                          \
+        std::atomic<record_id_t> ActivityProf::_glob_record_id(0);                   \
     } // activity_prof
 
 namespace activity_prof {
@@ -85,7 +85,6 @@ class CallbacksTable {
 };
 
 // Activity profile class
-template <typename OpCoord>
 class ActivityProf {
 public:
     // Domain ID
@@ -93,9 +92,10 @@ public:
     // Timeer type
     typedef hsa_rt_utils::Timer timer_t;
 
-    ActivityProf(const op_id_t& op_id, const OpCoord& op_coord) :
+    ActivityProf(const op_id_t& op_id, const uint64_t& queue_id, const int& device_id) :
         _op_id(op_id),
-        _op_coord(op_coord),
+        _queue_id(queue_id),
+        _device_id(device_id),
         _callback_fun(nullptr),
         _callback_arg(nullptr),
         _record_id(0)
@@ -122,8 +122,8 @@ public:
                 _record_id,                           // activity correlation id
                 _timer->timestamp_to_ns(begin_ts),    // begin timestamp, ns
                 _timer->timestamp_to_ns(end_ts),      // end timestamp, ns
-                _op_coord._deviceId,                  // device id
-                _op_coord._queueId,                   // stream id
+                _device_id,                           // device id
+                _queue_id,                            // stream id
                 bytes                                 // copied data size, for memcpy
             };
             _callback_fun(_op_id, &record, _callback_arg);
@@ -132,7 +132,9 @@ public:
 
 private:
     const op_id_t _op_id;
-    const OpCoord& _op_coord;
+    const uint64_t& _queue_id;
+    const int& _device_id;
+
     activity_async_callback_t _callback_fun;
     callback_arg_t _callback_arg;
     record_id_t _record_id;
@@ -171,5 +173,7 @@ public:
 } // namespace activity_prof
 
 #endif
+
+ACTIVITY_PROF_INSTANCES();
 
 #endif // ACTIVITY_PROF_H

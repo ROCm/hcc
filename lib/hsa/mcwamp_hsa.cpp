@@ -713,8 +713,6 @@ struct HSAOpCoord
 // Base class for the other HSA ops:
 class HSAOp : public Kalmar::KalmarAsyncOp {
 public:
-    typedef activity_prof::ActivityProf<HSAOpCoord> ActivityProf;
-
     HSAOp(hc::HSAOpId id, Kalmar::KalmarQueue *queue, hc::hcCommandKind commandKind);
 
     const HSAOpCoord opCoord() const { return _opCoord; };
@@ -739,7 +737,7 @@ protected:
 
     hsa_agent_t  _agent;
 
-    ActivityProf _activity_prof;
+    activity_prof::ActivityProf _activity_prof;
 };
 std::ostream& operator<<(std::ostream& os, const HSAOp & op);
 
@@ -5017,10 +5015,6 @@ HSABarrier::getEndTimestamp() override {
     return time.end;
 }
 
-
-// Activity profiling instantiation
-ACTIVITY_PROF_INSTANCES();
-
 // ----------------------------------------------------------------------
 // member function implementation of HSAOp
 // ----------------------------------------------------------------------
@@ -5037,7 +5031,7 @@ HSAOp::HSAOp(hc::HSAOpId id, Kalmar::KalmarQueue *queue, hc::hcCommandKind comma
     _signalIndex(-1),
     _agent(static_cast<Kalmar::HSADevice*>(hsaQueue()->getDev())->getAgent()),
 
-    _activity_prof(id, _opCoord)
+    _activity_prof(id, _opCoord._queueId, _opCoord._deviceId)
 {
     _signal.handle=0;
     apiStartTick = Kalmar::ctx.getSystemTicks();
