@@ -37,9 +37,8 @@ THE SOFTWARE.
     } // activity_prof
 
 namespace activity_prof {
-typedef uint64_t record_id_t;
-typedef uint32_t op_id_t;
-typedef uint32_t activity_kind_t;
+typedef activity_correlation_id_t record_id_t;
+typedef activity_op_t op_id_t;
 typedef Kalmar::hcCommandKind command_id_t;
 
 typedef activity_id_callback_t id_callback_fun_t;
@@ -62,7 +61,8 @@ class CallbacksTable {
         std::lock_guard<mutex_t> lck(_mutex);
         if (op_id == hc::HSA_OP_ID_ANY) {
             for (op_id_t i = 0; i < hc::HSA_OP_ID_NUM; ++i) {
-                set_async_callback(i, fun, arg);
+                _table.fun[i] = fun;
+                _table.arg[i] = arg;
             }
         } else if (op_id < hc::HSA_OP_ID_NUM) {
             _table.fun[op_id] = fun;
@@ -96,8 +96,8 @@ public:
     ActivityProf(const op_id_t& op_id, const OpCoord& op_coord) :
         _op_id(op_id),
         _op_coord(op_coord),
-        _callback_fun(NULL),
-        _callback_arg(NULL),
+        _callback_fun(nullptr),
+        _callback_arg(nullptr),
         _record_id(0)
     {}
 
@@ -112,7 +112,7 @@ public:
     }
 
     // Activity callback routine
-    inline void callback(const command_id_t& command_id, const uint64_t& begin_ts, const uint64_t& end_ts,
+    void callback(const command_id_t& command_id, const uint64_t& begin_ts, const uint64_t& end_ts,
                          const size_t& bytes = 0) {
         if (_callback_fun != NULL) {
             activity_record_t record {
