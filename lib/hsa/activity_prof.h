@@ -161,10 +161,9 @@ struct CallbacksTable {
     static bool set_async_callback(const op_id_t& op_id, const callback_fun_t& fun, const callback_arg_t& arg) { return true; }
 };
 
-template <typename OpCoord>
 class ActivityProf {
 public:
-    ActivityProf(const op_id_t& op_id, const OpCoord& op_coord) {}
+    ActivityProf(const op_id_t& op_id, const uint64_t& queue_id, const int& device_id) {}
     inline void initialize() {}
     inline void callback(const command_id_t& command_id, const uint64_t& begin_ts, const uint64_t& end_ts,
                          const size_t& bytes = 0) {}
