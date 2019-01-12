@@ -46,7 +46,6 @@
 #include "unpinned_copy_engine.h"
 #include "hc_rt_debug.h"
 #include "hc_printf.hpp"
-#include "hc_hsa_op_id.h"
 
 #include "activity_prof.h"
 

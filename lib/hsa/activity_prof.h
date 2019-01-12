@@ -29,10 +29,11 @@ THE SOFTWARE.
 #include "hsa_rt_utils.hpp"
 
 #define ACTIVITY_PROF_INSTANCES()                                                    \
+    hsa_rt_utils::Timer* hsa_rt_utils::TimerFactory::instance_ = nullptr;            \
+    hsa_rt_utils::TimerFactory::mutex_t hsa_rt_utils::TimerFactory::mutex_;          \
     namespace activity_prof {                                                        \
         CallbacksTable::table_t CallbacksTable::_table{};                            \
         CallbacksTable::mutex_t CallbacksTable::_mutex;                              \
-        ActivityProf::timer_t* ActivityProf::_timer = NULL;                          \
         std::atomic<record_id_t> ActivityProf::_glob_record_id(0);                   \
     } // activity_prof
 
@@ -40,6 +41,7 @@ namespace activity_prof {
 typedef activity_correlation_id_t record_id_t;
 typedef activity_op_t op_id_t;
 typedef Kalmar::hcCommandKind command_id_t;
+typedef hsa_rt_utils::TimerFactory TimerFactory;
 
 typedef activity_id_callback_t id_callback_fun_t;
 typedef activity_async_callback_t callback_fun_t;
@@ -49,22 +51,17 @@ class CallbacksTable {
     public:
     struct table_t {
         id_callback_fun_t id_callback;
-        callback_fun_t fun[hc::HSA_OP_ID_NUM];
-        callback_arg_t arg[hc::HSA_OP_ID_NUM];
+        callback_fun_t fun[hc::HSA_OP_ID_NUMBER];
+        callback_arg_t arg[hc::HSA_OP_ID_NUMBER];
     };
-    typedef std::recursive_mutex mutex_t;
+    typedef std::mutex mutex_t;
 
     static void set_id_callback(const id_callback_fun_t& fun) { _table.id_callback = fun; }
     static id_callback_fun_t get_id_callback() { return _table.id_callback; }
     
     static bool set_async_callback(const op_id_t& op_id, const callback_fun_t& fun, const callback_arg_t& arg) {
         std::lock_guard<mutex_t> lck(_mutex);
-        if (op_id == hc::HSA_OP_ID_ANY) {
-            for (op_id_t i = 0; i < hc::HSA_OP_ID_NUM; ++i) {
-                _table.fun[i] = fun;
-                _table.arg[i] = arg;
-            }
-        } else if (op_id < hc::HSA_OP_ID_NUM) {
+        if (op_id < hc::HSA_OP_ID_NUMBER) {
             _table.fun[op_id] = fun;
             _table.arg[op_id] = arg;
         } else {
@@ -89,7 +86,6 @@ class ActivityProf {
 public:
     // Domain ID
     static const int ACTIVITY_DOMAIN_ID = ACTIVITY_DOMAIN_HCC_OPS;
-    // Timeer type
     typedef hsa_rt_utils::Timer timer_t;
 
     ActivityProf(const op_id_t& op_id, const uint64_t& queue_id, const int& device_id) :
@@ -105,7 +101,7 @@ public:
     void initialize() {
         CallbacksTable::get_async_callback(_op_id, &_callback_fun, &_callback_arg);
         if (_callback_fun != NULL) {
-            if (_timer == NULL) _timer = new timer_t;
+            TimerFactory::Create();
             _record_id = _glob_record_id.fetch_add(1, std::memory_order_relaxed);
             (CallbacksTable::get_id_callback())(_record_id);
         }
@@ -120,8 +116,8 @@ public:
                 (activity_kind_t)command_id,          // activity kind
                 _op_id,                               // operation id
                 _record_id,                           // activity correlation id
-                _timer->timestamp_to_ns(begin_ts),    // begin timestamp, ns
-                _timer->timestamp_to_ns(end_ts),      // end timestamp, ns
+                TimerFactory::Instance().timestamp_to_ns(begin_ts),    // begin timestamp, ns
+                TimerFactory::Instance().timestamp_to_ns(end_ts),      // end timestamp, ns
                 _device_id,                           // device id
                 _queue_id,                            // stream id
                 bytes                                 // copied data size, for memcpy
@@ -139,7 +135,6 @@ private:
     callback_arg_t _callback_arg;
     record_id_t _record_id;
 
-    static timer_t* _timer;
     static std::atomic<record_id_t> _glob_record_id;
 };
 
