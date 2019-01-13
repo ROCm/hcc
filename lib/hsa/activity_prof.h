@@ -57,7 +57,7 @@ class CallbacksTable {
         id_callback_fun_t id_callback;
         callback_fun_t fun[hc::HSA_OP_ID_NUMBER];
         callback_arg_t arg[hc::HSA_OP_ID_NUMBER];
-        bool enable[hc::HSA_OP_ID_NUMBER];
+        bool enabled[hc::HSA_OP_ID_NUMBER];
         sem_t sem[hc::HSA_OP_ID_NUMBER];
     };
 
@@ -87,7 +87,7 @@ class CallbacksTable {
         if (op_id < hc::HSA_OP_ID_NUMBER) {
             _table.fun[op_id] = fun;
             _table.arg[op_id] = arg;
-            _table.enable[op_id] = (fun != nullptr);
+            _table.enabled[op_id] = (fun != nullptr);
         } else {
             ret = false;
         }
@@ -102,10 +102,10 @@ class CallbacksTable {
 
         *fun = _table.fun[op_id];
         *arg = _table.arg[op_id];
-        const bool enable = _table.fun[op_id];
+        const bool enabled = _table.fun[op_id];
 
         sem.fetch_sub(READER_BIT, std::memory_order_release);
-        return enable;
+        return enabled;
     }
 
     private:
@@ -124,7 +124,7 @@ public:
         _op_id(op_id),
         _queue_id(queue_id),
         _device_id(device_id),
-        _enable(false),
+        _enabled(false),
         _callback_fun(nullptr),
         _callback_arg(nullptr),
         _record_id(0)
@@ -132,8 +132,8 @@ public:
 
     // Initialization
     void initialize() {
-        _enable = CallbacksTable::get_async_callback(_op_id, &_callback_fun, &_callback_arg);
-        if (_enable == true) {
+        _enabled = CallbacksTable::get_async_callback(_op_id, &_callback_fun, &_callback_arg);
+        if (_enabled == true) {
             TimerFactory::Create();
             _record_id = _glob_record_id.fetch_add(1, std::memory_order_relaxed);
             (CallbacksTable::get_id_callback())(_record_id);
@@ -143,7 +143,7 @@ public:
     // Activity callback routine
     void callback(const command_id_t& command_id, const uint64_t& begin_ts, const uint64_t& end_ts,
                          const size_t& bytes = 0) {
-        if (_enable == true) {
+        if (_enabled == true) {
             activity_record_t record {
                 ACTIVITY_DOMAIN_ID,                   // domain id
                 (activity_kind_t)command_id,          // activity kind
@@ -164,7 +164,7 @@ private:
     const uint64_t& _queue_id;
     const int& _device_id;
 
-    bool _enable;
+    bool _enabled;
     activity_async_callback_t _callback_fun;
     callback_arg_t _callback_arg;
     record_id_t _record_id;
