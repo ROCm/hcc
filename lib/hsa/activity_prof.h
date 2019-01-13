@@ -20,7 +20,9 @@ THE SOFTWARE.
 #ifndef ACTIVITY_PROF_H
 #define ACTIVITY_PROF_H
 
+#include <atomic>
 #include <mutex>
+#include <thread>
 
 #include "kalmar_runtime.h"
 
@@ -49,31 +51,61 @@ typedef void* callback_arg_t;
 
 class CallbacksTable {
     public:
+    typedef std::mutex mutex_t;
+    typedef std::atomic<uint32_t> sem_t;
     struct table_t {
         id_callback_fun_t id_callback;
         callback_fun_t fun[hc::HSA_OP_ID_NUMBER];
         callback_arg_t arg[hc::HSA_OP_ID_NUMBER];
+        bool enable[hc::HSA_OP_ID_NUMBER];
+        sem_t sem[hc::HSA_OP_ID_NUMBER];
     };
-    typedef std::mutex mutex_t;
+
+    enum {
+      WRITER_BIT = 0x1,
+      READER_BIT = 0x2
+    };
+
+    static void sem_wait(sem_t& sem, const uint32_t mask) {
+        while ((sem.load(std::memory_order_acquire) & mask) != 0) std::this_thread::yield();
+    }
+    static void reader_wait(sem_t& sem) {
+        sem.fetch_sub(READER_BIT, std::memory_order_relaxed);
+        sem_wait(sem, WRITER_BIT);
+        sem.fetch_add(READER_BIT, std::memory_order_relaxed);
+    }
 
     static void set_id_callback(const id_callback_fun_t& fun) { _table.id_callback = fun; }
     static id_callback_fun_t get_id_callback() { return _table.id_callback; }
     
     static bool set_async_callback(const op_id_t& op_id, const callback_fun_t& fun, const callback_arg_t& arg) {
+        bool ret = true;
         std::lock_guard<mutex_t> lck(_mutex);
+        std::atomic<uint32_t>& sem = _table.sem[op_id];
+        if (sem.fetch_add(WRITER_BIT, std::memory_order_acquire) != 0) sem_wait(sem, ~WRITER_BIT);
+
         if (op_id < hc::HSA_OP_ID_NUMBER) {
             _table.fun[op_id] = fun;
             _table.arg[op_id] = arg;
+            _table.enable[op_id] = (fun != nullptr);
         } else {
-          return false;
+            ret = false;
         }
-        return true;
+
+        sem.fetch_sub(WRITER_BIT, std::memory_order_release);
+        return ret;
     }
     
-    static void get_async_callback(const op_id_t& op_id, callback_fun_t* fun, callback_arg_t* arg) {
-        std::lock_guard<mutex_t> lck(_mutex);
+    static bool get_async_callback(const op_id_t& op_id, callback_fun_t* fun, callback_arg_t* arg) {
+        std::atomic<uint32_t>& sem = _table.sem[op_id];
+        if ((sem.fetch_add(READER_BIT, std::memory_order_acquire) & WRITER_BIT) != 0) reader_wait(sem);
+
         *fun = _table.fun[op_id];
         *arg = _table.arg[op_id];
+        const bool enable = _table.fun[op_id];
+
+        sem.fetch_sub(READER_BIT, std::memory_order_release);
+        return enable;
     }
 
     private:
@@ -92,6 +124,7 @@ public:
         _op_id(op_id),
         _queue_id(queue_id),
         _device_id(device_id),
+        _enable(false),
         _callback_fun(nullptr),
         _callback_arg(nullptr),
         _record_id(0)
@@ -99,8 +132,8 @@ public:
 
     // Initialization
     void initialize() {
-        CallbacksTable::get_async_callback(_op_id, &_callback_fun, &_callback_arg);
-        if (_callback_fun != NULL) {
+        _enable = CallbacksTable::get_async_callback(_op_id, &_callback_fun, &_callback_arg);
+        if (_enable == true) {
             TimerFactory::Create();
             _record_id = _glob_record_id.fetch_add(1, std::memory_order_relaxed);
             (CallbacksTable::get_id_callback())(_record_id);
@@ -110,7 +143,7 @@ public:
     // Activity callback routine
     void callback(const command_id_t& command_id, const uint64_t& begin_ts, const uint64_t& end_ts,
                          const size_t& bytes = 0) {
-        if (_callback_fun != NULL) {
+        if (_enable == true) {
             activity_record_t record {
                 ACTIVITY_DOMAIN_ID,                   // domain id
                 (activity_kind_t)command_id,          // activity kind
@@ -131,6 +164,7 @@ private:
     const uint64_t& _queue_id;
     const int& _device_id;
 
+    bool _enable;
     activity_async_callback_t _callback_fun;
     callback_arg_t _callback_arg;
     record_id_t _record_id;
