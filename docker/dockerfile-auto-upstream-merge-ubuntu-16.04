@@ -18,6 +18,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
     apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     sudo \
     vim \
+    zlib1g-dev:amd64 \
     zip unzip 
 
 ENV HCC_HOME=$ROCM_PATH/hcc
