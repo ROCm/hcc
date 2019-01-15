@@ -3625,7 +3625,7 @@ namespace hc
             switch (cpu_access_) {
             case access_type_none: case access_type_auto:
                 r = static_cast<hsa_region_t*>(
-                    owner_.get_accelerator().get_hsa_am_region());
+                    owner_.get_accelerator().get_hsa_am_system_region());
                 break;
             default:
                 r = static_cast<hsa_region_t*>(
@@ -3637,7 +3637,7 @@ namespace hc
                     owner_.get_accelerator().get_hsa_am_system_region());
             }
 
-            void* tmp{nullptr};
+            void* tmp{};
             auto s = hsa_memory_allocate(*r, extent_.size() * sizeof(T), &tmp);
 
             if (s != HSA_STATUS_SUCCESS) {
@@ -5040,32 +5040,32 @@ namespace hc
         {
             if (ptr == this) return cache_for_sourceless_(this, byte_cnt);
 
+            const auto info = detail::pointer_info(ptr);
+
             std::lock_guard<std::mutex> lck{mutex_()};
 
             const auto it = cache_().find(ptr);
 
             if (it != cache_().cend()) return it->second;
 
-            hsa_amd_pointer_info_t info{};
-            info.size = sizeof(info);
+            switch (info.type) {
+            case HSA_EXT_POINTER_TYPE_HSA: case HSA_EXT_POINTER_TYPE_LOCKED:
+                return cache_().emplace(
+                    std::piecewise_construct,
+                    std::make_tuple(ptr),
+                    std::make_tuple(info.agentBaseAddress, [](void*) { return HSA_STATUS_SUCCESS; })).first->second;
+            default:
+                void* tmp{};
+                detail::throwing_hsa_result_check(
+                    hsa_amd_memory_lock(
+                        const_cast<void*>(ptr), byte_cnt, nullptr, 0, &tmp),
+                    __FILE__, __func__, __LINE__);
 
-            static const accelerator cpu{accelerator::cpu_accelerator()};
-
-            void* tmp{nullptr};
-            auto s = hsa_memory_allocate(
-                *static_cast<hsa_region_t*>(cpu.get_hsa_am_system_region()),
-                byte_cnt,
-                &tmp);
-
-            if (s != HSA_STATUS_SUCCESS) {
-                throw std::runtime_error{
-                    "Failed cache allocation for array_view."};
+                return cache_().emplace(
+                    std::piecewise_construct,
+                    std::make_tuple(ptr),
+                    std::make_tuple(tmp, hsa_amd_memory_unlock)).first->second;
             }
-
-            return cache_().emplace(
-                std::piecewise_construct,
-                std::make_tuple(ptr),
-                std::make_tuple(tmp, hsa_memory_free)).first->second;
         }
 
         static
@@ -5074,15 +5074,12 @@ namespace hc
         {
             static const accelerator acc{};
 
-            auto s = hsa_memory_allocate(
-                *static_cast<hsa_region_t*>(acc.get_hsa_am_system_region()),
-                byte_cnt,
-                &ptr);
-
-            if (s != HSA_STATUS_SUCCESS) {
-                throw std::runtime_error{
-                    "Failed cache allocation for sourceless array_view."};
-            }
+            detail::throwing_hsa_result_check(
+                hsa_memory_allocate(
+                    *static_cast<hsa_region_t*>(acc.get_hsa_am_system_region()),
+                    byte_cnt,
+                    &ptr),
+                __FILE__, __func__, __LINE__);
 
             std::lock_guard<std::mutex> lck{mutex_()};
 
@@ -5170,6 +5167,7 @@ namespace hc
         typename std::conditional<
             std::is_const<T>{}, const void*, void*>::type source_;
         std::size_t writers_for_this_;
+        hsa_amd_pointer_type_t source_type_;
 
         template<typename, int> friend class array;
         template<typename, int> friend class array_view;
@@ -5192,13 +5190,8 @@ namespace hc
 
         T* updated_data_() const [[cpu]]
         {
-            if (writers_for_this_ == max_array_view_cnt_) return base_ptr_;
-            if (writers_()[writers_for_this_].second.second.empty()) {
-                return base_ptr_;
-            }
-
             decltype(writers_()[writers_for_this_].second.second) tmp;
-            {
+            if (writers_for_this_ != max_array_view_cnt_) {
                 std::lock_guard<std::mutex> lck{
                     writers_()[writers_for_this_].second.first};
 
@@ -5206,7 +5199,8 @@ namespace hc
             }
             for (auto&& x : tmp) if (x.valid()) x.wait();
 
-            return base_ptr_;
+            return static_cast<T*>(
+                detail::pointer_info(base_ptr_).hostBaseAddress);
         }
 
         T* updated_data_() const [[hc]]
@@ -5308,7 +5302,8 @@ namespace hc
             source_{
                 (src == reinterpret_cast<value_type*>(this)) ? base_ptr_ : src},
             writers_for_this_{
-                std::is_const<T>{} ? max_array_view_cnt_ : writers_for_()}
+                std::is_const<T>{} ? max_array_view_cnt_ : writers_for_()},
+            source_type_{detail::pointer_info(source_).type}
         {
             if (source_ == base_ptr_) return;
 
@@ -5444,7 +5439,8 @@ namespace hc
             extent_{other.extent_},
             base_ptr_{other.base_ptr_},
             source_{other.source_},
-            writers_for_this_{other.writers_for_this_}
+            writers_for_this_{other.writers_for_this_},
+            source_type_{other.source_type_}
         {   // N.B.: this is coupled with make_registered_kernel, and relies on
             //       it copying the user provided Callable.
             captured_().insert(writers_for_this_);
@@ -5452,14 +5448,15 @@ namespace hc
         template<
             typename U = T,
             typename std::enable_if<std::is_const<U>{}>::type* = nullptr>
-        array_view(const array_view& other) [[cpu]]
+        array_view(const array_view& other) [[cpu]] // TODO: use = default.
             :
             data_{other.data_},
             owner_{other.owner_},
             extent_{other.extent_},
             base_ptr_{other.base_ptr_},
             source_{other.source_},
-            writers_for_this_{other.writers_for_this_}
+            writers_for_this_{other.writers_for_this_},
+            source_type_{other.source_type_}
         {}
 
         array_view(const array_view& other) [[hc]]
@@ -5482,7 +5479,8 @@ namespace hc
             extent_{other.extent_},
             base_ptr_{other.base_ptr_},
             source_{other.source_},
-            writers_for_this_{other.writers_for_this_}
+            writers_for_this_{other.writers_for_this_},
+            source_type_{other.source_type_}
         {}
         template<
             typename U,
@@ -5511,7 +5509,8 @@ namespace hc
             extent_{std::move(other.extent_)},
             base_ptr_{other.base_ptr_},
             source_{other.source_},
-            writers_for_this_{other.writers_for_this_}
+            writers_for_this_{other.writers_for_this_},
+            source_type_{other.source_type_}
         {
             other.base_ptr_ = nullptr;
             other.source_ = nullptr;
@@ -6167,10 +6166,9 @@ namespace hc
             #if __HCC_ACCELERATOR__ != 1
                 if (!data_) return;
 
-                auto& writers = writers_()[writers_for_this_];
-
                 std::size_t n{0u};
                 if (writers_for_this_ != max_array_view_cnt_) {
+                    auto& writers = writers_()[writers_for_this_];
                     std::lock_guard<std::mutex> lck{writers.second.first};
 
                     n = std::distance(
@@ -6193,10 +6191,13 @@ namespace hc
                     cache_().erase(source_);
                 }
 
-                std::lock_guard<std::mutex> lck{writers.second.first};
-                writers.second.second.clear();
+                if (writers_for_this_ == max_array_view_cnt_) return;
+
+                std::lock_guard<std::mutex> lck{
+                    writers_()[writers_for_this_].second.first};
+                writers_()[writers_for_this_].second.second.clear();
                 writer_signals_()[writers_for_this_].clear();
-                writers.first.clear();
+                writers_()[writers_for_this_].first.clear();
             #endif
         }
     };
