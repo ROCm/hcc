@@ -194,7 +194,8 @@ float reduction_tiled_1(const std::vector<float>& source)
         parallel_for_each(
             extent<1>(element_count).tile(_tile_size),
             make_callable_with_AMDGPU_attributes<
-                Flat_workgroup_size<_tile_size>>([=](tiled_index<1> tidx) [[hc]] {
+                Flat_workgroup_size<_tile_size, _tile_size>>(
+                    [=](tiled_index<1> tidx) [[hc]] {
             // Use tile_static as a scratchpad memory.
             tile_static float tile_data[_tile_size];
 
@@ -267,7 +268,8 @@ float reduction_tiled_2(const std::vector<float>& source)
         parallel_for_each(
             extent<1>(element_count).tile(_tile_size),
             make_callable_with_AMDGPU_attributes<
-                Flat_workgroup_size<_tile_size>>([=](tiled_index<1> tidx) [[hc]] {
+                Flat_workgroup_size<_tile_size, _tile_size>>(
+                    [=](tiled_index<1> tidx) [[hc]] {
             // Use tile_static as a scratchpad memory.
             tile_static float tile_data[_tile_size];
 
@@ -339,7 +341,8 @@ float reduction_tiled_3(const std::vector<float>& source)
         parallel_for_each(
             extent<1>(element_count).tile(_tile_size),
             make_callable_with_AMDGPU_attributes<
-                Flat_workgroup_size<_tile_size>>([=](tiled_index<1> tidx) [[hc]] {
+                Flat_workgroup_size<_tile_size, _tile_size>>(
+                    [=](tiled_index<1> tidx) [[hc]] {
             // Use tile_static as a scratchpad memory.
             tile_static float tile_data[_tile_size];
 
@@ -413,7 +416,8 @@ float reduction_tiled_4(const std::vector<float>& source)
         parallel_for_each(
             extent<1>(element_count / 2).tile(_tile_size),
             make_callable_with_AMDGPU_attributes<
-                Flat_workgroup_size<_tile_size>>([=](tiled_index<1> tidx) [[hc]] {
+                Flat_workgroup_size<_tile_size, _tile_size>>(
+                    [=](tiled_index<1> tidx) [[hc]] {
             // Use tile_static as a scratchpad memory.
             tile_static float tile_data[_tile_size];
 
@@ -490,8 +494,9 @@ float reduction_cascade(const std::vector<float>& source)
 
     parallel_for_each(
         extent<1>(_tile_count * _tile_size).tile(_tile_size),
-        make_callable_with_AMDGPU_attributes<Flat_workgroup_size<_tile_size>>(
-            [=, &a, &a_partial_result](tiled_index<1> tidx) [[hc]] {
+        make_callable_with_AMDGPU_attributes<
+            Flat_workgroup_size<_tile_size, _tile_size>>(
+                [=, &a, &a_partial_result](tiled_index<1> tidx) [[hc]] {
         // Use tile_static as a scratchpad memory.
         tile_static float tile_data[_tile_size];
 
