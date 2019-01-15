@@ -118,7 +118,6 @@ namespace hc
             static
             hsa_region_t fine_grained_(hsa_agent_t x)
             {
-                hsa_region_t fg{};
                 for (auto&& region : global_regions_(x)) {
                     std::uint32_t f{};
                     throwing_hsa_result_check(
@@ -129,7 +128,7 @@ namespace hc
                     if (f & HSA_REGION_GLOBAL_FLAG_FINE_GRAINED) return region;
                 }
 
-                return fg;
+                return {};
             }
 
             static
