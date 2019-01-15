@@ -131,6 +131,8 @@ public:
         }
     }
 
+    bool is_enabled() { return _enabled; }
+
 private:
     const op_id_t _op_id;
     const uint64_t& _queue_id;
@@ -166,6 +168,7 @@ public:
     ActivityProf(const op_id_t& op_id, const uint64_t& queue_id, const int& device_id) {}
     inline void initialize() {}
     inline void callback(const command_id_t& command_id, const uint64_t& begin_ts, const uint64_t& end_ts, const size_t& bytes = 0) {}
+    bool is_enabled() { return false; }
 };
 
 } // namespace activity_prof

@@ -4570,7 +4570,9 @@ HSADispatch::dispatchKernelAsyncFromOp()
 
 inline hsa_status_t
 HSADispatch::dispatchKernelAsync(const void *hostKernarg, int hostKernargSize, bool allocSignal) {
-
+    if (_activity_prof.is_enabled()) {
+        allocSignal = true;
+    }
 
     if (HCC_SERIALIZE_KERNEL & 0x1) {
         hsaQueue()->wait();
@@ -4628,7 +4630,7 @@ HSADispatch::dispose() {
         //LOG_PROFILE(this, start, end, "kernel", kname.c_str(), std::hex << "kernel="<< kernel << " " << (kernel? kernel->kernelCodeHandle:0x0) << " aql.kernel_object=" << aql.kernel_object << std::dec);
         LOG_PROFILE(this, start, end, "kernel", getKernelName(), "");
     }
-    if (HCC_PROFILE) _activity_prof.callback(getCommandKind(), getBeginTimestamp(), getEndTimestamp());
+    _activity_prof.callback(getCommandKind(), getBeginTimestamp(), getEndTimestamp());
     Kalmar::ctx.releaseSignal(_signal, _signalIndex);
 
     if (future != nullptr) {
@@ -4986,7 +4988,7 @@ HSABarrier::dispose() {
         };
         LOG_PROFILE(this, start, end, "barrier", "depcnt=" + std::to_string(depCount) + ",acq=" + fenceToString(acqBits) + ",rel=" + fenceToString(relBits), depss.str())
     }
-    if (HCC_PROFILE) _activity_prof.callback(getCommandKind(), getBeginTimestamp(), getEndTimestamp());
+    _activity_prof.callback(getCommandKind(), getBeginTimestamp(), getEndTimestamp());
     Kalmar::ctx.releaseSignal(_signal, _signalIndex);
 
     // Release referecne to our dependent ops:
@@ -5035,7 +5037,7 @@ HSAOp::HSAOp(hc::HSAOpId id, Kalmar::KalmarQueue *queue, hc::hcCommandKind comma
     _signal.handle=0;
     apiStartTick = Kalmar::ctx.getSystemTicks();
 
-    if (HCC_PROFILE) _activity_prof.initialize();
+    _activity_prof.initialize();
 };
 
 Kalmar::HSAQueue *HSAOp::hsaQueue() const 
@@ -5374,7 +5376,7 @@ HSACopy::dispose() {
 
             LOG_PROFILE(this, start, end, "copy", getCopyCommandString(),  "\t" << sizeBytes << " bytes;\t" << sizeBytes/1024.0/1024 << " MB;\t" << bw << " GB/s;");
         }
-        if (HCC_PROFILE) _activity_prof.callback(getCommandKind(), getBeginTimestamp(), getEndTimestamp(), sizeBytes);
+        _activity_prof.callback(getCommandKind(), getBeginTimestamp(), getEndTimestamp(), sizeBytes);
         Kalmar::ctx.releaseSignal(_signal, _signalIndex);
     } else {
         if (HCC_PROFILE & HCC_PROFILE_TRACE) {
@@ -5383,7 +5385,7 @@ HSACopy::dispose() {
             double bw = (double)(sizeBytes)/(end-start) * (1000.0/1024.0) * (1000.0/1024.0);
             LOG_PROFILE(this, start, end, "copyslo", getCopyCommandString(),  "\t" << sizeBytes << " bytes;\t" << sizeBytes/1024.0/1024 << " MB;\t" << bw << " GB/s;");
         }
-        if (HCC_PROFILE) _activity_prof.callback(getCommandKind(), apiStartTick, Kalmar::ctx.getSystemTicks(), sizeBytes);
+        _activity_prof.callback(getCommandKind(), apiStartTick, Kalmar::ctx.getSystemTicks(), sizeBytes);
     }
 
     if (future != nullptr) {
