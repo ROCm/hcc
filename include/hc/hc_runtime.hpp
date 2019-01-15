@@ -10,6 +10,7 @@
 #include "hc_defines.hpp"
 
 #include <hsa/hsa.h>
+#include <hsa/hsa_ext_amd.h>
 
 #include <algorithm>
 #include <atomic>
@@ -139,6 +140,20 @@ namespace hc
                     (((", on line " + std::to_string(line)) +
                     ", HSA RT failed: ") + p))))
             };
+        }
+
+        inline
+        hsa_amd_pointer_info_t pointer_info(const void* ptr)
+        {
+            hsa_amd_pointer_info_t r{};
+            r.size = sizeof(r);
+
+            throwing_hsa_result_check(
+                hsa_amd_pointer_info(
+                    const_cast<void*>(ptr), &r, nullptr, nullptr, nullptr),
+                __FILE__, __func__, __LINE__);
+
+            return r;
         }
 
         inline
