@@ -158,7 +158,7 @@ typedef void* callback_arg_t;
 
 struct CallbacksTable {
     static void init(const id_callback_fun_t& id_callback, const callback_fun_t& op_callback, const callback_arg_t& arg) {}
-    static bool set_enabled(const op_id_t& op_id, const bool& enable) { return true; }
+    static bool set_enabled(const op_id_t& op_id, const bool& enable) { return false; }
 };
 
 class ActivityProf {
