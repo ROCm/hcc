@@ -13,8 +13,8 @@ enum HSAOpId {
 namespace Kalmar {
 namespace CLAMP {
 // Activity profiling primitives
-extern bool SetActivityCallback(uint32_t op, void* callback, void* arg);
-extern void SetActivityIdCallback(void* callback);
+extern void InitActivityCallback(void* id_callback, void* op_callback, void* arg);
+extern bool EnableActivityCallback(uint32_t op, bool enable);
 extern const char* GetCmdName(uint32_t id);
 } // namespace CLAMP
 } // namespace Kalmar

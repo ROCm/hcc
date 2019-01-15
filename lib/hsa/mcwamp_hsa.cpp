@@ -5634,16 +5634,18 @@ std::ostream& operator<<(std::ostream& os, const HSAOp & op)
 
 // Profiling routines
 
-extern "C" void SetActivityIdCallbackImpl(void* callback) {
-    activity_prof::CallbacksTable::set_id_callback(reinterpret_cast<activity_prof::id_callback_fun_t>(callback));
+extern "C" void InitActivityCallbackImpl(void* id_callback, void* op_callback, void* arg) {
+    activity_prof::CallbacksTable::init(reinterpret_cast<activity_prof::id_callback_fun_t>(id_callback),
+                                        reinterpret_cast<activity_prof::callback_fun_t>(op_callback),
+                                        arg);
 }
 
-extern "C" bool SetActivityCallbackImpl(unsigned op, void* callback, void* arg) {
-    return activity_prof::CallbacksTable::set_async_callback(op, reinterpret_cast<activity_prof::callback_fun_t>(callback), arg);
+extern "C" bool EnableActivityCallbackImpl(unsigned op, bool enable) {
+    return activity_prof::CallbacksTable::set_enabled(op, enable);
 }
 
-extern "C" const char* GetCmdNameImpl(unsigned id) {
-    return getHcCommandKindString(static_cast<Kalmar::hcCommandKind>(id));
+extern "C" const char* GetCmdNameImpl(unsigned op) {
+    return getHcCommandKindString(static_cast<Kalmar::hcCommandKind>(op));
 }
 
 // TODO;

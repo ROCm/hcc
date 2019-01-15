@@ -31,8 +31,8 @@ struct RuntimeImpl {
     m_PushArgImpl(nullptr),
     m_PushArgPtrImpl(nullptr),
     m_GetContextImpl(nullptr),
-    m_SetActivityCallbackImpl(nullptr),
-    m_SetActivityIdCallbackImpl(nullptr),
+    m_InitActivityCallbackImpl(nullptr),
+    m_EnableActivityCallbackImpl(nullptr),
     m_GetCmdNameImpl(nullptr),
     isCPU(false) {
     //std::cout << "dlopen(" << libraryName << ")\n";
@@ -55,8 +55,8 @@ struct RuntimeImpl {
     m_PushArgImpl = (PushArgImpl_t) dlsym(m_RuntimeHandle, "PushArgImpl");
     m_PushArgPtrImpl = (PushArgPtrImpl_t) dlsym(m_RuntimeHandle, "PushArgPtrImpl");
     m_GetContextImpl= (GetContextImpl_t) dlsym(m_RuntimeHandle, "GetContextImpl");
-    m_SetActivityCallbackImpl = (SetActivityCallbackImpl_t) dlsym(m_RuntimeHandle, "SetActivityCallbackImpl");
-    m_SetActivityIdCallbackImpl = (SetActivityIdCallbackImpl_t) dlsym(m_RuntimeHandle, "SetActivityIdCallbackImpl");
+    m_InitActivityCallbackImpl = (InitActivityCallbackImpl_t) dlsym(m_RuntimeHandle, "InitActivityCallbackImpl");
+    m_EnableActivityCallbackImpl = (EnableActivityCallbackImpl_t) dlsym(m_RuntimeHandle, "EnableActivityCallbackImpl");
     m_GetCmdNameImpl = (GetCmdNameImpl_t) dlsym(m_RuntimeHandle, "GetCmdNameImpl");
   }
 
@@ -70,8 +70,8 @@ struct RuntimeImpl {
   GetContextImpl_t m_GetContextImpl;
 
   // Activity profiling routines
-  SetActivityCallbackImpl_t m_SetActivityCallbackImpl;
-  SetActivityIdCallbackImpl_t m_SetActivityIdCallbackImpl;
+  InitActivityCallbackImpl_t m_InitActivityCallbackImpl;
+  EnableActivityCallbackImpl_t m_EnableActivityCallbackImpl;
   GetCmdNameImpl_t m_GetCmdNameImpl;
 
   bool isCPU;
@@ -356,11 +356,11 @@ void PushArgPtr(void *k_, int idx, size_t sz, const void *s) {
 }
 
 // Activity profiling routines
-bool SetActivityCallback(uint32_t op, void* callback, void* arg) {
-  return GetOrInitRuntime()->m_SetActivityCallbackImpl(op, callback, arg);
+void InitActivityCallback(void* id_callback, void* op_callback, void* arg) {
+  GetOrInitRuntime()->m_InitActivityCallbackImpl(id_callback, op_callback, arg);
 }
-void SetActivityIdCallback(void* callback) {
-  GetOrInitRuntime()->m_SetActivityIdCallbackImpl(callback);
+bool EnableActivityCallback(uint32_t op, bool enable) {
+  return GetOrInitRuntime()->m_EnableActivityCallbackImpl(op, enable);
 }
 const char* GetCmdName(uint32_t id) {
   return GetOrInitRuntime()->m_GetCmdNameImpl(id);
