@@ -127,7 +127,7 @@ namespace hc
                 acc.get_hsa_am_finegrained_system_region());
             break;
         default :
-            region = static_cast<hsa_region_t*>(acc.get_hsa_am_region());
+            region = static_cast<hsa_region_t*>(acc.get_hsa_am_system_region());
         }
 
         if (!region || region->handle == 0) {
