@@ -1646,8 +1646,17 @@ public:
             }
             /* we can only safely clear from the first nullptr and older */
             if (first_nullptr >= 0) {
-                // TODO something faster than std::vector erase?
-                asyncOps.erase(asyncOps.begin(), asyncOps.begin() + first_nullptr + 1);
+                // We can do something faster than
+                // asyncOps.erase(asyncOps.begin(), asyncOps.begin() + first_nullptr + 1);
+                // because erasing from front of vectors will repeatedly move remaining elements.
+                // We can also do better than the improved
+                // asyncOps.erase(std::remove(asyncOps.begin(), asyncOps.begin()+first_nullptr+1, nullptr), asyncOps.end());
+                // because we know that all elements from 0..first_nullptr are nullptrs,
+                // so we can avoid the redundant checks of each element against nullptr.
+                for (size_t i=first_nullptr+1,new_i=0,end=asyncOps.size(); i<end; ++i) {
+                    asyncOps[new_i++] = std::move(asyncOps[i]);
+                }
+                asyncOps.resize(asyncOps.size() - first_nullptr - 1);
                 asyncOps_offset += first_nullptr + 1;
                 DBOUTL(DB_RESOURCE, "asyncOps=" << &asyncOps << " * erasing " << first_nullptr+1 << " ops. New size " << asyncOps.size());
             }
