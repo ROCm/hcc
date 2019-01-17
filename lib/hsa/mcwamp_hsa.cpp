@@ -1283,6 +1283,7 @@ private:
 
 
     bool         drainingQueue_;  // mode that we are draining queue, used to allow barrier ops to be enqueued.
+    bool         drainingQueueFailed_;  // indicate last attempt to drain queue failed
 
     //
     // kernel dispatches and barriers associated with this HSAQueue instance
@@ -1441,13 +1442,22 @@ public:
 
 
 
-        if (!drainingQueue_ && (asyncOps.size() >= HCC_MAX_INFLIGHT_COMMANDS_PER_QUEUE-1)) {
+        if (!drainingQueueFailed_ && !drainingQueue_ && (asyncOps.size() >= HCC_MAX_INFLIGHT_COMMANDS_PER_QUEUE-1)) {
             DBOUT(DB_WAIT, "*** Hit max inflight ops asyncOps.size=" << asyncOps.size() << ". " << op << " force sync\n");
             DBOUT(DB_RESOURCE, "asyncOps=" << &asyncOps << " *** Hit max inflight ops asyncOps.size=" << asyncOps.size() << ". " << op << " force sync\n");
 
             drainingQueue_ = true;
 
             wait();
+
+            drainingQueue_ = false;
+
+            if (drainingQueueFailed_) {
+                /* draining queue failed, so truly force a wait */
+                DBOUTL(DB_RESOURCE, "draining queue failed, truly forcing sync");
+                wait();
+                drainingQueueFailed_ = false;
+            }
         }
         op->asyncOpsIndex(asyncOps.size()+asyncOps_offset);
         youngestCommandKind = op->getCommandKind();
@@ -1617,7 +1627,8 @@ public:
             lastWaitOp = (lastWaitOp * QUEUE_FLUSHING_FRAC);
         }
 
-        for (int i = lastWaitOp-1; i >= 0;  i--) {
+        int i;
+        for (i = lastWaitOp-1; i >= 0;  i--) {
             if (asyncOps[i] != nullptr) {
                 auto asyncOp = asyncOps[i];
                 // we only drain starting at first found marker
@@ -1641,7 +1652,7 @@ public:
             }
         }
         // clear async operations table
-        if (drainingQueue_) {
+        if (drainingQueue_ && first_nullptr >= 0) {
             /* Did the waited op become null? This can happen due to future->wait() above. */
             if (asyncOps[lastWaitOp-1] == nullptr) {
                 first_nullptr = lastWaitOp-1;
@@ -1663,12 +1674,14 @@ public:
                 DBOUTL(DB_RESOURCE, "asyncOps=" << &asyncOps << " * erasing " << first_nullptr+1 << " ops. New size " << asyncOps.size());
             }
         }
+        else if (drainingQueue_) {
+            /* we were not able to find a suitable op to wait on */
+            drainingQueueFailed_ = true;
+        }
         else {
             asyncOps.clear();
             asyncOps_offset = 0;
         }
-
-        drainingQueue_ = false;
    }
 
     void LaunchKernel(void *ker, size_t nr_dim, size_t *global, size_t *local) override {
@@ -4063,7 +4076,7 @@ std::ostream& operator<<(std::ostream& os, const HSAQueue & hav)
 HSAQueue::HSAQueue(KalmarDevice* pDev, hsa_agent_t agent, execute_order order, queue_priority priority) :
     KalmarQueue(pDev, queuing_mode_automatic, order, priority),
     rocrQueue(nullptr),
-    asyncOps(), asyncOps_offset(0), drainingQueue_(false),
+    asyncOps(), asyncOps_offset(0), drainingQueue_(false), drainingQueueFailed_(false),
     valid(true), _nextSyncNeedsSysRelease(false), _nextKernelNeedsSysAcquire(false), bufferKernelMap(), kernelBufferMap()
 {
     {
