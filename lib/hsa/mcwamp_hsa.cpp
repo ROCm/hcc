@@ -4825,19 +4825,33 @@ HSABarrier::waitComplete() {
 inline hsa_status_t
 HSABarrier::enqueueAsync(hc::memory_scope fenceScope) {
 
-    if (fenceScope == hc::system_scope) {
-        hsaQueue()->setNextSyncNeedsSysRelease(false);
+    hc::memory_scope toDoReleaseFenceScope = fenceScope;
+    hc::memory_scope toDoAcquireFenceScope = _acquire_scope;
+
+    hsa_queue_t* rocrQueue = hsaQueue()->acquireLockedRocrQueue();
+
+    if ( hsaQueue()->nextSyncNeedsSysRelease() ) {
+         toDoReleaseFenceScope = hc::system_scope;
+         hsaQueue()->setNextSyncNeedsSysRelease(false);
+         DBOUTL( DB_CMD2, "Fuse System Scope Release Fencing request from the HSAQueue") ;
     };
 
-    if (fenceScope > _acquire_scope) {
-        DBOUTL( DB_CMD2, "  marker overriding acquireScope(old:" << _acquire_scope << ") to match fenceScope = " << fenceScope);
-        _acquire_scope = fenceScope;
+    if ( hsaQueue()->nextKernelNeedsSysAcquire() ) {
+         toDoAcquireFenceScope = hc::system_scope;
+         hsaQueue()->setNextKernelNeedsSysAcquire(false);
+         DBOUTL( DB_CMD2, "Fuse System Scope Acquire Fencing request from the HSAQueue") ;
+    };
+
+    if (toDoReleaseFenceScope > toDoAcquireFenceScope) {
+        DBOUTL( DB_CMD2, "  marker overriding acquireScope to " << fenceScope);
+        toDoAcquireFenceScope = toDoReleaseFenceScope;
+        _acquire_scope = toDoAcquireFenceScope;
     }
 
     // set acquire scope:
     unsigned fenceBits = 0;
 
-    switch (_acquire_scope) {
+    switch (toDoAcquireFenceScope) {
         case hc::no_scope:
             fenceBits |= ((HSA_FENCE_SCOPE_NONE) << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE);
             break;
@@ -4851,7 +4865,7 @@ HSABarrier::enqueueAsync(hc::memory_scope fenceScope) {
             STATUS_CHECK(HSA_STATUS_ERROR_INVALID_ARGUMENT, __LINE__);
     }
 
-    switch (fenceScope) {
+    switch (toDoReleaseFenceScope) {
         case hc::no_scope:
             fenceBits |= ((HSA_FENCE_SCOPE_NONE) << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
             break;
@@ -4883,45 +4897,36 @@ HSABarrier::enqueueAsync(hc::memory_scope fenceScope) {
 #endif
     header |= fenceBits;
 
-
-    {
-        hsa_queue_t* rocrQueue = hsaQueue()->acquireLockedRocrQueue();
-
-        // Obtain the write index for the command queue
-        uint64_t index = hsa_queue_load_write_index_relaxed(rocrQueue);
-        const uint32_t queueMask = rocrQueue->size - 1;
-        uint64_t nextIndex = index + 1;
-        if (nextIndex - hsa_queue_load_read_index_scacquire(rocrQueue) >= rocrQueue->size) {
-          checkHCCRuntimeStatus(Kalmar::HCCRuntimeStatus::HCCRT_STATUS_ERROR_COMMAND_QUEUE_OVERFLOW, __LINE__, rocrQueue);
-        }
-
-        // Define the barrier packet to be at the calculated queue index address
-        hsa_barrier_and_packet_t* barrier = &(((hsa_barrier_and_packet_t*)(rocrQueue->base_address))[index&queueMask]);
-        memset(barrier, 0, sizeof(hsa_barrier_and_packet_t));
-
-
-        // setup dependent signals
-        if ((depCount > 0) && (depCount <= 5)) {
-            for (int i = 0; i < depCount; ++i) {
-                barrier->dep_signal[i] = *(static_cast <hsa_signal_t*> (depAsyncOps[i]->getNativeHandle()));
-            }
-        }
-
-        barrier->completion_signal = _signal;
-
-        // Set header last:
-        barrier->header = header;
-
-        DBOUTL(DB_AQL, " barrier_aql " << *this << " "<< *barrier );
-        DBOUTL(DB_AQL2, rawAql(*barrier));
-
-
-        // Increment write index and ring doorbell to dispatch the kernel
-        hsa_queue_store_write_index_relaxed(rocrQueue, nextIndex);
-        hsa_signal_store_relaxed(rocrQueue->doorbell_signal, index);
-
-        hsaQueue()->releaseLockedRocrQueue();
+    // Obtain the write index for the command queue
+    uint64_t index = hsa_queue_load_write_index_relaxed(rocrQueue);
+    const uint32_t queueMask = rocrQueue->size - 1;
+    uint64_t nextIndex = index + 1;
+    if (nextIndex - hsa_queue_load_read_index_scacquire(rocrQueue) >= rocrQueue->size) {
+      checkHCCRuntimeStatus(Kalmar::HCCRuntimeStatus::HCCRT_STATUS_ERROR_COMMAND_QUEUE_OVERFLOW, __LINE__, rocrQueue);
     }
+
+    // Define the barrier packet to be at the calculated queue index address
+    hsa_barrier_and_packet_t* barrier = &(((hsa_barrier_and_packet_t*)(rocrQueue->base_address))[index&queueMask]);
+    memset(barrier, 0, sizeof(hsa_barrier_and_packet_t));
+
+    // setup dependent signals
+    if ((depCount > 0) && (depCount <= 5)) {
+      for (int i = 0; i < depCount; ++i) {
+        barrier->dep_signal[i] = *(static_cast <hsa_signal_t*> (depAsyncOps[i]->getNativeHandle()));
+      }
+    }
+
+    barrier->completion_signal = _signal;
+
+    // Set header last:
+    barrier->header = header;
+
+    DBOUTL(DB_AQL, " barrier_aql " << *this << " "<< *barrier );
+    DBOUTL(DB_AQL2, rawAql(*barrier));
+
+    // Increment write index and ring doorbell to dispatch the kernel
+    hsa_queue_store_write_index_relaxed(rocrQueue, nextIndex);
+    hsa_signal_store_relaxed(rocrQueue->doorbell_signal, index);
 
     isDispatched = true;
 
@@ -4929,11 +4934,12 @@ HSABarrier::enqueueAsync(hc::memory_scope fenceScope) {
     _barrierNextKernelNeedsSysAcquire = hsaQueue()->nextKernelNeedsSysAcquire();
     _barrierNextSyncNeedsSysRelease   = hsaQueue()->nextSyncNeedsSysRelease();
 
+    hsaQueue()->releaseLockedRocrQueue();
+
     // dynamically allocate a std::shared_future<void> object
     future = new std::shared_future<void>(std::async(std::launch::deferred, [&] {
         waitComplete();
     }).share());
-
 
     return HSA_STATUS_SUCCESS;
 }
