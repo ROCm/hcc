@@ -4357,9 +4357,6 @@ HSAQueue::dispatch_hsa_kernel(const hsa_kernel_dispatch_packet_t *aql,
     Kalmar::HSADevice* device = static_cast<Kalmar::HSADevice*>(this->getDev());
 
     std::shared_ptr<HSADispatch> sp_dispatch = std::make_shared<HSADispatch>(device, this/*queue*/, nullptr, aql);
-    if (HCC_OPT_FLUSH) {
-        sp_dispatch->overrideAcquireFenceIfNeeded();
-    }
 
     HSADispatch *dispatch = sp_dispatch.get();
     waitForStreamDeps(dispatch);
@@ -4648,6 +4645,8 @@ HSADispatch::dispatchKernelWaitComplete() {
     aql.header =
         ((HSA_FENCE_SCOPE_SYSTEM) << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
         ((HSA_FENCE_SCOPE_SYSTEM) << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
+    hsaQueue()->setNextKernelNeedsSysAcquire(false);
+    hsaQueue()->setNextSyncNeedsSysRelease(false);
 
     {
         // extract hsa_queue_t from HSAQueue
@@ -4688,14 +4687,17 @@ HSADispatch::dispatchKernelAsync(const void *hostKernarg, int hostKernargSize, b
 
     hsa_status_t status = HSA_STATUS_SUCCESS;
 
-
-    // If HCC_OPT_FLUSH=1, we are not flushing to system scope after each command.
-    // Set the flag so we remember to do so at next queue::wait() call.
-    hsaQueue()->setNextSyncNeedsSysRelease(true);
-
     {
         // extract hsa_queue_t from HSAQueue
         hsa_queue_t* rocrQueue = hsaQueue()->acquireLockedRocrQueue();
+
+        // If HCC_OPT_FLUSH=1, we are not flushing to system scope after each command.
+        // Set the flag so we remember to do so at next queue::wait() call.
+        hsaQueue()->setNextSyncNeedsSysRelease(true);
+
+        if (HCC_OPT_FLUSH) {
+          overrideAcquireFenceIfNeeded();
+        }
 
         // dispatch kernel
         status = dispatchKernel(rocrQueue, hostKernarg, hostKernargSize, allocSignal);
