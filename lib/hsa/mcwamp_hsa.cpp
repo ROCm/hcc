@@ -1620,6 +1620,8 @@ public:
         for (int i = lastWaitOp-1; i >= 0;  i--) {
             if (asyncOps[i] != nullptr) {
                 auto asyncOp = asyncOps[i];
+                // we only drain starting at first found marker
+                if (drainingQueue_ && asyncOp->getCommandKind() != hcCommandMarker) continue;
 #if !defined(NDEBUG)
                 if (!foundFirstValidOp) {
                     hsa_signal_t sig =  *(static_cast <hsa_signal_t*> (asyncOp->getNativeHandle()));
