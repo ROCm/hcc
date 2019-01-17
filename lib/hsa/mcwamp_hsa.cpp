@@ -79,9 +79,6 @@
 // MUST be a power of 2.
 #define MAX_INFLIGHT_COMMANDS_PER_QUEUE  (2*8192)
 
-// threshold to clean up finished kernel in HSAQueue.asyncOps
-#define ASYNCOPS_VECTOR_GC_SIZE (2*8192)
-
 
 //---
 // Environment variables:
@@ -1296,6 +1293,7 @@ private:
     // will be waited on.
     //
     std::vector< std::shared_ptr<HSAOp> > asyncOps;
+    int asyncOps_offset;
 
     uint64_t                                      queueSeqNum; // sequence-number of this queue.
 
@@ -1445,13 +1443,13 @@ public:
 
         if (!drainingQueue_ && (asyncOps.size() >= MAX_INFLIGHT_COMMANDS_PER_QUEUE-1)) {
             DBOUT(DB_WAIT, "*** Hit max inflight ops asyncOps.size=" << asyncOps.size() << ". " << op << " force sync\n");
-            DBOUT(DB_RESOURCE, "*** Hit max inflight ops asyncOps.size=" << asyncOps.size() << ". " << op << " force sync\n");
+            DBOUT(DB_RESOURCE, "asyncOps=" << &asyncOps << " *** Hit max inflight ops asyncOps.size=" << asyncOps.size() << ". " << op << " force sync\n");
 
             drainingQueue_ = true;
 
             wait();
         }
-        op->asyncOpsIndex(asyncOps.size());
+        op->asyncOpsIndex(asyncOps.size()+asyncOps_offset);
         youngestCommandKind = op->getCommandKind();
         asyncOps.push_back(std::move(op));
 
@@ -1594,9 +1592,9 @@ public:
         //
 
 
-        if (HCC_OPT_FLUSH && nextSyncNeedsSysRelease()) {
+        if (!drainingQueue_ && HCC_OPT_FLUSH && nextSyncNeedsSysRelease()) {
 
-            // In the loop below, this will be the first op waited on
+            // In the loop below, this will be the first op waited on when not in draining mode
             auto marker = EnqueueMarker(hc::system_scope);
 
             DBOUT(DB_CMD2, " Sys-release needed, enqueued marker into " << *this << " to release written data " << marker<<"\n");
@@ -1610,36 +1608,53 @@ public:
 
 
 
+#if !defined(NDEBUG)
         bool foundFirstValidOp = false;
-        int oldAysncOpsSize = asyncOps.size();
-        int lastWaitOp = oldAysncOpsSize - 1;
+#endif
+        int first_nullptr = -1;
+        int lastWaitOp = asyncOps.size();
         if (drainingQueue_) {
-            lastWaitOp = (oldAysncOpsSize * QUEUE_FLUSHING_FRAC) - 1;
+            lastWaitOp = (lastWaitOp * QUEUE_FLUSHING_FRAC);
         }
 
-        for (int i = lastWaitOp; i >= 0;  i--) {
+        for (int i = lastWaitOp-1; i >= 0;  i--) {
             if (asyncOps[i] != nullptr) {
                 auto asyncOp = asyncOps[i];
+#if !defined(NDEBUG)
                 if (!foundFirstValidOp) {
                     hsa_signal_t sig =  *(static_cast <hsa_signal_t*> (asyncOp->getNativeHandle()));
                     assert(sig.handle != 0);
                     foundFirstValidOp = true;
                 }
+#endif
                 // wait on valid futures only
                 std::shared_future<void>* future = asyncOp->getFuture();
                 if (future && future->valid()) {
                     future->wait();
                 }
             }
+            else {
+                first_nullptr = i;
+                break; /* as soon as an op is found to be nullptr, we know the older ones are also */
+            }
         }
         // clear async operations table
         if (drainingQueue_) {
-            if (oldAysncOpsSize == asyncOps.size()) {
-                asyncOps.erase(asyncOps.begin(), asyncOps.begin() + lastWaitOp);
+            /* Did the waited op become null? This can happen due to future->wait() above. */
+            if (asyncOps[lastWaitOp-1] == nullptr) {
+                first_nullptr = lastWaitOp-1;
+            }
+            /* we can only safely clear from the first nullptr and older */
+            if (first_nullptr >= 0) {
+                // TODO something faster than std::vector erase?
+                asyncOps.erase(asyncOps.begin(), asyncOps.begin() + first_nullptr + 1);
+                asyncOps_offset += first_nullptr + 1;
+                DBOUTL(DB_RESOURCE, "asyncOps=" << &asyncOps << " * erasing " << first_nullptr+1 << " ops. New size " << asyncOps.size());
             }
         }
         else {
             asyncOps.clear();
+            asyncOps_offset = 0;
         }
 
         drainingQueue_ = false;
@@ -2182,7 +2197,7 @@ public:
 
     // remove finished async operation from waiting list
     void removeAsyncOp(HSAOp* asyncOp) {
-        int targetIndex = asyncOp->asyncOpsIndex();
+        int targetIndex = asyncOp->asyncOpsIndex() - asyncOps_offset;
 
         // Make sure the opindex is still valid.
         // If the queue is destroyed first it may not exist in asyncops anymore so no need to destroy.
@@ -2219,13 +2234,9 @@ public:
             }
         }
 
-
-        // GC for finished kernels
-        if (asyncOps.size() > ASYNCOPS_VECTOR_GC_SIZE) {
-            DBOUTL(DB_RESOURCE, "asyncOps size=" << asyncOps.size() << " exceeds collection size, compacting");
-            asyncOps.erase(std::remove(asyncOps.begin(), asyncOps.end(), nullptr),
-                         asyncOps.end());
-        }
+        /* We used to garbage collect nullptr entries from asyncOps here.
+         * However, all garbage collection now occurs during pushAsyncOp as needed.
+         * This avoids incorrect interactions between queue draining and old GC code. */
     }
 };
 
@@ -4039,7 +4050,7 @@ std::ostream& operator<<(std::ostream& os, const HSAQueue & hav)
 HSAQueue::HSAQueue(KalmarDevice* pDev, hsa_agent_t agent, execute_order order, queue_priority priority) :
     KalmarQueue(pDev, queuing_mode_automatic, order, priority),
     rocrQueue(nullptr),
-    asyncOps(), drainingQueue_(false),
+    asyncOps(), asyncOps_offset(0), drainingQueue_(false),
     valid(true), _nextSyncNeedsSysRelease(false), _nextKernelNeedsSysAcquire(false), bufferKernelMap(), kernelBufferMap()
 {
     {
