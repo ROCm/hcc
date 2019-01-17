@@ -77,7 +77,7 @@
 // If limit is exceeded, HCC will force a queue wait to reclaim
 // resources (signals, kernarg)
 // MUST be a power of 2.
-#define MAX_INFLIGHT_COMMANDS_PER_QUEUE  (2*8192)
+int HCC_MAX_INFLIGHT_COMMANDS_PER_QUEUE=(2*8192);
 
 
 //---
@@ -1441,7 +1441,7 @@ public:
 
 
 
-        if (!drainingQueue_ && (asyncOps.size() >= MAX_INFLIGHT_COMMANDS_PER_QUEUE-1)) {
+        if (!drainingQueue_ && (asyncOps.size() >= HCC_MAX_INFLIGHT_COMMANDS_PER_QUEUE-1)) {
             DBOUT(DB_WAIT, "*** Hit max inflight ops asyncOps.size=" << asyncOps.size() << ". " << op << " force sync\n");
             DBOUT(DB_RESOURCE, "asyncOps=" << &asyncOps << " *** Hit max inflight ops asyncOps.size=" << asyncOps.size() << ". " << op << " force sync\n");
 
@@ -3826,6 +3826,8 @@ void HSAContext::ReadHccEnv()
         QUEUE_FLUSHING_FRAC = 0.5;
     }
 
+    GET_ENV_INT (HCC_MAX_INFLIGHT_COMMANDS_PER_QUEUE, "Max number of ops per queue. Must be power of 2. Default=(2*8192).");
+
     GET_ENV_INT    (HCC_PROFILE,         "Enable HCC kernel and data profiling.  1=summary, 2=trace");
     GET_ENV_INT    (HCC_PROFILE_VERBOSE, "Bitmark to control profile verbosity and format. 0x1=default, 0x2=show begin/end, 0x4=show barrier");
     GET_ENV_STRING (HCC_PROFILE_FILE,    "Set file name for HCC_PROFILE mode.  Default=stderr");
@@ -3899,12 +3901,12 @@ HSADevice::HSADevice(hsa_agent_t a, hsa_agent_t host, int x_accSeqNum) :
         status = hsa_agent_get_info(agent, HSA_AGENT_INFO_QUEUE_MAX_SIZE, &this->queue_size);
         STATUS_CHECK(status, __LINE__);
 
-        // MAX_INFLIGHT_COMMANDS_PER_QUEUE throttles the number of commands that can be in the queue, so no reason
+        // HCC_MAX_INFLIGHT_COMMANDS_PER_QUEUE throttles the number of commands that can be in the queue, so no reason
         // to allocate a huge HSA queue - size it to it is large enough to handle the inflight commands.
-        this->queue_size = 2*MAX_INFLIGHT_COMMANDS_PER_QUEUE;
+        this->queue_size = 2*HCC_MAX_INFLIGHT_COMMANDS_PER_QUEUE;
 
         // Check that the queue size is valid, these assumptions are used in hsa_queue_create.
-        assert (__builtin_popcount(MAX_INFLIGHT_COMMANDS_PER_QUEUE) == 1); // make sure this is power of 2.
+        assert (__builtin_popcount(HCC_MAX_INFLIGHT_COMMANDS_PER_QUEUE) == 1); // make sure this is power of 2.
     }
 
     status = hsa_amd_profiling_async_copy_enable(1);
