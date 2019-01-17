@@ -43,9 +43,6 @@ bool test() {
   hc::accelerator_view av = hc::accelerator().get_default_view();
   hc::completion_future fut2 = av.create_marker();
 
-  ret &= (fut.is_ready() == false);
-  ret &= (fut2.is_ready() == false);
-
   // wait on the barrier packet
   fut2.wait();
 
