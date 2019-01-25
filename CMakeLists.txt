@@ -179,7 +179,7 @@ if(USE_PROF_API EQUAL 1)
       ${PROF_API_HEADER_PATH}
     PATHS
       PATH_SUFFIXES
-        include/ext
+        roctracer/include/ext
   )
   if(NOT PROF_API_HEADER_DIR)
     MESSAGE("PROF_API_HEADER_PATH = ${PROF_API_HEADER_PATH}")
