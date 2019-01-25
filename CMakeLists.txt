@@ -173,24 +173,21 @@ endif (USE_CODEXL_ACTIVITY_LOGGER EQUAL 1)
 # Detect profiling API
 ################
 if(USE_PROF_API EQUAL 1)
-add_definitions(-DUSE_PROF_API=1)
-if (NOT DEFINED PROF_API_HEADER_PATH)
-  find_package(PkgConfig)
-  pkg_check_modules(ROCTRACERPROTO QUIET roctracer-proto)
-  if(ROCTRACERPROTO_FOUND EQUAL 1)
-    pkg_get_variable(PROF_API_HEADER_PATH roctracer-proto prefix)
+  add_definitions(-DUSE_PROF_API=1)
+  find_path(PROF_API_HEADER_DIR prof_protocol.h
+    HINTS
+      ${PROF_API_HEADER_PATH}
+    PATHS
+      PATH_SUFFIXES
+        include/ext
+  )
+  if(NOT PROF_API_HEADER_DIR)
+    MESSAGE("PROF_API_HEADER_PATH = ${PROF_API_HEADER_PATH}")
+    MESSAGE(FATAL_ERROR "Profiling API header not found, use -DPROF_API_HEADER_PATH=<path to prof_protocol.h header>")
   else()
-    set(PROF_API_HEADER_PATH /opt/rocm/roctracer/include/ext)
+    include_directories ( ${PROF_API_HEADER_DIR} )
+    MESSAGE("Profiling API: ${PROF_API_HEADER_DIR}")
   endif()
-endif()
-find_path(PROF_API_HEADER_DIR NAMES prof_protocol.h PATHS ${PROF_API_HEADER_PATH} NO_DEFAULT_PATH)
-if(NOT PROF_API_HEADER_DIR)
-  MESSAGE("PROF_API_HEADER_PATH = ${PROF_API_HEADER_PATH}")
-  MESSAGE(FATAL_ERROR "Profiling API header not found, use -DPROF_API_HEADER_PATH=<path to prof_protocol.h header>")
-else()
-  include_directories ( ${PROF_API_HEADER_DIR} )
-  MESSAGE("Profiling API: ${PROF_API_HEADER_DIR}")
-endif()
 endif()
 
 #################
