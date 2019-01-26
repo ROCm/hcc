@@ -177,8 +177,10 @@ if(USE_PROF_API EQUAL 1)
   find_path(PROF_API_HEADER_DIR prof_protocol.h
     HINTS
       ${PROF_API_HEADER_PATH}
+    PATHS
+      ${ROCM_ROOT}/roctracer
     PATH_SUFFIXES
-      roctracer/include/ext
+      include/ext
   )
   if(NOT PROF_API_HEADER_DIR)
     MESSAGE("PROF_API_HEADER_PATH = ${PROF_API_HEADER_PATH}")
