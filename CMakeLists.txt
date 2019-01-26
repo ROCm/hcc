@@ -173,7 +173,6 @@ endif (USE_CODEXL_ACTIVITY_LOGGER EQUAL 1)
 # Detect profiling API
 ################
 if(USE_PROF_API EQUAL 1)
-  add_definitions(-DUSE_PROF_API=1)
   find_path(PROF_API_HEADER_DIR prof_protocol.h
     HINTS
       ${PROF_API_HEADER_PATH}
@@ -185,6 +184,7 @@ if(USE_PROF_API EQUAL 1)
   if(NOT PROF_API_HEADER_DIR)
     MESSAGE(FATAL_ERROR "Profiling API header not found, use -DPROF_API_HEADER_PATH=<path to prof_protocol.h header>")
   else()
+    add_definitions(-DUSE_PROF_API=1)
     include_directories ( ${PROF_API_HEADER_DIR} )
     MESSAGE("Profiling API: ${PROF_API_HEADER_DIR}")
   endif()
