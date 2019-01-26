@@ -183,7 +183,6 @@ if(USE_PROF_API EQUAL 1)
       include/ext
   )
   if(NOT PROF_API_HEADER_DIR)
-    MESSAGE("PROF_API_HEADER_PATH = ${PROF_API_HEADER_PATH}")
     MESSAGE(FATAL_ERROR "Profiling API header not found, use -DPROF_API_HEADER_PATH=<path to prof_protocol.h header>")
   else()
     include_directories ( ${PROF_API_HEADER_DIR} )
