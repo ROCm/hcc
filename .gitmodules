@@ -1,7 +1,7 @@
 [submodule "llvm"]
 	path = compiler
 	url = https://github.com/RadeonOpenCompute/llvm.git
-	branch = amd-common
+	branch = feature_hcc_direct_function_call_support
 [submodule "lld"]
 	path = lld
 	url = https://github.com/RadeonOpenCompute/lld.git
@@ -9,7 +9,7 @@
 [submodule "clang"]
 	path = clang
 	url = https://github.com/RadeonOpenCompute/hcc-clang-upgrade.git
-	branch = clang_tot_upgrade
+	branch = feature_hcc_direct_function_call_support
 [submodule "compiler-rt"]
 	path = compiler-rt
 	url = https://github.com/RadeonOpenCompute/compiler-rt
