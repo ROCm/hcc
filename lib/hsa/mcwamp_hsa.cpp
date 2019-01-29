@@ -1388,6 +1388,7 @@ public:
     //
     void printAsyncOps(std::ostream &s = std::cerr)
     {
+        std::lock_guard<std::recursive_mutex> lg(qmutex);
         hsa_signal_value_t oldv=0;
         s << *this << " : " << asyncOps.size() << " op entries\n";
         for (int i=0; i<asyncOps.size(); i++) {
@@ -1429,6 +1430,8 @@ public:
     // TODO - can convert to reference?
     void pushAsyncOp(std::shared_ptr<HSAOp> op) {
 
+        std::lock_guard<std::recursive_mutex> lg(qmutex);
+
         op->setSeqNumFromQueue();
 
         DBOUT(DB_CMD, "  pushing " << *op << " completion_signal="<< std::hex  << ((hsa_signal_t*)op->getNativeHandle())->handle << std::dec
@@ -1469,6 +1472,8 @@ public:
     // Also different modes and optimizations can control when dependencies are added.
     // TODO - return reference if possible to avoid shared ptr overhead.
     std::shared_ptr<KalmarAsyncOp> detectStreamDeps(hcCommandKind newCommandKind, KalmarAsyncOp *kNewOp) {
+
+        std::lock_guard<std::recursive_mutex> lg(qmutex);
 
         const auto newOp = static_cast<const HSAOp*> (kNewOp);
 
@@ -1533,6 +1538,7 @@ public:
 
 
     int getPendingAsyncOps() override {
+        std::lock_guard<std::recursive_mutex> lg(qmutex);
         int count = 0;
         for (int i = 0; i < asyncOps.size(); ++i) {
             auto &asyncOp = asyncOps[i];
@@ -1557,6 +1563,8 @@ public:
         // Have to walk asyncOps since it can contain null pointers (if event is waited on and removed)
         // Also not all commands contain signals.
         
+        std::lock_guard<std::recursive_mutex> lg(qmutex);
+
         bool isEmpty = true;
 
         const auto& oldest = find_if(
@@ -1606,26 +1614,28 @@ public:
         }
 
 
-
-        bool foundFirstValidOp = false;
-
-        for (int i = asyncOps.size()-1; i >= 0;  i--) {
-            if (asyncOps[i] != nullptr) {
-                auto asyncOp = asyncOps[i];
-                if (!foundFirstValidOp) {
-                    hsa_signal_t sig =  *(static_cast <hsa_signal_t*> (asyncOp->getNativeHandle()));
-                    assert(sig.handle != 0);
-                    foundFirstValidOp = true;
-                }
-                // wait on valid futures only
-                std::shared_future<void>* future = asyncOp->getFuture();
-                if (future && future->valid()) {
-                    future->wait();
+        {
+            std::lock_guard<std::recursive_mutex> lg(qmutex);
+            bool foundFirstValidOp = false;
+            for (int i = asyncOps.size()-1; i >= 0;  i--) {
+                if (asyncOps[i] != nullptr) {
+                    auto asyncOp = asyncOps[i];
+                    if (!foundFirstValidOp) {
+                        hsa_signal_t sig =  *(static_cast <hsa_signal_t*> (asyncOp->getNativeHandle()));
+                        assert(sig.handle != 0);
+                        foundFirstValidOp = true;
+                    }
+                    // wait on valid futures only
+                    std::shared_future<void>* future = asyncOp->getFuture();
+                    if (future && future->valid()) {
+                        future->wait();
+                    }
                 }
             }
+
+            // clear async operations table
+            asyncOps.clear();
         }
-        // clear async operations table
-        asyncOps.clear();
    }
 
     void LaunchKernel(void *ker, size_t nr_dim, size_t *global, size_t *local) override {
@@ -2165,6 +2175,9 @@ public:
 
     // remove finished async operation from waiting list
     void removeAsyncOp(HSAOp* asyncOp) {
+
+        std::lock_guard<std::recursive_mutex> lg(qmutex);
+
         int targetIndex = asyncOp->asyncOpsIndex();
 
         // Make sure the opindex is still valid.
