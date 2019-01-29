@@ -1391,6 +1391,7 @@ public:
     //
     void printAsyncOps(std::ostream &s = std::cerr)
     {
+        std::lock_guard<std::recursive_mutex> lg(qmutex);
         hsa_signal_value_t oldv=0;
         s << *this << " : " << asyncOps.size() << " op entries\n";
         for (int i=0; i<asyncOps.size(); i++) {
@@ -1431,6 +1432,8 @@ public:
     // Save the command and type
     // TODO - can convert to reference?
     void pushAsyncOp(std::shared_ptr<HSAOp> op) {
+
+        std::lock_guard<std::recursive_mutex> lg(qmutex);
 
         op->setSeqNumFromQueue();
 
@@ -1480,6 +1483,8 @@ public:
     // Also different modes and optimizations can control when dependencies are added.
     // TODO - return reference if possible to avoid shared ptr overhead.
     std::shared_ptr<KalmarAsyncOp> detectStreamDeps(hcCommandKind newCommandKind, KalmarAsyncOp *kNewOp) {
+
+        std::lock_guard<std::recursive_mutex> lg(qmutex);
 
         const auto newOp = static_cast<const HSAOp*> (kNewOp);
 
@@ -1544,6 +1549,7 @@ public:
 
 
     int getPendingAsyncOps() override {
+        std::lock_guard<std::recursive_mutex> lg(qmutex);
         int count = 0;
         for (int i = 0; i < asyncOps.size(); ++i) {
             auto &asyncOp = asyncOps[i];
@@ -1568,6 +1574,8 @@ public:
         // Have to walk asyncOps since it can contain null pointers (if event is waited on and removed)
         // Also not all commands contain signals.
         
+        std::lock_guard<std::recursive_mutex> lg(qmutex);
+
         bool isEmpty = true;
 
         const auto& oldest = find_if(
@@ -1616,7 +1624,7 @@ public:
             printAsyncOps(std::cerr);
         }
 
-
+        std::lock_guard<std::recursive_mutex> lg(qmutex);
 
 #if !defined(NDEBUG)
         bool foundFirstValidOp = false;
@@ -1627,8 +1635,7 @@ public:
             lastWaitOp = (lastWaitOp * QUEUE_FLUSHING_FRAC);
         }
 
-        int i;
-        for (i = lastWaitOp-1; i >= 0;  i--) {
+        for (int i = lastWaitOp-1; i >= 0;  i--) {
             if (asyncOps[i] != nullptr) {
                 auto asyncOp = asyncOps[i];
                 // we only drain starting at first found marker
@@ -1682,7 +1689,7 @@ public:
             asyncOps.clear();
             asyncOps_offset = 0;
         }
-   }
+    }
 
     void LaunchKernel(void *ker, size_t nr_dim, size_t *global, size_t *local) override {
         LaunchKernelWithDynamicGroupMemory(ker, nr_dim, global, local, 0);
@@ -2221,6 +2228,9 @@ public:
 
     // remove finished async operation from waiting list
     void removeAsyncOp(HSAOp* asyncOp) {
+
+        std::lock_guard<std::recursive_mutex> lg(qmutex);
+
         int targetIndex = asyncOp->asyncOpsIndex() - asyncOps_offset;
 
         // Make sure the opindex is still valid.
