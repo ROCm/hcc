@@ -36,6 +36,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
     libc++abi-dev \
     libc++-dev \
     hsa-rocr-dev && \
+    rocm-device-libs \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
