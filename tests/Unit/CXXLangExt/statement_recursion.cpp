@@ -13,7 +13,7 @@ int fib(int x) restrict (amp, cpu) {
 // An HSA version of C++AMP program
 int main ()
 {
-
+ #if 0
   const int vecSize = 16;
 
   int ans[vecSize];
@@ -37,5 +37,7 @@ int main ()
     std::cout << "Verify failed!\n";
   }
   return (error != 0);
+#endif
+  return 1;
 }
 

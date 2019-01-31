@@ -1,4 +1,4 @@
-
+// XFAIL: *
 // RUN: %hc %s -o %t.out && %t.out
 
 // Parallel STL headers

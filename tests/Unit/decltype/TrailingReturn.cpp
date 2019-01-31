@@ -1,5 +1,4 @@
 // TODO: Assess whether this test considers valid behaviour without C++AMP.
-// XFAIL: *
 // RUN: %cxxamp -c %s
 
 #define TEST(a,b) static_assert(std::is_same<a,b>::value, "Test failed, type of \"" #a "\" != type of \"" #b "\".")

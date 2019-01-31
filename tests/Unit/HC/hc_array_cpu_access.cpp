@@ -1,3 +1,4 @@
+// XFAIL: *
 // RUN: %hc %s -o %t.out && %t.out
 
 #include <iostream>

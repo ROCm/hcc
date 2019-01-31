@@ -43,13 +43,13 @@ bool test_negative() {
   // verify data
   bool ret = (result == false);
 
-#if _DEBUG 
+#if _DEBUG
   for (int i = 0; i < ROW; ++i) {
     for (int j = 0; j < COL; ++j) {
       std::cout << std::setw(5) << table[i * COL + j];
     }
     std::cout << "\n";
-  } 
+  }
 #endif
 
   return ret;
@@ -80,13 +80,13 @@ bool test() {
   // verify data
   bool ret = (result == true);
 
-#if _DEBUG 
+#if _DEBUG
   for (int i = 0; i < ROW; ++i) {
     for (int j = 0; j < COL; ++j) {
       std::cout << std::setw(5) << table[i * COL + j];
     }
     std::cout << "\n";
-  } 
+  }
 #endif
 
   return ret;
