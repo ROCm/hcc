@@ -34,8 +34,8 @@ if ($bundle_start == 0 || $bundle_size == 0) {
 else {
 
   # extract kernel bundle file from the binary
-  my $data_lma         = hex(`objdump -h $input_file | grep ".data.rel.ro" | awk '{print \$5}'`);
-  my $data_file_offset = hex(`objdump -h $input_file | grep ".data.rel.ro" | awk '{print \$6}'`);
+  my $data_lma         = hex(`objdump -h $input_file | grep ".kernel" | awk '{print \$5}'`);
+  my $data_file_offset = hex(`objdump -h $input_file | grep ".kernel" | awk '{print \$6}'`);
   my $bundle_file_offset = $data_file_offset + ($bundle_start - $data_lma);
   my $bundle_file_name = "$input_file.bundle";
   system("dd if=$input_file of=$bundle_file_name skip=$bundle_file_offset count=$bundle_size bs=1 status=none") == 0
