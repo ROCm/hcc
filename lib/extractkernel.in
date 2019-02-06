@@ -13,6 +13,11 @@ sub usage {
 }
 
 my $debug = 0;
+
+# use clang offload bundler (instead of "dd")
+# to extract device object from the bundle
+my $use_clang_offload_bundler = 1;
+
 my %options=();
 getopts('hi:', \%options);
 
@@ -80,7 +85,7 @@ while(1) {
   my $num_bundles;
   $read_bytes = read(INPUT_FP, $num_bundles, 8);
   $read_bytes == 8 or die("Fail to parse number of bundles\n");
-  $num_bundles = unpack("s", $num_bundles);
+  $num_bundles = unpack("Q", $num_bundles);
   if ($debug) {
     print "Blob $num_blobs, number of bundles: $num_bundles\n";
   }
@@ -103,14 +108,14 @@ while(1) {
     my $offset;
     $read_bytes = read(INPUT_FP, $offset, 8);
     $read_bytes == 8 or die("Fail to parse bundle offset\n");
-    $offset = unpack("s", $offset);
+    $offset = unpack("Q", $offset);
     $last_bundle_offset = max($last_bundle_offset, $offset);
 
     # read bundle size
     my $size;
     $read_bytes = read(INPUT_FP, $size, 8);
     $read_bytes == 8 or die("Fail to parse bundle size\n");
-    $size = unpack("s", $size);
+    $size = unpack("Q", $size);
     if ($last_bundle_offset == $offset) {
       $last_bundle_size = $size;
     }
@@ -119,12 +124,16 @@ while(1) {
     my $triple_size;
     $read_bytes = read(INPUT_FP, $triple_size, 8);
     $read_bytes == 8 or die("Fail to parse triple size\n");
-    $triple_size = unpack("s", $triple_size);
+    $triple_size = unpack("Q", $triple_size);
 
     # triple
     my $triple;
     $read_bytes = read(INPUT_FP, $triple, $triple_size);
     $read_bytes == $triple_size or die("Fail to parse triple\n");
+
+    if ($debug) {
+      print("\t bundle $iter: offset=$offset, size=$size, triple_size=$triple_size, triple=$triple\n");
+    }
 
     # Only process GPU targets, skip host targets
     if ($triple =~ /^hcc-amdgcn-amd-amdhsa--/) {
@@ -137,6 +146,17 @@ while(1) {
 
       # add into asic_target_array
       $asic_target_array[$#asic_target_array + 1]=$asic_target;
+
+      if (!$use_clang_offload_bundler) {
+        my $offset_for_hsaco = $current_blob_offset + $offset;
+        my $dd_command ="dd if=${input_file} of=${hsaco_file_name} skip=$offset_for_hsaco count=$size bs=1 status=none";
+        if ($debug) {
+          print("extract code bundle with dd: $dd_command\n");
+        }
+        system($dd_command) == 0
+          or die("Fail to extract code bundle with dd\n");
+      }
+
     } else {
       #print("Host target: " . $Triple . "\n");
     }
@@ -148,12 +168,18 @@ while(1) {
   system("dd if=$input_file of=$blob_filename skip=$current_blob_offset count=$write_bytes bs=1 status=none") == 0
     or die("Extracting kernel bundle file failed: $?");
 
-  if (-f $clang_offload_bundler) {
-    # use clang-offload-bundler to unbundle HSACO
-    system("${clang_offload_bundler} -unbundle -type=o -inputs=${blob_filename} ${clang_offloadbundler_outputs} ${clang_offloadbundler_targets}") == 0 
-      or die("Fail to execute clang-offload-bundler");
-  } else {
-    die("Can't find clang-offload-bundler\n");
+  if ($use_clang_offload_bundler) {
+    if (-f $clang_offload_bundler) {
+      # use clang-offload-bundler to unbundle HSACO
+      my $command = "${clang_offload_bundler} -unbundle -type=o -inputs=${blob_filename} ${clang_offloadbundler_outputs} ${clang_offloadbundler_targets}";
+      if ($debug) {
+        print("clang offload bundler command: $command\n");
+      }
+      system($command) == 0 
+        or die("Fail to execute clang-offload-bundler");
+    } else {
+      die("Can't find clang-offload-bundler\n");
+    }
   }
 
   if (-f $llvm_objdump) {
