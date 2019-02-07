@@ -1968,7 +1968,7 @@ public:
     }
 
     void* getHSAQueue() override {
-        return static_cast<void*>(rocrQueue);
+        return static_cast<void*>(rocrQueue->_hwQueue);
     }
 
     hsa_queue_t *acquireLockedRocrQueue();
