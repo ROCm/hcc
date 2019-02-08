@@ -329,17 +329,23 @@ static void read_code_bundles(std::vector<_code_bundle>& bundles) {
   }
 }
 
-void LoadInMemoryProgram(KalmarQueue* pQueue) {
+
+
+void LoadInMemoryProgram(KalmarDevice* k_device) {
 
   static std::vector<_code_bundle> bundles;
   static std::once_flag f;
   std::call_once(f, [&](){ read_code_bundles(bundles); });
 
   for (auto&& b : bundles) {
-    if (pQueue->getDev()->IsCompatibleKernel((void*) b.size, (void*) b.device_binary)) {
-      pQueue->getDev()->BuildProgram((void*) b.size, (void*) b.device_binary);
+    if (k_device->IsCompatibleKernel((void*) b.size, (void*) b.device_binary)) {
+      k_device->BuildProgram((void*) b.size, (void*) b.device_binary);
     }
   }
+}
+
+void LoadInMemoryProgram(KalmarQueue* k_queue) {
+  LoadInMemoryProgram(k_queue->getDev());
 }
 
 // used in parallel_for_each.h
@@ -380,11 +386,9 @@ public:
   KalmarBootstrap() : runtime(nullptr) {
     bool lazy_init = true;
     const char* lazyinit_env = getenv("HCC_LAZYINIT");
-    if (lazyinit_env != std::nullptr &&
-         (std::string("OFF") == lazyinit_env ||
-            strtol(lazyinit_env, nullptr, 0) == 0)) {
+    if (lazyinit_env != nullptr &&
+          strtol(lazyinit_env, nullptr, 0) == 0) {
         lazy_init = false;
-      }
     }
 
     if (!lazy_init) {
