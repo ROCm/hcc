@@ -35,10 +35,6 @@ int main() {
   }
   std::vector<hc::accelerator_view> all_views(std::move(hc::accelerator().get_all_views()));
 
-#if 0
-  std::cout << "number of views: expected=" << expected_unique_views << " actual=" << all_views.size() << std::endl;
-#endif
-
   bool failed = all_views.size() != expected_unique_views;
   return failed;
 }
