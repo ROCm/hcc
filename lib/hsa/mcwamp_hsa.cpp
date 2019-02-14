@@ -553,7 +553,6 @@ class HSAQueue;
 class HSADevice;
 
 namespace CLAMP {
-  void LoadInMemoryProgram(KalmarDevice*);
   void LoadInMemoryProgram(KalmarQueue*);
 } // namespace CLAMP
 } // namespace Kalmar
@@ -3196,9 +3195,6 @@ public:
     void* getSymbolAddress(const char* symbolName) override {
         hsa_status_t status;
 
-        if (executables.size() == 0)
-          CLAMP::LoadInMemoryProgram(this);
-
         unsigned long* symbol_ptr = nullptr;
         if (executables.size() != 0) {
             // iterate through all HSA executables
@@ -3254,8 +3250,12 @@ public:
 
     // FIXME: return values
     void memcpySymbol(const char* symbolName, void* hostptr, size_t count, size_t offset = 0, enum hcCommandKind kind = hcMemcpyHostToDevice) override {
-        unsigned long* symbol_ptr = (unsigned long*)getSymbolAddress(symbolName);
-        memcpySymbol(symbol_ptr, hostptr, count, offset, kind);
+        if (executables.size() != 0) {
+            unsigned long* symbol_ptr = (unsigned long*)getSymbolAddress(symbolName);
+            memcpySymbol(symbol_ptr, hostptr, count, offset, kind);
+        } else {
+            throw Kalmar::runtime_exception("HSA executable NOT built yet!", 0);
+        }
     }
 
     void* getHSAAgent() override;
