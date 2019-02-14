@@ -31,9 +31,6 @@ struct RuntimeImpl {
     m_PushArgImpl(nullptr),
     m_PushArgPtrImpl(nullptr),
     m_GetContextImpl(nullptr),
-    m_InitActivityCallbackImpl(nullptr),
-    m_EnableActivityCallbackImpl(nullptr),
-    m_GetCmdNameImpl(nullptr),
     isCPU(false) {
     //std::cout << "dlopen(" << libraryName << ")\n";
     m_RuntimeHandle = dlopen(libraryName, RTLD_LAZY|RTLD_NODELETE);
@@ -55,9 +52,6 @@ struct RuntimeImpl {
     m_PushArgImpl = (PushArgImpl_t) dlsym(m_RuntimeHandle, "PushArgImpl");
     m_PushArgPtrImpl = (PushArgPtrImpl_t) dlsym(m_RuntimeHandle, "PushArgPtrImpl");
     m_GetContextImpl= (GetContextImpl_t) dlsym(m_RuntimeHandle, "GetContextImpl");
-    m_InitActivityCallbackImpl = (InitActivityCallbackImpl_t) dlsym(m_RuntimeHandle, "InitActivityCallbackImpl");
-    m_EnableActivityCallbackImpl = (EnableActivityCallbackImpl_t) dlsym(m_RuntimeHandle, "EnableActivityCallbackImpl");
-    m_GetCmdNameImpl = (GetCmdNameImpl_t) dlsym(m_RuntimeHandle, "GetCmdNameImpl");
   }
 
   void set_cpu() { isCPU = true; }
@@ -68,12 +62,6 @@ struct RuntimeImpl {
   PushArgImpl_t m_PushArgImpl;
   PushArgPtrImpl_t m_PushArgPtrImpl;
   GetContextImpl_t m_GetContextImpl;
-
-  // Activity profiling routines
-  InitActivityCallbackImpl_t m_InitActivityCallbackImpl;
-  EnableActivityCallbackImpl_t m_EnableActivityCallbackImpl;
-  GetCmdNameImpl_t m_GetCmdNameImpl;
-
   bool isCPU;
 };
 
@@ -353,17 +341,6 @@ void PushArg(void *k_, int idx, size_t sz, const void *s) {
 }
 void PushArgPtr(void *k_, int idx, size_t sz, const void *s) {
   GetOrInitRuntime()->m_PushArgPtrImpl(k_, idx, sz, s);
-}
-
-// Activity profiling routines
-void InitActivityCallback(void* id_callback, void* op_callback, void* arg) {
-  GetOrInitRuntime()->m_InitActivityCallbackImpl(id_callback, op_callback, arg);
-}
-bool EnableActivityCallback(uint32_t op, bool enable) {
-  return GetOrInitRuntime()->m_EnableActivityCallbackImpl(op, enable);
-}
-const char* GetCmdName(uint32_t id) {
-  return GetOrInitRuntime()->m_GetCmdNameImpl(id);
 }
 
 } // namespace CLAMP

@@ -169,27 +169,6 @@ MESSAGE("")
 
 endif (USE_CODEXL_ACTIVITY_LOGGER EQUAL 1)
 
-################
-# Detect profiling API
-################
-if(USE_PROF_API EQUAL 1)
-  find_path(PROF_API_HEADER_DIR prof_protocol.h
-    HINTS
-      ${PROF_API_HEADER_PATH}
-    PATHS
-      ${ROCM_ROOT}/roctracer
-    PATH_SUFFIXES
-      include/ext
-  )
-  if(NOT PROF_API_HEADER_DIR)
-    MESSAGE(FATAL_ERROR "Profiling API header not found, use -DPROF_API_HEADER_PATH=<path to prof_protocol.h header>")
-  else()
-    add_definitions(-DUSE_PROF_API=1)
-    include_directories ( ${PROF_API_HEADER_DIR} )
-    MESSAGE("Profiling API: ${PROF_API_HEADER_DIR}")
-  endif()
-endif()
-
 #################
 # Configure which C++ runtime to use
 # hcc will use libc++ if USE_LIBCXX is set to ON; otherwise, it will use libstdc++
