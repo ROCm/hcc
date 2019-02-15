@@ -1558,27 +1558,25 @@ public:
 
     bool isEmpty() override {
 
-        std::lock_guard<std::recursive_mutex> lg(qmutex);
-
-        // Have to walk asyncOps since it can contain null pointers.
-        // Also not all commands contain signals.
-        // Start search at youngest op.
-        for (int i = decrement(asyncOpsIndex), count = 0; count < asyncOps.size(); i = decrement(i), ++count) {
-            if (asyncOps[i] != nullptr) {
-                hsa_signal_t signal = *(static_cast <hsa_signal_t*> (asyncOps[i]->getNativeHandle()));
-                if (signal.handle) {
-                    hsa_signal_value_t v = hsa_signal_load_scacquire(signal);
-                    if (v != 0) {
-                        return false;
-                    }
-                } else {
-                    // youngest has no signal - enqueue a new one:
-                    auto marker = EnqueueMarker(hc::system_scope);
-                    DBOUTL(DB_CMD2, "Inside HSAQueue::isEmpty and queue contained only no-signal ops, enqueued marker " << marker << " into " << *this);
-                    return false;
-                }
-            }
+        if (youngestCommandKind == hcCommandInvalid) {
+            return true; // no op ever inserted 
         }
+
+        // we need the lock because back() accesses asyncOps
+        std::lock_guard<std::recursive_mutex> lg(qmutex);
+        hsa_signal_t signal = *(static_cast <hsa_signal_t*> (back()->getNativeHandle()));
+        if (signal.handle) {
+            hsa_signal_value_t v = hsa_signal_load_scacquire(signal);
+            if (v != 0) {
+                return false;
+            }
+        } else {
+            // youngest has no signal - enqueue a new one:
+            auto marker = EnqueueMarker(hc::system_scope);
+            DBOUTL(DB_CMD2, "Inside HSAQueue::isEmpty and queue contained only no-signal ops, enqueued marker " << marker << " into " << *this);
+            return false;
+        }
+
         return true;
     };
 
