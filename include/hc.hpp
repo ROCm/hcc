@@ -2817,7 +2817,10 @@ extern "C" inline __attribute((always_inline)) std::uint64_t __cycle_u64() __HC_
  *
  * @return The result will be in the range 0 to WAVESIZE - 1.
  */
-extern "C" unsigned int __activelaneid_u32() __HC__;
+extern "C" unsigned int __ockl_activelane_u32(void);
+extern "C" inline unsigned int __activelaneid_u32() __HC__ {
+	return __ockl_activelane_u32();
+}
 
 /**
  * Return a bit mask shows which active work-items in the
