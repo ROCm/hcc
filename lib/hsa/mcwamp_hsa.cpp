@@ -1563,7 +1563,7 @@ public:
         // Have to walk asyncOps since it can contain null pointers.
         // Also not all commands contain signals.
         // Start search at youngest op.
-        for (int i = decrement(asyncOpsIndex), count = 0; count < asyncOps.size(); i = decrement(i)) {
+        for (int i = decrement(asyncOpsIndex), count = 0; count < asyncOps.size(); i = decrement(i), ++count) {
             if (asyncOps[i] != nullptr) {
                 hsa_signal_t signal = *(static_cast <hsa_signal_t*> (asyncOps[i]->getNativeHandle()));
                 if (signal.handle) {
@@ -1610,7 +1610,7 @@ public:
         std::shared_future<void>* future = nullptr;
         {
             std::lock_guard<std::recursive_mutex> lg(qmutex);
-            for (int i = decrement(asyncOpsIndex); i != 0;  i--) {
+            for (int i = decrement(asyncOpsIndex), count = 0; count < asyncOps.size(); i = decrement(i), ++count) {
                 if (asyncOps[i] != nullptr) {
                     auto asyncOp = asyncOps[i];
                     // wait on valid futures only
