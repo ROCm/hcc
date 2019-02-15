@@ -715,9 +715,6 @@ public:
     HSAOp(hc::HSAOpId id, Kalmar::KalmarQueue *queue, hc::hcCommandKind commandKind);
 
     const HSAOpCoord opCoord() const { return _opCoord; };
-    int asyncOpsIndex() const { return _asyncOpsIndex; };
-
-    void asyncOpsIndex(int asyncOpsIndex) { _asyncOpsIndex = asyncOpsIndex; };
 
     void* getNativeHandle() override { return &_signal; }
 
@@ -729,7 +726,6 @@ public:
 protected:
     uint64_t     apiStartTick;
     HSAOpCoord   _opCoord;
-    int          _asyncOpsIndex;
 
     hsa_signal_t _signal;
     int          _signalIndex;
@@ -737,6 +733,8 @@ protected:
     hsa_agent_t  _agent;
 
     activity_prof::ActivityProf _activity_prof;
+
+    hsa_status_t _wait_complete_status;
 };
 std::ostream& operator<<(std::ostream& os, const HSAOp & op);
 
@@ -829,11 +827,8 @@ public:
 
 
     ~HSACopy() {
-        if (isSubmitted) {
-            hsa_status_t status = HSA_STATUS_SUCCESS;
-            status = waitComplete();
-            STATUS_CHECK(status, __LINE__);
-        }
+        future->wait();
+        STATUS_CHECK(_wait_complete_status, __LINE__);
         dispose();
     }
 
@@ -977,11 +972,8 @@ public:
     }
 
     ~HSABarrier() {
-        if (isDispatched) {
-            hsa_status_t status = HSA_STATUS_SUCCESS;
-            status = waitComplete();
-            STATUS_CHECK(status, __LINE__);
-        }
+        future->wait();
+        STATUS_CHECK(_wait_complete_status, __LINE__);
         dispose();
     }
 
@@ -1048,11 +1040,9 @@ public:
 
 
     ~HSADispatch() {
-
-        if (isDispatched) {
-            hsa_status_t status = HSA_STATUS_SUCCESS;
-            status = waitComplete();
-            STATUS_CHECK(status, __LINE__);
+        if (future){
+            future->wait();
+            STATUS_CHECK(_wait_complete_status, __LINE__);
         }
         dispose();
     }
@@ -1287,11 +1277,13 @@ private:
     // kernel dispatches and barriers associated with this HSAQueue instance
     //
     // When a kernel k is dispatched, we'll get a KalmarAsyncOp f.
-    // This vector would hold f.  acccelerator_view::wait() would trigger
-    // HSAQueue::wait(), and all future objects in the KalmarAsyncOp objects
-    // will be waited on.
+    // This vector would hold f.  ops are added by replacing the op within the shared_ptr.
+    // This could trigger the freeing of resources, one insertion at a time.
     //
     std::vector< std::shared_ptr<HSAOp> > asyncOps;
+
+    // index where the next asyncOp should be inserted into the asyncOps container
+    int asyncOpsIndex;
 
     uint64_t                                      queueSeqNum; // sequence-number of this queue.
 
@@ -1384,6 +1376,21 @@ public:
         DBOUT(DB_INIT, "HSAQueue::~HSAQueue() " << this << "out\n");
     }
 
+    int increment(int index) {
+        // increment index, without using modulo
+        return ((index+1) == asyncOps.size() ? 0 : (index+1));
+    }
+
+    int decrement(int index) {
+        // decrement index, without using modulo
+        return (index == 0 ? asyncOps.size()-1 : index-1);
+    }
+
+    std::shared_ptr<HSAOp> back() {
+        // to emulate container.back(), but using the current insert index
+        return asyncOps[decrement(asyncOpsIndex)];
+    }
+
     // FIXME: implement flush
     //
     void printAsyncOps(std::ostream &s = std::cerr)
@@ -1440,21 +1447,9 @@ public:
                     << (op->getCommandKind() == hcCommandKernel ? ((static_cast<HSADispatch*> (op.get()))->getKernelName()) : "")  // change to getLongKernelName() for mangled name
                     << std::endl);
 
-
-
-        if (!drainingQueue_ && (asyncOps.size() >= MAX_INFLIGHT_COMMANDS_PER_QUEUE-1)) {
-            DBOUT(DB_WAIT, "*** Hit max inflight ops asyncOps.size=" << asyncOps.size() << ". " << op << " force sync\n");
-            DBOUT(DB_RESOURCE, "*** Hit max inflight ops asyncOps.size=" << asyncOps.size() << ". " << op << " force sync\n");
-
-            drainingQueue_ = true;
-
-            wait();
-        }
-        op->asyncOpsIndex(asyncOps.size());
         youngestCommandKind = op->getCommandKind();
-        asyncOps.push_back(std::move(op));
-
-        drainingQueue_ = false;
+        asyncOps[asyncOpsIndex] = std::move(op);
+        asyncOpsIndex = increment(asyncOpsIndex);
 
         if (DBFLAG(DB_QUEUE)) {
             printAsyncOps(std::cerr);
@@ -1479,12 +1474,14 @@ public:
 
         assert (newCommandKind != hcCommandInvalid);
 
-        if (!asyncOps.empty() && asyncOps.back().get()!=nullptr) {
+        auto lastOp = back();
+
+        if (lastOp.get()!=nullptr) {
             assert (youngestCommandKind != hcCommandInvalid);
 
             // Ensure we have not already added the op we are checking into asyncOps,
             // that must be done after we check for deps.
-            if (newOp && (newOp == asyncOps.back().get())) {
+            if (newOp && (newOp == lastOp.get())) {
                 throw Kalmar::runtime_exception("enqueued op before checking dependencies!", 0);
             }
 
@@ -1505,7 +1502,7 @@ public:
             } else if (isCopyCommand(newCommandKind) && isCopyCommand(youngestCommandKind)) {
                 assert (newOp);
                 auto hsaCopyOp = static_cast<const HSACopy*> (newOp);
-                auto youngestCopyOp = static_cast<const HSACopy*> (asyncOps.back().get());
+                auto youngestCopyOp = static_cast<const HSACopy*> (lastOp.get());
                 if (hsaCopyOp->getCopyDevice() != youngestCopyOp->getCopyDevice()) {
                     // This covers cases where two copies are back-to-back in the queue but use different copy engines.
                     // In this case there is no implicit dependency between the ops so we need to add one
@@ -1521,7 +1518,7 @@ public:
 
             if (needDep) {
                 DBOUT(DB_CMD2, "command type changed " << getHcCommandKindString(youngestCommandKind) << "  ->  " << getHcCommandKindString(newCommandKind) << "\n") ;
-                return asyncOps.back();
+                return lastOp;
             }
         }
 
@@ -1560,33 +1557,29 @@ public:
 
 
     bool isEmpty() override {
-        // Have to walk asyncOps since it can contain null pointers (if event is waited on and removed)
-        // Also not all commands contain signals.
-        
+
         std::lock_guard<std::recursive_mutex> lg(qmutex);
 
-        bool isEmpty = true;
-
-        const auto& oldest = find_if(
-                    asyncOps.crbegin(), asyncOps.crend(), [](const std::shared_ptr<HSAOp> &asyncOp) { return asyncOp != nullptr; });
-
-
-        if (oldest != asyncOps.crend()) {
-            hsa_signal_t signal = *(static_cast <hsa_signal_t*> ((*oldest)->getNativeHandle()));
-            if (signal.handle) {
-                hsa_signal_value_t v = hsa_signal_load_scacquire(signal);
-                if (v != 0) {
-                    isEmpty=false;
+        // Have to walk asyncOps since it can contain null pointers.
+        // Also not all commands contain signals.
+        // Start search at youngest op.
+        for (int i = decrement(asyncOpsIndex), count = 0; count < asyncOps.size(); i = decrement(i)) {
+            if (asyncOps[i] != nullptr) {
+                hsa_signal_t signal = *(static_cast <hsa_signal_t*> (asyncOps[i]->getNativeHandle()));
+                if (signal.handle) {
+                    hsa_signal_value_t v = hsa_signal_load_scacquire(signal);
+                    if (v != 0) {
+                        return false;
+                    }
+                } else {
+                    // youngest has no signal - enqueue a new one:
+                    auto marker = EnqueueMarker(hc::system_scope);
+                    DBOUTL(DB_CMD2, "Inside HSAQueue::isEmpty and queue contained only no-signal ops, enqueued marker " << marker << " into " << *this);
+                    return false;
                 }
-            } else {
-                // oldest has no signal - enqueue a new one:
-                auto marker = EnqueueMarker(hc::system_scope);
-                DBOUTL(DB_CMD2, "Inside HSAQueue::isEmpty and queue contained only no-signal ops, enqueued marker " << marker << " into " << *this);
-                isEmpty=false;
             }
         }
-
-        return isEmpty;
+        return true;
     };
 
 
@@ -1614,29 +1607,23 @@ public:
         }
 
 
+        std::shared_future<void>* future = nullptr;
         {
             std::lock_guard<std::recursive_mutex> lg(qmutex);
-            bool foundFirstValidOp = false;
-            for (int i = asyncOps.size()-1; i >= 0;  i--) {
+            for (int i = decrement(asyncOpsIndex); i != 0;  i--) {
                 if (asyncOps[i] != nullptr) {
                     auto asyncOp = asyncOps[i];
-                    if (!foundFirstValidOp) {
-                        hsa_signal_t sig =  *(static_cast <hsa_signal_t*> (asyncOp->getNativeHandle()));
-                        assert(sig.handle != 0);
-                        foundFirstValidOp = true;
-                    }
                     // wait on valid futures only
-                    std::shared_future<void>* future = asyncOp->getFuture();
+                    future = asyncOp->getFuture();
                     if (future && future->valid()) {
-                        future->wait();
+                        break;
                     }
+                    future = nullptr;
                 }
             }
-
-            // clear async operations table
-            asyncOps.clear();
         }
-   }
+        if (future) future->wait();
+    }
 
     void LaunchKernel(void *ker, size_t nr_dim, size_t *global, size_t *local) override {
         LaunchKernelWithDynamicGroupMemory(ker, nr_dim, global, local, 0);
@@ -2172,57 +2159,6 @@ public:
 
     void copy_ext(const void *src, void *dst, size_t size_bytes, hc::hcCommandKind copyDir, const hc::AmPointerInfo &srcPtrInfo, const hc::AmPointerInfo &dstPtrInfo, bool foo) override ;
 
-
-    // remove finished async operation from waiting list
-    void removeAsyncOp(HSAOp* asyncOp) {
-
-        std::lock_guard<std::recursive_mutex> lg(qmutex);
-
-        int targetIndex = asyncOp->asyncOpsIndex();
-
-        // Make sure the opindex is still valid.
-        // If the queue is destroyed first it may not exist in asyncops anymore so no need to destroy.
-        if (targetIndex < asyncOps.size() &&
-            asyncOp == asyncOps[targetIndex].get()) {
-
-            // All older ops are known to be done and we can reclaim their resources here:
-            // Both execute_in_order and execute_any_order flags always remove ops in-order at the end of the pipe.
-            // Note if not found above targetIndex=-1 and we skip the loop:
-            for (int i = targetIndex; i>=0; i--) {
-                Kalmar::KalmarAsyncOp *op = asyncOps[i].get();
-                if (op) {
-                    asyncOps[i].reset();
-
-        #if CHECK_OLDER_COMPLETE
-                    // opportunistically update status for any ops we encounter along the way:
-                    hsa_signal_t signal =  *(static_cast<hsa_signal_t*> (op->getNativeHandle()));
-
-                    // v<0 : no signal, v==0 signal and done, v>0 : signal and not done:
-                    hsa_signal_value_t v = -1;
-                    if (signal.handle)
-                        v = hsa_signal_load_scacquire(signal);
-                    assert (v <=0);
-        #endif
-
-                } else {
-                    // The queue is retired in-order, and ops only inserted at "top", and ops can only be removed at two defined points:
-                    //   - Draining the entire queue in HSAQueue::wait() - this calls asyncOps.clear()
-                    //   - Events in the middle of the queue can be removed, but will call this function which removes all older ops.
-                    //   So once we remove the asyncOps, there is no way for an older async op to be come non-null and we can stop search here:
-
-                    break; // stop searching if we find null, there cannot be any more valid pointers below.
-                }
-            }
-        }
-
-
-        // GC for finished kernels
-        if (asyncOps.size() > ASYNCOPS_VECTOR_GC_SIZE) {
-            DBOUTL(DB_RESOURCE, "asyncOps size=" << asyncOps.size() << " exceeds collection size, compacting");
-            asyncOps.erase(std::remove(asyncOps.begin(), asyncOps.end(), nullptr),
-                         asyncOps.end());
-        }
-    }
 };
 
 
@@ -4015,7 +3951,7 @@ std::ostream& operator<<(std::ostream& os, const HSAQueue & hav)
 HSAQueue::HSAQueue(KalmarDevice* pDev, hsa_agent_t agent, execute_order order, queue_priority priority) :
     KalmarQueue(pDev, queuing_mode_automatic, order, priority),
     rocrQueue(nullptr),
-    asyncOps(), drainingQueue_(false),
+    asyncOps(ASYNCOPS_VECTOR_GC_SIZE), asyncOpsIndex(0),
     valid(true), _nextSyncNeedsSysRelease(false), _nextKernelNeedsSysAcquire(false), bufferKernelMap(), kernelBufferMap()
 {
     {
@@ -4557,12 +4493,11 @@ HSADispatch::dispatchKernel(hsa_queue_t* lockedHsaQueue, const void *hostKernarg
 // wait for the kernel to finish execution
 inline hsa_status_t
 HSADispatch::waitComplete() {
-    hsa_status_t status = HSA_STATUS_SUCCESS;
+    _wait_complete_status = HSA_STATUS_SUCCESS;
     if (!isDispatched)  {
-        return HSA_STATUS_ERROR_INVALID_ARGUMENT;
+        _wait_complete_status = HSA_STATUS_ERROR_INVALID_ARGUMENT;
+        return _wait_complete_status;
     }
-
-
 
     if (_signal.handle) {
         DBOUT(DB_MISC, "wait for kernel dispatch op#" << *this  << " completion with wait flag: " << waitMode << "  signal="<< std::hex  << _signal.handle << std::dec << "\n");
@@ -4581,22 +4516,18 @@ HSADispatch::waitComplete() {
         DBOUT (DB_MISC, "null signal, considered complete\n");
     }
 
-
-    // unregister this async operation from HSAQueue
-    if (this->hsaQueue() != nullptr) {
-        this->hsaQueue()->removeAsyncOp(this);
-    }
-
     isDispatched = false;
-    return status;
+
+    return _wait_complete_status;
 }
 
 inline hsa_status_t
 HSADispatch::dispatchKernelWaitComplete() {
-    hsa_status_t status = HSA_STATUS_SUCCESS;
+    _wait_complete_status = HSA_STATUS_SUCCESS;
 
     if (isDispatched) {
-        return HSA_STATUS_ERROR_INVALID_ARGUMENT;
+        _wait_complete_status = HSA_STATUS_ERROR_INVALID_ARGUMENT;
+        return _wait_complete_status;
     }
 
     // WaitComplete dispatches need to ensure all data is released to system scope
@@ -4611,17 +4542,17 @@ HSADispatch::dispatchKernelWaitComplete() {
         hsa_queue_t* rocrQueue = hsaQueue()->acquireLockedRocrQueue();
 
         // dispatch kernel
-        status = dispatchKernel(rocrQueue, arg_vec.data(), arg_vec.size(), true);
-        STATUS_CHECK(status, __LINE__);
+        _wait_complete_status = dispatchKernel(rocrQueue, arg_vec.data(), arg_vec.size(), true);
+        STATUS_CHECK(_wait_complete_status, __LINE__);
 
         hsaQueue()->releaseLockedRocrQueue();
     }
 
     // wait for completion
-    status = waitComplete();
-    STATUS_CHECK(status, __LINE__);
+    waitComplete();
+    STATUS_CHECK(_wait_complete_status, __LINE__);
 
-    return status;
+    return _wait_complete_status;
 }
 
 
@@ -4668,8 +4599,8 @@ HSADispatch::dispatchKernelAsync(const void *hostKernarg, int hostKernargSize, b
     }).share());
 
     if (HCC_SERIALIZE_KERNEL & 0x2) {
-        status = waitComplete();
-        STATUS_CHECK(status, __LINE__);
+        future->wait();
+        STATUS_CHECK(_wait_complete_status, __LINE__);
     };
 
 
@@ -4882,9 +4813,10 @@ HSADispatch::setLaunchConfiguration(const int dims, size_t *globalDims, size_t *
 // wait for the barrier to complete
 inline hsa_status_t
 HSABarrier::waitComplete() {
-    hsa_status_t status = HSA_STATUS_SUCCESS;
+    _wait_complete_status = HSA_STATUS_SUCCESS;
     if (!isDispatched)  {
-        return HSA_STATUS_ERROR_INVALID_ARGUMENT;
+        _wait_complete_status = HSA_STATUS_ERROR_INVALID_ARGUMENT;
+        return _wait_complete_status;
     }
 
     DBOUT(DB_WAIT,  "  wait for barrier " << *this << " completion with wait flag: " << waitMode << "  signal="<< std::hex  << _signal.handle << std::dec <<"...\n");
@@ -4893,14 +4825,9 @@ HSABarrier::waitComplete() {
     hsa_signal_wait_scacquire(_signal, HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX, waitMode);
 
 
-    // unregister this async operation from HSAQueue
-    if (this->hsaQueue() != nullptr) {
-        this->hsaQueue()->removeAsyncOp(this);
-    }
-
     isDispatched = false;
 
-    return status;
+    return _wait_complete_status;
 }
 
 
@@ -5092,7 +5019,6 @@ HSAOpCoord::HSAOpCoord(Kalmar::HSAQueue *queue) :
 HSAOp::HSAOp(hc::HSAOpId id, Kalmar::KalmarQueue *queue, hc::hcCommandKind commandKind) :
     KalmarAsyncOp(queue, commandKind),
     _opCoord(static_cast<Kalmar::HSAQueue*> (queue)),
-    _asyncOpsIndex(-1),
 
     _signalIndex(-1),
     _agent(static_cast<Kalmar::HSADevice*>(hsaQueue()->getDev())->getAgent()),
@@ -5111,12 +5037,7 @@ Kalmar::HSAQueue *HSAOp::hsaQueue() const
 };
 
 bool HSAOp::isReady() override {
-    bool ready = (hsa_signal_load_scacquire(_signal) == 0);
-    if (ready && hsaQueue()) {
-        hsaQueue()->removeAsyncOp(this);
-    }
-
-    return ready;
+    return (hsa_signal_load_scacquire(_signal) == 0);
 }
 
 
@@ -5139,12 +5060,11 @@ HSACopy::HSACopy(Kalmar::KalmarQueue *queue, const void* src_, void* dst_, size_
 // wait for the async copy to complete
 inline hsa_status_t
 HSACopy::waitComplete() {
-    hsa_status_t status = HSA_STATUS_SUCCESS;
+    _wait_complete_status = HSA_STATUS_SUCCESS;
     if (!isSubmitted)  {
-        return HSA_STATUS_ERROR_INVALID_ARGUMENT;
+        _wait_complete_status = HSA_STATUS_ERROR_INVALID_ARGUMENT;
+        return _wait_complete_status;
     }
-
-
 
     // Wait on completion signal until the async copy is finishedS
     if (DBFLAG(DB_WAIT)) {
@@ -5158,15 +5078,9 @@ HSACopy::waitComplete() {
     // Wait on completion signal until the async copy is finished
     hsa_signal_wait_scacquire(_signal, HSA_SIGNAL_CONDITION_LT, 1, UINT64_MAX, waitMode);
 
-
-    // unregister this async operation from HSAQueue
-    if (this->hsaQueue() != nullptr) {
-        this->hsaQueue()->removeAsyncOp(this);
-    }
-
     isSubmitted = false;
 
-    return status;
+    return _wait_complete_status;
 }
 
 
@@ -5488,8 +5402,8 @@ HSACopy::enqueueAsyncCopyCommand(const Kalmar::HSADevice *copyDevice, const hc::
     }).share());
 
     if (HCC_SERIALIZE_COPY & 0x2) {
-        status = waitComplete();
-        STATUS_CHECK(status, __LINE__);
+        future->wait();
+        STATUS_CHECK(_wait_complete_status, __LINE__);
     };
 
     return status;
