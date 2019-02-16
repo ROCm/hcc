@@ -827,8 +827,10 @@ public:
 
 
     ~HSACopy() {
-        future->wait();
-        STATUS_CHECK(_wait_complete_status, __LINE__);
+        if (future) {
+            future->wait();
+            STATUS_CHECK(_wait_complete_status, __LINE__);
+        }
         dispose();
     }
 
