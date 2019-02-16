@@ -1729,8 +1729,8 @@ public:
         auto&& dependentAsyncOpVector = bufferKernelMap[buffer];
         for (int i = 0; i < dependentAsyncOpVector.size(); ++i) {
           auto dependentAsyncOp = dependentAsyncOpVector[i];
-          if (!dependentAsyncOp.expired()) {
-            auto dependentAsyncOpPointer = dependentAsyncOp.lock();
+          auto dependentAsyncOpPointer = dependentAsyncOp.lock();
+          if (dependentAsyncOpPointer) {
             // wait on valid futures only
             std::shared_future<void>* future = dependentAsyncOpPointer->getFuture();
             if (future->valid()) {
