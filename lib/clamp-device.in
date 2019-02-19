@@ -40,6 +40,9 @@ KMTHINLTO="${KMTHINLTO:=0}"
 # flag for early finalization
 AMDGPU_OBJ_CODEGEN="0"
 
+# flag for function calls enabled
+AMDGPU_FUNC_CALLS="0"
+
 if [ $KMDBSCRIPT == "1" ]
 then
   set -x
@@ -105,6 +108,10 @@ do
     --early-finalize)
     AMDGPU_OBJ_CODEGEN="1"
     KMTHINLTO="0"
+    continue
+    ;;
+    --amdgpu-func-calls)
+    AMDGPU_FUNC_CALLS="1"
     continue
     ;;
     --hcc-extra-libs=*)
@@ -187,7 +194,8 @@ fi
 # Invoke HCC-specific opt passes
 $OPT -load $LIB/LLVMSelectAcceleratorCode@CMAKE_SHARED_LIBRARY_SUFFIX@ \
   -load $LIB/LLVMPromotePointerKernArgsToGlobal@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-  -select-accelerator-code -promote-pointer-kernargs-to-global \
+  -select-accelerator-code -sac-enable-function-calls=$AMDGPU_FUNC_CALLS \
+  -promote-pointer-kernargs-to-global \
   -dce -globaldce -always-inline -infer-address-spaces \
   < $2.linked.bc -o $2.selected.bc
 
@@ -230,9 +238,11 @@ fi
 CODE_OBJECT_FORMAT="-mattr=-code-object-v3"
 
 if [ $KMTHINLTO == "1" ]; then
-  $LLC $KMOPTLLC -mtriple amdgcn-amd-amdhsa -mcpu=$AMDGPU_TARGET $CODE_OBJECT_FORMAT -filetype=obj -o $2 $2.opt.bc
+  $LLC -mtriple amdgcn-amd-amdhsa -mcpu=$AMDGPU_TARGET $CODE_OBJECT_FORMAT \
+    $KMOPTLLC -amdgpu-function-calls=$AMDGPU_FUNC_CALLS -filetype=obj -o $2 $2.opt.bc
 else
-  $LLC $KMOPTLLC -mtriple amdgcn-amd-amdhsa -mcpu=$AMDGPU_TARGET $CODE_OBJECT_FORMAT -filetype=obj -o $2.isabin $2.opt.bc
+  $LLC -mtriple amdgcn-amd-amdhsa -mcpu=$AMDGPU_TARGET $CODE_OBJECT_FORMAT \
+    $KMOPTLLC -amdgpu-function-calls=$AMDGPU_FUNC_CALLS -filetype=obj -o $2.isabin $2.opt.bc
 fi
 
 # error handling for llc
@@ -248,7 +258,8 @@ if [ $KMDUMPISA == "1" ]; then
   else
     cp $2.isabin ${KMDUMPDIR}/dump-$AMDGPU_TARGET.isabin
   fi
-  $LLC $KMOPTLLC -mtriple amdgcn-amd-amdhsa -mcpu=$AMDGPU_TARGET $CODE_OBJECT_FORMAT -filetype=asm -o $2.isa $2.opt.bc
+  $LLC -mtriple amdgcn-amd-amdhsa -mcpu=$AMDGPU_TARGET $CODE_OBJECT_FORMAT \
+     $KMOPTLLC -amdgpu-function-calls=$AMDGPU_FUNC_CALLS -filetype=asm -o $2.isa $2.opt.bc
   mv $2.isa ${KMDUMPDIR}/dump-$AMDGPU_TARGET.isa
 fi
 
