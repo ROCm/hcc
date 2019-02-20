@@ -43,7 +43,7 @@ int main() {
 
   av.copy(data, data_d, 3 * sizeof(int));
 
-  parallel_for_each(extent<1>(3), [=](index<1> idx) [[hc]] {
+  parallel_for_each(extent<1>(3), [=](hc::index<1> idx) [[hc]] {
                       data_d[idx[0]] = f.table[idx[0]] + 999;
                     });
 

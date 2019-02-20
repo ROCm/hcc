@@ -62,7 +62,7 @@ bool test_bitinsert_u32() {
 
   array<uint32_t, 1> output_GPU(GRID_SIZE);
   extent<1> ex(GRID_SIZE);
-  parallel_for_each(ex, [&](index<1>& idx) [[hc]] {
+  parallel_for_each(ex, [&](hc::index<1>& idx) [[hc]] {
     output_GPU(idx) = __bitinsert_u32(test0_GPU(idx), test1_GPU(idx),
                                       test2_GPU(idx), test3_GPU(idx));
   }).wait();
@@ -112,7 +112,7 @@ bool test_bitinsert_u64() {
 
   array<uint64_t, 1> output_GPU(GRID_SIZE);
   extent<1> ex(GRID_SIZE);
-  parallel_for_each(ex, [&](index<1>& idx) [[hc]] {
+  parallel_for_each(ex, [&](hc::index<1>& idx) [[hc]] {
     output_GPU(idx) = __bitinsert_u64(test0_GPU(idx), test1_GPU(idx),
                                       test2_GPU(idx), test3_GPU(idx));
   }).wait();

@@ -36,7 +36,7 @@ bool test() {
 
 #define TEST(func) \
   { \
-    parallel_for_each(ex, [=](index<1>& idx) __HC__ { \
+    parallel_for_each(ex, [=](hc::index<1>& idx) __HC__ { \
       table3(idx) = func(table1(idx), table2(idx)); \
     }).wait(); \
     int error = 0; \

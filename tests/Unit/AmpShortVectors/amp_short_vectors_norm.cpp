@@ -250,7 +250,7 @@ int main(void) {
     array_view<norm> gb(b);
     array_view<norm> gc(c);
     array_view<norm> gd(d);
-    for (index<1> i(0); i[0] < vecSize; i++) {
+    for (hc::index<1> i(0); i[0] < vecSize; i++) {
       norm tmp1(rand() / 1000.0f);
       ga[i] = tmp1;
       norm tmp2(rand() / 1000.0f);
@@ -258,7 +258,7 @@ int main(void) {
     }
     parallel_for_each(
       e,
-      [=](index<1> idx) [[hc]] {
+      [=](hc::index<1> idx) [[hc]] {
       gc[idx] = -ga[idx];
       gc[idx] += (ga[idx] + gb[idx]);
       gc[idx] -= (ga[idx] - gb[idx]);

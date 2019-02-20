@@ -54,7 +54,7 @@ bool test() {
   float table[SIZE] { 0.0f };
 
   // test foo1
-  parallel_for_each(extent<1>(SIZE), [&table](index<1> idx) [[hc]] {
+  parallel_for_each(extent<1>(SIZE), [&table](hc::index<1> idx) [[hc]] {
     table[idx[0]] = foo1(0.0f);
   });
 
@@ -70,7 +70,7 @@ bool test() {
   }
 
   // test foo2
-  parallel_for_each(extent<1>(SIZE), [&table](index<1> idx) [[hc]] {
+  parallel_for_each(extent<1>(SIZE), [&table](hc::index<1> idx) [[hc]] {
     table[idx[0]] = foo2(0.0f);
   });
 

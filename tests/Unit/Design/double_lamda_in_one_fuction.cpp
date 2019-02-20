@@ -6,11 +6,11 @@ int main() {
   int v[11] = {0,1,2,3,4,5,6,7,8,9,10};
   int expexted_v[11] = {11,12,13,14,15,16,17,18,19,20,21};
   array_view<int> av(11, v);
-  parallel_for_each(av.get_extent(), [=](index<1> idx) [[hc]] {
+  parallel_for_each(av.get_extent(), [=](hc::index<1> idx) [[hc]] {
     av[idx] +=1 ;
   });
 
-  parallel_for_each(av.get_extent(), [=](index<1> idx) [[hc]] {
+  parallel_for_each(av.get_extent(), [=](hc::index<1> idx) [[hc]] {
     av[idx] += 10;
   });
 

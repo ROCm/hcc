@@ -18,7 +18,7 @@ bool test1() {
   bool ret = true;
   array<int, 1> table(GRID_SIZE);
   extent<1> ex(GRID_SIZE);
-  parallel_for_each(ex, [&](index<1>& idx) [[hc]] {
+  parallel_for_each(ex, [&](hc::index<1>& idx) [[hc]] {
     table[idx] = foo();
   }).wait();
 
@@ -46,7 +46,7 @@ bool test2() {
   bool ret = true;
   array<int, 1> table(GRID_SIZE);
   extent<1> ex(GRID_SIZE);
-  parallel_for_each(ex, [&](index<1>& idx) [[hc]] {
+  parallel_for_each(ex, [&](hc::index<1>& idx) [[hc]] {
     table[idx] = bar();
   }).wait();
 
@@ -82,7 +82,7 @@ bool test3() {
   array<int, 1> table(GRID_SIZE);
   extent<1> ex(GRID_SIZE);
   baz obj;
-  parallel_for_each(ex, [&](index<1>& idx) [[hc]] {
+  parallel_for_each(ex, [&](hc::index<1>& idx) [[hc]] {
     table[idx] = obj.test();
   }).wait();
 
@@ -103,7 +103,7 @@ bool test4() {
   bool ret = true;
   array<int, 1> table(GRID_SIZE);
   extent<1> ex(GRID_SIZE);
-  parallel_for_each(ex, [&](index<1>& idx) [[hc]] {
+  parallel_for_each(ex, [&](hc::index<1>& idx) [[hc]] {
     table[idx] = baz::test2();
   }).wait();
 

@@ -32,14 +32,14 @@ bool test() {
   array_view<_Tp> gb(b);
   array_view<_Tp> gc(c);
   array_view<_Tp> gexp(exp);
-  for (index<1> i(0); i[0] < vecSize; i++) {
+  for (hc::index<1> i(0); i[0] < vecSize; i++) {
     ga[i] = dis(gen);
     gexp[i] = static_cast<_Tp>(dis_int(gen));
   }
 
   parallel_for_each(
     e,
-    [=](index<1> idx) [[hc]] {
+    [=](hc::index<1> idx) [[hc]] {
     gb[idx] = precise_math::scalb(ga[idx], gexp[idx]);
   });
 

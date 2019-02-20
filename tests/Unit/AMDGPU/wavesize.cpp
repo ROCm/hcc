@@ -14,7 +14,7 @@ int main() {
   using namespace hc;
   array<unsigned int, 1> table(GRID_SIZE);
   extent<1> ex(GRID_SIZE);
-  parallel_for_each(ex, [&](index<1>& idx) [[hc]] {
+  parallel_for_each(ex, [&](hc::index<1>& idx) [[hc]] {
     table(idx) = __wavesize();
   }).wait();
 

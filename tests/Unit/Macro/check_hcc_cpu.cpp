@@ -9,7 +9,7 @@ int main() {
   using namespace hc;
   array_view<int, 1> av(1, test);
 
-  parallel_for_each(extent<1>(1), [=](index<1> idx) [[hc]] {
+  parallel_for_each(extent<1>(1), [=](hc::index<1> idx) [[hc]] {
 #ifdef __HCC_CPU__
     av[idx] = 0;
 #else

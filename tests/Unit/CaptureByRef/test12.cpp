@@ -31,7 +31,7 @@ bool test() {
   p.bar = rand() % 15 + 1;
 
   extent<1> ex(VECTOR_SIZE);
-  parallel_for_each(ex, [&](index<1> idx) [[hc]] {
+  parallel_for_each(ex, [&](hc::index<1> idx) [[hc]] {
     // capture array type, and POD type by reference
     table[idx[0]] *= (p.foo * p.bar);
   });

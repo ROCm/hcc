@@ -33,7 +33,7 @@ bool test() {
   array_view<_Tp> gd(d);
   array_view<_Tp> ge(e);
 
-  for (index<1> i(0); i[0] < vecSize; i++) {
+  for (hc::index<1> i(0); i[0] < vecSize; i++) {
     ga[i] = dis(gen);
     gb[i] = dis(gen);
     gc[i] = dis(gen);
@@ -41,7 +41,7 @@ bool test() {
 
   parallel_for_each(
     e,
-    [=](index<1> idx) [[hc]] {
+    [=](hc::index<1> idx) [[hc]] {
           gd[idx] = precise_math::fmaf(ga[idx], gb[idx], gc[idx]);
   });
 

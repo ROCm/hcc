@@ -43,7 +43,7 @@ bool test32() {
 
   array<uint32_t, 1> output_GPU(GRID_SIZE);
   extent<1> ex(GRID_SIZE);
-  parallel_for_each(ex, [&](index<1>& idx) [[hc]] {
+  parallel_for_each(ex, [&](hc::index<1>& idx) [[hc]] {
     output_GPU(idx) = __popcount_u32_b32(test_GPU(idx));
   }).wait();
 
@@ -75,7 +75,7 @@ bool test64() {
   copy(test.begin(), test_GPU);
   array<uint32_t, 1> output_GPU(GRID_SIZE);
   extent<1> ex(GRID_SIZE);
-  parallel_for_each(ex, [&](index<1>& idx) [[hc]] {
+  parallel_for_each(ex, [&](hc::index<1>& idx) [[hc]] {
     output_GPU(idx) = __popcount_u32_b64(test_GPU(idx));
   }).wait();
 
