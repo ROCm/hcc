@@ -1590,6 +1590,33 @@ public:
     };
 
 
+    void drain() {
+      while (1) {
+        std::shared_ptr<HSAOp> r;
+        {
+          bool found = false;
+          std::lock_guard<std::recursive_mutex> lg(qmutex);
+          for (int i = 0; i < asyncOps.size(); i++) {
+            if (asyncOps[i] != nullptr) {
+              // wait on valid futures only
+              std::shared_future<void>* future = asyncOps[i]->getFuture();
+              if (future && future->valid()) {
+                r = std::move(asyncOps[i]);
+                found = true;
+                break;
+              }
+            }
+          }
+          // not more valid asyncOps
+          if (!found) {
+            asyncOps.clear();
+            return;
+          }
+        }
+        r.reset();
+      }
+    }
+
     // Must retain this exact function signature here even though mode not used since virtual interface in
     // runtime depends on this signature.
     void wait(hcWaitMode mode = hcWaitModeBlocked) override {
@@ -1613,29 +1640,7 @@ public:
             printAsyncOps(std::cerr);
         }
 
-
-        {
-            std::lock_guard<std::recursive_mutex> lg(qmutex);
-            bool foundFirstValidOp = false;
-            for (int i = asyncOps.size()-1; i >= 0;  i--) {
-                if (asyncOps[i] != nullptr) {
-                    auto asyncOp = asyncOps[i];
-                    if (!foundFirstValidOp) {
-                        hsa_signal_t sig =  *(static_cast <hsa_signal_t*> (asyncOp->getNativeHandle()));
-                        assert(sig.handle != 0);
-                        foundFirstValidOp = true;
-                    }
-                    // wait on valid futures only
-                    std::shared_future<void>* future = asyncOp->getFuture();
-                    if (future && future->valid()) {
-                        future->wait();
-                    }
-                }
-            }
-
-            // clear async operations table
-            asyncOps.clear();
-        }
+        drain();
    }
 
     void LaunchKernel(void *ker, size_t nr_dim, size_t *global, size_t *local) override {
@@ -2176,51 +2181,59 @@ public:
     // remove finished async operation from waiting list
     void removeAsyncOp(HSAOp* asyncOp) {
 
-        std::lock_guard<std::recursive_mutex> lg(qmutex);
+        std::vector<std::shared_ptr<HSAOp>> ops_to_be_reset;
 
-        int targetIndex = asyncOp->asyncOpsIndex();
+        // entering critical section, find all the async ops to be removed.
+        {
+          std::lock_guard<std::recursive_mutex> lg(qmutex);
 
-        // Make sure the opindex is still valid.
-        // If the queue is destroyed first it may not exist in asyncops anymore so no need to destroy.
-        if (targetIndex < asyncOps.size() &&
-            asyncOp == asyncOps[targetIndex].get()) {
+          int targetIndex = asyncOp->asyncOpsIndex();
+
+          // Make sure the opindex is still valid.
+          // If the queue is destroyed first it may not exist in asyncops anymore so no need to destroy.
+          if (targetIndex < asyncOps.size() &&
+                asyncOp == asyncOps[targetIndex].get()) {
 
             // All older ops are known to be done and we can reclaim their resources here:
             // Both execute_in_order and execute_any_order flags always remove ops in-order at the end of the pipe.
             // Note if not found above targetIndex=-1 and we skip the loop:
             for (int i = targetIndex; i>=0; i--) {
-                Kalmar::KalmarAsyncOp *op = asyncOps[i].get();
-                if (op) {
-                    asyncOps[i].reset();
+              Kalmar::KalmarAsyncOp *op = asyncOps[i].get();
+              if (op) {
+
+                // move the ops to be removed into a temp vector
+                // to order to avoid the ops being destructed right the way,
+                // which may end up in a deadlock
+                ops_to_be_reset.push_back(std::move(asyncOps[i]));
 
         #if CHECK_OLDER_COMPLETE
-                    // opportunistically update status for any ops we encounter along the way:
-                    hsa_signal_t signal =  *(static_cast<hsa_signal_t*> (op->getNativeHandle()));
+                // opportunistically update status for any ops we encounter along the way:
+                hsa_signal_t signal =  *(static_cast<hsa_signal_t*> (op->getNativeHandle()));
 
-                    // v<0 : no signal, v==0 signal and done, v>0 : signal and not done:
-                    hsa_signal_value_t v = -1;
-                    if (signal.handle)
-                        v = hsa_signal_load_scacquire(signal);
-                    assert (v <=0);
+                // v<0 : no signal, v==0 signal and done, v>0 : signal and not done:
+                hsa_signal_value_t v = -1;
+                if (signal.handle)
+                  v = hsa_signal_load_scacquire(signal);
+                assert (v <=0);
         #endif
+              } else {
+                // The queue is retired in-order, and ops only inserted at "top", and ops can only be removed at two defined points:
+                //   - Draining the entire queue in HSAQueue::wait() - this calls asyncOps.clear()
+                //   - Events in the middle of the queue can be removed, but will call this function which removes all older ops.
+                //   So once we remove the asyncOps, there is no way for an older async op to be come non-null and we can stop search here:
 
-                } else {
-                    // The queue is retired in-order, and ops only inserted at "top", and ops can only be removed at two defined points:
-                    //   - Draining the entire queue in HSAQueue::wait() - this calls asyncOps.clear()
-                    //   - Events in the middle of the queue can be removed, but will call this function which removes all older ops.
-                    //   So once we remove the asyncOps, there is no way for an older async op to be come non-null and we can stop search here:
-
-                    break; // stop searching if we find null, there cannot be any more valid pointers below.
-                }
+                break; // stop searching if we find null, there cannot be any more valid pointers below.
+              }
             }
+          }
         }
-
+        for (auto& d : ops_to_be_reset) {
+          d.reset();
+        }
 
         // GC for finished kernels
         if (asyncOps.size() > ASYNCOPS_VECTOR_GC_SIZE) {
-            DBOUTL(DB_RESOURCE, "asyncOps size=" << asyncOps.size() << " exceeds collection size, compacting");
-            asyncOps.erase(std::remove(asyncOps.begin(), asyncOps.end(), nullptr),
-                         asyncOps.end());
+          drain();
         }
     }
 };
