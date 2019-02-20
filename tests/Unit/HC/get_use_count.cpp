@@ -22,7 +22,7 @@ int main() {
   extent<1> ex(GRID_SIZE);
 
   // launch a kernel, log current hardware cycle count
-  completion_future cf = parallel_for_each(ex, [&](index<1>& idx) [[hc]] {
+  completion_future cf = parallel_for_each(ex, [&](hc::index<1>& idx) [[hc]] {
     table(idx) = __cycle_u64();
   });
 

@@ -34,7 +34,7 @@ bool test2() {
 
   // dispatch a kernel which reads from globalVar and stores result to table1
   extent<1> ex(GRID_SIZE);
-  completion_future fut = parallel_for_each(ex, [=](index<1>& idx) __attribute__((hc)) {
+  completion_future fut = parallel_for_each(ex, [=](hc::index<1>& idx) __attribute__((hc)) {
     tableOutput1(idx) = tableGlobal[idx[0]];
   });
 

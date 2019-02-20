@@ -25,7 +25,7 @@ public:
 
   user_functor(_Tp (&t)[N]) [[cpu, hc]] : input(t) {}
 
-  void operator() (index<1>& idx) [[hc]] {
+  void operator() (hc::index<1>& idx) [[hc]] {
     input[idx[0]] = idx[0];
   }
 };
@@ -38,7 +38,7 @@ public:
   prog(_Tp& f) [[cpu, hc]] : kernel(f) {
   }
 
-  void operator() (index<1>& idx) [[hc]] {
+  void operator() (hc::index<1>& idx) [[hc]] {
     kernel(idx);
   }
 

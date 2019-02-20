@@ -15,7 +15,7 @@ int main() {
 
   {
     // case 1: placed between parameter list and left bracket
-    auto k1 = [=] (const index<1>& idx) __attribute__((hc)) {
+    auto k1 = [=] (const hc::index<1>& idx) __attribute__((hc)) {
       av[idx] = idx[0];
     };
   
@@ -31,7 +31,7 @@ int main() {
 
   {
     // case 2: placed between lambda introducer and parameter list
-    auto k2 = [=] __attribute__((hc)) (const index<1>& idx) {
+    auto k2 = [=] __attribute__((hc)) (const hc::index<1>& idx) {
       av[idx] = idx[0];
     };
   
@@ -47,7 +47,7 @@ int main() {
 
   {
     // case 3: placed in front of lambda introducer
-    auto k3 = __attribute__((hc)) [=] (const index<1>& idx) {
+    auto k3 = __attribute__((hc)) [=] (const hc::index<1>& idx) {
       av[idx] = idx[0];
     };
   

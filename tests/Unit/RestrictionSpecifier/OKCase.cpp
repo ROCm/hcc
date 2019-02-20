@@ -32,7 +32,7 @@ int fooCPU() [[cpu]]  // OK
 
 int main(void)
 {
-  parallel_for_each(extent<1>(1), [](index<1>) [[hc]]
+  parallel_for_each(extent<1>(1), [](hc::index<1>) [[hc]]
     {
         fooAMP();
     });

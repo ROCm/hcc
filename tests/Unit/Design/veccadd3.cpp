@@ -14,7 +14,7 @@ void vecAdd(float* A, float* B, float* C, int n)
     copy(A,AA);
     copy(B,BA);	
     parallel_for_each(view, CA.get_extent(), 
-            [&AA,&BA,&CA](index<1> i) [[hc]] {
+            [&AA,&BA,&CA](hc::index<1> i) [[hc]] {
             CA[i] = AA[i] + BA[i];
     });
     copy(CA,C);

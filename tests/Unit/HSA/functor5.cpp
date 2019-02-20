@@ -21,7 +21,7 @@ using namespace hc;
 template<typename _Tp, size_t N>
 class user_functor {
 public:
-  void operator() (index<1>& idx, _Tp (&input)[N]) [[hc]] {
+  void operator() (hc::index<1>& idx, _Tp (&input)[N]) [[hc]] {
     input[idx[0]] = idx[0];
   }
 };
@@ -35,7 +35,7 @@ public:
   prog(_Tp (&t)[N], user_functor<_Tp, N>& f) [[cpu, hc]] : input(t), kernel(f) {
   }
 
-  void operator() (index<1>& idx) [[hc]] {
+  void operator() (hc::index<1>& idx) [[hc]] {
     kernel(idx, input);
   }
 

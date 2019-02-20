@@ -20,7 +20,7 @@ int main(void) {
   std::vector<T> init(vecSize, INIT);
   array<T, 1> count(vecSize, init.begin());
 
-  parallel_for_each(count.get_extent(), [=, &count](index<1> idx) [[hc]] {
+  parallel_for_each(count.get_extent(), [=, &count](hc::index<1> idx) [[hc]] {
     atomic_exchange(&count(idx), NEW_VALUE);
   });
 

@@ -23,7 +23,7 @@ int CPU_Func_1() [[cpu]]
 inline
 int CPU_Func_X()
 {
-  parallel_for_each(extent<1>(1), [](index<1>) [[hc]]
+  parallel_for_each(extent<1>(1), [](hc::index<1>) [[hc]]
   {
     // OK
   });
@@ -33,7 +33,7 @@ int CPU_Func_X()
 inline
 int CPU_Func_Y() [[cpu]]
 {
-  parallel_for_each(extent<1>(1), [](index<1>) [[hc]]
+  parallel_for_each(extent<1>(1), [](hc::index<1>) [[hc]]
   {
     // OK
   });
@@ -52,7 +52,7 @@ int main(void)
   CPU_Func_Y();
 
   auto a_lambda = [] () [[cpu]] {
-    parallel_for_each(extent<1>(1), [](index<1>) [[hc]]
+    parallel_for_each(extent<1>(1), [](hc::index<1>) [[hc]]
     {
       // OK
     });

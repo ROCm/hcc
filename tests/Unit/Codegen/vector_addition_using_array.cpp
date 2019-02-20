@@ -24,7 +24,7 @@ void vectorAdd_by_array(const std::vector<float>& vecA, const std::vector<float>
    extent<1> e(N);
 
    parallel_for_each(e,
-         [=](index<1> idx) [[hc]] { cv[idx] = av[idx] + bv[idx]; }); 
+         [=](hc::index<1> idx) [[hc]] { cv[idx] = av[idx] + bv[idx]; }); 
 }
 
 int main(void)

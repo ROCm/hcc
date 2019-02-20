@@ -67,7 +67,7 @@ bool test() {
   array<uint64_t, 1> output_GPU(GRID_SIZE);
   array<uint32_t, 1> output_GPU2(GRID_SIZE);
   extent<1> ex(GRID_SIZE);
-  parallel_for_each(ex, [&](index<1>& idx) [[hc]] {
+  parallel_for_each(ex, [&](hc::index<1>& idx) [[hc]] {
     output_GPU(idx) = __activelanemask_v4_b64_b1(test_GPU(idx));
     output_GPU2(idx) = __popcount_u32_b64(output_GPU(idx));
   }).wait();

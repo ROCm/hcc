@@ -26,7 +26,7 @@ bool test() {
 
   extent<1> ex(VECTOR_SIZE);
   array_view<int, 1> av(ex, table);
-  parallel_for_each(av.get_extent(), [&, av](index<1> idx) [[hc]] {
+  parallel_for_each(av.get_extent(), [&, av](hc::index<1> idx) [[hc]] {
     // capture multiple scalar types by reference
     av[idx] *= (val + val2);
   });

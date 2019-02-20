@@ -24,7 +24,7 @@ bool test__shfl(int grid_size, T arg) {
   array<T, 1> table(grid_size);
 
   // broadcast of a single value across a wavefront
-  parallel_for_each(ex, [&, arg](index<1>& idx) [[hc]] {
+  parallel_for_each(ex, [&, arg](hc::index<1>& idx) [[hc]] {
     T value = T();
     if (__lane_id() == 0)
       value = arg;
@@ -56,7 +56,7 @@ bool test__shfl2(int grid_size, int sub_wavefront_width, T arg) {
   array<T, 1> table(grid_size);
 
   // broadcast of a single value across a sub-wavefront
-  parallel_for_each(ex, [&, arg, sub_wavefront_width](index<1>& idx) [[hc]] {
+  parallel_for_each(ex, [&, arg, sub_wavefront_width](hc::index<1>& idx) [[hc]] {
     T value = T();
     unsigned int laneId = __lane_id();
     // each subsection of a wavefront would have a different test value

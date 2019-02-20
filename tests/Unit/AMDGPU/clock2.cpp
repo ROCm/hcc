@@ -17,7 +17,7 @@ int main() {
   extent<1> ex(GRID_SIZE);
 
   // launch a kernel, log current timestamp
-  parallel_for_each(ex, [&](index<1>& idx) [[hc]] {
+  parallel_for_each(ex, [&](hc::index<1>& idx) [[hc]] {
     table(idx) = __clock_u64();
     table2(idx) = __clock_u64();
   }).wait();

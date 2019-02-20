@@ -15,7 +15,7 @@ int main(void) {
   }
   array<int, 1> count(vecSize, std::begin(init));
 
-  parallel_for_each(count.get_extent(), [=, &count](index<1> idx) [[hc]] {
+  parallel_for_each(count.get_extent(), [=, &count](hc::index<1> idx) [[hc]] {
     atomic_fetch_xor(&count(idx), 1);
   });
 
