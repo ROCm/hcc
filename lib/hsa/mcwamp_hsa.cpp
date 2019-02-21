@@ -1589,30 +1589,43 @@ public:
         return isEmpty;
     };
 
-
+    // Drain the asyncOps vector
+    // Examine all the valid ops in the asyncOps vector,
+    // make sure they are completed and then shrink the 
+    // asyncOps vector backe to zero
     void drain() {
+
+      // keep going through the asyncOps vector until
+      // no valid op is found
       while (1) {
         std::shared_ptr<HSAOp> r;
         {
           bool found = false;
+
+          // lock the queue and find the first valid op
           std::lock_guard<std::recursive_mutex> lg(qmutex);
           for (int i = 0; i < asyncOps.size(); i++) {
             if (asyncOps[i] != nullptr) {
               // wait on valid futures only
               std::shared_future<void>* future = asyncOps[i]->getFuture();
               if (future && future->valid()) {
+                // move the op from the vector into a temp
+                // so that we can wait outside lock
                 r = std::move(asyncOps[i]);
                 found = true;
                 break;
               }
             }
           }
-          // not more valid asyncOps
+          // not more valid op in the asyncOps vector,
+          // shrink the asyncOps vector and leave
           if (!found) {
             asyncOps.clear();
             return;
           }
         }
+        // this will destroy the op and will wait
+        // if it hasn't been completed
         r.reset();
       }
     }
