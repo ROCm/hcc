@@ -3992,6 +3992,9 @@ void HSAQueue::dispose() override {
         // wait on all existing kernel dispatches and barriers to complete
         wait();
 
+        // clear asyncOps to trigger any lingering resource cleanup while we still hold the locks
+        asyncOps.clear();
+
         this->valid = false;
 
         // clear bufferKernelMap
