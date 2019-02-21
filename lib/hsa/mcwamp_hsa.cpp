@@ -1597,11 +1597,11 @@ public:
 
       // keep going through the asyncOps vector until
       // no valid op is found
-      while (1) {
+      bool found = false;
+      do {
         std::shared_ptr<HSAOp> r;
+        found = false;
         {
-          bool found = false;
-
           // lock the queue and find the first valid op
           std::lock_guard<std::recursive_mutex> lg(qmutex);
           for (int i = 0; i < asyncOps.size(); i++) {
@@ -1624,10 +1624,12 @@ public:
             return;
           }
         }
-        // this will destroy the op and will wait
-        // if it hasn't been completed
-        r.reset();
-      }
+        // wait for the op to complete
+        std::shared_future<void>* future = r->getFuture();
+        if (future && future->valid()) {
+          future->wait();
+        }
+      } while(found);
     }
 
     // Must retain this exact function signature here even though mode not used since virtual interface in
