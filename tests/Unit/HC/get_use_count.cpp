@@ -36,8 +36,10 @@ int main() {
 
   cf.wait();
 
-  // waiting removes the reference from the queue so we just have the one here in CF.
-  assert(cf.get_use_count() == 1);
+  // with the new lazy HCC queue op cleanup logic,
+  // waiting does not remove the reference from the queue,
+  // so we should still have the two references
+  assert(cf.get_use_count() == 2);
 
 
   return 0;
