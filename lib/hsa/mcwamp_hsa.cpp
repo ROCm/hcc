@@ -2061,15 +2061,16 @@ public:
 
         hsa_status_t status = HSA_STATUS_SUCCESS;
 
+        std::lock_guard<std::recursive_mutex> lg(qmutex);
+
         // create shared_ptr instance
         std::shared_ptr<HSABarrier> barrier = std::make_shared<HSABarrier>(this, 0, nullptr);
-        // associate the barrier with this queue
-        pushAsyncOp(barrier);
-
         // enqueue the barrier
         status = barrier.get()->enqueueAsync(release_scope);
         STATUS_CHECK(status, __LINE__);
 
+        // associate the barrier with this queue
+        pushAsyncOp(std::move(barrier));
 
         return barrier;
     }
@@ -2093,11 +2094,11 @@ public:
 
         if ((count >= 0) && (count <= HSA_BARRIER_DEP_SIGNAL_CNT)) {
 
+            std::lock_guard<std::recursive_mutex> lg(qmutex);
+
+
             // create shared_ptr instance
             std::shared_ptr<HSABarrier> barrier = std::make_shared<HSABarrier>(this, count, depOps);
-            // associate the barrier with this queue
-            pushAsyncOp(barrier);
-
             for (int i=0; i<count; i++) {
                 auto depOp = barrier->depAsyncOps[i];
                 if (depOp != nullptr) {
@@ -2151,6 +2152,8 @@ public:
             status = barrier.get()->enqueueAsync(fenceScope);
             STATUS_CHECK(status, __LINE__);
 
+            // associate the barrier with this queue
+            pushAsyncOp(std::move(barrier));
 
             return barrier;
         } else {
