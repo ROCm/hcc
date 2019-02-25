@@ -1604,8 +1604,7 @@ public:
         {
           // lock the queue and find the first valid op
           std::lock_guard<std::recursive_mutex> lg(qmutex);
-
-          for (int i = asyncOps.size()-1; i>=0; i--) {
+          for (int i = 0; i < asyncOps.size(); i++) {
             if (asyncOps[i] != nullptr) {
               // wait on valid futures only
               std::shared_future<void>* future = asyncOps[i]->getFuture();
@@ -1617,13 +1616,7 @@ public:
                 break;
               }
             }
-            else {
-              // found an nullptr in the asyncOps vector
-              // older ops should 
-              break;
-            }
           }
-
           // not more valid op in the asyncOps vector,
           // shrink the asyncOps vector and leave
           if (!found) {
@@ -1631,7 +1624,6 @@ public:
             return;
           }
         }
-
         // wait for the op to complete
         std::shared_future<void>* future = r->getFuture();
         if (future && future->valid()) {
