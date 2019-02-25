@@ -5,8 +5,6 @@ endif (HCC_RUNTIME_DEBUG)
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/../hcc_config)
 
-set(CMAKE_CXX_FLAGS "-std=c++11" )
-
 if (USE_LIBCXX)
   add_definitions(-DUSE_LIBCXX  -DLIBCXX_HEADER=${LIBCXX_HEADER})
   if (HCC_TOOLCHAIN_RHEL)
@@ -30,6 +28,7 @@ endif (USE_CODEXL_ACTIVITY_LOGGER EQUAL 1)
 
 add_executable(hcc-config hcc_config.cpp)
 
+target_compile_options(hcc-config PUBLIC "-std=c++11" )
 
 add_custom_command(TARGET hcc-config POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E create_symlink ./hcc-config ./clamp-config
