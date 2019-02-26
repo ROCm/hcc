@@ -114,7 +114,7 @@ public:
     }
 
     template <class T>
-    inline void callback_gpu(T* obj, const size_t& bytes = 0) {
+    inline void report_gpu_timestamps(T* obj, const size_t& bytes = 0) {
         if (_enabled == true) {
             const command_id_t command_id = obj->getCommandKind();
             uint64_t start = obj->getBeginTimestamp();
@@ -124,7 +124,7 @@ public:
     }
 
     template <class T>
-    inline void callback_sys(T* obj, const size_t& bytes = 0) {
+    inline void report_system_ticks(T* obj, const size_t& bytes = 0) {
         if (_enabled == true) {
             const command_id_t command_id = obj->getCommandKind();
             uint64_t start = obj->getStartTick();
@@ -185,8 +185,8 @@ class ActivityProf {
 public:
     ActivityProf(const op_id_t& op_id, const uint64_t& queue_id, const int& device_id) {}
     inline void initialize() {}
-    template <class T> inline void callback_gpu(T* obj, const size_t& bytes = 0) {}
-    template <class T> inline void callback_sys(T* obj, const size_t& bytes = 0) {}
+    template <class T> inline void report_gpu_timestamps(T* obj, const size_t& bytes = 0) {}
+    template <class T> inline void report_system_ticks(T* obj, const size_t& bytes = 0) {}
     inline bool is_enabled() { return false; }
 };
 

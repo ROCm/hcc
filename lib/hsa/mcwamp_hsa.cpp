@@ -4699,7 +4699,7 @@ HSADispatch::dispose() {
         //LOG_PROFILE(this, start, end, "kernel", kname.c_str(), std::hex << "kernel="<< kernel << " " << (kernel? kernel->kernelCodeHandle:0x0) << " aql.kernel_object=" << aql.kernel_object << std::dec);
         LOG_PROFILE(this, start, end, "kernel", getKernelName(), "");
     }
-    _activity_prof.callback_gpu<HSADispatch>(this);
+    _activity_prof.report_gpu_timestamps<HSADispatch>(this);
     Kalmar::ctx.releaseSignal(_signal, _signalIndex);
 
     if (future != nullptr) {
@@ -5057,7 +5057,7 @@ HSABarrier::dispose() {
         };
         LOG_PROFILE(this, start, end, "barrier", "depcnt=" + std::to_string(depCount) + ",acq=" + fenceToString(acqBits) + ",rel=" + fenceToString(relBits), depss.str())
     }
-    _activity_prof.callback_gpu<HSABarrier>(this);
+    _activity_prof.report_gpu_timestamps<HSABarrier>(this);
     Kalmar::ctx.releaseSignal(_signal, _signalIndex);
 
     // Release referecne to our dependent ops:
@@ -5587,7 +5587,7 @@ HSACopy::dispose() {
 
             LOG_PROFILE(this, start, end, "copy", getCopyCommandString(),  "\t" << sizeBytes << " bytes;\t" << sizeBytes/1024.0/1024 << " MB;\t" << bw << " GB/s;");
         }
-        _activity_prof.callback_gpu<HSACopy>(this, sizeBytes);
+        _activity_prof.report_gpu_timestamps<HSACopy>(this, sizeBytes);
         Kalmar::ctx.releaseSignal(_signal, _signalIndex);
     } else {
         if (HCC_PROFILE & HCC_PROFILE_TRACE) {
@@ -5596,7 +5596,7 @@ HSACopy::dispose() {
             double bw = (double)(sizeBytes)/(end-start) * (1000.0/1024.0) * (1000.0/1024.0);
             LOG_PROFILE(this, start, end, "copyslo", getCopyCommandString(),  "\t" << sizeBytes << " bytes;\t" << sizeBytes/1024.0/1024 << " MB;\t" << bw << " GB/s;");
         }
-        _activity_prof.callback_sys<HSACopy>(this, sizeBytes);
+        _activity_prof.report_system_ticks<HSACopy>(this, sizeBytes);
     }
 
     if (future != nullptr) {
