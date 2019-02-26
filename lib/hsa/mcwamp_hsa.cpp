@@ -4252,17 +4252,9 @@ HSAQueue::dispatch_hsa_kernel(const hsa_kernel_dispatch_packet_t *aql,
     pushAsyncOp(sp_dispatch);
     dispatch->setKernelName(kernelName);
 
-
-    // May be faster to create signals for each dispatch than to use markers.
-    // Perhaps could check HSA queue pointers.
-    bool needsSignal = true;
-    if (HCC_OPT_FLUSH && !HCC_PROFILE && (cf==nullptr) && !HCC_FORCE_COMPLETION_FUTURE && !HCC_SERIALIZE_KERNEL) {
-        // Only allocate a signal if the caller requested a completion_future to track status.
-        needsSignal = false;
-    };
-
-    dispatch->dispatchKernelAsync(args, argSize, needsSignal);
-
+    // We used to skip signal creation as part of HCC_OPT_FLUSH being true.
+    // However, the new asyncOps resource cleanup logic requires all async ops to have a signal.
+    dispatch->dispatchKernelAsync(args, argSize, true);
 
     if (cf) {
         *cf = hc::completion_future(sp_dispatch);
