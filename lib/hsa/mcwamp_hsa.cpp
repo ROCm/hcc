@@ -5167,8 +5167,8 @@ hsa_status_t HSACopy::hcc_memory_async_copy(Kalmar::hcCommandKind copyKind, cons
             break;
         case Kalmar::hcMemcpyDeviceToDevice:
             this->isPeerToPeer = (dstPtrInfo._acc != srcPtrInfo._acc);
-            srcAgent=copyAgent; dstAgent=copyAgent;
-
+            srcAgent = *reinterpret_cast<hsa_agent_t*>(srcPtrInfo._acc.get_hsa_agent());
+            dstAgent = *reinterpret_cast<hsa_agent_t*>(dstPtrInfo._acc.get_hsa_agent());
             /* D2D case
              * Simply pass this->src and this->dst to ROCR runtime.
              */
@@ -5192,7 +5192,7 @@ hsa_status_t HSACopy::hcc_memory_async_copy(Kalmar::hcCommandKind copyKind, cons
      *
      *     1.   Use SDMA, if the src agent is a CPU AND dst agent is a GPU.
      *     2.   Use SDMA, if the src agent is a GPU AND dst agent is a CPU.
-     *     3.   Launch a Blit kernel if the src agent is a GPU AND dst agent is a GPU.
+     *     3.   if both src and dst agents are GPU, let ROCR to decide the copy strategy.
      */
 
     DBOUT(DB_AQL, "hsa_amd_memory_async_copy("
@@ -5245,22 +5245,18 @@ hsa_status_t HSACopy::hcc_memory_async_copy_rect(Kalmar::hcCommandKind copyKind,
     void *dstPtr = nullptr;
     void *srcPtr = nullptr;
 
-    hsa_agent_t srcAgent, dstAgent;
     switch (copyKind) {
         case Kalmar::hcMemcpyHostToHost:
-            srcAgent=hostAgent; dstAgent=hostAgent;
             dstPtr = this->dst;
             srcPtr = const_cast<void*>(this->src);
             break;
         case Kalmar::hcMemcpyHostToDevice:
-            srcAgent=hostAgent; dstAgent=copyAgent;
             dstPtr = this->dst;
             srcPtr = reinterpret_cast<unsigned char*>(srcPtrInfo._devicePointer) +
                      (reinterpret_cast<unsigned char*>(const_cast<void*>(this->src)) -
                       reinterpret_cast<unsigned char*>(srcPtrInfo._hostPointer));
             break;
         case Kalmar::hcMemcpyDeviceToHost:
-            srcAgent=copyAgent; dstAgent=hostAgent;
             dstPtr = reinterpret_cast<unsigned char*>(dstPtrInfo._devicePointer) +
                      (reinterpret_cast<unsigned char*>(this->dst) -
                       reinterpret_cast<unsigned char*>(dstPtrInfo._hostPointer));
@@ -5268,7 +5264,6 @@ hsa_status_t HSACopy::hcc_memory_async_copy_rect(Kalmar::hcCommandKind copyKind,
             break;
         case Kalmar::hcMemcpyDeviceToDevice:
             this->isPeerToPeer = (dstPtrInfo._acc != srcPtrInfo._acc);
-            srcAgent=copyAgent; dstAgent=copyAgent;
             dstPtr = this->dst;
             srcPtr = const_cast<void*>(this->src);
             break;
