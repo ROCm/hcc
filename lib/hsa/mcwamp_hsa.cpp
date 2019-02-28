@@ -1614,9 +1614,22 @@ public:
                     }
                     future = nullptr;
                 }
+                else {
+                    // asyncOps queue is initialized to all nullptr.
+                    // until the queue history fills up, this condition will occur
+                    break;
+                }
             }
         }
         if (future) future->wait();
+        else {
+            DBOUTL(DB_CMD2, "HSAQueue::wait() no future, enqueued marker");
+            auto marker = EnqueueMarker(hc::no_scope);
+            std::shared_future<void>* future = marker->getFuture();
+            if (future && future->valid()) {
+                future->wait();
+            }
+        }
     }
 
     void LaunchKernel(void *ker, size_t nr_dim, size_t *global, size_t *local) override {
@@ -3983,10 +3996,14 @@ void HSAQueue::dispose() override {
         std::lock_guard<std::mutex> rl(device->rocrQueuesMutex);
         std::lock_guard<std::recursive_mutex> l(this->qmutex);
 
-        // wait on all existing kernel dispatches and barriers to complete
-        wait();
+        if (HCC_OPT_FLUSH && nextSyncNeedsSysRelease()) {
+            auto marker = EnqueueMarker(hc::system_scope);
+            DBOUTL(DB_CMD2, "HSAQueue::dispose() Sys-release needed, enqueued marker into " << *this << " to release written data " << marker);
+        }
 
         // clear asyncOps to trigger any lingering resource cleanup while we still hold the locks
+        // this implicitly waits on all remaining async ops as they destruct, including the
+        // possible marker from above
         asyncOps.clear();
 
         this->valid = false;
