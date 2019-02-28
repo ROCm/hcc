@@ -1585,6 +1585,7 @@ public:
         // Ensures younger ops have chance to complete before older ops reclaim their resources
         //
 
+        std::lock_guard<std::recursive_mutex> lg(qmutex);
 
         if (HCC_OPT_FLUSH && nextSyncNeedsSysRelease()) {
 
@@ -1600,36 +1601,20 @@ public:
             printAsyncOps(std::cerr);
         }
 
-
-        std::shared_future<void>* future = nullptr;
-        {
-            std::lock_guard<std::recursive_mutex> lg(qmutex);
-            for (int i = decrement(asyncOpsIndex), count = 0; count < asyncOps.size(); i = decrement(i), ++count) {
-                if (asyncOps[i] != nullptr) {
-                    auto asyncOp = asyncOps[i];
-                    // wait on valid futures only
-                    future = asyncOp->getFuture();
-                    if (future && future->valid()) {
-                        break;
-                    }
-                    future = nullptr;
-                }
-                else {
-                    // asyncOps queue is initialized to all nullptr.
-                    // until the queue history fills up, this condition will occur
-                    break;
-                }
-            }
-        }
-        if (future) future->wait();
-        else {
-            DBOUTL(DB_CMD2, "HSAQueue::wait() no future, enqueued marker");
-            auto marker = EnqueueMarker(hc::no_scope);
-            std::shared_future<void>* future = marker->getFuture();
+        // if youngest op doesn't have a future, enqueue a marker to add the future
+        bool need_marker = true;
+        auto youngest_op = back();
+        if (youngest_op != nullptr) {
+            auto future = youngest_op->getFuture();
             if (future && future->valid()) {
-                future->wait();
+                need_marker = false;
             }
         }
+        if (need_marker) {
+            auto marker = EnqueueMarker(hc::no_scope);
+            DBOUT(DB_CMD2, "No future found in wait, enqueued marker into " << *this << "\n");
+        }
+        back()->getFuture()->wait();
     }
 
     void LaunchKernel(void *ker, size_t nr_dim, size_t *global, size_t *local) override {
