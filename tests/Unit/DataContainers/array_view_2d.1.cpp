@@ -9,7 +9,7 @@ int main()
   extent<2> e(5, 2);
   {
     array_view<int, 2> av(e, v); 
-    parallel_for_each(av.get_extent(), [=](index<2> idx) [[hc]] { 
+    parallel_for_each(av.get_extent(), [=](hc::index<2> idx) [[hc]] { 
 	av[idx] -= 1; 
 	});
     assert(av.get_extent() == e);

@@ -37,7 +37,7 @@ bool test1(const user_functor& functor) {
   *accumulator = 0;
 
   extent<1> ex(SIZE);
-  parallel_for_each(ex, [=] (index<1>& idx) [[hc]] {
+  parallel_for_each(ex, [=] (hc::index<1>& idx) [[hc]] {
     long t = functor.value(idx[0]);
     terms[idx[0]] = t;
     accumulator->fetch_add(t);
@@ -76,7 +76,7 @@ bool test2(const user_functor& functor) {
   *accumulator = 0;
 
   extent<1> ex(SIZE);
-  parallel_for_each(ex, [=] (index<1>& idx) [[hc]] {
+  parallel_for_each(ex, [=] (hc::index<1>& idx) [[hc]] {
     terms[idx[0]] = functor.value(idx[0]);
     accumulator->fetch_add(terms[idx[0]]);
   });
@@ -114,7 +114,7 @@ bool test3(const user_functor& functor) {
   *accumulator = 0;
 
   extent<1> ex(SIZE);
-  parallel_for_each(ex, [=] (index<1>& idx) [[hc]] {
+  parallel_for_each(ex, [=] (hc::index<1>& idx) [[hc]] {
     long t = idx[0] + 1;
     terms[idx[0]] = t;
     accumulator->fetch_add(t);

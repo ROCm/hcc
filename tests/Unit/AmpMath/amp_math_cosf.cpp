@@ -29,13 +29,13 @@ bool test() {
   array_view<_Tp> ga(a);
   array_view<_Tp> gb(b);
   array_view<_Tp> gc(c);
-  for (index<1> i(0); i[0] < vecSize; i++) {
+  for (hc::index<1> i(0); i[0] < vecSize; i++) {
     ga[i] = dis(gen);
   }
 
   parallel_for_each(
     e,
-    [=](index<1> idx) [[hc]] {
+    [=](hc::index<1> idx) [[hc]] {
     gc[idx] = fast_math::cosf(ga[idx]);
   });
 

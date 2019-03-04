@@ -16,7 +16,7 @@ extern "C" int foo(int grid_size) {
   extent<1> ex(grid_size);
   array_view<int, 1> av(grid_size);
 
-  parallel_for_each(ex, [=](index<1>& idx) [[hc]] {
+  parallel_for_each(ex, [=](hc::index<1>& idx) [[hc]] {
     av(idx) = 1;
   }).wait();
 
@@ -34,7 +34,7 @@ extern "C" int bar(int grid_size) {
   extent<1> ex(grid_size);
   array_view<int, 1> av(grid_size);
 
-  parallel_for_each(ex, [=](index<1>& idx) [[hc]] {
+  parallel_for_each(ex, [=](hc::index<1>& idx) [[hc]] {
     av(idx) = 2;
   }).wait();
 
@@ -58,7 +58,7 @@ int baz(int grid_size) {
 
   extent<1> ex(grid_size);
   array_view<int, 1> av(grid_size);
-  parallel_for_each(ex, [=](index<1>& idx) [[hc]] {
+  parallel_for_each(ex, [=](hc::index<1>& idx) [[hc]] {
     av(idx) = 3;
   }).wait();
 

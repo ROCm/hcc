@@ -30,7 +30,7 @@ bool test() {
   int sum_cpu = 0;
 
   // test on GPU
-  parallel_for_each(extent<1>(1),[=,&l,&sum_gpu](index<1> i) [[hc]] {
+  parallel_for_each(extent<1>(1),[=,&l,&sum_gpu](hc::index<1> i) [[hc]] {
     for (int j = 0; j < 4; j++) {
       sum_gpu+=l.strings[j][0];
     }

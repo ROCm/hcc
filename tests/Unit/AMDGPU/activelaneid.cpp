@@ -13,10 +13,10 @@
 
 #define TEST_DEBUG (0)
 
-// A test case to verify HSAIL builtin function
-// - __activelanecount_u32_b1
+// A test case to verify builtin function
+// - __activelaneid_u32
 
-// test __activelanecount_u32_b1
+// test __activelaneid_u32
 bool test() {
   using namespace hc;
   bool ret = true;
@@ -40,26 +40,24 @@ bool test() {
       }
     }
 
-    // randomly shuffle items in the block
+
     for (int j = 0; j < WAVEFRONT_SIZE * 10; ++j) {
       int k1 = int_dist(rd);
       int k2 = int_dist(rd); 
       if (k1 != k2) {
-        test[i * WAVEFRONT_SIZE + k1] ^= test[i * WAVEFRONT_SIZE + k2] ^= test[i * WAVEFRONT_SIZE + k1] ^= test[i * WAVEFRONT_SIZE + k2];
-      }
+        test[i * WAVEFRONT_SIZE + k1] ^= test[i * WAVEFRONT_SIZE + k2] ^= test[i * WAVEFRONT_SIZE + k1] ^= test[i * WAVEFRONT_SIZE + k2];     }
     }
+
   }
 
+#if TEST_DEBUG
   for (int i = 0; i < WAVEFRONT_SIZE; ++i) {
     for (int j = 0; j < WAVEFRONT_SIZE; ++j) {
-#if TEST_DEBUG
       std::cout << test[i * WAVEFRONT_SIZE + j] << " ";
-#endif
     }
-#if TEST_DEBUG
     std::cout << "\n";
-#endif
   }
+#endif
 
   array<uint32_t, 1> test_GPU(GRID_SIZE);
   copy(test.begin(), test_GPU);
@@ -67,16 +65,28 @@ bool test() {
   array<uint32_t, 1> output_GPU(GRID_SIZE);
   extent<1> ex(GRID_SIZE);
   parallel_for_each(ex, [&](hc::index<1>& idx) [[hc]] {
-    output_GPU(idx) = __activelanecount_u32_b1(test_GPU(idx));
+    if (test_GPU[idx] == 1)
+      output_GPU(idx) = __activelaneid_u32();
+    else
+      output_GPU(idx) = 99;
   }).wait();
 
   // verify result
   std::vector<uint32_t> output = output_GPU;
   for (int i = 0; i < WAVEFRONT_SIZE; ++i) {
+    int activeLaneID = 0;
     for (int j = 0; j < WAVEFRONT_SIZE; ++j) {
-      ret &= (output[i * WAVEFRONT_SIZE + j] == i);
+       if (test[i * WAVEFRONT_SIZE +j] == 1) 
+         ret &= (output[i * WAVEFRONT_SIZE + j] == activeLaneID++);
+       else
+	 ret &= (output[i * WAVEFRONT_SIZE +j] == 99);
+       
 #if TEST_DEBUG
-      std::cout << output[i * WAVEFRONT_SIZE + j] << " ";
+      if (!ret) {
+        std::cout << "FAILED: laneid " << activeLaneID << " "; 
+	ret = true;
+      }
+      std::cout << "i: " << i << " j: " << j << " input = " << test[i * WAVEFRONT_SIZE +j] << " j = " << j << " and output = " << output[i * WAVEFRONT_SIZE + j] << "\n";
 #endif
     }
 #if TEST_DEBUG

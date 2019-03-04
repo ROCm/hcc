@@ -72,7 +72,7 @@ float reduction_simple_1(const std::vector<float>& source)
     // back only the first element.
     array<float, 1> a(element_count, source.begin());
 
-    // Takes care of odd input elements – we could completely avoid tail sum
+    // Takes care of odd input elements ï¿½ we could completely avoid tail sum
     // if we would require source to have even number of elements.
     float tail_sum = (element_count % 2) ? source[element_count - 1] : 0;
     array_view<float, 1> av_tail_sum(1, &tail_sum);
@@ -80,7 +80,7 @@ float reduction_simple_1(const std::vector<float>& source)
     // Each thread reduces two elements.
     for (unsigned s = element_count / 2; s > 0; s /= 2)
     {
-        parallel_for_each(extent<1>(s), [=, &a] (index<1> idx) [[hc]]
+        parallel_for_each(extent<1>(s), [=, &a] (hc::index<1> idx) [[hc]]
         {
             a[idx] = a[idx] + a[idx + s];
 
@@ -127,7 +127,7 @@ float reduction_simple_2(const std::vector<float>& source)
     unsigned prev_s = element_count;
     for (unsigned s = element_count / window_width; s > 0; s /= window_width)
     {
-        parallel_for_each(extent<1>(s), [=, &a] (index<1> idx) [[hc]]
+        parallel_for_each(extent<1>(s), [=, &a] (hc::index<1> idx) [[hc]]
         {
             float sum = 0.f;
             for(unsigned i = 0; i < window_width; i++)

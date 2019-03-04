@@ -13,8 +13,12 @@
 [submodule "compiler-rt"]
 	path = compiler-rt
 	url = https://github.com/RadeonOpenCompute/compiler-rt
-    branch = amd-hcc
+        branch = amd-common
+[submodule "rocdl"]
+	path = rocdl
+	url = http://github.com/RadeonOpenCompute/ROCm-Device-Libs.git
+        branch = master
 [submodule "clang-tools-extra"]
 	path = clang-tools-extra
 	url = https://github.com/RadeonOpenCompute/clang-tools-extra.git
-	branch = amd-hcc
+	branch = amd-common

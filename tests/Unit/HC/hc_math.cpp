@@ -38,7 +38,7 @@ bool test_math_fn(const char* name, F f, G ref_f)
 
     array_view<T> table(grid_sz);
 
-    parallel_for_each(table.get_extent(), [=](const index<1>& idx) __HC__ {
+    parallel_for_each(table.get_extent(), [=](const hc::index<1>& idx) __HC__ {
        table[idx] = f(static_cast<T>(idx[0] + 1));
     });
 

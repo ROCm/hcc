@@ -33,7 +33,7 @@ void transpose_simple(const array_view<const _value_type, 2>& data,
   assert(data.get_extent() == transpose(data_transpose.get_extent()));
 
   data_transpose.discard_data();
-  parallel_for_each(data.get_extent(), [=] (index<2> idx) [[hc]] {
+  parallel_for_each(data.get_extent(), [=] (hc::index<2> idx) [[hc]] {
     data_transpose[transpose(idx)] = data[idx];
   });
 }
@@ -219,8 +219,8 @@ void transpose_tiled_truncate_option_b(
   tiled_extent<2> e_truncated(e_tiled.truncate());
 
   // Transform matrix to be multiple of 16*16 and transpose.
-  auto b  = data.section(index<2>(0,0), e_truncated);
-  auto b_t = data_transpose.section(index<2>(0,0),
+  auto b  = data.section(hc::index<2>(0,0), e_truncated);
+  auto b_t = data_transpose.section(hc::index<2>(0,0),
                  transpose(static_cast<extent<2>>(e_truncated)));
   transpose_tiled_even<_value_type, _tile_size>(b, b_t);
 

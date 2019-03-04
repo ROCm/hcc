@@ -57,7 +57,7 @@ bool test() {
 
   extent<1> ex(VECTOR_SIZE);
   array_view<int, 1> av(ex, table);
-  parallel_for_each(av.get_extent(), [&, av](index<1> idx) [[hc]] {
+  parallel_for_each(av.get_extent(), [&, av](hc::index<1> idx) [[hc]] {
     // capture multitple POD types by reference
     av[idx] *= ((p.foo + p.bar) + (p2.foo + p2.bar + p2.baz) + (p3.foo + p3.bar + p3.baz + p3.qux));
   });

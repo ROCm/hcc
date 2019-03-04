@@ -27,7 +27,7 @@ bool test() {
   int val2 = rand() % 15 + 1;
 
   extent<1> ex(VECTOR_SIZE);
-  parallel_for_each(ex, [&](index<1> idx) [[hc]] {
+  parallel_for_each(ex, [&](hc::index<1> idx) [[hc]] {
     // capture multiple scalar types by reference
     table[idx[0]] += table2[idx[0]];
   });

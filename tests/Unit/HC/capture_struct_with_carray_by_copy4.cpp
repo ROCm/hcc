@@ -186,7 +186,7 @@ bool test() {
 
   av.copy(data, data_d, N * sizeof(T));
 
-  parallel_for_each(extent<1>(N), [=](index<1> idx) [[hc]] {
+  parallel_for_each(extent<1>(N), [=](hc::index<1> idx) [[hc]] {
                       data_d[idx[0]] = f.table[idx[0]] + T(999);
                     });
 

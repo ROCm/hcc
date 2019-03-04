@@ -17,7 +17,7 @@ bool test() {
 
   int width = 0;
 
-  auto k = [&width] (const index<1>& idx) [[hc]] {
+  auto k = [&width] (const hc::index<1>& idx) [[hc]] {
     width = sizeof(T);
   };
 
