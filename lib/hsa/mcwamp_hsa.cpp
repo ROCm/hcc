@@ -2157,7 +2157,7 @@ public:
     void copy_ext(const void *src, void *dst, size_t size_bytes, hc::hcCommandKind copyDir, const hc::AmPointerInfo &srcPtrInfo, const hc::AmPointerInfo &dstPtrInfo,
                   const Kalmar::KalmarDevice *copyDevice, bool forceUnpinnedCopy) override ;
 
-    int copy2d_ext(const void *src, void *dst, size_t width, size_t height, size_t srcPitch, size_t dstPitch, hc::hcCommandKind copyDir, const hc::AmPointerInfo &srcPtrInfo, const hc::AmPointerInfo &dstPtrInfo, const Kalmar::KalmarDevice *copyDevice, bool forceUnpinnedCopy);
+    bool copy2d_ext(const void *src, void *dst, size_t width, size_t height, size_t srcPitch, size_t dstPitch, hc::hcCommandKind copyDir, const hc::AmPointerInfo &srcPtrInfo, const hc::AmPointerInfo &dstPtrInfo, const Kalmar::KalmarDevice *copyDevice, bool forceUnpinnedCopy);
 
     void copy_ext(const void *src, void *dst, size_t size_bytes, hc::hcCommandKind copyDir, const hc::AmPointerInfo &srcPtrInfo, const hc::AmPointerInfo &dstPtrInfo, bool foo) override ;
 
@@ -4117,8 +4117,8 @@ void HSAQueue::copy_ext(const void *src, void *dst, size_t size_bytes, hc::hcCom
     copy_ext(src, dst, size_bytes, copyDir, srcPtrInfo, dstPtrInfo, copyDevice);
 }
 
-int HSAQueue::copy2d_ext(const void *src, void *dst, size_t width, size_t height, size_t srcPitch, size_t dstPitch, hc::hcCommandKind copyDir, const hc::AmPointerInfo &srcPtrInfo, const hc::AmPointerInfo &dstPtrInfo, const Kalmar::KalmarDevice *copyDevice, bool forceUnpinnedCopy) { 
-    int retStatus = 0;
+bool HSAQueue::copy2d_ext(const void *src, void *dst, size_t width, size_t height, size_t srcPitch, size_t dstPitch, hc::hcCommandKind copyDir, const hc::AmPointerInfo &srcPtrInfo, const hc::AmPointerInfo &dstPtrInfo, const Kalmar::KalmarDevice *copyDevice, bool forceUnpinnedCopy) { 
+    bool retStatus = true;
     this->wait();
 
 
@@ -4131,7 +4131,7 @@ int HSAQueue::copy2d_ext(const void *src, void *dst, size_t width, size_t height
 
     delete(copyCommand);
     if(status != HSA_STATUS_SUCCESS)
-        retStatus = -1;
+        retStatus = false;
 
     return retStatus;
 };
