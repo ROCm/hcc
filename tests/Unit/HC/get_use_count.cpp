@@ -39,7 +39,7 @@ int main() {
   // with the new lazy HCC queue op cleanup logic,
   // waiting does not remove the reference from the queue,
   // so we should still have the two references
-  assert(cf.get_use_count() == 2);
+  assert(cf.get_use_count() == 1);
 
 
   return 0;
