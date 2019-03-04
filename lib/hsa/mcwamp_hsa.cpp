@@ -5341,6 +5341,8 @@ HSACopy::enqueueAsyncCopyCommand(const Kalmar::HSADevice *copyDevice, const hc::
 
         auto fenceScope = (hsaQueue()->nextSyncNeedsSysRelease()) ? hc::system_scope : hc::no_scope;
 
+        // we must set the copy device prior to hcc_memory_async_copy so that detectStreamDeps resolves properly
+        this->copyDevice = copyDevice;
         depAsyncOp = std::static_pointer_cast<HSAOp> (hsaQueue()->detectStreamDeps(this->getCommandKind(), this));
         if (depAsyncOp) {
             depSignal = * (static_cast <hsa_signal_t*> (depAsyncOp->getNativeHandle()));
