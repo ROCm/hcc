@@ -14,7 +14,7 @@ int main() {
   // CHECK-LABEL: define weak_odr amdgpu_kernel void @"_ZZ4mainEN3$_019__cxxamp_trampolineEPjii"
   // CHECK-SAME:({{[^)]*}}){{[^#]*}}#[[ATTR0:[0-9]+]]
   // CHECK: attributes #[[ATTR0]] = {{{.*}}"amdgpu-flat-work-group-size"="1,10" "amdgpu-max-work-group-dim"="10,1,1" "amdgpu-waves-per-eu"="5,6"
-  auto k = [&](index<1>& idx) [[hc]]
+  auto k = [&](hc::index<1>& idx) [[hc]]
                               [[hc_waves_per_eu(5,6)]]
                               [[hc_flat_workgroup_size(1,10)]]
                               [[hc_max_workgroup_dim(10,1,1)]]{

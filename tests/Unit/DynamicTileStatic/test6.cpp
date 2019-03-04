@@ -22,8 +22,8 @@ bool test() {
     tile_static int lds1[TILE_SIZE];
 
     // obtain workitem absolute index and workgroup index
-    index<1> global = tidx.global;
-    index<1> local = tidx.local;
+    hc::index<1> global = tidx.global;
+    hc::index<1> local = tidx.local;
 
     // fetch the address of a variable in group segment
     unsigned char* ptr = (unsigned char*)&lds1[local[0]];

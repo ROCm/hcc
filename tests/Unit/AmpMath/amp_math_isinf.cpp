@@ -21,7 +21,7 @@ int main(void) {
 
   parallel_for_each(
     e,
-    [=](index<1> idx) [[hc]] {
+    [=](hc::index<1> idx) [[hc]] {
     out[idx] = fast_math::isinf(6.5f/in[idx]);
   });
 

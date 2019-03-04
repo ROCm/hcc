@@ -21,7 +21,7 @@ int main()
     array_view<int> read_scalar{1};
     array_view<int> read_array(array_size);
 
-    parallel_for_each(hc::extent<1>{1}, [=](index<1>) [[hc]] {
+    parallel_for_each(hc::extent<1>{1}, [=](hc::index<1>) [[hc]] {
         read_scalar[0] = global_scalar;
         for (auto i = 0u; i != array_size; ++i) read_array[i] = global_array[i];
     });
@@ -32,7 +32,7 @@ int main()
     }
 
     #if false // 10/09/2017 - GPU writes to globals are not correctly observed.
-        parallel_for_each(hc::extent<1>{1}, [=](index<1>) [[hc]] {
+        parallel_for_each(hc::extent<1>{1}, [=](hc::index<1>) [[hc]] {
             ++global_scalar;
             for (auto&& x : global_array) ++x;
         }).wait();

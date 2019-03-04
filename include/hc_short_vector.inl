@@ -170,11 +170,11 @@ typedef unorm16 unorm_16;
 template<typename SCALAR_TYPE, int SIZE> 
 struct short_vector {
 #if !__HCC_AMP__
-  typedef typename __vector<SCALAR_TYPE,SIZE>::type type;
+  typedef typename __vector<SCALAR_TYPE,SIZE>::__scalartype_N type;
 #else
   typedef typename std::conditional<SIZE==1
                                   , SCALAR_TYPE
-                                  , __vector<SCALAR_TYPE,SIZE>>::type type;
+                                  , typename __vector<SCALAR_TYPE,SIZE>::__scalartype_N> type;
 #endif
 };
 

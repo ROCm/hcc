@@ -23,7 +23,7 @@ bool test() {
 
   parallel_for_each(
     e,
-    [=](index<1> idx) [[hc]] {
+    [=](hc::index<1> idx) [[hc]] {
     out[idx] = precise_math::isinf(6.5/in[idx]);
   });
 

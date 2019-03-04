@@ -21,7 +21,7 @@ bool test_reduce(int grid_size) {
   extent<1> ex(grid_size);
   array<int, 1> table(grid_size);
 
-  parallel_for_each(ex, [&](index<1>& idx) [[hc]] {
+  parallel_for_each(ex, [&](hc::index<1>& idx) [[hc]] {
     int laneId = __lane_id();
     int value = (WAVEFRONT_SIZE - 1) - laneId;
 

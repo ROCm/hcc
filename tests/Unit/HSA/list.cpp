@@ -34,7 +34,7 @@ bool test() {
   int n = nodes.size();
 
   // test on GPU
-  parallel_for_each(extent<1>(1),[=, &sum_gpu](index<1> idx) [[hc]] {
+  parallel_for_each(extent<1>(1),[=, &sum_gpu](hc::index<1> idx) [[hc]] {
     List* l = head;
     for (int i = 0; i < n; ++i) {
       sum_gpu += l->data;

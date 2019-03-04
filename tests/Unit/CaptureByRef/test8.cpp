@@ -29,7 +29,7 @@ bool test() {
   }
 
   extent<3> ex(VECTOR_SIZE, VECTOR_SIZE, VECTOR_SIZE);
-  parallel_for_each(ex, [&](index<3> idx) [[hc]] {
+  parallel_for_each(ex, [&](hc::index<3> idx) [[hc]] {
     // capture multiple 3D array types and scalar type by reference
     table2[idx[0]][idx[1]][idx[2]] = table[idx[0]][idx[1]][idx[2]] * p;
   });

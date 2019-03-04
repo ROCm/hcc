@@ -12,7 +12,7 @@ bool test_array_rank(int extval = _rank)
     extent<_rank> e(data);
     array<_type, _rank> a1(e);
 
-    parallel_for_each(e, [&](index<_rank> idx) [[hc]] {
+    parallel_for_each(e, [&](hc::index<_rank> idx) [[hc]] {
         a1[idx] = 1;
     });
 

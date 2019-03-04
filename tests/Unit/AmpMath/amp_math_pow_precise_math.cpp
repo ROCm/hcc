@@ -32,14 +32,14 @@ bool test() {
   array_view<_Tp> gc(c);
   array_view<_Tp> gd(d);
 
-  for (index<1> i(0); i[0] < vecSize; i++) {
+  for (hc::index<1> i(0); i[0] < vecSize; i++) {
     ga[i] = dis(gen);
     gb[i] = dis(gen);
   }
 
   parallel_for_each(
     e,
-    [=](index<1> idx) [[hc]] {
+    [=](hc::index<1> idx) [[hc]] {
     gc[idx] = precise_math::pow(ga[idx], gb[idx]);
   });
 

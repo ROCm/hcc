@@ -21,7 +21,7 @@ bool test_atomic_wrapinc_global() {
   array<unsigned int, 1> data2(GRID_SIZE);
   extent<1> ex(GRID_SIZE);
 
-  parallel_for_each(ex, [&](index<1>& idx) [[hc]] {
+  parallel_for_each(ex, [&](hc::index<1>& idx) [[hc]] {
     // initialize value
     data1(idx) = idx[0]; // data1 initialized as workitem index
     data2(idx) = 0;      // data2 initialized as 0
@@ -96,7 +96,7 @@ bool test_atomic_wrapdec_global() {
   array<unsigned int, 1> data2(GRID_SIZE);
   extent<1> ex(GRID_SIZE);
 
-  parallel_for_each(ex, [&](index<1>& idx) [[hc]] {
+  parallel_for_each(ex, [&](hc::index<1>& idx) [[hc]] {
     // initialize value
     data1(idx) = idx[0]; // data1 initialized as workitem index
     data2(idx) = 0;      // data2 initialized as 0

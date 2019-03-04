@@ -158,7 +158,7 @@ bool test_gpu_u32() {
 
   array<uint32_t, 1> output_GPU(GRID_SIZE);
   extent<1> ex(GRID_SIZE);
-  parallel_for_each(ex, [&](index<1>& idx) [[hc]] {
+  parallel_for_each(ex, [&](hc::index<1>& idx) [[hc]] {
     output_GPU(idx) = __firstbit_u32_u32(test_GPU(idx));
   }).wait();
 
@@ -190,7 +190,7 @@ bool test_gpu_u64() {
   copy(test.begin(), test_GPU);
   array<uint32_t, 1> output_GPU(GRID_SIZE);
   extent<1> ex(GRID_SIZE);
-  parallel_for_each(ex, [&](index<1>& idx) [[hc]] {
+  parallel_for_each(ex, [&](hc::index<1>& idx) [[hc]] {
     output_GPU(idx) = __firstbit_u32_u64(test_GPU(idx));
   }).wait();
 
@@ -223,7 +223,7 @@ bool test_gpu_s32() {
 
   array<uint32_t, 1> output_GPU(GRID_SIZE);
   extent<1> ex(GRID_SIZE);
-  parallel_for_each(ex, [&](index<1>& idx) [[hc]] {
+  parallel_for_each(ex, [&](hc::index<1>& idx) [[hc]] {
     output_GPU(idx) = __firstbit_u32_s32(test_GPU(idx));
   }).wait();
 
@@ -255,7 +255,7 @@ bool test_gpu_s64() {
   copy(test.begin(), test_GPU);
   array<uint32_t, 1> output_GPU(GRID_SIZE);
   extent<1> ex(GRID_SIZE);
-  parallel_for_each(ex, [&](index<1>& idx) [[hc]] {
+  parallel_for_each(ex, [&](hc::index<1>& idx) [[hc]] {
     output_GPU(idx) = __firstbit_u32_s64(test_GPU(idx));
   }).wait();
 
