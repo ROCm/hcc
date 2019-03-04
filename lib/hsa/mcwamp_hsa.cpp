@@ -4633,13 +4633,15 @@ HSADispatch::dispose() {
         //LOG_PROFILE(this, start, end, "kernel", kname.c_str(), std::hex << "kernel="<< kernel << " " << (kernel? kernel->kernelCodeHandle:0x0) << " aql.kernel_object=" << aql.kernel_object << std::dec);
         LOG_PROFILE(this, start, end, "kernel", getKernelName(), "");
     }
+
     _activity_prof.report_gpu_timestamps<HSADispatch>(this);
-    Kalmar::ctx.releaseSignal(_signal, _signalIndex);
 
     if (future != nullptr) {
       delete future;
       future = nullptr;
     }
+
+    Kalmar::ctx.releaseSignal(_signal, _signalIndex);
 }
 
 inline uint64_t
@@ -4993,18 +4995,20 @@ HSABarrier::dispose() {
         };
         LOG_PROFILE(this, start, end, "barrier", "depcnt=" + std::to_string(depCount) + ",acq=" + fenceToString(acqBits) + ",rel=" + fenceToString(relBits), depss.str())
     }
-    _activity_prof.report_gpu_timestamps<HSABarrier>(this);
-    Kalmar::ctx.releaseSignal(_signal, _signalIndex);
 
-    // Release referecne to our dependent ops:
+    // Release references to our dependent ops:
     for (int i=0; i<depCount; i++) {
         depAsyncOps[i] = nullptr;
     }
+
+    _activity_prof.report_gpu_timestamps<HSABarrier>(this);
 
     if (future != nullptr) {
       delete future;
       future = nullptr;
     }
+
+    Kalmar::ctx.releaseSignal(_signal, _signalIndex);
 }
 
 inline uint64_t
@@ -5496,6 +5500,10 @@ HSACopy::dispose() {
     // clear reference counts for dependent ops.
     depAsyncOp = nullptr;
 
+    if (future != nullptr) {
+        delete future;
+        future = nullptr;
+    }
 
     // HSA signal may not necessarily be allocated by HSACopy instance
     // only release the signal if it was really allocated (signalIndex >= 0)
@@ -5518,11 +5526,6 @@ HSACopy::dispose() {
             LOG_PROFILE(this, start, end, "copyslo", getCopyCommandString(),  "\t" << sizeBytes << " bytes;\t" << sizeBytes/1024.0/1024 << " MB;\t" << bw << " GB/s;");
         }
         _activity_prof.report_system_ticks<HSACopy>(this, sizeBytes);
-    }
-
-    if (future != nullptr) {
-        delete future;
-        future = nullptr;
     }
 }
 
