@@ -862,7 +862,7 @@ public:
     void syncCopyExt(hc::hcCommandKind copyDir,
                      const hc::AmPointerInfo &srcPtrInfo, const hc::AmPointerInfo &dstPtrInfo,
                      const Kalmar::HSADevice *copyDevice, bool forceUnpinnedCopy);
-    void syncCopy2DExt(hc::hcCommandKind copyDir,
+    hsa_status_t syncCopy2DExt(hc::hcCommandKind copyDir,
                      const hc::AmPointerInfo &srcPtrInfo, const hc::AmPointerInfo &dstPtrInfo,size_t width, size_t height, size_t srcPitch, size_t dstPitch,
                      const Kalmar::HSADevice *copyDevice, bool forceUnpinnedCopy);
 
@@ -2157,7 +2157,7 @@ public:
     void copy_ext(const void *src, void *dst, size_t size_bytes, hc::hcCommandKind copyDir, const hc::AmPointerInfo &srcPtrInfo, const hc::AmPointerInfo &dstPtrInfo,
                   const Kalmar::KalmarDevice *copyDevice, bool forceUnpinnedCopy) override ;
 
-    void copy2d_ext(const void *src, void *dst, size_t width, size_t height, size_t srcPitch, size_t dstPitch, hc::hcCommandKind copyDir, const hc::AmPointerInfo &srcPtrInfo, const hc::AmPointerInfo &dstPtrInfo, const Kalmar::KalmarDevice *copyDevice, bool forceUnpinnedCopy);
+    int copy2d_ext(const void *src, void *dst, size_t width, size_t height, size_t srcPitch, size_t dstPitch, hc::hcCommandKind copyDir, const hc::AmPointerInfo &srcPtrInfo, const hc::AmPointerInfo &dstPtrInfo, const Kalmar::KalmarDevice *copyDevice, bool forceUnpinnedCopy);
 
     void copy_ext(const void *src, void *dst, size_t size_bytes, hc::hcCommandKind copyDir, const hc::AmPointerInfo &srcPtrInfo, const hc::AmPointerInfo &dstPtrInfo, bool foo) override ;
 
@@ -4117,7 +4117,8 @@ void HSAQueue::copy_ext(const void *src, void *dst, size_t size_bytes, hc::hcCom
     copy_ext(src, dst, size_bytes, copyDir, srcPtrInfo, dstPtrInfo, copyDevice);
 }
 
-void HSAQueue::copy2d_ext(const void *src, void *dst, size_t width, size_t height, size_t srcPitch, size_t dstPitch, hc::hcCommandKind copyDir, const hc::AmPointerInfo &srcPtrInfo, const hc::AmPointerInfo &dstPtrInfo, const Kalmar::KalmarDevice *copyDevice, bool forceUnpinnedCopy) { 
+int HSAQueue::copy2d_ext(const void *src, void *dst, size_t width, size_t height, size_t srcPitch, size_t dstPitch, hc::hcCommandKind copyDir, const hc::AmPointerInfo &srcPtrInfo, const hc::AmPointerInfo &dstPtrInfo, const Kalmar::KalmarDevice *copyDevice, bool forceUnpinnedCopy) { 
+    int retStatus = 0;
     this->wait();
 
 
@@ -4126,10 +4127,13 @@ void HSAQueue::copy2d_ext(const void *src, void *dst, size_t width, size_t heigh
     HSACopy* copyCommand = new HSACopy(this, src, dst, width*height);
     copyCommand->setCommandKind(copyDir);
 
-    copyCommand->syncCopy2DExt(copyDir, srcPtrInfo, dstPtrInfo, width, height, srcPitch, dstPitch,copyDeviceHsa, forceUnpinnedCopy);
+    hsa_status_t status = copyCommand->syncCopy2DExt(copyDir, srcPtrInfo, dstPtrInfo, width, height, srcPitch, dstPitch,copyDeviceHsa, forceUnpinnedCopy);
 
     delete(copyCommand);
+    if(status != HSA_STATUS_SUCCESS)
+        retStatus = -1;
 
+    return retStatus;
 };
 
 std::shared_ptr<KalmarAsyncOp> HSAQueue::EnqueueAsyncCopyExt(const void* src, void* dst, size_t size_bytes,
@@ -4165,8 +4169,8 @@ std::shared_ptr<KalmarAsyncOp> HSAQueue::EnqueueAsyncCopy2dExt(const void* src, 
 
     //euqueue the async copy command
     status = copy2dCommand.get()->enqueueAsyncCopy2dCommand(width, height, srcPitch, dstPitch, copy2dDeviceHsa, srcPtrInfo, dstPtrInfo);
-    STATUS_CHECK(status, __LINE__);
-
+    if(status != HSA_STATUS_SUCCESS)
+        return nullptr;
     //associate the async copy command with this queue
     pushAsyncOp(copy2dCommand);
 
@@ -5289,7 +5293,7 @@ hsa_status_t HSACopy::hcc_memory_async_copy_rect(Kalmar::hcCommandKind copyKind,
     status = hsa_amd_memory_async_copy_rect(&dst, &dstOff, &src, &srcOff, &range, copyAgent, hsa_amd_copy_direction_t(copyKind),depSignalCnt, depSignalCnt ? depSignals:NULL,completion_signal);
 
     if (status != HSA_STATUS_SUCCESS) {
-        throw Kalmar::runtime_exception("hsa_amd_memory_async_copy_rect error", status);
+        return status;
     }
     DBOUT( DB_CMD2, "  copy setNextKernelNeedsSysAcquire(true)\n");
     hsaQueue()->setNextKernelNeedsSysAcquire(true);
@@ -5456,14 +5460,15 @@ HSACopy::enqueueAsyncCopy2dCommand(size_t width, size_t height, size_t srcPitch,
                 << "  copyAgent=" << copyDevice
                 << "\n");
         }
-        isAsync = true;
         
-        hcc_memory_async_copy_rect(getCommandKind(), copyDevice, dstPtrInfo, srcPtrInfo, width, height, srcPitch, dstPitch, depSignalCnt, depSignalCnt ? &depSignal:NULL, _signal);
+        status = hcc_memory_async_copy_rect(getCommandKind(), copyDevice, dstPtrInfo, srcPtrInfo, width, height, srcPitch, dstPitch, depSignalCnt, depSignalCnt ? &depSignal:NULL, _signal);
+        if(status != HSA_STATUS_SUCCESS)
+            return status;
     }
-    isSubmitted = true;
 
     STATUS_CHECK(status, __LINE__);
-
+    isAsync = true;
+    isSubmitted = true;
     //dynamically allocate a std::shared_future<void> object
     future = new std::shared_future<void>(std::async(std::launch::deferred, [&] {
              waitComplete();
@@ -5650,7 +5655,7 @@ HSACopy::syncCopyExt(hc::hcCommandKind copyDir, const hc::AmPointerInfo &srcPtrI
     }
 }
 
-void HSACopy::syncCopy2DExt(hc::hcCommandKind copyDir,
+hsa_status_t HSACopy::syncCopy2DExt(hc::hcCommandKind copyDir,
                      const hc::AmPointerInfo &srcPtrInfo, const hc::AmPointerInfo &dstPtrInfo,size_t width, size_t height, size_t srcPitch, size_t dstPitch,
                      const Kalmar::HSADevice *copyDevice, bool forceUnpinnedCopy)
 {
@@ -5677,8 +5682,8 @@ void HSACopy::syncCopy2DExt(hc::hcCommandKind copyDir,
         DBOUT(DB_COPY,"done!\n");
     } else {
         DBOUT(DB_COPY, "HSACopy::syncCopy2DExt(), hcc_amd_memory_async_copy_rect() returns: 0x" << std::hex << hsa_status << std::dec <<"\n");
-        throw Kalmar::runtime_exception("hcc_amd_memory_async_copy_rect error", hsa_status);
     }
+    return hsa_status;
 }
 
 // Performs a copy, potentially through a staging buffer .

@@ -301,7 +301,7 @@ public:
   virtual void copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, bool forceUnpinnedCopy) { };
   virtual void copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, 
                         const Kalmar::KalmarDevice *copyDev, bool forceUnpinnedCopy) { };
-  virtual void copy2d_ext(const void *src, void *dst, size_t width, size_t height, size_t srcPitch, size_t dstPitch, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo,const Kalmar::KalmarDevice *copyDev, bool forceUnpinnedCopy) { };
+  virtual int copy2d_ext(const void *src, void *dst, size_t width, size_t height, size_t srcPitch, size_t dstPitch, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo,const Kalmar::KalmarDevice *copyDev, bool forceUnpinnedCopy) { };
   /// cleanup internal resource
   /// this function is usually called by dtor of the implementation classes
   /// in rare occasions it may be called by other functions to ensure proper
