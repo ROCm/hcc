@@ -19,7 +19,7 @@ using namespace hc;
 // the class will call a separate functor
 class user_functor {
 public:
-  void operator() (index<1>& idx, int (&input)[SIZE]) [[hc]] {
+  void operator() (hc::index<1>& idx, int (&input)[SIZE]) [[hc]] {
     input[idx[0]] = idx[0];
   }
 };
@@ -32,7 +32,7 @@ public:
   prog(int (&t)[SIZE], user_functor& f) [[cpu, hc]] : input(t), kernel(f) {
   }
 
-  void operator() (index<1>& idx) [[hc]] {
+  void operator() (hc::index<1>& idx) [[hc]] {
     kernel(idx, input);
   }
 

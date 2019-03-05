@@ -24,7 +24,7 @@ public:
   prog(_Tp (&t)[N]) [[cpu, hc]] : input(t) {
   }
 
-  void operator() (index<1>& idx) [[hc]] {
+  void operator() (hc::index<1>& idx) [[hc]] {
     input[idx[0]] = idx[0];
   }
 

@@ -113,27 +113,45 @@ public:
         }
     }
 
-    // Activity callback routine
-    void callback(const command_id_t& command_id, const uint64_t& begin_ts, const uint64_t& end_ts, const size_t& bytes = 0) {
+    template <class T>
+    inline void report_gpu_timestamps(T* obj, const size_t& bytes = 0) {
         if (_enabled == true) {
-            activity_record_t record {
-                ACTIVITY_DOMAIN_ID,                   // domain id
-                (activity_kind_t)command_id,          // activity kind
-                _op_id,                               // operation id
-                _record_id,                           // activity correlation id
-                TimerFactory::Instance().timestamp_to_ns(begin_ts),    // begin timestamp, ns
-                TimerFactory::Instance().timestamp_to_ns(end_ts),      // end timestamp, ns
-                _device_id,                           // device id
-                _queue_id,                            // queue id
-                bytes                                 // copied data size, for memcpy
-            };
-            (CallbacksTable::get_op_callback())(_op_id, &record, CallbacksTable::get_arg());
+            const command_id_t command_id = obj->getCommandKind();
+            uint64_t start = obj->getBeginTimestamp();
+            uint64_t end   = obj->getEndTimestamp();
+            callback(command_id, start, end, bytes);
+        }
+    }
+
+    template <class T>
+    inline void report_system_ticks(T* obj, const size_t& bytes = 0) {
+        if (_enabled == true) {
+            const command_id_t command_id = obj->getCommandKind();
+            uint64_t start = obj->getStartTick();
+            uint64_t end   = obj->getSystemTicks();
+            callback(command_id, start, end, bytes);
         }
     }
 
     bool is_enabled() { return _enabled; }
 
 private:
+    // Activity callback routine
+    void callback(const command_id_t& command_id, const uint64_t& begin_ts, const uint64_t& end_ts, const size_t& bytes) {
+        activity_record_t record {
+            ACTIVITY_DOMAIN_ID,                   // domain id
+            (activity_kind_t)command_id,          // activity kind
+            _op_id,                               // operation id
+            _record_id,                           // activity correlation id
+            TimerFactory::Instance().timestamp_to_ns(begin_ts),    // begin timestamp, ns
+            TimerFactory::Instance().timestamp_to_ns(end_ts),      // end timestamp, ns
+            _device_id,                           // device id
+            _queue_id,                            // queue id
+            bytes                                 // copied data size, for memcpy
+        };
+        (CallbacksTable::get_op_callback())(_op_id, &record, CallbacksTable::get_arg());
+    }
+
     const op_id_t _op_id;
     const uint64_t& _queue_id;
     const int& _device_id;
@@ -167,8 +185,9 @@ class ActivityProf {
 public:
     ActivityProf(const op_id_t& op_id, const uint64_t& queue_id, const int& device_id) {}
     inline void initialize() {}
-    inline void callback(const command_id_t& command_id, const uint64_t& begin_ts, const uint64_t& end_ts, const size_t& bytes = 0) {}
-    bool is_enabled() { return false; }
+    template <class T> inline void report_gpu_timestamps(T* obj, const size_t& bytes = 0) {}
+    template <class T> inline void report_system_ticks(T* obj, const size_t& bytes = 0) {}
+    inline bool is_enabled() { return false; }
 };
 
 } // namespace activity_prof

@@ -14,7 +14,7 @@ bool test() {
   T init[vecSize] { 0 };
   array<T, 1> count(vecSize, std::begin(init));
 
-  parallel_for_each(count.get_extent(), [=, &count](index<1> idx) [[hc]] {
+  parallel_for_each(count.get_extent(), [=, &count](hc::index<1> idx) [[hc]] {
     for(int i = 0; i < vecSize; i++) {
       atomic_fetch_add(&count[i], T(1));
     }

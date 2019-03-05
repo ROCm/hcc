@@ -21,7 +21,7 @@ bool test_scan(int grid_size, int sub_wavefront_width) {
   extent<1> ex(grid_size);
   array<int, 1> table(grid_size);
 
-  parallel_for_each(ex, [&, sub_wavefront_width](index<1>& idx) [[hc]] {
+  parallel_for_each(ex, [&, sub_wavefront_width](hc::index<1>& idx) [[hc]] {
     int laneId = __lane_id();
     int logicalLaneId = laneId % sub_wavefront_width;
     int value = (WAVEFRONT_SIZE - 1) - laneId;

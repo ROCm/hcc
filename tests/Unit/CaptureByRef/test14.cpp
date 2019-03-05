@@ -35,7 +35,7 @@ bool test() {
   }
 
   extent<2> ex(VECTOR_SIZE, VECTOR_SIZE);
-  parallel_for_each(ex, [&](index<2> idx) [[hc]] {
+  parallel_for_each(ex, [&](hc::index<2> idx) [[hc]] {
     // capture array type, and POD type by reference
     // use member function to access POD type
     int result = 0;

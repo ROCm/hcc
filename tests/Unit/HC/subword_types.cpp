@@ -12,7 +12,7 @@ template<typename T>
 bool test_aggregate_use()
 {
     array_view<T> out{42};
-    parallel_for_each(hc::extent<1>{1}, [=](index<1>) [[hc]] {
+    parallel_for_each(hc::extent<1>{1}, [=](hc::index<1>) [[hc]] {
        T tmp[42] = {};
        for (auto i = 0u; i != out.get_extent().size(); ++i) out[i] = tmp[i];
     });
@@ -28,7 +28,7 @@ template<typename T>
 bool test_direct_use()
 {
     array_view<T> out{1};
-    parallel_for_each(hc::extent<1>{1}, [=](index<1>) [[hc]] {
+    parallel_for_each(hc::extent<1>{1}, [=](hc::index<1>) [[hc]] {
         T tmp = {};
         out[0] = tmp;
     });
@@ -42,7 +42,7 @@ bool test_nested_use()
     struct Tmp { T x; };
 
     array_view<Tmp> out{1};
-    parallel_for_each(hc::extent<1>{1}, [=](index<1>) [[hc]] {
+    parallel_for_each(hc::extent<1>{1}, [=](hc::index<1>) [[hc]] {
         Tmp tmp = {};
         out[0] = tmp;
     });

@@ -21,7 +21,7 @@ int main()
 // CHECK-NEXT:    foo();
 // CHECK-NEXT:       ^
 
-  parallel_for_each(extent<1>(1), [](index<1>) [[cpu]] {
+  parallel_for_each(extent<1>(1), [](hc::index<1>) [[cpu]] {
     foo();
   });
 // CHECK: call_amp_function_in_cpu_function_or_lambda_or_pfe.cpp:[[@LINE-2]]:8: error:  'foo':  no overloaded function has restriction specifiers that are compatible with the ambient context 'main()::(anonymous class)::operator()'

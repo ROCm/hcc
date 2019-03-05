@@ -19,8 +19,8 @@ int main(void) {
 
   extent<2> compute_domain(e_a);
   parallel_for_each(compute_domain.tile(tile_size, tile_size), [=] (tiled_index<2> tidx) [[cpu, hc]] {
-    index<2> localIdx = tidx.local;
-    index<2> globalIdx = tidx.global;
+    hc::index<2> localIdx = tidx.local;
+    hc::index<2> globalIdx = tidx.global;
     int v = 0;
 
     tile_static int localA[tile_size][tile_size];

@@ -64,7 +64,7 @@ bool test() {
 
   array<uint32_t, 1> output_GPU(GRID_SIZE);
   extent<1> ex(GRID_SIZE);
-  parallel_for_each(ex, [&](index<1>& idx) [[hc]] {
+  parallel_for_each(ex, [&](hc::index<1>& idx) [[hc]] {
     if (test_GPU[idx] == 1)
       output_GPU(idx) = __activelaneid_u32();
     else

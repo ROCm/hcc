@@ -23,7 +23,7 @@ public:
 
   user_functor(int (&t)[SIZE]) [[cpu, hc]] : input(t) {}
 
-  void operator() (index<1>& idx) [[hc]] {
+  void operator() (hc::index<1>& idx) [[hc]] {
     input[idx[0]] = idx[0];
   }
 };
@@ -35,7 +35,7 @@ public:
   prog(user_functor& f) [[cpu, hc]] : kernel(f) {
   }
 
-  void operator() (index<1>& idx) [[hc]] {
+  void operator() (hc::index<1>& idx) [[hc]] {
     kernel(idx);
   }
 

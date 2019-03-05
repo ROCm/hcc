@@ -37,7 +37,7 @@ int main() {
   array<unsigned int, 1> table(GRID_SIZE);
   extent<1> ex(GRID_SIZE);
   int i = 0;
-  auto k = [&table, i](index<1>& idx) [[hc]]{
+  auto k = [&table, i](hc::index<1>& idx) [[hc]]{
     A a;
     table(idx) = f(a, i);
   };

@@ -22,7 +22,7 @@ int main() {
   extent<1> ex(GRID_SIZE);
 
   // launch a kernel, log current hardware cycle count
-  completion_future cf = parallel_for_each(ex, [&](index<1>& idx) [[hc]] {
+  completion_future cf = parallel_for_each(ex, [&](hc::index<1>& idx) [[hc]] {
     table(idx) = __cycle_u64();
   });
 
@@ -36,8 +36,10 @@ int main() {
 
   cf.wait();
 
-  // waiting removes the reference from the queue so we just have the one here in CF.
-  assert(cf.get_use_count() == 1);
+  // with the new lazy HCC queue op cleanup logic,
+  // waiting does not remove the reference from the queue,
+  // so we should still have the two references
+  assert(cf.get_use_count() == 2);
 
 
   return 0;

@@ -44,7 +44,7 @@ bool test() {
   p.qux = rand() % 15 + 1;
 
   extent<1> ex(VECTOR_SIZE);
-  parallel_for_each(ex, [&](index<1> idx) [[hc]] {
+  parallel_for_each(ex, [&](hc::index<1> idx) [[hc]] {
     // capture array type, and an inherited type by reference
     table[idx[0]] = (p.foo * p.bar * p.baz * p.qux);
   });

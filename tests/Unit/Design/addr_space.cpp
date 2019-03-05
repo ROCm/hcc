@@ -23,13 +23,13 @@ int main(void) {
   array_view<float> ga(vecSize);
   array_view<float> gb(vecSize);
   array_view<float> gc(vecSize);
-  for (index<1> i(0); i[0] < vecSize; i++) {
+  for (hc::index<1> i(0); i[0] < vecSize; i++) {
     ga[i] = dis(gen);
   }
 
   parallel_for_each(
     e,
-    [=](index<1> idx) [[hc]] {
+    [=](hc::index<1> idx) [[hc]] {
     gc[idx] = x(&ga[idx]);
   });
 

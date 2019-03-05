@@ -27,7 +27,7 @@ bool test() {
   }
 
   extent<2> ex(VECTOR_SIZE, VECTOR_SIZE);
-  parallel_for_each(ex, [&](index<2> idx) [[hc]] {
+  parallel_for_each(ex, [&](hc::index<2> idx) [[hc]] {
     // capture multiple 2D array types and scalar type by reference
     table2[idx[0]][idx[1]] = table[idx[0]][idx[1]] * p;
   });
