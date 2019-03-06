@@ -311,7 +311,6 @@ static inline PrintfError printf(const char* format_string, All... all) [[hc,cpu
 
 #endif
 
-#ifdef HCC_ENABLE_ACCELERATOR_PRINTF
 // regex for finding format string specifiers
 static const std::regex specifierPattern("(%){1}[-+#0]*[0-9]*((.)[0-9]+){0,1}([hl]*)([diuoxXfFeEgGaAcsp]){1}");
 static const std::regex signedIntegerPattern("(%){1}[-+#0]*[0-9]*((.)[0-9]+){0,1}([hl]*)([cdi]){1}");
@@ -387,11 +386,6 @@ static inline void processPrintfPackets(PrintfPacket* packets, const unsigned in
   }
   std::flush(std::cout);
 }
-#else
-static inline void processPrintfPackets(PrintfPacket* packets, const unsigned int numPackets) {
-  return;
-}
-#endif
 
 static inline void processPrintfBuffer(PrintfPacket* gpuBuffer) {
 
