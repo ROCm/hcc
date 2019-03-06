@@ -101,9 +101,7 @@ set_target_properties(hsa-runtime64 PROPERTIES
   INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${HSA_HEADER}"
 )
 
-# If not using the integrated ROCm Device Library,
-# then the one installed on the system
-# or provided by a user
+# find device libs
 find_path(ROCM_DEVICE_LIB ocml.amdgcn.bc
   PATH_SUFFIXES
     lib
@@ -114,7 +112,7 @@ find_path(ROCM_DEVICE_LIB ocml.amdgcn.bc
 )
 
 if (NOT ROCM_DEVICE_LIB)
-  MESSAGE(FATAL_ERROR "ROCm Device Libs not found. Use -DROCM_DEVICE_LIB=<path_to_ocml.amdgcn.bc>.")
+  MESSAGE(FATAL_ERROR "ROCm Device Libs not found. Use -DROCM_DEVICE_LIB_DIR=<path_to_ocml.amdgcn.bc>.")
 endif (NOT ROCM_DEVICE_LIB)
 
 set(ROCM_DEVICE_LIB_PATHS ${ROCM_DEVICE_LIB})
