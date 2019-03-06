@@ -5462,10 +5462,8 @@ HSACopy::enqueueAsyncCopy2dCommand(size_t width, size_t height, size_t srcPitch,
         }
         
         status = hcc_memory_async_copy_rect(getCommandKind(), copyDevice, dstPtrInfo, srcPtrInfo, width, height, srcPitch, dstPitch, depSignalCnt, depSignalCnt ? &depSignal:NULL, _signal);
-        if(status != HSA_STATUS_SUCCESS) {
-            Kalmar::ctx.releaseSignal(_signal, _signalIndex);
+        if(status != HSA_STATUS_SUCCESS)
             return status;
-        }
     }
 
     STATUS_CHECK(status, __LINE__);
