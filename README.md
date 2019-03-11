@@ -10,6 +10,10 @@ The project is based on LLVM+CLANG. For more information, please visit the
 
 [https://github.com/RadeonOpenCompute/hcc/wiki][1]
 
+Deprecation Notice
+==================
+AMD is deprecating HCC to put more focus on HIP development and on other languages supporting heterogeneous compute.    We will no longer develop any new feature in HCC and we will stop maintaining HCC after its final release, which is planned for June 2019.  If your application was developed with the hc C++ API, we would encourage you to transition it to other languages supported by AMD, such as [HIP](https://github.com/ROCm-Developer-Tools/HIP) or OpenCL.    HIP and hc language share the same compiler technology, so many hc kernel language features (including inline assembly) are also available through the HIP compilation path.
+
 Download HCC
 ============
 The project now employs git submodules to manage external components it depends 
