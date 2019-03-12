@@ -524,6 +524,18 @@ public:
         return pQueue->getHSAAMRegion();
     }
 
+    /**
+     * Returns an opaque handle which points to the finegrained AM region on the HSA agent.
+     * This region can be used to allocate finegrained accelerator memory which is accessible from the 
+     * specified accelerator.
+     *
+     * @return An opaque handle of the region, if the accelerator is based
+     *         on HSA.  NULL otherwise.
+     */
+    void* get_hsa_finegrained_am_region() {
+        return pQueue->getHSAFinegrainedAMRegion();
+    }
+
 
     /**
      * Returns an opaque handle which points to the AM system region on the HSA agent.
@@ -1009,6 +1021,18 @@ public:
      */
     void* get_hsa_am_region() const {
         return get_default_view().get_hsa_am_region();
+    }
+
+    /**
+     * Returns an opaque handle which points to the finegrained AM region on the HSA agent.
+     * This region can be used to allocate finegrained accelerator memory which is accessible from the 
+     * specified accelerator.
+     *
+     * @return An opaque handle of the region, if the accelerator is based
+     *         on HSA.  NULL otherwise.
+     */
+    void* get_hsa_finegrained_am_region() const {
+        return get_default_view().get_hsa_finegrained_am_region();
     }
 
     /**
