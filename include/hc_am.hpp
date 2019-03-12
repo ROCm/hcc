@@ -11,9 +11,10 @@ typedef int am_status_t;
 #define AM_ERROR_MISC                       -1 /** Misellaneous error */
 
 // Flags for am_alloc API:
-#define amHostPinned      0x1 ///< Allocate pinned host memory accessible from all GPUs.
-#define amHostNonCoherent 0x1 ///< Allocate non-coherent pinned host memory accessible from all GPUs.
-#define amHostCoherent    0x2 ///< Allocate coherent pinned host memory accessible from all GPUs.
+#define amHostPinned        0x1 ///< Allocate pinned host memory accessible from all GPUs.
+#define amHostNonCoherent   0x1 ///< Allocate non-coherent pinned host memory accessible from all GPUs.
+#define amHostCoherent      0x2 ///< Allocate coherent pinned host memory accessible from all GPUs.
+#define amDeviceFinegrained 0x4 ///< Allocate finegrained device memory.
 
 namespace hc {
 

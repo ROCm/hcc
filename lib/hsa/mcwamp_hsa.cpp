@@ -1136,16 +1136,19 @@ struct pool_iterator
     hsa_amd_memory_pool_t _am_memory_pool;
     hsa_amd_memory_pool_t _am_host_memory_pool;
     hsa_amd_memory_pool_t _am_host_coherent_memory_pool;
+    hsa_amd_memory_pool_t _am_finegrained_memory_pool;
 
     hsa_amd_memory_pool_t _kernarg_memory_pool;
     hsa_amd_memory_pool_t _finegrained_system_memory_pool;
     hsa_amd_memory_pool_t _coarsegrained_system_memory_pool;
     hsa_amd_memory_pool_t _local_memory_pool;
+    hsa_amd_memory_pool_t _finegrained_local_memory_pool;
 
     bool        _found_kernarg_memory_pool;
     bool        _found_finegrained_system_memory_pool;
     bool        _found_local_memory_pool;
     bool        _found_coarsegrained_system_memory_pool;
+    bool        _found_finegrained_local_memory_pool;
 
     size_t _local_memory_pool_size;
 
@@ -1159,11 +1162,13 @@ pool_iterator::pool_iterator()
     _finegrained_system_memory_pool.handle=(uint64_t)-1;
     _local_memory_pool.handle=(uint64_t)-1;
     _coarsegrained_system_memory_pool.handle=(uint64_t)-1;
+    _finegrained_local_memory_pool.handle=(uint64_t)-1;
 
     _found_kernarg_memory_pool = false;
     _found_finegrained_system_memory_pool = false;
     _found_local_memory_pool = false;
     _found_coarsegrained_system_memory_pool = false;
+    _found_finegrained_local_memory_pool = false;
 
     _local_memory_pool_size = 0;
 }
@@ -1982,6 +1987,8 @@ public:
 
     void* getHSAKernargRegion() override;
 
+    void* getHSAFinegrainedAMRegion() override;
+
     bool hasHSAInterOp() override {
         return true;
     }
@@ -2382,18 +2389,33 @@ public:
         }
 
         if (segment == HSA_AMD_SEGMENT_GLOBAL) {
+          hsa_amd_memory_pool_global_flag_t flags;
+          status = hsa_amd_memory_pool_get_info(region, HSA_AMD_MEMORY_POOL_INFO_GLOBAL_FLAGS, &flags);
+          if (status != HSA_STATUS_SUCCESS) {
+            return status;
+          }
+
           size_t size = 0;
           status = hsa_amd_memory_pool_get_info(region, HSA_AMD_MEMORY_POOL_INFO_SIZE, &size);
           if (status != HSA_STATUS_SUCCESS) {
             return status;
           }
-          DBOUT(DB_INIT, "  found memory pool of GPU local memory region=" << region.handle << ", size(MB) = " << (size/(1024*1024)) << std::endl);
-          pool_iterator *ri = (pool_iterator*) (data);
-          ri->_local_memory_pool = region;
-          ri->_found_local_memory_pool = true;
-          ri->_local_memory_pool_size = size;
 
-          return HSA_STATUS_INFO_BREAK;
+          pool_iterator *ri = (pool_iterator*) (data);
+          if ((flags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_FINE_GRAINED) && (!ri->_found_finegrained_local_memory_pool)) {
+            DBOUT(DB_INIT, "  found fine grained memory pool of GPU local memory region=" << region.handle << ", size(MB) = " << (size/(1024*1024)) << std::endl);
+            ri->_finegrained_local_memory_pool = region;
+            ri->_found_finegrained_local_memory_pool = true;
+          }
+          if ((flags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_COARSE_GRAINED) && (!ri->_found_local_memory_pool)) {
+            DBOUT(DB_INIT, "  found coarse grained memory pool of GPU local memory region=" << region.handle << ", size(MB) = " << (size/(1024*1024)) << std::endl);
+            ri->_local_memory_pool = region;
+            ri->_found_local_memory_pool = true;
+            ri->_local_memory_pool_size = size;
+          }
+          if (ri->_found_finegrained_local_memory_pool && ri->_found_local_memory_pool) {
+            return HSA_STATUS_INFO_BREAK;
+          }
         }
 
         return HSA_STATUS_SUCCESS;
@@ -2918,6 +2940,10 @@ public:
     hsa_amd_memory_pool_t& getHSAAMRegion() {
         return ri._am_memory_pool;
     }
+    
+    hsa_amd_memory_pool_t& getHSAFinegrainedAMRegion() {
+        return ri._am_finegrained_memory_pool;
+    }
 
     bool hasHSAKernargRegion() const {
       return ri._found_kernarg_memory_pool;
@@ -2929,6 +2955,10 @@ public:
 
     bool hasHSACoarsegrainedRegion() const {
       return ri._found_local_memory_pool;
+    }
+    
+    bool hasHSAFinegrainedVRAMRegion() const {
+      return ri._found_finegrained_local_memory_pool;
     }
 
     bool is_peer(const Kalmar::KalmarDevice* other) override {
@@ -3957,6 +3987,9 @@ HSADevice::HSADevice(hsa_agent_t a, hsa_agent_t host, int x_accSeqNum) :
     ri._am_host_coherent_memory_pool = (ri._found_finegrained_system_memory_pool)
                                   ? ri._finegrained_system_memory_pool
                                   : ri._coarsegrained_system_memory_pool;
+
+    // No fallback for finegrained GPU memory. Applications might rely on memory type.
+    ri._am_finegrained_memory_pool = ri._finegrained_local_memory_pool;
 
     /// Query the maximum number of work-items in a workgroup
     status = hsa_agent_get_info(agent, HSA_AGENT_INFO_WORKGROUP_MAX_SIZE, &workgroup_max_size);
