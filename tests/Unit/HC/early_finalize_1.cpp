@@ -1,9 +1,7 @@
 // RUN: %hc -D_OBJ_1 %s -c -o %T/early_finalize_1.obj1.o -fno-gpu-rdc
 // RUN: %hc -D_OBJ_2 %s -c -o %T/early_finalize_1.obj2.o -fno-gpu-rdc
 // RUN: %hc -D_OBJ_3 %s -c -o %T/early_finalize_1.obj3.o -fno-gpu-rdc
-// RUN: c++ %T/early_finalize_1.obj1.o %T/early_finalize_1.obj2.o  %T/early_finalize_1.obj3.o -L %lib_output_path -lWl,-rpath=%lib_output_path -lmcwamp
-
-
+// RUN: c++ %T/early_finalize_1.obj1.o %T/early_finalize_1.obj2.o  %T/early_finalize_1.obj3.o -L %lib_output_path -Wl,-rpath=%lib_output_path -lmcwamp -o %t.out && %t.out
 
 #include <hc.hpp>
 
