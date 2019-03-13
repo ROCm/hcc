@@ -2,6 +2,7 @@ config.llvm_tools_dir = "@LLVM_TOOLS_DIR@"
 config.llvm_libs_dir = "@LLVM_LIBS_DIR@"
 config.project_src_dir = "@HCC_SOURCE_DIR@"
 config.executable_output_path = "@EXECUTABLE_OUTPUT_PATH@"
+config.library_output_path = "@LIBRARY_OUTPUT_PATH@"
 
 # gtest
 config.gtest_src_dir = "@GTEST_SRC_DIR@"
