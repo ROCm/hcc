@@ -10,6 +10,9 @@ KMDUMPLLVM="${KMDUMPLLVM:=0}"
 
 AMDGPU_OBJ_CODEGEN="${AMDGPU_OBJ_CODEGEN:=0}"
 
+# flag for function calls enabled
+AMDGPU_FUNC_CALLS="0"
+
 # inject additional GPU archs through an env var
 HCC_EXTRA_GPU_ARCH="${HCC_EXTRA_GPU_ARCH:=0}"
 
@@ -91,6 +94,10 @@ do
     AMDGPU_OBJ_CODEGEN=1
     continue
     ;;
+    --amdgpu-func-calls)
+    AMDGPU_FUNC_CALLS="1"
+    continue
+    ;;
   esac
 done
 
@@ -144,7 +151,11 @@ if [ $AMDGPU_OBJ_CODEGEN == 1 ]; then
   declare -a pids
   # for each GPU target, lower to GCN ISA in HSACO format
   for AMDGPU_TARGET in ${AMDGPU_TARGET_ARRAY[@]}; do
-    { $CLAMP_DEVICE "$KERNEL_INPUT" "$TEMP_DIR/kernel-$AMDGPU_TARGET.hsaco" --amdgpu-target=$AMDGPU_TARGET --early-finalize ; } &
+    if [ $AMDGPU_FUNC_CALLS == "1" ]; then
+      { $CLAMP_DEVICE "$KERNEL_INPUT" "$TEMP_DIR/kernel-$AMDGPU_TARGET.hsaco" --amdgpu-target=$AMDGPU_TARGET --early-finalize --amdgpu-func-calls; } &
+    else
+      { $CLAMP_DEVICE "$KERNEL_INPUT" "$TEMP_DIR/kernel-$AMDGPU_TARGET.hsaco" --amdgpu-target=$AMDGPU_TARGET --early-finalize ; } &
+    fi
 
     # error handling
     pids+=("${pids[@]}" "$!")
