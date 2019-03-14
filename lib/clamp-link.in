@@ -25,6 +25,9 @@ fi
 # enable bundle dumping
 KMDUMPBUNDLE="${KMDUMPBUNDLE:=0}"
 
+# flag for function calls enabled
+AMDGPU_FUNC_CALLS="0"
+
 BINDIR=$(dirname $0)
 LINK=$BINDIR/llvm-link
 LTO=$BINDIR/llvm-lto
@@ -163,7 +166,11 @@ _thinlto_path() {
     i=0
     for AMDGPU_TARGET in ${AMDGPU_TARGET_ARRAY[@]}
     do
-      { $CLAMP_DEVICE $KERNEL.thinlto.imported.bc $KERNEL-$AMDGPU_TARGET.isabin --amdgpu-target=$AMDGPU_TARGET; } &
+      if [ $AMDGPU_FUNC_CALLS == "1" ]; then
+        { $CLAMP_DEVICE $KERNEL.thinlto.imported.bc $KERNEL-$AMDGPU_TARGET.isabin --amdgpu-target=$AMDGPU_TARGET --amdgpu-func-calls; } &
+      else
+        { $CLAMP_DEVICE $KERNEL.thinlto.imported.bc $KERNEL-$AMDGPU_TARGET.isabin --amdgpu-target=$AMDGPU_TARGET; } &
+      fi
       # error handling
       pids=("${pids[@]}" "$!")
 
@@ -231,8 +238,11 @@ _default_path() {
   declare -a pids
   # for each GPU target, lower to GCN ISA in HSACO format
   for AMDGPU_TARGET in ${AMDGPU_TARGET_ARRAY[@]}; do
-    { $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel-$AMDGPU_TARGET.hsaco --amdgpu-target=$AMDGPU_TARGET; } &
-
+    if [ $AMDGPU_FUNC_CALLS == "1" ]; then
+      { $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel-$AMDGPU_TARGET.hsaco --amdgpu-target=$AMDGPU_TARGET --amdgpu-func-calls; } &
+    else
+      { $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel-$AMDGPU_TARGET.hsaco --amdgpu-target=$AMDGPU_TARGET; } &
+    fi
     # error handling
     pids+=("${pids[@]}" "$!")
 
@@ -299,6 +309,10 @@ do
     ######################
     --amdgpu-target=*)
     AMDGPU_TARGET_ARRAY+=("${ARG#*=}")
+    continue
+    ;;
+    --amdgpu-func-calls)
+    AMDGPU_FUNC_CALLS="1"
     continue
     ;;
     ################################################
