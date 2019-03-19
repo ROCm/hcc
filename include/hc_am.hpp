@@ -14,6 +14,7 @@ typedef int am_status_t;
 #define amHostPinned      0x1 ///< Allocate pinned host memory accessible from all GPUs.
 #define amHostNonCoherent 0x1 ///< Allocate non-coherent pinned host memory accessible from all GPUs.
 #define amHostCoherent    0x2 ///< Allocate coherent pinned host memory accessible from all GPUs.
+#define amHostUnmapped    0x4 ///< Don't map allocated pinned host memory to all GPUs. 
 
 namespace hc {
 
