@@ -282,13 +282,14 @@ auto_voidp am_aligned_alloc(std::size_t sizeBytes, hc::accelerator &acc, unsigne
                         } else {
                             hc::AmPointerInfo ampi(ptr/*hostPointer*/, ptr /*devicePointer*/, unalignedPtr, sizeBytes, acc, false/*isDevice*/, true /*isAMManaged*/);
                             g_amPointerTracker.insert(unalignedPtr,ampi);
-
-                            // Host memory is always mapped to all possible peers:
-                            auto accs = hc::accelerator::get_all();
-                            auto s2 = am_map_to_peers(ptr, accs.size(), accs.data());
-                            if (s2 != AM_SUCCESS) {
-                                hsa_amd_memory_pool_free(ptr);
-                                ptr = NULL;
+                            if(!(flags & amHostUnmapped)) {
+                                // Host memory is always mapped to all possible peers if !amHostUnmapped
+                                auto accs = hc::accelerator::get_all();
+                                auto s2 = am_map_to_peers(ptr, accs.size(), accs.data());
+                                if (s2 != AM_SUCCESS) {
+                                    hsa_amd_memory_pool_free(ptr);
+                                    ptr = NULL;
+                                }
                             }
                         }
                     } else {

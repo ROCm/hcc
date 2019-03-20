@@ -3000,7 +3000,7 @@ inline float __amdgcn_ds_permute(int index, float src) [[hc]] {
 /**
  * ds_swizzle intrinsic
  */
-extern "C" int __amdgcn_ds_swizzle(int src, int pattern) [[hc]];
+extern "C" int __amdgcn_ds_swizzle(int src, int pattern) [[hc]] __asm("llvm.amdgcn.ds.swizzle");
 inline unsigned int __amdgcn_ds_swizzle(unsigned int src, int pattern) [[hc]] {
   __u tmp; tmp.u = src;
   tmp.i = __amdgcn_ds_swizzle(tmp.i, pattern);
@@ -3017,7 +3017,7 @@ inline float __amdgcn_ds_swizzle(float src, int pattern) [[hc]] {
 /**
  * move DPP intrinsic
  */
-extern "C" int __amdgcn_move_dpp(int src, int dpp_ctrl, int row_mask, int bank_mask, bool bound_ctrl) [[hc]]; 
+extern "C" int __amdgcn_move_dpp(int src, int dpp_ctrl, int row_mask, int bank_mask, bool bound_ctrl) [[hc]] __asm("llvm.amdgcn.mov.dpp.i32");
 
 /**
  * Shift the value of src to the right by one thread within a wavefront.  
@@ -3027,15 +3027,18 @@ extern "C" int __amdgcn_move_dpp(int src, int dpp_ctrl, int row_mask, int bank_m
  * @return value of src being shifted into from the neighboring lane 
  * 
  */
-extern "C" int __amdgcn_wave_sr1(int src, bool bound_ctrl) [[hc]];
+// extern "C" int __amdgcn_wave_sr1(int src, bool bound_ctrl) [[hc]];
 inline unsigned int __amdgcn_wave_sr1(unsigned int src, bool bound_ctrl) [[hc]] {
   __u tmp; tmp.u = src;
-  tmp.i = __amdgcn_wave_sr1(tmp.i, bound_ctrl);
+  tmp.i = __amdgcn_move_dpp(tmp.i, 312, 15, 15, bound_ctrl); //__amdgcn_wave_sr1(tmp.i, bound_ctrl);
   return tmp.u;
+}
+inline int __amdgcn_wave_sr1(int src, bool bound_ctrl) [[hc]] {
+	return __amdgcn_move_dpp(src, 312, 15, 15, bound_ctrl);
 }
 inline float __amdgcn_wave_sr1(float src, bool bound_ctrl) [[hc]] {
   __u tmp; tmp.f = src;
-  tmp.i = __amdgcn_wave_sr1(tmp.i, bound_ctrl);
+  tmp.i = __amdgcn_wave_sr1(tmp.u, bound_ctrl);
   return tmp.f;
 }
 
@@ -3047,15 +3050,18 @@ inline float __amdgcn_wave_sr1(float src, bool bound_ctrl) [[hc]] {
  * @return value of src being shifted into from the neighboring lane 
  * 
  */
-extern "C" int __amdgcn_wave_sl1(int src, bool bound_ctrl) [[hc]];  
+// extern "C" int __amdgcn_wave_sl1(int src, bool bound_ctrl) [[hc]];
 inline unsigned int __amdgcn_wave_sl1(unsigned int src, bool bound_ctrl) [[hc]] {
   __u tmp; tmp.u = src;
-  tmp.i = __amdgcn_wave_sl1(tmp.i, bound_ctrl);
+  tmp.i = __amdgcn_move_dpp(tmp.i, 304, 15, 15, bound_ctrl); // __amdgcn_wave_sl1(tmp.i, bound_ctrl);
   return tmp.u;
+}
+inline unsigned int __amdgcn_wave_sl1(int src, bool bound_ctrl) [[hc]] {
+	return __amdgcn_move_dpp(src, 304, 15, 15, bound_ctrl);
 }
 inline float __amdgcn_wave_sl1(float src, bool bound_ctrl) [[hc]] {
   __u tmp; tmp.f = src;
-  tmp.i = __amdgcn_wave_sl1(tmp.i, bound_ctrl);
+  tmp.i = __amdgcn_wave_sl1(tmp.u, bound_ctrl);
   return tmp.f;
 }
 
