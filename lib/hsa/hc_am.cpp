@@ -257,7 +257,9 @@ auto_voidp am_aligned_alloc(std::size_t sizeBytes, hc::accelerator &acc, unsigne
                alloc_region = static_cast<hsa_amd_memory_pool_t*>(acc.get_hsa_am_system_region());
             } else if (flags & amHostCoherent) {
                alloc_region = static_cast<hsa_amd_memory_pool_t*>(acc.get_hsa_am_finegrained_system_region());
-            }else {
+            } else if (flags & amDeviceFinegrained) {
+               alloc_region = static_cast<hsa_amd_memory_pool_t*>(acc.get_hsa_finegrained_am_region());
+            } else {
                alloc_region = static_cast<hsa_amd_memory_pool_t*>(acc.get_hsa_am_region());
             }
 
