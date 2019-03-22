@@ -290,6 +290,14 @@ do
     IFS=$'\n' read -d '' -r -a LINES < "$REAL_PATH"
     for LINE in ${LINES[@]}
     do
+      #remove the extra colons wrapping the command
+      if [[ $LINE =~ (^[ ]*\"*)|(\"$) ]]; then
+        LINE=`echo "$LINE" | sed -e "s/^\"*//g" | sed -e "s/\"*$//g"`
+        if [ $VERBOSE == 2 ]; then
+          echo "Stripped: $LINE"
+        fi
+      fi
+
       if [ $VERBOSE == 2 ]; then
         echo "add linker command: $LINE"
       fi
