@@ -257,7 +257,9 @@ auto_voidp am_aligned_alloc(std::size_t sizeBytes, hc::accelerator &acc, unsigne
                alloc_region = static_cast<hsa_amd_memory_pool_t*>(acc.get_hsa_am_system_region());
             } else if (flags & amHostCoherent) {
                alloc_region = static_cast<hsa_amd_memory_pool_t*>(acc.get_hsa_am_finegrained_system_region());
-            }else {
+            } else if (flags & amDeviceFinegrained) {
+               alloc_region = static_cast<hsa_amd_memory_pool_t*>(acc.get_hsa_finegrained_am_region());
+            } else {
                alloc_region = static_cast<hsa_amd_memory_pool_t*>(acc.get_hsa_am_region());
             }
 
@@ -280,13 +282,14 @@ auto_voidp am_aligned_alloc(std::size_t sizeBytes, hc::accelerator &acc, unsigne
                         } else {
                             hc::AmPointerInfo ampi(ptr/*hostPointer*/, ptr /*devicePointer*/, unalignedPtr, sizeBytes, acc, false/*isDevice*/, true /*isAMManaged*/);
                             g_amPointerTracker.insert(unalignedPtr,ampi);
-
-                            // Host memory is always mapped to all possible peers:
-                            auto accs = hc::accelerator::get_all();
-                            auto s2 = am_map_to_peers(ptr, accs.size(), accs.data());
-                            if (s2 != AM_SUCCESS) {
-                                hsa_amd_memory_pool_free(ptr);
-                                ptr = NULL;
+                            if(!(flags & amHostUnmapped)) {
+                                // Host memory is always mapped to all possible peers if !amHostUnmapped
+                                auto accs = hc::accelerator::get_all();
+                                auto s2 = am_map_to_peers(ptr, accs.size(), accs.data());
+                                if (s2 != AM_SUCCESS) {
+                                    hsa_amd_memory_pool_free(ptr);
+                                    ptr = NULL;
+                                }
                             }
                         }
                     } else {

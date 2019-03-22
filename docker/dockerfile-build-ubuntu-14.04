@@ -24,8 +24,8 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
     software-properties-common \
     wget \
     python \
-    rpm \
     pkg-config \
+    rpm \
     g++-multilib \
     gcc-multilib \
     findutils \
@@ -35,7 +35,6 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
     libpci3 \
     libc++abi-dev \
     libc++-dev \
-    rocm-device-libs \
     hsa-rocr-dev && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*

@@ -76,8 +76,7 @@ LLD=$BINDIR/ld.lld
 
 
 HCC_BIN_PATH=$(dirname -- "$(readlink -f -- "$BASH_SOURCE")")
-ROCM_DEVICE_LIBS_SEARCH_PATHS="$HCC_BIN_PATH/../../lib;@ROCM_DEVICE_LIB_PATHS@"
-
+ROCM_DEVICE_LIBS_SEARCH_PATHS="$HCC_BIN_PATH/../../rocdl/lib;$HCC_BIN_PATH/../rocdl/lib;@ROCM_DEVICE_LIB_PATHS@"
 ROCM_LIB=""
 for SEARCH_PATH in $(echo $ROCM_DEVICE_LIBS_SEARCH_PATHS | tr ";" "\n")
 do
@@ -175,6 +174,10 @@ elif [ $AMDGPU_TARGET == "gfx906" ]; then
   HCC_EXTRA_ARCH_FILE=$HCC_EXTRA_LIBRARIES_GFX906
 fi
 HCC_BC_LIBS="$ROCM_LIB/hc.amdgcn.bc $ROCM_LIB/hip.amdgcn.bc $ROCM_LIB/opencl.amdgcn.bc $ROCM_LIB/ocml.amdgcn.bc $ROCM_LIB/ockl.amdgcn.bc $OCLC_ISA_VERSION_LIB $ROCM_LIB/oclc_finite_only_off.amdgcn.bc $ROCM_LIB/oclc_daz_opt_off.amdgcn.bc $ROCM_LIB/oclc_correctly_rounded_sqrt_on.amdgcn.bc $ROCM_LIB/oclc_unsafe_math_off.amdgcn.bc"
+
+if [ -f "$ROCM_LIB/oclc_wavefrontsize64_on.amdgcn.bc" ]; then
+   HCC_BC_LIBS="$HCC_BC_LIBS $ROCM_LIB/oclc_wavefrontsize64_on.amdgcn.bc"
+fi
 
 # include libraries specified through the HCC_EXTRA_LIBRARIES environment variable
 HCC_BC_LIBS="$HCC_BC_LIBS  $HCC_EXTRA_LIBRARIES $HCC_EXTRA_ARCH_FILE"
