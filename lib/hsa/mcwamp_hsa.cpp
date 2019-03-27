@@ -29,9 +29,7 @@
 #include <unistd.h>
 #include <sys/syscall.h>
 
-#ifndef USE_LIBCXX
 #include <cxxabi.h>
-#endif
 
 #include <hsa/hsa.h>
 #include <hsa/hsa_ext_finalize.h>
@@ -2759,9 +2757,7 @@ public:
             if (kernelNameFormat == 1) {
                 shortName = fun; // mangled name
             } else {
-#ifndef USE_LIBCXX
                 demangled = abi::__cxa_demangle(fun, nullptr, nullptr, &demangleStatus);
-#endif
                 shortName = demangleStatus ? fun : std::string(demangled);
                 try {
                     if (demangleStatus == 0) {
