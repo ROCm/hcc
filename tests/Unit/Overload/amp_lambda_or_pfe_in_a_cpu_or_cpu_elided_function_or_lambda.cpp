@@ -1,4 +1,6 @@
 // RUN: %cxxamp %s -o %t.out && %t.out
+// XFAIL: *
+
 #include <hc.hpp>
 using namespace hc;
 
