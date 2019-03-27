@@ -7,6 +7,7 @@
 
 #include "hc_rt_debug.h"
 #include "mcwamp_impl.hpp"
+#include "../hc2/external/elfio/elfio.hpp"
 
 #include <kalmar_runtime.h>
 
@@ -18,10 +19,8 @@
 
 #include <mutex>
 
+#include <link.h>
 #include <dlfcn.h>
-
-// Kernel bundle
-extern "C" char * kernel_bundle_source[] asm ("_binary_kernel_bundle_start") __attribute__((visibility("default")));
 
 // interface of HCC runtime implementation
 struct RuntimeImpl {
@@ -96,14 +95,6 @@ public:
       m_kernel_source(kernel_source) {}
 
   virtual bool detect() {
-    //std::cout << "Detecting " << m_name << "...";
-    // detect if kernel is available
-    if (!m_kernel_source) {
-      //std::cout << " kernel not found" << std::endl;
-      return false;
-    }
-    //std::cout << " kernel found...";
-
     void* handle = nullptr;
 
     // detect if C++AMP runtime is available and
@@ -133,7 +124,7 @@ private:
  */
 class HSAPlatformDetect : public PlatformDetect {
 public:
-  HSAPlatformDetect() : PlatformDetect("HSA", "libmcwamp_hsa.so",  kernel_bundle_source) {}
+  HSAPlatformDetect() : PlatformDetect("HSA", "libmcwamp_hsa.so", nullptr) {}
 };
 
 
@@ -274,63 +265,102 @@ struct _code_bundle {
   const char* device_binary;
 };
 
+
+template<typename P>
+inline
+ELFIO::section* find_section_if(ELFIO::elfio& reader, P p) {
+    const auto it = std::find_if(
+        reader.sections.begin(), reader.sections.end(), std::move(p));
+
+    return it != reader.sections.end() ? *it : nullptr;
+}
+
+
 static void read_code_bundles(std::vector<_code_bundle>& bundles) {
 
-  const char* bundles_data_start = (const char *)kernel_bundle_source;
+  static std::once_flag f;
+  static std::vector<std::vector<char>> blobs{};
+  static char* bundles_data_start = nullptr;
 
-  while (true) {
+  std::call_once(f, []() {
 
-    static const std::string OFFLOAD_BUNDLER_MAGIC_STR("__CLANG_OFFLOAD_BUNDLE__");
-    std::string bundle_magic(bundles_data_start, OFFLOAD_BUNDLER_MAGIC_STR.length());
-    if (!std::equal(OFFLOAD_BUNDLER_MAGIC_STR.begin(),
-                    OFFLOAD_BUNDLER_MAGIC_STR.end(),
-                    bundle_magic.begin())) return;
+    dl_iterate_phdr([](dl_phdr_info* info, std::size_t, void*) {
+      ELFIO::elfio tmp;
 
-    // skip the magic string
-    const char* bundles_data_ptr = bundles_data_start + 
-                                   OFFLOAD_BUNDLER_MAGIC_STR.length();
-    
-    // where this bundle ends
-    size_t bundle_end = 0;
+      const auto elf =
+        info->dlpi_addr ? info->dlpi_name : "/proc/self/exe";
 
-    // get number of bundles
-    uint64_t num_bundles;
-    std::memcpy(&num_bundles, bundles_data_ptr, sizeof(num_bundles));
-    bundles_data_ptr += sizeof(num_bundles);
-    for (uint64_t i = 0; i < num_bundles; ++i) {
+      if (!tmp.load(elf)) return 0;
 
-      _code_bundle b = {};
+      const auto it = find_section_if(tmp, [](const ELFIO::section* x) {
+        return x->get_name() == ".kernel";
+      });
+
+      if (!it) return 0;
+
+      blobs.emplace_back(it->get_data(), it->get_data() + it->get_size());
+
+      return 0;
+    }, nullptr);
+  });
+
+  for (auto &b : blobs) {
+
+    const char* bundles_data_start = b.data();
+
+    while (true) {
+
+      static const std::string OFFLOAD_BUNDLER_MAGIC_STR("__CLANG_OFFLOAD_BUNDLE__");
+      std::string bundle_magic(bundles_data_start, OFFLOAD_BUNDLER_MAGIC_STR.length());
+      if (!std::equal(OFFLOAD_BUNDLER_MAGIC_STR.begin(),
+                  OFFLOAD_BUNDLER_MAGIC_STR.end(),
+                  bundle_magic.begin())) return;
+
+      // skip the magic string
+      const char* bundles_data_ptr = bundles_data_start + 
+                                     OFFLOAD_BUNDLER_MAGIC_STR.length();
+
+      // where this bundle ends
+      size_t bundle_end = 0;
+
+      // get number of bundles
+      uint64_t num_bundles;
+      std::memcpy(&num_bundles, bundles_data_ptr, sizeof(num_bundles));
+      bundles_data_ptr += sizeof(num_bundles);
+      for (uint64_t i = 0; i < num_bundles; ++i) {
+
+        _code_bundle b = {};
  
-      std::memcpy(&b.offset, bundles_data_ptr, sizeof(b.offset));
-      bundles_data_ptr += sizeof(b.offset);
+        std::memcpy(&b.offset, bundles_data_ptr, sizeof(b.offset));
+        bundles_data_ptr += sizeof(b.offset);
 
-      std::memcpy(&b.size, bundles_data_ptr, sizeof(b.size));
-      bundles_data_ptr += sizeof(b.size);
+        std::memcpy(&b.size, bundles_data_ptr, sizeof(b.size));
+        bundles_data_ptr += sizeof(b.size);
 
-      std::memcpy(&b.triple_size, bundles_data_ptr, sizeof(b.triple_size));
-      bundles_data_ptr += sizeof(b.triple_size);
+        std::memcpy(&b.triple_size, bundles_data_ptr, sizeof(b.triple_size));
+        bundles_data_ptr += sizeof(b.triple_size);
 
-      b.triple = bundles_data_ptr;
-      bundles_data_ptr += b.triple_size;
+        b.triple = bundles_data_ptr;
+        bundles_data_ptr += b.triple_size;
 
-      b.device_binary = bundles_data_start + b.offset;
-      bundle_end = std::max(bundle_end, b.offset + b.size);
+        b.device_binary = bundles_data_start + b.offset;
+        bundle_end = std::max(bundle_end, b.offset + b.size);
 
-      static const std::string hcc_triple_prefix("hcc-amdgcn-amd-amdhsa--");
-      std::string triple(b.triple, b.triple_size);
-      if (std::equal(hcc_triple_prefix.begin(),
-                     hcc_triple_prefix.end(),
-                     triple.begin())) {
-                     bundles.push_back(std::move(b));
+        static const std::string hcc_triple_prefix("hcc-amdgcn-amd-amdhsa--");
+        std::string triple(b.triple, b.triple_size);
+        if (std::equal(hcc_triple_prefix.begin(),
+                       hcc_triple_prefix.end(),
+                       triple.begin())) {
+                       bundles.push_back(std::move(b));
+        }
       }
+      // bump to read the next group of bundles
+      bundles_data_start += bundle_end;
     }
-    // bump to read the next group of bundles
-    bundles_data_start += bundle_end;
   }
 }
 
 void LoadInMemoryProgram(KalmarQueue* pQueue) {
-
   static std::vector<_code_bundle> bundles;
   static std::once_flag f;
   std::call_once(f, [&](){ read_code_bundles(bundles); });
