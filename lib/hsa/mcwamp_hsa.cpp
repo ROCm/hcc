@@ -2706,6 +2706,11 @@ public:
             case hc::EF_AMDGPU_MACH_AMDGCN_GFX906 : triple.append("906"); break;
         }
 
+        unsigned sram_ecc_enabled = reader.get_flags() & hc::EF_AMDGPU_SRAM_ECC;
+        unsigned xnack_enabled = reader.get_flags() & hc::EF_AMDGPU_XNACK;
+        if (xnack_enabled) triple.append("+xnack");
+        if (sram_ecc_enabled) triple.append("+sram-ecc");
+
         const auto isa{get_isa_name_from_triple(std::move(triple))};
 
         struct isa_comp_data {
@@ -2714,7 +2719,11 @@ public:
         } co_data;
 
         status = hsa_isa_from_name(isa.c_str(), &co_data.isa_type);
-        STATUS_CHECK(status, __LINE__);
+
+        if (status != HSA_STATUS_SUCCESS) {
+          free(kernel_source);
+          return false;
+        }
 
         // Check if the code object is compatible with ISA of the agent
         co_data.is_compatible = false;
