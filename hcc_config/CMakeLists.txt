@@ -5,14 +5,6 @@ endif (HCC_RUNTIME_DEBUG)
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/../hcc_config)
 
-if (USE_LIBCXX)
-  add_definitions(-DUSE_LIBCXX  -DLIBCXX_HEADER=${LIBCXX_HEADER})
-  if (HCC_TOOLCHAIN_RHEL)
-    add_definitions(-DHCC_TOOLCHAIN_RHEL)
-  endif()
-endif (USE_LIBCXX)
-
-
 ####################
 # CodeXL Activity Logger
 ####################

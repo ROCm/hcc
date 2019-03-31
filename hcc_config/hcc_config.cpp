@@ -95,14 +95,6 @@ void cxxflags(void) {
         std::cout << " -hc";
     }
 
-    // extra compiler options and include paths if
-    // using the libc++ for C++ runtime
-#ifdef USE_LIBCXX
-    // Add include path to the libcxx headers
-    std::cout << " -I" XSTR(LIBCXX_HEADER) ;
-    std::cout << " -stdlib=libc++";
-#endif
-
     // Common options
     std::cout << " -std=c++amp";
 
@@ -150,12 +142,6 @@ void ldflags(void) {
         }
     }
 
-    // extra libraries if using libc++ for C++ runtime
-    // If using RHEL or CentOS, must also use c++abi
-#ifdef USE_LIBCXX
-    std::cout << " -stdlib=libc++";
-    std::cout << " -lc++ -lc++abi ";
-#endif
     std::cout << " -ldl -lm -lpthread";
 
     if (const char *p = getenv("TEST_CPU"))

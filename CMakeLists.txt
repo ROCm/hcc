@@ -191,34 +191,6 @@ if(USE_PROF_API EQUAL 1)
 endif()
 
 #################
-# Configure which C++ runtime to use
-# hcc will use libc++ if USE_LIBCXX is set to ON; otherwise, it will use libstdc++
-#################
-
-# if USE_LIBCXX is not explicitly set
-if( NOT DEFINED USE_LIBCXX )
-  # default to libstdc++
-  set( USE_LIBCXX "OFF" )
-
-  if( CMAKE_COMPILER_IS_GNUCXX AND (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 5.0) )
-    # If host compiler is g++, use libc++ if version is less than 5.0
-    set( USE_LIBCXX "ON" )
-  elseif( CMAKE_CXX_COMPILER_ID MATCHES "Clang" )
-    # If host compiler is clang, detect version of system g++ and use libc++ if less than 5.0
-    execute_process( COMMAND g++ -dumpversion OUTPUT_VARIABLE gplusplus_version )
-    if( gplusplus_version VERSION_LESS 5.0 )
-      set( USE_LIBCXX "ON" )
-    endif( )
-  endif( )
-endif( )
-
-# Detect libc++
-if (USE_LIBCXX)
-  find_path(LIBCXX_HEADER random PATHS /usr/local/include/c++/v1 /usr/include/c++/v1 NO_DEFAULT_PATH)
-  message( "libc++ headers found at ${LIBCXX_HEADER}" )
-endif( )
-
-#################
 # Set up version information
 #################
 
@@ -565,12 +537,6 @@ set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA
 
 set(HCC_GENERAL_DEBIAN_DEP "coreutils, g++-multilib, gcc-multilib, findutils, libelf1, libpci3, file")
 
-if ( USE_LIBCXX )
-  set(HCC_LIBCXX_DEBIAN_DEP ", libc++1, libc++-dev, libc++abi1, libc++abi-dev")
-else ( USE_LIBCXX )
-  set(HCC_LIBCXX_DEBIAN_DEP "")
-endif( USE_LIBCXX )
-
 # control the list of package dependency depending on whether this is an official release build.
 # for non-official release build, we want to relax the dependency on rocr runtime
 if (OFFICIAL_RELEASE_BUILD)
@@ -594,11 +560,6 @@ set(CPACK_RPM_PRE_UNINSTALL_SCRIPT_FILE "${PROJECT_BINARY_DIR}/packaging/debian/
 set(CPACK_RPM_PACKAGE_AUTOREQ 0)
 
 set(HCC_GENERAL_RPM_DEP "coreutils, findutils, elfutils-libelf, pciutils-libs, file, pth")
-if ( USE_LIBCXX )
-  set(HCC_LIBCXX_RPM_DEP ", libcxx, libcxxabi")
-else ( USE_LIBCXX )
-  set(HCC_LIBCXX_RPM_DEP "")
-endif( USE_LIBCXX )
 
 set(CPACK_RPM_PACKAGE_REQUIRES "${HCC_GENERAL_RPM_DEP} ${HCC_ROCR_DEP} ${HCC_LIBCXX_RPM_DEP}" )
 
