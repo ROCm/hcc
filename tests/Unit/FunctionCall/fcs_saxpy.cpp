@@ -1,4 +1,4 @@
-// RUN: %hc -hc -amdgpu-function-calls %s -o %t.out && %t.out
+// RUN: %hc -hc -hc-function-calls %s -o %t.out && %t.out
 
 #include <random>
 #include <algorithm>
