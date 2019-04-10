@@ -84,7 +84,6 @@ enum : unsigned {
   // Indicates if the xnack target feature is enabled for all code contained in
   // the object.
   EF_AMDGPU_XNACK = 0x100,
-  EF_AMDGPU_SRAM_ECC = 0x200,
 };
 
 } // namespace ELFIO
