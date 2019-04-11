@@ -1008,7 +1008,7 @@ class HSADispatch : public HSAOp {
 private:
     Kalmar::HSADevice* device;
 
-    const char *kernel_name;
+    std::string kernel_name;
     const HSAKernel* kernel;
 
     std::vector<uint8_t> arg_vec;
@@ -1028,8 +1028,10 @@ private:
 public:
     std::shared_future<void>* getFuture() override { return future; }
 
-    void setKernelName(const char *x_kernel_name) { kernel_name = x_kernel_name;};
-    const char *getKernelName() { return kernel_name ? kernel_name : (kernel ? kernel->shortKernelName.c_str() : "<unknown_kernel>"); };
+    void setKernelName(const char *x_kernel_name) { 
+      if (x_kernel_name) kernel_name = std::string(x_kernel_name);
+    };
+    const char *getKernelName() { return !kernel_name.empty() ? kernel_name.c_str() : (kernel ? kernel->shortKernelName.c_str() : "<unknown_kernel>"); };
     const char *getLongKernelName() { return (kernel ? kernel->getLongKernelName().c_str() : "<unknown_kernel>"); };
 
 
@@ -4416,7 +4418,6 @@ HSADispatch::HSADispatch(Kalmar::HSADevice* _device, Kalmar::KalmarQueue *queue,
                          const hsa_kernel_dispatch_packet_t *aql) :
     HSAOp(hc::HSA_OP_ID_DISPATCH, queue, Kalmar::hcCommandKernel),
     device(_device),
-    kernel_name(nullptr),
     kernel(_kernel),
     isDispatched(false),
     waitMode(HSA_WAIT_STATE_BLOCKED),
