@@ -223,7 +223,6 @@ if [ $KMHACKLLVM == "1" ]; then
 fi
 
 if [ $KMDUMPLLVM == "1" ]; then
-  cp $2.selected.bc ${KMDUMPDIR}/dump-$AMDGPU_TARGET.selected.bc
   cp $2.opt.bc ${KMDUMPDIR}/dump-$AMDGPU_TARGET.opt.bc
 fi
 
