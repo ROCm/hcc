@@ -6,6 +6,7 @@ endif()
 # gtest
 set(GTEST_SRC_DIR "${PROJECT_SOURCE_DIR}/utils")
 set(GTEST_INC_DIR "${PROJECT_SOURCE_DIR}/utils")
+set(CMAKE_SHARED_LINKER_FLAGS "-Wl,-z,noexecstack")
 
 # MCWAMP
 set(MCWAMP_INC_DIR "${PROJECT_SOURCE_DIR}/include")
@@ -27,7 +28,6 @@ macro(amp_target name )
   target_include_directories(${name} PRIVATE ${MCWAMP_INC_DIR})
   target_include_directories(${name} SYSTEM INTERFACE $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include>)
   target_compile_options(${name} PUBLIC -hc -fPIC)
-
   # Enable debug line info only if it's a release build and HCC_RUNTIME_DEBUG is OFF
   # Otherwise, -gline-tables-only would override other existing debug flags
   if ((NOT HCC_RUNTIME_DEBUG) AND ("${CMAKE_BUILD_TYPE}" STREQUAL "Release"))
