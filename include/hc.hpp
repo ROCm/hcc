@@ -493,6 +493,22 @@ public:
     }
 
     /**
+     * @return An opaque handle of the underlying HSA queue, if the accelerator
+     *         view is based on HSA.  NULL if otherwise.
+     *
+     *         This locks the underlying RocrQueue so that the HSA
+     *         queue cannot be stolen. The caller must eventually
+     *         perform an matching release operation.
+     */
+    void* acquire_locked_hsa_queue() {
+        return pQueue->acquireLockedHsaQueue();
+    }
+
+    void release_locked_hsa_queue() {
+        pQueue->releaseLockedHsaQueue();
+    }
+
+    /**
      * Returns an opaque handle which points to the underlying HSA agent.
      *
      * @return An opaque handle of the underlying HSA agent, if the accelerator
