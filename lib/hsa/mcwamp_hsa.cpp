@@ -1968,9 +1968,9 @@ public:
         }
     }
 
-    hsa_queue_t *acquireLockedRocrQueue();
+    void *acquireLockedHsaQueue();
 
-    void releaseLockedRocrQueue();
+    void releaseLockedHsaQueue();
 
 
     void* getHSAAgent() override;
@@ -4038,7 +4038,7 @@ Kalmar::HSADevice * HSAQueue::getHSADev() const {
     return static_cast<Kalmar::HSADevice*>(this->getDev());
 };
 
-hsa_queue_t *HSAQueue::acquireLockedRocrQueue() {
+void *HSAQueue::acquireLockedHsaQueue() {
     DBOUT(DB_LOCK, " ptr:" << this << " lock...\n");
     this->qmutex.lock();
     if (this->rocrQueue == nullptr) {
@@ -4046,12 +4046,12 @@ hsa_queue_t *HSAQueue::acquireLockedRocrQueue() {
         device->createOrstealRocrQueue(this);
     }
 
-    DBOUT (DB_QUEUE, "acquireLockedRocrQueue returned hwQueue=" << this->rocrQueue->_hwQueue << "\n");
+    DBOUT (DB_QUEUE, "acquireLockedHsaQueue returned hwQueue=" << this->rocrQueue->_hwQueue << "\n");
     assert (this->rocrQueue->_hwQueue != 0);
     return this->rocrQueue->_hwQueue;
 }
 
-void HSAQueue::releaseLockedRocrQueue()
+void HSAQueue::releaseLockedHsaQueue()
 {
 
     DBOUT(DB_LOCK, " ptr:" << this << " unlock...\n");
@@ -4551,13 +4551,13 @@ HSADispatch::dispatchKernelWaitComplete() {
 
     {
         // extract hsa_queue_t from HSAQueue
-        hsa_queue_t* rocrQueue = hsaQueue()->acquireLockedRocrQueue();
+        auto rocrQueue = reinterpret_cast<hsa_queue_t*>(hsaQueue()->acquireLockedHsaQueue());
 
         // dispatch kernel
         _wait_complete_status = dispatchKernel(rocrQueue, arg_vec.data(), arg_vec.size(), true);
         STATUS_CHECK(_wait_complete_status, __LINE__);
 
-        hsaQueue()->releaseLockedRocrQueue();
+        hsaQueue()->releaseLockedHsaQueue();
     }
 
     // wait for completion
@@ -4590,7 +4590,7 @@ HSADispatch::dispatchKernelAsync(const void *hostKernarg, int hostKernargSize, b
 
     {
         // extract hsa_queue_t from HSAQueue
-        hsa_queue_t* rocrQueue = hsaQueue()->acquireLockedRocrQueue();
+        auto rocrQueue = reinterpret_cast<hsa_queue_t*>(hsaQueue()->acquireLockedHsaQueue());
 
         // If HCC_OPT_FLUSH=1, we are not flushing to system scope after each command.
         // Set the flag so we remember to do so at next queue::wait() call.
@@ -4604,7 +4604,7 @@ HSADispatch::dispatchKernelAsync(const void *hostKernarg, int hostKernargSize, b
         status = dispatchKernel(rocrQueue, hostKernarg, hostKernargSize, allocSignal);
         STATUS_CHECK(status, __LINE__);
 
-        hsaQueue()->releaseLockedRocrQueue();
+        hsaQueue()->releaseLockedHsaQueue();
     }
 
 
@@ -4859,7 +4859,7 @@ HSABarrier::enqueueAsync(hc::memory_scope fenceScope) {
     hc::memory_scope toDoReleaseFenceScope = fenceScope;
     hc::memory_scope toDoAcquireFenceScope = _acquire_scope;
 
-    hsa_queue_t* rocrQueue = hsaQueue()->acquireLockedRocrQueue();
+    auto rocrQueue = reinterpret_cast<hsa_queue_t*>(hsaQueue()->acquireLockedHsaQueue());
 
     if ( hsaQueue()->nextSyncNeedsSysRelease() ) {
          toDoReleaseFenceScope = hc::system_scope;
@@ -4962,7 +4962,7 @@ HSABarrier::enqueueAsync(hc::memory_scope fenceScope) {
     _barrierNextKernelNeedsSysAcquire = hsaQueue()->nextKernelNeedsSysAcquire();
     _barrierNextSyncNeedsSysRelease   = hsaQueue()->nextSyncNeedsSysRelease();
 
-    hsaQueue()->releaseLockedRocrQueue();
+    hsaQueue()->releaseLockedHsaQueue();
 
     // dynamically allocate a std::shared_future<void> object
     future = new std::shared_future<void>(std::async(std::launch::deferred, [&] {

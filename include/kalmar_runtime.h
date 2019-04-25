@@ -256,6 +256,10 @@ public:
   /// Is the queue empty?  Same as getPendingAsyncOps but may be faster.
   virtual bool isEmpty() { return 0; }
 
+  /// get underlying native queue handle
+  virtual void* acquireLockedHsaQueue() { return nullptr; }
+  virtual void releaseLockedHsaQueue() { }
+
   /// get underlying native agent handle
   virtual void* getHSAAgent() { return nullptr; }
 
