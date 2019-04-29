@@ -870,7 +870,16 @@ public:
         pQueue->set_mode(mode);
         return pQueue;
     }
-  
+
+    /**
+     * Clients can use the underlying device as an identifier for the
+     * accelerator. This complies with the equality opertor below,
+     * which says that two accelerators are the same if their pDev is
+     * the same. For example, the pointer returned here is used by HIP
+     * hostcall to track all buffers allocated on the same device.
+     */
+    const void* get_raw_device() const { return pDev; };
+
     /**
      * Compares "this" accelerator with the passed accelerator object to
      * determine if they represent the same underlying device.
