@@ -66,7 +66,6 @@
 #define KERNARG_BUFFER_SIZE (512)
 
 // number of pre-allocated kernarg buffers in HSAContext
-// Not required but typically should be greater than HCC_SIGNAL_POOL_SIZE 
 // (some kernels don't allocate signals but nearly all need kernargs)
 #define KERNARG_POOL_SIZE (1024)
 
@@ -84,8 +83,6 @@ int HCC_ASYNCOPS_SIZE = (2*8192);
 //---
 // Environment variables:
 int HCC_PRINT_ENV=0;
-
-int HCC_SIGNAL_POOL_SIZE=512;
 
 int HCC_UNPINNED_COPY_MODE = UnpinnedCopyEngine::UseStaging;
 
@@ -730,7 +727,6 @@ protected:
     HSAOpCoord   _opCoord;
 
     hsa_signal_t _signal;
-    int          _signalIndex;
 
     hsa_agent_t  _agent;
 
@@ -3450,11 +3446,6 @@ class HSAContext final : public KalmarContext
 public:
     std::map<uint64_t, HSADevice *> agentToDeviceMap_;
 private:
-    /// memory pool for signals
-    std::vector<hsa_signal_t> signalPool;
-    std::vector<bool> signalPoolFlag;
-    int signalCursor;
-    std::mutex signalPoolMutex;
     /* TODO: Modify properly when supporing multi-gpu.
     When using memory pool api, each agent will only report memory pool
     which is attached with the agent itself physically, eg, GPU won't
@@ -3532,7 +3523,7 @@ public:
     void ReadHccEnv() ;
     std::ostream &getHccProfileStream() const { return *hccProfileStream; };
 
-    HSAContext() : KalmarContext(), signalPool(), signalPoolFlag(), signalCursor(0), signalPoolMutex() {
+    HSAContext() : KalmarContext() {
         host.handle = (uint64_t)-1;
 
         ReadHccEnv();
@@ -3575,131 +3566,24 @@ public:
         }
         def = Devices[first_gpu_index + HCC_DEFAULT_GPU];
 
-        signalPoolMutex.lock();
-
-        // pre-allocate signals
-        DBOUT(DB_SIG,  " pre-allocate " << HCC_SIGNAL_POOL_SIZE << " signals\n");
-        for (int i = 0; i < HCC_SIGNAL_POOL_SIZE; ++i) {
-          hsa_signal_t signal;
-          status = hsa_signal_create(1, 0, NULL, &signal);
-          STATUS_CHECK(status, __LINE__);
-          signalPool.push_back(signal);
-          signalPoolFlag.push_back(false);
-        }
-
-        signalPoolMutex.unlock();
-
         initPrintfBuffer();
 
         init_success = true;
     }
 
-    void releaseSignal(hsa_signal_t signal, int signalIndex) {
-
+    void releaseSignal(hsa_signal_t signal) {
         if (signal.handle) {
-
-            DBOUT(DB_SIG, "  releaseSignal: 0x" << std::hex << signal.handle << std::dec << " and restored value to 1\n");
-            hsa_status_t status = HSA_STATUS_SUCCESS;
-            signalPoolMutex.lock();
-
-            // restore signal to the initial value 1
-            hsa_signal_store_screlease(signal, 1);
-
-            // mark the signal pointed by signalIndex as available
-            signalPoolFlag[signalIndex] = false;
-
-            signalPoolMutex.unlock();
+            DBOUT(DB_SIG, "  releaseSignal: 0x" << std::hex << signal.handle << std::dec << "\n");
+            hsa_status_t status = hsa_signal_destroy(signal);
+            STATUS_CHECK(status, __LINE__);
         }
     }
 
-    std::pair<hsa_signal_t, int> getSignal() {
-        hsa_signal_t ret;
-
-        signalPoolMutex.lock();
-        int cursor = signalCursor;
-
-        if (signalPoolFlag[cursor] == false) {
-            // the cursor is valid, use it
-            ret = signalPool[cursor];
-
-            // set the signal as used
-            signalPoolFlag[cursor] = true;
-
-            // simply move the cursor to the next index
-            ++signalCursor;
-            if (signalCursor == signalPool.size()) signalCursor = 0;
-        } else {
-            // the cursor is not valid, sequentially find the next available slot
-            bool found = false;
-            int startingCursor = cursor;
-            do {
-                ++cursor;
-                if (cursor == signalPool.size()) cursor = 0;
-
-                if (signalPoolFlag[cursor] == false) {
-                    // the cursor is valid, use it
-                    ret = signalPool[cursor];
-
-                    // set the signal as used
-                    signalPoolFlag[cursor] = true;
-
-                    // simply move the cursor to the next index
-                    signalCursor = cursor + 1;
-                    if (signalCursor == signalPool.size()) signalCursor = 0;
-
-                    // break from the loop
-                    found = true;
-                    break;
-                }
-            } while(cursor != startingCursor); // ensure we at most scan the vector once
-
-            if (found == false) {
-                hsa_status_t status = HSA_STATUS_SUCCESS;
-
-                // increase signal pool on demand by HCC_SIGNAL_POOL_SIZE
-
-                // keep track of the size of signal pool before increasing it
-                int oldSignalPoolSize = signalPool.size();
-                int oldSignalPoolFlagSize = signalPoolFlag.size();
-                assert(oldSignalPoolSize == oldSignalPoolFlagSize);
-
-                DBOUTL(DB_RESOURCE, "Growing signal pool from " << signalPool.size() << " to " << signalPool.size() + HCC_SIGNAL_POOL_SIZE);
-
-                // increase signal pool on demand for another HCC_SIGNAL_POOL_SIZE
-                for (int i = 0; i < HCC_SIGNAL_POOL_SIZE; ++i) {
-                    hsa_signal_t signal;
-                    status = hsa_signal_create(1, 0, NULL, &signal);
-                    STATUS_CHECK(status, __LINE__);
-                    signalPool.push_back(signal);
-                    signalPoolFlag.push_back(false);
-                }
-
-                DBOUT(DB_SIG,  "grew signal pool to size=" << signalPool.size() << "\n");
-
-                assert(signalPool.size() == oldSignalPoolSize + HCC_SIGNAL_POOL_SIZE);
-                assert(signalPoolFlag.size() == oldSignalPoolFlagSize + HCC_SIGNAL_POOL_SIZE);
-
-                // set return values, after the pool has been increased
-
-                // use the first item in the newly allocated pool
-                cursor = oldSignalPoolSize;
-
-                // access the new item through the newly assigned cursor
-                ret = signalPool[cursor];
-
-                // mark the item as used
-                signalPoolFlag[cursor] = true;
-
-                // simply move the cursor to the next index
-                signalCursor = cursor + 1;
-                if (signalCursor == signalPool.size()) signalCursor = 0;
-
-                found = true;
-            }
-        }
-
-        signalPoolMutex.unlock();
-        return std::make_pair(ret, cursor);
+    hsa_signal_t getSignal() {
+        hsa_signal_t signal;
+        hsa_status_t status = hsa_signal_create(1, 0, NULL, &signal);
+        STATUS_CHECK(status, __LINE__);
+        return signal;
     }
 
     ~HSAContext() {
@@ -3726,20 +3610,6 @@ public:
             delete dev;
         Devices.clear();
         def = nullptr;
-
-        signalPoolMutex.lock();
-
-        // deallocate signals in the pool
-        for (int i = 0; i < signalPool.size(); ++i) {
-            hsa_signal_t signal;
-            status = hsa_signal_destroy(signalPool[i]);
-            STATUS_CHECK(status, __LINE__);
-        }
-
-        signalPool.clear();
-        signalPoolFlag.clear();
-
-        signalPoolMutex.unlock();
 
         // shutdown HSA runtime
         status = hsa_shut_down();
@@ -3834,8 +3704,6 @@ void HSAContext::ReadHccEnv()
     GET_ENV_INT(HCC_OPT_FLUSH, "Perform system-scope acquire/release only at CPU sync boundaries (rather than after each kernel)");
     GET_ENV_INT(HCC_FORCE_CROSS_QUEUE_FLUSH, "create_blocking_marker will force need for sys acquire (0x1) and release (0x2) queue where the marker is created. 0x3 sets need for both flags.");
     GET_ENV_INT(HCC_MAX_QUEUES, "Set max number of HSA queues this process will use.  accelerator_views will share the allotted queues and steal from each other as necessary");
-
-    GET_ENV_INT(HCC_SIGNAL_POOL_SIZE, "Number of pre-allocated HSA signals.  Signals are precious resource so manage carefully");
 
     GET_ENV_INT(HCC_ASYNCOPS_SIZE, "Number of HSA operations to allow prior to resource cleanup.");
 
@@ -4604,13 +4472,10 @@ HSADispatch::dispatchKernel(hsa_queue_t* lockedHsaQueue, const void *hostKernarg
         /*
          * Create a signal to wait for the dispatch to finish.
          */
-        std::pair<hsa_signal_t, int> ret = Kalmar::ctx.getSignal();
-        _signal = ret.first;
-        _signalIndex = ret.second;
+        _signal = Kalmar::ctx.getSignal();
         q_aql->completion_signal = _signal;
     } else {
         _signal.handle = 0;
-        _signalIndex = -1;
     }
 
     // Lastly copy in the header:
@@ -4784,7 +4649,7 @@ HSADispatch::dispose() {
       future = nullptr;
     }
 
-    Kalmar::ctx.releaseSignal(_signal, _signalIndex);
+    Kalmar::ctx.releaseSignal(_signal);
 }
 
 inline uint64_t
@@ -5046,10 +4911,7 @@ HSABarrier::enqueueAsync(hc::memory_scope fenceScope) {
     }
 
     // Create a signal to wait for the barrier to finish.
-    std::pair<hsa_signal_t, int> ret = Kalmar::ctx.getSignal();
-    _signal = ret.first;
-    _signalIndex = ret.second;
-
+    _signal = Kalmar::ctx.getSignal();
 
     // setup header
     header = HSA_PACKET_TYPE_BARRIER_AND << HSA_PACKET_HEADER_TYPE;
@@ -5151,7 +5013,7 @@ HSABarrier::dispose() {
       future = nullptr;
     }
 
-    Kalmar::ctx.releaseSignal(_signal, _signalIndex);
+    Kalmar::ctx.releaseSignal(_signal);
 }
 
 inline uint64_t
@@ -5179,8 +5041,6 @@ HSAOpCoord::HSAOpCoord(Kalmar::HSAQueue *queue) :
 HSAOp::HSAOp(hc::HSAOpId id, Kalmar::KalmarQueue *queue, hc::hcCommandKind commandKind) :
     KalmarAsyncOp(queue, commandKind),
     _opCoord(static_cast<Kalmar::HSAQueue*> (queue)),
-
-    _signalIndex(-1),
     _agent(static_cast<Kalmar::HSADevice*>(hsaQueue()->getDev())->getAgent()),
     _dependency_chain_length(0),
     _activity_prof(id, _opCoord._queueId, _opCoord._deviceId)
@@ -5347,9 +5207,7 @@ hsa_status_t HSACopy::hcc_memory_async_copy(Kalmar::hcCommandKind copyKind, cons
     hsa_signal_t depSignal = { .handle = 0x0 };
     {
         // Create a signal to wait for the async copy command to finish.
-        std::pair<hsa_signal_t, int> ret = Kalmar::ctx.getSignal();
-        _signal = ret.first;
-        _signalIndex = ret.second;
+        _signal = Kalmar::ctx.getSignal();
 
         if (!hsaQueue()->nextSyncNeedsSysRelease()) {
             DBOUT( DB_CMD2, "  copy launching without adding system release\n");
@@ -5512,9 +5370,7 @@ hsa_status_t HSACopy::hcc_memory_async_copy_rect(Kalmar::hcCommandKind copyKind,
     hsa_signal_t depSignal = { .handle = 0x0 };
     {
         //Create a signal to wait for the async copy command to finish.
-        std::pair<hsa_signal_t, int> ret = Kalmar::ctx.getSignal();
-        _signal = ret.first;
-        _signalIndex = ret.second; 
+        _signal = Kalmar::ctx.getSignal();
 
         if (!hsaQueue()->nextSyncNeedsSysRelease()) {
             DBOUT( DB_CMD2, "  copy launching without adding system release\n");
@@ -5652,8 +5508,8 @@ HSACopy::dispose() {
     }
 
     // HSA signal may not necessarily be allocated by HSACopy instance
-    // only release the signal if it was really allocated (signalIndex >= 0)
-    if (_signalIndex >= 0) {
+    // only release the signal if it was really allocated
+    if (_signal.handle) {
         if (HCC_PROFILE & HCC_PROFILE_TRACE) {
             uint64_t start = getBeginTimestamp();
             uint64_t end   = getEndTimestamp();
@@ -5663,7 +5519,7 @@ HSACopy::dispose() {
             LOG_PROFILE(this, start, end, "copy", getCopyCommandString(),  "\t" << sizeBytes << " bytes;\t" << sizeBytes/1024.0/1024 << " MB;\t" << bw << " GB/s;");
         }
         _activity_prof.report_gpu_timestamps<HSACopy>(this, sizeBytes);
-        Kalmar::ctx.releaseSignal(_signal, _signalIndex);
+        Kalmar::ctx.releaseSignal(_signal);
     } else {
         if (HCC_PROFILE & HCC_PROFILE_TRACE) {
             uint64_t start = apiStartTick;
