@@ -1533,7 +1533,9 @@ public:
             }
 
             if (needDep) {
-                if (hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(lastOp->getNativeHandle()))==0) {
+                hsa_signal_t* s = static_cast<hsa_signal_t*>(lastOp->getNativeHandle());
+                if (s->handle == 0 ||
+                    hsa_signal_load_scacquire(*s)==0) {
                     // if the last op has already been completed then don't need a dependency
                     return nullptr;
                 }
