@@ -1529,7 +1529,6 @@ public:
                 if (FORCE_SIGNAL_DEP_BETWEEN_COPIES) {
                     DBOUT(DB_CMD2, "Set NeedDep for " << newOp << "(FORCE_SIGNAL_DEP_BETWEEN_COPIES) " );
                     needDep = true;
-                    return lastOp;
                 }
             }
 
