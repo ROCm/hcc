@@ -1529,10 +1529,15 @@ public:
                 if (FORCE_SIGNAL_DEP_BETWEEN_COPIES) {
                     DBOUT(DB_CMD2, "Set NeedDep for " << newOp << "(FORCE_SIGNAL_DEP_BETWEEN_COPIES) " );
                     needDep = true;
+                    return lastOp;
                 }
             }
 
             if (needDep) {
+                if (hsa_signal_load_scacquire(*static_cast<hsa_signal_t*>(lastOp->getNativeHandle()))==0) {
+                    // if the last op has already been completed then don't need a dependency
+                    return nullptr;
+                }
                 DBOUT(DB_CMD2, "command type changed " << getHcCommandKindString(youngestCommandKind) << "  ->  " << getHcCommandKindString(newCommandKind) << "\n") ;
                 return lastOp;
             }
