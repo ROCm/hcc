@@ -4974,8 +4974,12 @@ HSABarrier::waitComplete() {
     // Wait on completion signal until the barrier is finished
     hsa_signal_wait_scacquire(_signal, HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX, waitMode);
 
-
     isDispatched = false;
+
+    // Release references to our dependent ops:
+    for (int i=0; i<depCount; i++) {
+        depAsyncOps[i] = nullptr;
+    }
 
     return _wait_complete_status;
 }
@@ -5137,11 +5141,6 @@ HSABarrier::dispose() {
         LOG_PROFILE(this, start, end, "barrier", "depcnt=" + std::to_string(depCount) + ",acq=" + fenceToString(acqBits) + ",rel=" + fenceToString(relBits), depss.str())
     }
 
-    // Release references to our dependent ops:
-    for (int i=0; i<depCount; i++) {
-        depAsyncOps[i] = nullptr;
-    }
-
     _activity_prof.report_gpu_timestamps<HSABarrier>(this);
 
     if (future != nullptr) {
@@ -5237,6 +5236,9 @@ HSACopy::waitComplete() {
     hsa_signal_wait_scacquire(_signal, HSA_SIGNAL_CONDITION_LT, 1, UINT64_MAX, waitMode);
 
     isSubmitted = false;
+
+    // clear reference counts for dependent ops.
+    depAsyncOp = nullptr;
 
     return _wait_complete_status;
 }
@@ -5671,9 +5673,6 @@ HSACopy::dispose() {
         }
         _activity_prof.report_system_ticks<HSACopy>(this, sizeBytes);
     }
-
-    // clear reference counts for dependent ops.
-    depAsyncOp = nullptr;
 }
 
 inline uint64_t
