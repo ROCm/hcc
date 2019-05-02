@@ -1531,6 +1531,12 @@ public:
             }
 
             if (needDep) {
+                hsa_signal_t* s = static_cast<hsa_signal_t*>(lastOp->getNativeHandle());
+                if (s->handle == 0 ||
+                    hsa_signal_load_scacquire(*s)==0) {
+                    // if the last op has already been completed then don't need a dependency
+                    return nullptr;
+                }
                 DBOUT(DB_CMD2, "command type changed " << getHcCommandKindString(youngestCommandKind) << "  ->  " << getHcCommandKindString(newCommandKind) << "\n") ;
                 return lastOp;
             }
