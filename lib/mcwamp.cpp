@@ -30,6 +30,7 @@ struct RuntimeImpl {
     m_PushArgImpl(nullptr),
     m_PushArgPtrImpl(nullptr),
     m_GetContextImpl(nullptr),
+    m_ShutdownImpl(nullptr),
     m_InitActivityCallbackImpl(nullptr),
     m_EnableActivityCallbackImpl(nullptr),
     m_GetCmdNameImpl(nullptr),
@@ -45,6 +46,7 @@ struct RuntimeImpl {
 
   ~RuntimeImpl() {
     if (m_RuntimeHandle) {
+      m_ShutdownImpl();
       dlclose(m_RuntimeHandle);
     }
   }
@@ -54,6 +56,7 @@ struct RuntimeImpl {
     m_PushArgImpl = (PushArgImpl_t) dlsym(m_RuntimeHandle, "PushArgImpl");
     m_PushArgPtrImpl = (PushArgPtrImpl_t) dlsym(m_RuntimeHandle, "PushArgPtrImpl");
     m_GetContextImpl= (GetContextImpl_t) dlsym(m_RuntimeHandle, "GetContextImpl");
+    m_ShutdownImpl= (ShutdownImpl_t) dlsym(m_RuntimeHandle, "ShutdownImpl");
     m_InitActivityCallbackImpl = (InitActivityCallbackImpl_t) dlsym(m_RuntimeHandle, "InitActivityCallbackImpl");
     m_EnableActivityCallbackImpl = (EnableActivityCallbackImpl_t) dlsym(m_RuntimeHandle, "EnableActivityCallbackImpl");
     m_GetCmdNameImpl = (GetCmdNameImpl_t) dlsym(m_RuntimeHandle, "GetCmdNameImpl");
@@ -67,6 +70,7 @@ struct RuntimeImpl {
   PushArgImpl_t m_PushArgImpl;
   PushArgPtrImpl_t m_PushArgPtrImpl;
   GetContextImpl_t m_GetContextImpl;
+  ShutdownImpl_t m_ShutdownImpl;
 
   // Activity profiling routines
   InitActivityCallbackImpl_t m_InitActivityCallbackImpl;
@@ -276,11 +280,10 @@ ELFIO::section* find_section_if(ELFIO::elfio& reader, P p) {
 }
 
 
-static void read_code_bundles(std::vector<_code_bundle>& bundles) {
+static std::vector<std::vector<char>>& get_code_blobs() {
 
   static std::once_flag f;
   static std::vector<std::vector<char>> blobs{};
-  static char* bundles_data_start = nullptr;
 
   std::call_once(f, []() {
 
@@ -303,6 +306,14 @@ static void read_code_bundles(std::vector<_code_bundle>& bundles) {
       return 0;
     }, nullptr);
   });
+
+  return blobs;
+}
+
+static void read_code_bundles(std::vector<_code_bundle>& bundles) {
+
+  std::vector<std::vector<char>>& blobs = get_code_blobs();
+  static char* bundles_data_start = nullptr;
 
   for (auto &b : blobs) {
 
@@ -408,13 +419,13 @@ private:
   RuntimeImpl* runtime;
 public:
   KalmarBootstrap() : runtime(nullptr) {
-    bool to_init = true;
+    bool to_init = false;
     char* lazyinit_env = getenv("HCC_LAZYINIT");
     if (lazyinit_env != nullptr) {
-      if (std::string("ON") == lazyinit_env) {
-        to_init = false;
-      } else if (strtol(lazyinit_env, nullptr, 0)) {
-        to_init = false;
+      if (std::string("OFF") == lazyinit_env) {
+        to_init = true;
+      } else if (std::string("0") == lazyinit_env) {
+        to_init = true;
       }
     }
 
@@ -436,6 +447,12 @@ public:
         // load kernels on the default queue for the device
         CLAMP::LoadInMemoryProgram(queue.get());
       }
+    }
+    else {
+      // Instead of loading kernels, we still load code blobs eagerly.
+      // They are used later when the first kernel is requested.
+      // Return value is discarded here, but used by read_code_bundles().
+      (void)CLAMP::get_code_blobs();
     }
   }
 };
