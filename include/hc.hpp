@@ -493,16 +493,6 @@ public:
     }
 
     /**
-     * Returns an opaque handle which points to the underlying HSA queue.
-     *
-     * @return An opaque handle of the underlying HSA queue, if the accelerator
-     *         view is based on HSA.  NULL if otherwise.
-     */
-    void* get_hsa_queue() {
-        return pQueue->getHSAQueue();
-    }
-
-    /**
      * Returns an opaque handle which points to the underlying HSA agent.
      *
      * @return An opaque handle of the underlying HSA agent, if the accelerator
