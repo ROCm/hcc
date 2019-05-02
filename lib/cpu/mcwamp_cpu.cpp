@@ -90,3 +90,6 @@ static CPUContext ctx;
 extern "C" void *GetContextImpl() {
   return &Kalmar::ctx;
 }
+
+extern "C" void ShutdownImpl() {
+}
