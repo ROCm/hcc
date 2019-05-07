@@ -17,6 +17,8 @@ typedef int am_status_t;
 #define amHostUnmapped      0x4 ///< Don't map allocated pinned host memory to all GPUs. 
 #define amDeviceFinegrained 0x8 ///< Allocate finegrained device memory.
 
+#define amHostLockCoarseGrained    0x1 ///< Lock host memory with coarse garined semantics.
+
 namespace hc {
 
 // Info for each pointer in the memtry tracker:
@@ -237,6 +239,21 @@ am_status_t am_map_to_peers(void* ptr, std::size_t num_peer, const hc::accelerat
  * @return AM_ERROR_MISC if lock is unsuccessful.
  */
 am_status_t am_memory_host_lock(hc::accelerator &ac, void *hostPtr, std::size_t size, hc::accelerator *visibleAc, std::size_t numVisibleAc);
+
+/*
+ * Locks a host pointer to a vector of agents
+ *
+ * @p ac acclerator corresponding to current device
+ * @p hostPtr pointer to host memory which should be page-locked
+ * @p size size of hostPtr to be page-locked
+ * @p visibleAc pointer to hcc accelerators to which the hostPtr should be visible
+ * @p numVisibleAc number of elements in visibleAc
+ * @p Flags:
+ *    amHostLockCoarseGrained : lock with coarse grained semantics
+ * @return AM_SUCCESS if lock is successfully.
+ * @return AM_ERROR_MISC if lock is unsuccessful.
+ */
+am_status_t am_memory_host_lock_with_flag(hc::accelerator &ac, void *hostPtr, std::size_t size, hc::accelerator *visibleAc, std::size_t numVisibleAc, unsigned flags=0);
 
 /*
  * Unlock page locked host memory

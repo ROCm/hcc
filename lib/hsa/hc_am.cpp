@@ -609,6 +609,34 @@ am_status_t am_memory_host_lock(hc::accelerator &ac, void *hostPtr, std::size_t 
     return am_status;
 }
 
+am_status_t am_memory_host_lock_with_flag(hc::accelerator &ac, void *hostPtr, std::size_t size, hc::accelerator *visible_ac, std::size_t num_visible_ac, unsigned flags)
+{
+    am_status_t am_status = AM_ERROR_MISC;
+    void *devPtr;
+    std::vector<hsa_agent_t> agents;
+    hsa_status_t hsa_status = HSA_STATUS_SUCCESS;
+    for(int i=0;i<num_visible_ac;i++)
+    {
+        agents.push_back(*static_cast<hsa_agent_t*>(visible_ac[i].get_hsa_agent()));
+    }
+    if(flags == amHostLockCoarseGrained)
+        hsa_status = hsa_amd_memory_lock(hostPtr, size, &agents[0], num_visible_ac, &devPtr);
+    else {
+        hsa_amd_memory_pool_t *alloc_region = static_cast<hsa_amd_memory_pool_t*>(ac.get_hsa_am_finegrained_system_region());
+        hsa_status = hsa_amd_memory_lock_to_pool(hostPtr, size, &agents[0], num_visible_ac, *alloc_region, 0, &devPtr);
+    }
+
+    if(hsa_status == HSA_STATUS_SUCCESS)
+    {
+       hc::AmPointerInfo ampi(hostPtr, devPtr, devPtr, size, ac, false, false);
+       hc::AmPointerInfo ampi2(hostPtr, devPtr, devPtr, size, ac, true, false);
+       g_amPointerTracker.insert(hostPtr, ampi);
+       g_amPointerTracker.insert(devPtr, ampi2);
+       am_status = AM_SUCCESS;
+    }
+    return am_status;
+}
+
 am_status_t am_memory_host_unlock(hc::accelerator &ac, void *hostPtr)
 {
     am_status_t am_status = AM_ERROR_MISC;
