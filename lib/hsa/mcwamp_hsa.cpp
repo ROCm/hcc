@@ -3600,6 +3600,15 @@ public:
         }
         def = Devices[first_gpu_index + HCC_DEFAULT_GPU];
 
+        // pinned hc::printf_buffer so that the GPUs could access it
+        if (hc::printf_buffer_locked_va == nullptr) {
+          hsa_status_t status = HSA_STATUS_SUCCESS;
+          hsa_agent_t* hsa_agents = agents.data();
+          status = hsa_amd_memory_lock(&hc::printf_buffer, sizeof(hc::printf_buffer),
+                                       hsa_agents, agents.size(), (void**)&hc::printf_buffer_locked_va);
+          STATUS_CHECK(status, __LINE__);
+        }
+
         init_success = true;
     }
 
@@ -3678,15 +3687,6 @@ public:
           if (hc::printf_buffer == nullptr) {
             hc::printf_buffer = hc::createPrintfBuffer(hc::default_printf_buffer_size);
           }
-        }
-
-        // pinned hc::printf_buffer so that the GPUs could access it
-        if (hc::printf_buffer_locked_va == nullptr) {
-          hsa_status_t status = HSA_STATUS_SUCCESS;
-          hsa_agent_t* hsa_agents = agents.data();
-          status = hsa_amd_memory_lock(&hc::printf_buffer, sizeof(hc::printf_buffer),
-                                       hsa_agents, agents.size(), (void**)&hc::printf_buffer_locked_va);
-          STATUS_CHECK(status, __LINE__);
         }
     }
 
