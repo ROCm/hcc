@@ -902,6 +902,7 @@ public:
     // array of all operations that this op depends on.
     // This array keeps a reference which prevents those ops from being deleted until this op is deleted.
     std::shared_ptr<HSAOp> depAsyncOps [HSA_BARRIER_DEP_SIGNAL_CNT];
+    std::string depAsyncOpsStr;
 
 public:
     std::shared_future<void>* getFuture() override { return future; }
@@ -4843,6 +4844,19 @@ HSABarrier::waitComplete() {
 
     isDispatched = false;
 
+    if ((HCC_PROFILE & HCC_PROFILE_TRACE) && (HCC_PROFILE_VERBOSE & HCC_PROFILE_VERBOSE_BARRIER)) {
+        std::stringstream depss;
+        for (int i=0; i<depCount; i++) {
+            if (i==0) {
+                depss << " deps=";
+            } else {
+                depss << ",";
+            }
+            depss << *depAsyncOps[i];
+        };
+        depAsyncOpsStr = depss.str();
+    }
+
     // Release references to our dependent ops:
     for (int i=0; i<depCount; i++) {
         depAsyncOps[i] = nullptr;
@@ -4992,17 +5006,7 @@ HSABarrier::dispose() {
         uint64_t end   = getEndTimestamp();
         int acqBits = extractBits(header, HSA_PACKET_HEADER_SCACQUIRE_FENCE_SCOPE, HSA_PACKET_HEADER_WIDTH_SCACQUIRE_FENCE_SCOPE);
         int relBits = extractBits(header, HSA_PACKET_HEADER_SCRELEASE_FENCE_SCOPE, HSA_PACKET_HEADER_WIDTH_SCRELEASE_FENCE_SCOPE);
-
-        std::stringstream depss;
-        for (int i=0; i<depCount; i++) {
-            if (i==0) {
-                depss << " deps=";
-            } else {
-                depss << ",";
-            }
-            depss << *depAsyncOps[i];
-        };
-        LOG_PROFILE(this, start, end, "barrier", "depcnt=" + std::to_string(depCount) + ",acq=" + fenceToString(acqBits) + ",rel=" + fenceToString(relBits), depss.str())
+        LOG_PROFILE(this, start, end, "barrier", "depcnt=" + std::to_string(depCount) + ",acq=" + fenceToString(acqBits) + ",rel=" + fenceToString(relBits), depAsyncOpsStr)
     }
 
     _activity_prof.report_gpu_timestamps<HSABarrier>(this);
