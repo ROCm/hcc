@@ -2,6 +2,7 @@
 // RUN: %hc %s -o %t.out && %t.out
 #include <hc.hpp>
 
+#include <cstdlib>
 #include <iostream>
 #include <vector>
 #include <random>
@@ -21,6 +22,18 @@ void test(std::vector<hc::accelerator_view>& v, int default_views_to_push, int v
 
 int main() {
   bool ret = true;
+
+  // HCC_LAZYINIT default was changed from OFF to ON.
+  // If old behavior is requested, it changes the total number of views.
+  int maybe_additional_view = 0;
+  char* lazyinit_env = std::getenv("HCC_LAZYINIT");
+  if (lazyinit_env != nullptr) {
+    if (std::string("OFF") == lazyinit_env) {
+      maybe_additional_view = 1;
+    } else if (std::string("0") == lazyinit_env) {
+      maybe_additional_view = 1;
+    }
+  }
 
   std::vector<hc::accelerator_view> v1;
   std::vector<hc::accelerator_view> v2;
@@ -52,12 +65,12 @@ int main() {
   ret &= (v4.size() == (d4 + c4));
 
 #if !TLS_QUEUE
-  ret &= (v5.size() == (1 + c1 + c2 + c3 + c4));
+  ret &= (v5.size() == (c1 + c2 + c3 + c4 + maybe_additional_view));
 #else
   // now default accelerator view is thread local, so the total number of views
   // would the the number of threads (4), plus additional views created in each
-  // thread, plus another one inside HCC runtime
-  ret &= (v5.size() == (4 + c1 + c2 + c3 + c4 + 1));
+  // thread, plus another one inside HCC runtime if lazy init is disabled
+  ret &= (v5.size() == (4 + c1 + c2 + c3 + c4 + maybe_additional_view));
 #endif
 
   return !(ret == true);
