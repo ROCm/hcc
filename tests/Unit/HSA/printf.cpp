@@ -1,5 +1,4 @@
 // RUN: %hc %s -DHCC_ENABLE_ACCELERATOR_PRINTF -lhc_am -o %t.out && %t.out | %FileCheck %s
-// XFAIL: *
 
 #include <cassert>
 #include <hc.hpp>
