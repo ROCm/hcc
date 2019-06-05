@@ -3325,6 +3325,9 @@ private:
 } // end namespace Kalmar
 
 namespace hc {
+
+#ifdef HC_PRINTF_SUPPORT_ENABLE
+
 // regex for finding format string specifiers
 static const std::regex specifierPattern("(%){1}[-+#0]*[0-9]*((.)[0-9]+){0,1}([hl]*)([diuoxXfFeEgGaAcsp]){1}");
 static const std::regex signedIntegerPattern("(%){1}[-+#0]*[0-9]*((.)[0-9]+){0,1}([hl]*)([cdi]){1}");
@@ -3400,6 +3403,12 @@ static inline void processPrintfPackets(PrintfPacket* packets, const unsigned in
   }
   std::flush(std::cout);
 }
+
+#else
+
+static inline void processPrintfPackets(PrintfPacket* packets, const unsigned int numPackets) { }
+
+#endif  // #ifdef HC_PRINTF_SUPPORT_ENABLE
 
 static inline void processPrintfBuffer(PrintfPacket* gpuBuffer) {
 
