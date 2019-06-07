@@ -722,6 +722,8 @@ public:
     static constexpr uint32_t _max_dependency_chain_length = 32;
     uint32_t           _dependency_chain_length;
 
+    std::vector< std::shared_ptr<HSAOp> > asyncOpsWithoutSignal;
+
 protected:
     uint64_t     apiStartTick;
     HSAOpCoord   _opCoord;
@@ -1289,8 +1291,12 @@ private:
     // When a kernel k is dispatched, we'll get a KalmarAsyncOp f.
     // This vector would hold f.  ops are added by replacing the op within the shared_ptr.
     // This could trigger the freeing of resources, one insertion at a time.
+    // However, some Ops do not have an associated signal. We must keep them until
+    // some other Op is added that has a signal, to make sure any resources associated with
+    // the signal-less Ops are freed after completion.
     //
     std::vector< std::shared_ptr<HSAOp> > asyncOps;
+    std::vector< std::shared_ptr<HSAOp> > asyncOpsWithoutSignal;
 
     // index where the next asyncOp should be inserted into the asyncOps container
     int asyncOpsIndex;
@@ -1457,15 +1463,43 @@ public:
                     << (op->getCommandKind() == hcCommandKernel ? ((static_cast<HSADispatch*> (op.get()))->getKernelName()) : "")  // change to getLongKernelName() for mangled name
                     << std::endl);
 
+        if (((hsa_signal_t*)op->getNativeHandle())->handle == 0) {
+            asyncOpsWithoutSignal.push_back(op);
+        }
+        else if (!asyncOpsWithoutSignal.empty()) {
+            DBOUT(DB_SIG, "attaching " << asyncOpsWithoutSignal.size() << " ops without signals to " << *op
+                    << " signal="<< std::hex  << ((hsa_signal_t*)op->getNativeHandle())->handle << std::dec
+                    << " commandKind=" << getHcCommandKindString(op->getCommandKind())
+                    << " "
+                    << (op->getCommandKind() == hcCommandKernel ? ((static_cast<HSADispatch*> (op.get()))->getKernelName()) : "")  // change to getLongKernelName() for mangled name
+                    << std::endl);
+
+            if (!op->asyncOpsWithoutSignal.empty()) {
+                throw Kalmar::runtime_exception("new op does not have empty async ops list!", 0);
+            }
+            op->asyncOpsWithoutSignal.swap(asyncOpsWithoutSignal);
+            if (!asyncOpsWithoutSignal.empty()) {
+                throw Kalmar::runtime_exception("after swap, signal list not empty!", 0);
+            }
+        }
         youngestCommandKind = op->getCommandKind();
         asyncOps[asyncOpsIndex] = std::move(op);
         asyncOpsIndex = increment(asyncOpsIndex);
+
+        // There are cases where no op is created that has a signal.
+        // To avoid uncontrolled growth of the asyncOpsWithoutSignal vector,
+        // once we reach capacity, force a signal via barrier.
+        // This will recurse eventually back into this pushAsyncOp function,
+        // but is guaranteed to skip this check here.
+        if (asyncOpsWithoutSignal.size() > (HCC_ASYNCOPS_SIZE/2)) {
+            DBOUT(DB_SIG, "ops without signals reached capacity, enqueuing marker\n");
+            EnqueueMarker(hc::no_scope);
+        }
 
         if (DBFLAG(DB_QUEUE)) {
             printAsyncOps(std::cerr);
         }
     }
-
 
 
     // Check upcoming command that will be sent to this queue against the youngest async op
@@ -1530,9 +1564,10 @@ public:
             }
 
             if (needDep) {
+                // kernels might not have a signal and should be returned as a dep
+                // so only handle the case here where a valid signal is present
                 hsa_signal_t* s = static_cast<hsa_signal_t*>(lastOp->getNativeHandle());
-                if (s->handle == 0 ||
-                    hsa_signal_load_scacquire(*s)==0) {
+                if (s->handle != 0 && hsa_signal_load_scacquire(*s)==0) {
                     // if the last op has already been completed then don't need a dependency
                     return nullptr;
                 }
@@ -1701,8 +1736,6 @@ public:
 
         // create a shared_ptr instance
         std::shared_ptr<KalmarAsyncOp> sp_dispatch(dispatch);
-        // associate the kernel dispatch with this queue
-        pushAsyncOp(std::static_pointer_cast<HSAOp> (sp_dispatch));
 
         size_t tmp_local[] = {0, 0, 0};
         if (!local)
@@ -1713,6 +1746,8 @@ public:
         status = dispatch->dispatchKernelAsyncFromOp();
         STATUS_CHECK(status, __LINE__);
 
+        // associate the kernel dispatch with this queue
+        pushAsyncOp(std::static_pointer_cast<HSAOp> (sp_dispatch));
 
         if (hasArrayViewBufferDeps) {
             // associate all buffers used by the kernel with the kernel dispatch instance
@@ -2043,13 +2078,13 @@ public:
 
         // create shared_ptr instance
         std::shared_ptr<HSABarrier> barrier = std::make_shared<HSABarrier>(this, 0, nullptr);
-        // associate the barrier with this queue
-        pushAsyncOp(barrier);
 
         // enqueue the barrier
         status = barrier.get()->enqueueAsync(release_scope);
         STATUS_CHECK(status, __LINE__);
 
+        // associate the barrier with this queue
+        pushAsyncOp(barrier);
 
         return barrier;
     }
@@ -2075,8 +2110,6 @@ public:
 
             // create shared_ptr instance
             std::shared_ptr<HSABarrier> barrier = std::make_shared<HSABarrier>(this, count, depOps);
-            // associate the barrier with this queue
-            pushAsyncOp(barrier);
 
             for (int i=0; i<count; i++) {
                 auto depOp = barrier->depAsyncOps[i];
@@ -2131,6 +2164,8 @@ public:
             status = barrier.get()->enqueueAsync(fenceScope);
             STATUS_CHECK(status, __LINE__);
 
+            // associate the barrier with this queue
+            pushAsyncOp(barrier);
 
             return barrier;
         } else {
@@ -4291,12 +4326,19 @@ HSAQueue::dispatch_hsa_kernel(const hsa_kernel_dispatch_packet_t *aql,
     HSADispatch *dispatch = sp_dispatch.get();
     waitForStreamDeps(dispatch);
 
-    pushAsyncOp(sp_dispatch);
     dispatch->setKernelName(kernelName);
 
-    // We used to skip signal creation as part of HCC_OPT_FLUSH being true.
-    // However, the new asyncOps resource cleanup logic requires all async ops to have a signal.
-    dispatch->dispatchKernelAsync(args, argSize, true);
+    // May be faster to create signals for each dispatch than to use markers.
+    // Perhaps could check HSA queue pointers.
+    bool needsSignal = true;
+    if (HCC_OPT_FLUSH && !HCC_PROFILE && (cf==nullptr) && !HCC_FORCE_COMPLETION_FUTURE && !HCC_SERIALIZE_KERNEL) {
+        // Only allocate a signal if the caller requested a completion_future to track status.
+        needsSignal = false;
+    };
+
+    dispatch->dispatchKernelAsync(args, argSize, needsSignal);
+
+    pushAsyncOp(sp_dispatch);
 
     if (cf) {
         *cf = hc::completion_future(sp_dispatch);
@@ -4603,7 +4645,7 @@ HSADispatch::dispatchKernelAsyncFromOp()
 
 inline hsa_status_t
 HSADispatch::dispatchKernelAsync(const void *hostKernarg, int hostKernargSize, bool allocSignal) {
-    if (_activity_prof.is_enabled()) {
+    if (_activity_prof.is_enabled() || (HCC_PROFILE & HCC_PROFILE_TRACE) || HCC_FORCE_COMPLETION_FUTURE) {
         allocSignal = true;
     }
 
