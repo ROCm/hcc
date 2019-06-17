@@ -113,6 +113,7 @@ int HCC_OPT_FLUSH=1;
 unsigned HCC_DB = 0;
 unsigned HCC_DB_SYMBOL_FORMAT=0x10;
 
+int HCC_LAZY_QUEUE_CREATION=1;
 int HCC_MAX_QUEUES = 20;
 
 
@@ -1996,46 +1997,9 @@ public:
                              const void * args, size_t argsize,
                              hc::completion_future *cf, const char *kernelName) override ;
 
-    bool set_cu_mask(const std::vector<bool>& cu_mask) override {
-        // get device's total compute unit count
-        auto device = getDev();
-        unsigned int physical_count = device->get_compute_unit_count();
-        assert(physical_count > 0);
 
-        uint32_t temp = 0;
-        uint32_t bit_index = 0;
-
-        // If cu_mask.size() is greater than physical_count, igore the rest.
-        int iter = cu_mask.size() > physical_count ? physical_count : cu_mask.size();
-
-
-        {
-            std::lock_guard<std::recursive_mutex> l(this->qmutex);
-
-
-            this->cu_arrays.clear();
-
-            for(auto i = 0; i < iter; i++) {
-                temp |= (uint32_t)(cu_mask[i]) << bit_index;
-
-                if(++bit_index == 32) {
-                    this->cu_arrays.push_back(temp);
-                    bit_index = 0;
-                    temp = 0;
-                }
-            }
-
-            if(bit_index != 0) {
-                this->cu_arrays.push_back(temp);
-            }
-
-
-            // Apply the new cu mask to the hw queue:
-            return (rocrQueue->setCuMask(this) == HSA_STATUS_SUCCESS);
-
-        }
-    }
-
+    bool set_cu_mask(const std::vector<bool>& cu_mask) override;
+ 
     // enqueue a barrier packet
     std::shared_ptr<KalmarAsyncOp> EnqueueMarker(memory_scope release_scope) override {
 
@@ -3743,6 +3707,7 @@ void HSAContext::ReadHccEnv()
     GET_ENV_INT(HCC_OPT_FLUSH, "Perform system-scope acquire/release only at CPU sync boundaries (rather than after each kernel)");
     GET_ENV_INT(HCC_FORCE_CROSS_QUEUE_FLUSH, "create_blocking_marker will force need for sys acquire (0x1) and release (0x2) queue where the marker is created. 0x3 sets need for both flags.");
     GET_ENV_INT(HCC_MAX_QUEUES, "Set max number of HSA queues this process will use.  accelerator_views will share the allotted queues and steal from each other as necessary");
+    GET_ENV_INT(HCC_LAZY_QUEUE_CREATION, "Control lazy HSA queue creation (enabled by default).  Set to 0 to disable it.");
 
     GET_ENV_INT(HCC_ASYNCOPS_SIZE, "Number of HSA operations to allow prior to resource cleanup.");
 
@@ -3989,7 +3954,8 @@ HSAQueue::HSAQueue(KalmarDevice* pDev, hsa_agent_t agent, execute_order order, q
     asyncOps(HCC_ASYNCOPS_SIZE), asyncOpsIndex(0),
     valid(true), _nextSyncNeedsSysRelease(false), _nextKernelNeedsSysAcquire(false), bufferKernelMap(), kernelBufferMap()
 {
-    {
+
+    if (!HCC_LAZY_QUEUE_CREATION) {
         // Protect the HSA queue we can steal it.
         DBOUT(DB_LOCK, " ptr:" << this << " create lock_guard...\n");
 
@@ -3998,7 +3964,6 @@ HSAQueue::HSAQueue(KalmarDevice* pDev, hsa_agent_t agent, execute_order order, q
         auto device = static_cast<Kalmar::HSADevice*>(this->getDev());
         device->createOrstealRocrQueue(this, priority);
     }
-
 
     youngestCommandKind = hcCommandInvalid;
 
@@ -4301,8 +4266,48 @@ HSAQueue::dispatch_hsa_kernel(const hsa_kernel_dispatch_packet_t *aql,
     if (cf) {
         *cf = hc::completion_future(sp_dispatch);
     }
-};
+}
 
+bool 
+HSAQueue::set_cu_mask(const std::vector<bool>& cu_mask) override {
+    // get device's total compute unit count
+    auto device = getDev();
+    unsigned int physical_count = device->get_compute_unit_count();
+    assert(physical_count > 0);
+
+    uint32_t temp = 0;
+    uint32_t bit_index = 0;
+
+    // If cu_mask.size() is greater than physical_count, igore the rest.
+    int iter = cu_mask.size() > physical_count ? physical_count : cu_mask.size();
+
+    {
+        std::lock_guard<std::recursive_mutex> l(this->qmutex);
+
+
+        this->cu_arrays.clear();
+
+        for(auto i = 0; i < iter; i++) {
+            temp |= (uint32_t)(cu_mask[i]) << bit_index;
+
+            if(++bit_index == 32) {
+                this->cu_arrays.push_back(temp);
+                bit_index = 0;
+                temp = 0;
+            }
+        }
+
+        if(bit_index != 0) {
+            this->cu_arrays.push_back(temp);
+        }
+
+        // Apply the new cu mask to the hw queue:
+        if (!rocrQueue) {
+            getHSADev()->createOrstealRocrQueue(this, priority);
+        }
+        return (rocrQueue->setCuMask(this) == HSA_STATUS_SUCCESS);
+    }
+}
 } // namespace Kalmar
 
 // ----------------------------------------------------------------------
