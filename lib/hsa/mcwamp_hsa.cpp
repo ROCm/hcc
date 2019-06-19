@@ -1356,6 +1356,9 @@ private:
     // signal used by sync copy only
     hsa_signal_t  sync_copy_signal;
 
+    // indicated whether this HSAQueue has already been used
+    // for compute or copy tasks 
+    bool has_been_used;
 
 public:
     HSAQueue(KalmarDevice* pDev, hsa_agent_t agent, execute_order order, queue_priority priority) ;
@@ -1449,7 +1452,7 @@ public:
     void pushAsyncOp(std::shared_ptr<HSAOp> op) {
 
         std::lock_guard<std::recursive_mutex> lg(qmutex);
-
+        
         op->setSeqNumFromQueue();
 
         DBOUT(DB_CMD, "  pushing " << *op << " completion_signal="<< std::hex  << ((hsa_signal_t*)op->getNativeHandle())->handle << std::dec
@@ -1461,6 +1464,7 @@ public:
         youngestCommandKind = op->getCommandKind();
         asyncOps[asyncOpsIndex] = std::move(op);
         asyncOpsIndex = increment(asyncOpsIndex);
+        has_been_used = true;
 
         if (DBFLAG(DB_QUEUE)) {
             printAsyncOps(std::cerr);
@@ -1610,6 +1614,8 @@ public:
         //
 
         std::lock_guard<std::recursive_mutex> lg(qmutex);
+
+        if (!has_been_used) return;
 
         if (HCC_OPT_FLUSH && nextSyncNeedsSysRelease()) {
 
@@ -2142,6 +2148,7 @@ public:
 void RocrQueue::assignHccQueue(HSAQueue *hccQueue) {
     assert (hccQueue->rocrQueue == nullptr);  // only needy should assign new queue
     hccQueue->rocrQueue = this;
+    hccQueue->has_been_used = true;
     _hccQueue = hccQueue;
 
     setCuMask(hccQueue);
@@ -3952,7 +3959,8 @@ HSAQueue::HSAQueue(KalmarDevice* pDev, hsa_agent_t agent, execute_order order, q
     KalmarQueue(pDev, queuing_mode_automatic, order, priority),
     rocrQueue(nullptr),
     asyncOps(HCC_ASYNCOPS_SIZE), asyncOpsIndex(0),
-    valid(true), _nextSyncNeedsSysRelease(false), _nextKernelNeedsSysAcquire(false), bufferKernelMap(), kernelBufferMap()
+    valid(true), _nextSyncNeedsSysRelease(false), _nextKernelNeedsSysAcquire(false), bufferKernelMap(), kernelBufferMap(),
+    has_been_used(false)
 {
 
     if (!HCC_LAZY_QUEUE_CREATION) {
