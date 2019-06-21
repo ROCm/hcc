@@ -3573,6 +3573,12 @@ public:
             agentToDeviceMap_.insert(std::pair<uint64_t, HSADevice*> (agent.handle, dev));
         }
 
+        if (agents.size() == 0) {
+            // no GPU found
+            init_success = true;
+            return;
+        }
+
         DBOUT(DB_INIT, "Setting GPU " << HCC_DEFAULT_GPU << " as the default accelerator\n");
         if (first_gpu_index + HCC_DEFAULT_GPU >= Devices.size()) {
             hc::print_backtrace();
