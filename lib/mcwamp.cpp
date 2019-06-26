@@ -167,48 +167,55 @@ static RuntimeImpl* LoadCPURuntime() {
   return runtimeImpl;
 }
 
-RuntimeImpl* GetOrInitRuntime() {
-  static RuntimeImpl* runtimeImpl = nullptr;
-  if (runtimeImpl == nullptr) {
-    HSAPlatformDetect hsa_rt;
+static RuntimeImpl* GetOrInitRuntime_impl() {
+  RuntimeImpl* runtimeImpl = nullptr;
+  HSAPlatformDetect hsa_rt;
 
-    char* verbose_env = getenv("HCC_VERBOSE");
-    if (verbose_env != nullptr) {
-      if (std::string("ON") == verbose_env) {
-        mcwamp_verbose = true;
-      }
+  char* verbose_env = getenv("HCC_VERBOSE");
+  if (verbose_env != nullptr) {
+    if (std::string("ON") == verbose_env) {
+      mcwamp_verbose = true;
     }
+  }
 
-    // force use certain C++AMP runtime from HCC_RUNTIME environment variable
-    char* runtime_env = getenv("HCC_RUNTIME");
-    if (runtime_env != nullptr) {
-      if (std::string("HSA") == runtime_env) {
-        if (hsa_rt.detect()) {
-          runtimeImpl = LoadHSARuntime();
-        } else {
-          std::cerr << "Ignore unsupported HCC_RUNTIME environment variable: " << runtime_env << std::endl;
-        }
-      } else if(std::string("CPU") == runtime_env) {
-          // CPU runtime should be available
-          runtimeImpl = LoadCPURuntime();
-          runtimeImpl->set_cpu();
-      } else {
-        std::cerr << "Ignore unknown HCC_RUNTIME environment variable:" << runtime_env << std::endl;
-      }
-    }
-
-    // If can't determined by environment variable, try detect what can be used
-    if (runtimeImpl == nullptr) {
+  // force use certain C++AMP runtime from HCC_RUNTIME environment variable
+  char* runtime_env = getenv("HCC_RUNTIME");
+  if (runtime_env != nullptr) {
+    if (std::string("HSA") == runtime_env) {
       if (hsa_rt.detect()) {
         runtimeImpl = LoadHSARuntime();
       } else {
-          runtimeImpl = LoadCPURuntime();
-          runtimeImpl->set_cpu();
-          std::cerr << "No suitable runtime detected. Fall back to CPU!" << std::endl;
+        std::cerr << "Ignore unsupported HCC_RUNTIME environment variable: " << runtime_env << std::endl;
       }
+    } else if(std::string("CPU") == runtime_env) {
+        // CPU runtime should be available
+        runtimeImpl = LoadCPURuntime();
+        runtimeImpl->set_cpu();
+    } else {
+      std::cerr << "Ignore unknown HCC_RUNTIME environment variable:" << runtime_env << std::endl;
     }
   }
+
+  // If can't determined by environment variable, try detect what can be used
+  if (runtimeImpl == nullptr) {
+    if (hsa_rt.detect()) {
+      runtimeImpl = LoadHSARuntime();
+    } else {
+        runtimeImpl = LoadCPURuntime();
+        runtimeImpl->set_cpu();
+        std::cerr << "No suitable runtime detected. Fall back to CPU!" << std::endl;
+    }
+  } 
   return runtimeImpl;
+}
+
+RuntimeImpl* GetOrInitRuntime() {
+  static std::unique_ptr<RuntimeImpl> runtime;
+  static std::once_flag f;
+  std::call_once(f, []() {
+    runtime = std::move(std::unique_ptr<RuntimeImpl>(GetOrInitRuntime_impl()));
+  });
+  return runtime.get();
 }
 
 bool is_cpu()
@@ -415,10 +422,8 @@ KalmarContext *getContext() {
 
 // Kalmar runtime bootstrap logic
 class KalmarBootstrap {
-private:
-  RuntimeImpl* runtime;
 public:
-  KalmarBootstrap() : runtime(nullptr) {
+  KalmarBootstrap() {
     bool to_init = false;
     char* lazyinit_env = getenv("HCC_LAZYINIT");
     if (lazyinit_env != nullptr) {
@@ -430,13 +435,7 @@ public:
     }
 
     if (to_init) {
-      // initialize runtime
-      runtime = CLAMP::GetOrInitRuntime();
-
-      // get context
-      KalmarContext* context = static_cast<KalmarContext*>(runtime->m_GetContextImpl());
-
-      const std::vector<KalmarDevice*> devices = context->getDevices();
+      const std::vector<KalmarDevice*> devices = getContext()->getDevices();
 
       // load kernels on the default queue for each device
       for (auto dev = devices.begin(); dev != devices.end(); dev++) {
