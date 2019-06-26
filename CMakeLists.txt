@@ -427,6 +427,8 @@ if (HCC_INTEGRATE_ROCDL)
     COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_isa_version_901.amdgcn.bc              oclc_isa_version_901.amdgcn.bc
     COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_isa_version_804.amdgcn.bc              oclc_isa_version_804.amdgcn.bc
     COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_isa_version_906.amdgcn.bc              oclc_isa_version_906.amdgcn.bc
+    COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_wavefrontsize64_off.amdgcn.bc          oclc_wavefrontsize64_off.amdgcn.bc
+    COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_wavefrontsize64_on.amdgcn.bc           oclc_wavefrontsize64_on.amdgcn.bc
     COMMAND ${CMAKE_COMMAND} -E create_symlink ../ocml/ocml.amdgcn.bc                              ocml.amdgcn.bc
     WORKING_DIRECTORY ${ROCDL_BUILD_DIR}/lib
   )
