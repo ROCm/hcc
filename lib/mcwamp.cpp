@@ -209,8 +209,8 @@ static RuntimeImpl* GetOrInitRuntime_impl() {
   return runtimeImpl;
 }
 
+static std::unique_ptr<RuntimeImpl> runtime;
 RuntimeImpl* GetOrInitRuntime() {
-  static std::unique_ptr<RuntimeImpl> runtime;
   static std::once_flag f;
   std::call_once(f, []() {
     runtime = std::move(std::unique_ptr<RuntimeImpl>(GetOrInitRuntime_impl()));
