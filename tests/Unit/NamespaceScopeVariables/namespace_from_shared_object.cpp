@@ -1,5 +1,5 @@
 // RUN: %hc -fPIC -shared %S/Inputs/shared_object_with_namespace.cc -o %T/libnamespace_from.so
-// RUN: %hc %s -L%T -lnamespace_from -o %t.out && LD_LIBRARY_PATH=%T %t.out
+// RUN: %hc %s -L%T -lnamespace_from -o %t.out && LD_LIBRARY_PATH=$LD_LIBRARY_PATH:%T %t.out
 
 #include "Inputs/test_parameters.hpp"
 

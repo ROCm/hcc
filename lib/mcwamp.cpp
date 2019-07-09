@@ -291,7 +291,7 @@ static std::vector<std::vector<char>>& get_code_blobs() {
       ELFIO::elfio tmp;
 
       const auto elf =
-        info->dlpi_addr ? info->dlpi_name : "/proc/self/exe";
+        (info->dlpi_addr && *info->dlpi_name != '\0') ? info->dlpi_name : "/proc/self/exe";
 
       if (!tmp.load(elf)) return 0;
 
