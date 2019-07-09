@@ -3587,6 +3587,7 @@ public:
         }
         def = Devices[first_gpu_index + HCC_DEFAULT_GPU];
 
+#ifdef HC_PRINTF_SUPPORT_ENABLE
         // pinned hc::printf_buffer so that the GPUs could access it
         if (hc::printf_buffer_locked_va == nullptr) {
           hsa_status_t status = HSA_STATUS_SUCCESS;
@@ -3595,6 +3596,7 @@ public:
                                        hsa_agents, agents.size(), (void**)&hc::printf_buffer_locked_va);
           STATUS_CHECK(status, __LINE__);
         }
+#endif
 
         init_success = true;
     }
@@ -3621,6 +3623,7 @@ public:
         if (!init_success)
           return;
 
+#if HC_PRINTF_SUPPORT_ENABLE
         // deallocate the printf buffer
         if (HCC_ENABLE_PRINTF &&
             hc::printf_buffer != nullptr) {
@@ -3632,6 +3635,7 @@ public:
         status = hsa_amd_memory_unlock(&hc::printf_buffer);
         STATUS_CHECK(status, __LINE__);
         hc::printf_buffer_locked_va = nullptr;
+#endif
 
         // destroy all KalmarDevices associated with this context
         for (auto dev : Devices)
@@ -5792,6 +5796,8 @@ HSACopy::syncCopy() {
 // ----------------------------------------------------------------------
 
 extern "C" void *GetContextImpl() {
+
+#ifdef HC_PRINTF_SUPPORT_ENABLE
   // If hc::printf is enabled, it must be initialized *after* the Kalmar::ctx is created.
   // We only want to do this once, but the call to initPrintfBuffer will recurse back
   // into this getter. We use TLS to make sure the same thread is the one recursing.
@@ -5805,6 +5811,8 @@ extern "C" void *GetContextImpl() {
       });
     }
   }
+#endif
+
   return Kalmar::ctx;
 }
 

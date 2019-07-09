@@ -15,11 +15,16 @@
 
 // The printf on the accelerator is only enabled when
 // The HCC_ENABLE_ACCELERATOR_PRINTF is defined
-//
-//#define HCC_ENABLE_ACCELERATOR_PRINTF (1)
+
+// Disabling hc::printf it's broken on certain platform
+// and this experimental feature is not longer being maintained.  
+#ifdef HCC_ENABLE_ACCELERATOR_PRINTF
+  #undef HCC_ENABLE_ACCELERATOR_PRINTF
+  #warning "The experimental hc::printf is no longer supported and is disabled"
+#endif
 
 // Indicate whether hc::printf is supported
-#define HC_FEATURE_PRINTF (1)
+//#define HC_FEATURE_PRINTF (1)
 
 // Enable extra debug messages
 #define HC_PRINTF_DEBUG  (0)
