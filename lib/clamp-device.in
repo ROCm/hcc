@@ -43,6 +43,9 @@ AMDGPU_OBJ_CODEGEN="0"
 # flag for function calls enabled
 AMDGPU_FUNC_CALLS="0"
 
+# flag for COV3
+HCC_COV3="0"
+
 if [ $KMDBSCRIPT == "1" ]
 then
   set -x
@@ -112,6 +115,10 @@ do
     ;;
     --amdgpu-func-calls)
     AMDGPU_FUNC_CALLS="1"
+    continue
+    ;;
+    --hcc-cov3)
+    HCC_COV3="1"
     continue
     ;;
     --hcc-extra-libs=*)
@@ -227,9 +234,11 @@ if [ $KMDUMPLLVM == "1" ]; then
 fi
 
 
-# Disable code object v3, generate code object v2 for now
+# Handle code object v3 or code object v2
 CODE_OBJECT_FORMAT="-mattr=-code-object-v3"
-
+if [ $HCC_COV3 == "1" ]; then
+  CODE_OBJECT_FORMAT="-mattr=+code-object-v3"
+fi
 if [ $KMTHINLTO == "1" ]; then
   $LLC -mtriple amdgcn-amd-amdhsa -mcpu=$AMDGPU_TARGET $CODE_OBJECT_FORMAT \
     $KMOPTLLC -amdgpu-function-calls=$AMDGPU_FUNC_CALLS -filetype=obj -o $2 $2.opt.bc
