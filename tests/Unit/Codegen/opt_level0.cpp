@@ -38,5 +38,3 @@ int main(void)
 
     return 0;
 }
-
-// CHECK: clang-{{[0-9]}}{{(.[0-9])?}}: warning: -O0 is ignored in GPU compilation path
