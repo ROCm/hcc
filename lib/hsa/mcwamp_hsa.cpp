@@ -2234,7 +2234,7 @@ public:
     UnpinnedCopyEngine::CopyMode  copy_mode;
 
     // Creates or steals a rocrQueue and returns it in theif->rocrQueue
-    void createOrstealRocrQueue(Kalmar::HSAQueue *thief, queue_priority priority = priority_normal) {
+    void createOrstealRocrQueue(Kalmar::HSAQueue *thief, queue_priority priority) {
         RocrQueue *foundRQ = nullptr;
 
         // Allocate a new queue when we are below the HCC_MAX_QUEUES limit
@@ -4072,7 +4072,7 @@ void *HSAQueue::acquireLockedHsaQueue() {
     this->qmutex.lock();
     if (this->rocrQueue == nullptr) {
         auto device = static_cast<Kalmar::HSADevice*>(this->getDev());
-        device->createOrstealRocrQueue(this);
+        device->createOrstealRocrQueue(this, priority);
     }
 
     DBOUT (DB_QUEUE, "acquireLockedHsaQueue returned hwQueue=" << this->rocrQueue->_hwQueue << "\n");
