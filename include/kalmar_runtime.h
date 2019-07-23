@@ -327,6 +327,8 @@ private:
   KalmarDevice* pDev;
   queuing_mode mode;
   execute_order order;
+
+protected:
   queue_priority priority;
 
   uint64_t      opSeqNums; // last seqnum assigned to an op in this queue

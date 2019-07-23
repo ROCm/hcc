@@ -113,6 +113,7 @@ int HCC_OPT_FLUSH=1;
 unsigned HCC_DB = 0;
 unsigned HCC_DB_SYMBOL_FORMAT=0x10;
 
+int HCC_LAZY_QUEUE_CREATION=1;
 int HCC_MAX_QUEUES = 20;
 
 
@@ -1195,23 +1196,8 @@ struct RocrQueue {
     }
 
     RocrQueue(hsa_agent_t agent, size_t queue_size, HSAQueue *hccQueue, queue_priority priority)
-        : _priority(priority)
+        : _priority(priority_normal)
     {
-        // Map queue_priority to hsa_amd_queue_priority_t
-        hsa_amd_queue_priority_t queue_priority;
-        switch (priority) {
-            case priority_low:
-                queue_priority = HSA_AMD_QUEUE_PRIORITY_LOW;
-                break;
-            case priority_high:
-                queue_priority = HSA_AMD_QUEUE_PRIORITY_HIGH;
-                break;
-            case priority_normal:
-            default:
-                queue_priority = HSA_AMD_QUEUE_PRIORITY_NORMAL;
-                break;
-        }
-
         assert(queue_size != 0);
 
         /// Create a queue using the maximum size.
@@ -1221,8 +1207,7 @@ struct RocrQueue {
         STATUS_CHECK(status, __LINE__);
 
         // Set queue priority
-        status = hsa_amd_queue_set_priority(_hwQueue, queue_priority);
-        DBOUT(DB_QUEUE, "  " <<  __func__ << ": set priority for HSA command queue: " << _hwQueue << " to " << queue_priority << "\n");
+        status = setPriority(priority);
         STATUS_CHECK(status, __LINE__);
 
         // TODO - should we provide a mechanism to conditionally enable profiling as a performance optimization?
@@ -1242,6 +1227,8 @@ struct RocrQueue {
     };
 
     void assignHccQueue(HSAQueue *hccQueue);
+
+    hsa_status_t setPriority(queue_priority p);
 
     hsa_status_t setCuMask(HSAQueue *hccQueue);
 
@@ -1361,6 +1348,9 @@ private:
     // signal used by sync copy only
     hsa_signal_t  sync_copy_signal;
 
+    // indicated whether this HSAQueue has already been used
+    // for compute or copy tasks 
+    bool has_been_used;
 
 public:
     HSAQueue(KalmarDevice* pDev, hsa_agent_t agent, execute_order order, queue_priority priority) ;
@@ -1454,7 +1444,7 @@ public:
     void pushAsyncOp(std::shared_ptr<HSAOp> op) {
 
         std::lock_guard<std::recursive_mutex> lg(qmutex);
-
+        
         op->setSeqNumFromQueue();
 
         DBOUT(DB_CMD, "  pushing " << *op << " completion_signal="<< std::hex  << ((hsa_signal_t*)op->getNativeHandle())->handle << std::dec
@@ -1499,8 +1489,9 @@ public:
         if (DBFLAG(DB_QUEUE)) {
             printAsyncOps(std::cerr);
         }
-    }
 
+        has_been_used = true;
+    }
 
     // Check upcoming command that will be sent to this queue against the youngest async op
     // in the queue to detect if any command dependency is required.
@@ -1644,6 +1635,8 @@ public:
         //
 
         std::lock_guard<std::recursive_mutex> lg(qmutex);
+
+        if (!has_been_used) return;
 
         if (HCC_OPT_FLUSH && nextSyncNeedsSysRelease()) {
 
@@ -2031,46 +2024,9 @@ public:
                              const void * args, size_t argsize,
                              hc::completion_future *cf, const char *kernelName) override ;
 
-    bool set_cu_mask(const std::vector<bool>& cu_mask) override {
-        // get device's total compute unit count
-        auto device = getDev();
-        unsigned int physical_count = device->get_compute_unit_count();
-        assert(physical_count > 0);
 
-        uint32_t temp = 0;
-        uint32_t bit_index = 0;
-
-        // If cu_mask.size() is greater than physical_count, igore the rest.
-        int iter = cu_mask.size() > physical_count ? physical_count : cu_mask.size();
-
-
-        {
-            std::lock_guard<std::recursive_mutex> l(this->qmutex);
-
-
-            this->cu_arrays.clear();
-
-            for(auto i = 0; i < iter; i++) {
-                temp |= (uint32_t)(cu_mask[i]) << bit_index;
-
-                if(++bit_index == 32) {
-                    this->cu_arrays.push_back(temp);
-                    bit_index = 0;
-                    temp = 0;
-                }
-            }
-
-            if(bit_index != 0) {
-                this->cu_arrays.push_back(temp);
-            }
-
-
-            // Apply the new cu mask to the hw queue:
-            return (rocrQueue->setCuMask(this) == HSA_STATUS_SUCCESS);
-
-        }
-    }
-
+    bool set_cu_mask(const std::vector<bool>& cu_mask) override;
+ 
     // enqueue a barrier packet
     std::shared_ptr<KalmarAsyncOp> EnqueueMarker(memory_scope release_scope) override {
 
@@ -2213,9 +2169,41 @@ public:
 void RocrQueue::assignHccQueue(HSAQueue *hccQueue) {
     assert (hccQueue->rocrQueue == nullptr);  // only needy should assign new queue
     hccQueue->rocrQueue = this;
+    hccQueue->has_been_used = true;
     _hccQueue = hccQueue;
 
     setCuMask(hccQueue);
+}
+
+hsa_status_t RocrQueue::setPriority(queue_priority p) {
+    auto status = HSA_STATUS_SUCCESS;
+    if (p != _priority) {
+          // Map queue_priority to hsa_amd_queue_priority_t
+        hsa_amd_queue_priority_t h_priority;
+        switch (p) {
+            case priority_low:
+                h_priority = HSA_AMD_QUEUE_PRIORITY_LOW;
+                break;
+            case priority_high:
+                h_priority = HSA_AMD_QUEUE_PRIORITY_HIGH;
+                break;
+            case priority_normal:
+                h_priority = HSA_AMD_QUEUE_PRIORITY_NORMAL;
+                break;
+            default:
+                {
+                    std::stringstream msg;
+                    msg << "Unknown priority value " << p;
+                    throw Kalmar::runtime_exception(msg.str().c_str(), -1);
+                }
+                break;
+        }
+        _priority = p;
+        // Set queue priority
+        status = hsa_amd_queue_set_priority(_hwQueue, h_priority);
+        DBOUT(DB_QUEUE, "Set priority for HSA command queue: " << _hwQueue << " to " << h_priority << "\n");
+    }
+    return status;
 }
 
 hsa_status_t RocrQueue::setCuMask(HSAQueue *hccQueue) {
@@ -2287,7 +2275,7 @@ public:
     UnpinnedCopyEngine::CopyMode  copy_mode;
 
     // Creates or steals a rocrQueue and returns it in theif->rocrQueue
-    void createOrstealRocrQueue(Kalmar::HSAQueue *thief, queue_priority priority = priority_normal) {
+    void createOrstealRocrQueue(Kalmar::HSAQueue *thief, queue_priority priority) {
         RocrQueue *foundRQ = nullptr;
 
         // Allocate a new queue when we are below the HCC_MAX_QUEUES limit
@@ -2317,33 +2305,45 @@ public:
                     }
                 }
             }
-
             // Second pass, try steal from a ROCR queue associated with an HCC queue, but with no active tasks
             {
                 std::lock_guard<std::mutex> lg(rocrQueuesMutex);
-                for (auto rq : rocrQueues[priority]) {
+                for (int p = priority_low; priority >= priority_high; --p) {
+                    auto& rqueues = rocrQueues[p];
+                    for (auto it = rqueues.begin(); it != rqueues.end(); ++it) {
+                        auto rq = *it;
 
-                    if (rq->_hccQueue == nullptr) {
-                        DBOUT(DB_QUEUE, "Found unused rocrQueue=" << rq << " for thief=" << thief << ".  hwQueue=" << rq->_hwQueue << "\n")
-                        // update the queue pointers to indicate the theft
-                        rq->assignHccQueue(thief);
-                        return;
-                    } else if (rq->_hccQueue != thief)  {
-                        auto victimHccQueue = rq->_hccQueue;
-                        std::lock_guard<std::recursive_mutex> l(victimHccQueue->qmutex);
-                        if (victimHccQueue->isEmpty()) {
-                            DBOUT(DB_LOCK, " ptr:" << this << " lock_guard...\n");
-                            assert (victimHccQueue->rocrQueue == rq);  // ensure the link is consistent.
-                            victimHccQueue->rocrQueue = nullptr;
-
-                            // update the queue pointers to indicate the theft:
+                        auto is_free = [thief](RocrQueue* rq) {
+                            if (rq->_hccQueue == nullptr) {
+                                DBOUT(DB_QUEUE, "Found unused rocrQueue=" << rq << "\n")
+                                return true;
+                            } else if (rq->_hccQueue != thief)  {
+                                auto victimHccQueue = rq->_hccQueue;
+                                std::lock_guard<std::recursive_mutex> l(victimHccQueue->qmutex);
+                                if (victimHccQueue->isEmpty()) {
+                                    assert (victimHccQueue->rocrQueue == rq);  // ensure the link is consistent.
+                                    victimHccQueue->rocrQueue = nullptr;
+                                    DBOUT(DB_QUEUE, "Stole existing rocrQueue=" << rq << " from victimHccQueue=" << victimHccQueue << "\n")
+                                    return true;
+                                }
+                            }
+                            return false;
+                        };
+                        
+                        if (is_free(rq)) {
+                            DBOUT(DB_QUEUE, "Assign rocrQueue=" << rq << " to thief=" << thief << ".  hwQueue=" << rq->_hwQueue << "\n");
                             rq->assignHccQueue(thief);
-                            DBOUT(DB_QUEUE, "Stole existing rocrQueue=" << rq << " from victimHccQueue=" << victimHccQueue << " to hccQueue=" << thief << "\n")
-                            return; // for
+                            if (p != priority) {
+                                auto status = rq->setPriority(priority);
+                                STATUS_CHECK(status, __LINE__);
+                                rocrQueues[priority].push_back(rq);
+                                rqueues.erase(it);
+                            }
+                            return;
                         }
                     }
                 }
-            }
+            }  // Second pass
         }
     };
 
@@ -2564,9 +2564,6 @@ public:
     }
 
 
-
-
-
     HSADevice(hsa_agent_t a, hsa_agent_t host, int x_accSeqNum);
 
     ~HSADevice() {
@@ -2752,6 +2749,7 @@ public:
             case hc::EF_AMDGPU_MACH_AMDGCN_GFX803 : triple.append("803"); break;
             case hc::EF_AMDGPU_MACH_AMDGCN_GFX900 : triple.append("900"); break;
             case hc::EF_AMDGPU_MACH_AMDGCN_GFX906 : triple.append("906"); break;
+            case hc::EF_AMDGPU_MACH_AMDGCN_GFX908 : triple.append("908"); break;
         }
 
         const auto isa{get_isa_name_from_triple(std::move(triple))};
@@ -3637,6 +3635,12 @@ public:
             agentToDeviceMap_.insert(std::pair<uint64_t, HSADevice*> (agent.handle, dev));
         }
 
+        if (agents.size() == 0) {
+            // no GPU found
+            init_success = true;
+            return;
+        }
+
         DBOUT(DB_INIT, "Setting GPU " << HCC_DEFAULT_GPU << " as the default accelerator\n");
         if (first_gpu_index + HCC_DEFAULT_GPU >= Devices.size()) {
             hc::print_backtrace();
@@ -3645,6 +3649,7 @@ public:
         }
         def = Devices[first_gpu_index + HCC_DEFAULT_GPU];
 
+#ifdef HC_PRINTF_SUPPORT_ENABLE
         // pinned hc::printf_buffer so that the GPUs could access it
         if (hc::printf_buffer_locked_va == nullptr) {
           hsa_status_t status = HSA_STATUS_SUCCESS;
@@ -3653,6 +3658,7 @@ public:
                                        hsa_agents, agents.size(), (void**)&hc::printf_buffer_locked_va);
           STATUS_CHECK(status, __LINE__);
         }
+#endif
 
         init_success = true;
     }
@@ -3679,6 +3685,7 @@ public:
         if (!init_success)
           return;
 
+#if HC_PRINTF_SUPPORT_ENABLE
         // deallocate the printf buffer
         if (HCC_ENABLE_PRINTF &&
             hc::printf_buffer != nullptr) {
@@ -3690,6 +3697,7 @@ public:
         status = hsa_amd_memory_unlock(&hc::printf_buffer);
         STATUS_CHECK(status, __LINE__);
         hc::printf_buffer_locked_va = nullptr;
+#endif
 
         // destroy all KalmarDevices associated with this context
         for (auto dev : Devices)
@@ -3778,6 +3786,7 @@ void HSAContext::ReadHccEnv()
     GET_ENV_INT(HCC_OPT_FLUSH, "Perform system-scope acquire/release only at CPU sync boundaries (rather than after each kernel)");
     GET_ENV_INT(HCC_FORCE_CROSS_QUEUE_FLUSH, "create_blocking_marker will force need for sys acquire (0x1) and release (0x2) queue where the marker is created. 0x3 sets need for both flags.");
     GET_ENV_INT(HCC_MAX_QUEUES, "Set max number of HSA queues this process will use.  accelerator_views will share the allotted queues and steal from each other as necessary");
+    GET_ENV_INT(HCC_LAZY_QUEUE_CREATION, "Control lazy HSA queue creation (enabled by default).  Set to 0 to disable it.");
 
     GET_ENV_INT(HCC_ASYNCOPS_SIZE, "Number of HSA operations to allow prior to resource cleanup.");
 
@@ -4022,9 +4031,11 @@ HSAQueue::HSAQueue(KalmarDevice* pDev, hsa_agent_t agent, execute_order order, q
     KalmarQueue(pDev, queuing_mode_automatic, order, priority),
     rocrQueue(nullptr),
     asyncOps(HCC_ASYNCOPS_SIZE), asyncOpsIndex(0),
-    valid(true), _nextSyncNeedsSysRelease(false), _nextKernelNeedsSysAcquire(false), bufferKernelMap(), kernelBufferMap()
+    valid(true), _nextSyncNeedsSysRelease(false), _nextKernelNeedsSysAcquire(false), bufferKernelMap(), kernelBufferMap(),
+    has_been_used(false)
 {
-    {
+
+    if (!HCC_LAZY_QUEUE_CREATION) {
         // Protect the HSA queue we can steal it.
         DBOUT(DB_LOCK, " ptr:" << this << " create lock_guard...\n");
 
@@ -4033,7 +4044,6 @@ HSAQueue::HSAQueue(KalmarDevice* pDev, hsa_agent_t agent, execute_order order, q
         auto device = static_cast<Kalmar::HSADevice*>(this->getDev());
         device->createOrstealRocrQueue(this, priority);
     }
-
 
     youngestCommandKind = hcCommandInvalid;
 
@@ -4103,7 +4113,7 @@ void *HSAQueue::acquireLockedHsaQueue() {
     this->qmutex.lock();
     if (this->rocrQueue == nullptr) {
         auto device = static_cast<Kalmar::HSADevice*>(this->getDev());
-        device->createOrstealRocrQueue(this);
+        device->createOrstealRocrQueue(this, priority);
     }
 
     DBOUT (DB_QUEUE, "acquireLockedHsaQueue returned hwQueue=" << this->rocrQueue->_hwQueue << "\n");
@@ -4343,8 +4353,48 @@ HSAQueue::dispatch_hsa_kernel(const hsa_kernel_dispatch_packet_t *aql,
     if (cf) {
         *cf = hc::completion_future(sp_dispatch);
     }
-};
+}
 
+bool 
+HSAQueue::set_cu_mask(const std::vector<bool>& cu_mask) override {
+    // get device's total compute unit count
+    auto device = getDev();
+    unsigned int physical_count = device->get_compute_unit_count();
+    assert(physical_count > 0);
+
+    uint32_t temp = 0;
+    uint32_t bit_index = 0;
+
+    // If cu_mask.size() is greater than physical_count, igore the rest.
+    int iter = cu_mask.size() > physical_count ? physical_count : cu_mask.size();
+
+    {
+        std::lock_guard<std::recursive_mutex> l(this->qmutex);
+
+
+        this->cu_arrays.clear();
+
+        for(auto i = 0; i < iter; i++) {
+            temp |= (uint32_t)(cu_mask[i]) << bit_index;
+
+            if(++bit_index == 32) {
+                this->cu_arrays.push_back(temp);
+                bit_index = 0;
+                temp = 0;
+            }
+        }
+
+        if(bit_index != 0) {
+            this->cu_arrays.push_back(temp);
+        }
+
+        // Apply the new cu mask to the hw queue:
+        if (!rocrQueue) {
+            getHSADev()->createOrstealRocrQueue(this, priority);
+        }
+        return (rocrQueue->setCuMask(this) == HSA_STATUS_SUCCESS);
+    }
+}
 } // namespace Kalmar
 
 // ----------------------------------------------------------------------
@@ -5825,6 +5875,8 @@ HSACopy::syncCopy() {
 // ----------------------------------------------------------------------
 
 extern "C" void *GetContextImpl() {
+
+#ifdef HC_PRINTF_SUPPORT_ENABLE
   // If hc::printf is enabled, it must be initialized *after* the Kalmar::ctx is created.
   // We only want to do this once, but the call to initPrintfBuffer will recurse back
   // into this getter. We use TLS to make sure the same thread is the one recursing.
@@ -5838,6 +5890,8 @@ extern "C" void *GetContextImpl() {
       });
     }
   }
+#endif
+
   return Kalmar::ctx;
 }
 

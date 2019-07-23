@@ -1,4 +1,6 @@
 // RUN: %cxxamp -O1 %s -o %t.out 2>&1 | %FileCheck %s
+// XFAIL: *
+
 #include <stdlib.h>
 #include <iostream>
 #include <functional>

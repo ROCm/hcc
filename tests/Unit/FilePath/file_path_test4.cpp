@@ -1,7 +1,7 @@
 // RUN: mkdir -p "%T/foo bar"
 // RUN: cp "%s" "%T/foo bar"
 // RUN: %hc -fPIC -shared -DSHARED_LIBRARY "%T/foo bar/`basename "%s"`" -o "%T/foo bar/libfile_path_test4.so"
-// RUN: %clang %s -L"%T/foo bar/" -lfile_path_test4 -o %t.out && LD_LIBRARY_PATH="%T/foo bar/" %t.out
+// RUN: %clang %s -L"%T/foo bar/" -lfile_path_test4 -o %t.out && LD_LIBRARY_PATH=$LD_LIBRARY_PATH:"%T/foo bar/" %t.out
 
 // kernels built as one single shared libary
 // linked dynamically with the main program which doesn't contain any

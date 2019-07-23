@@ -2,7 +2,7 @@
 //       scope variables in main in HC, until further notice.
 // XFAIL: *
 // RUN: %hc -fPIC -shared %S/Inputs/shared_object_needs_namespace.cc -o %T/libnamespace_to.so
-// RUN: %hc %s -L%T -lnamespace_to -o %t.out && LD_LIBRARY_PATH=%T %t.out
+// RUN: %hc %s -L%T -lnamespace_to -o %t.out && LD_LIBRARY_PATH=$LD_LIBRARY_PATH:%T %t.out
 
 #include "Inputs/test_parameters.hpp"
 
