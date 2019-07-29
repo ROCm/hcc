@@ -30,7 +30,7 @@ if (!%options || defined $options{h}) {
 # get the directory of this script
 my $tools_path_prefix = $FindBin::Bin;
 if (defined $ENV{'HCC_HOME'}) {
-  $tools_path_prefix = $File::Spec->catfile($ENV{'HCC_HOME'}, "bin");
+  $tools_path_prefix = File::Spec->catfile($ENV{'HCC_HOME'}, "bin");
 }
 my $llvm_objdump = File::Spec->catfile($tools_path_prefix, "llvm-objdump");
 my $clang_offload_bundler = File::Spec->catfile($tools_path_prefix, "clang-offload-bundler");
