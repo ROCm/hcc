@@ -1429,7 +1429,8 @@ public:
         // create a shared_ptr instance
         std::shared_ptr<HSAOp> op(op_);
 
-        std::lock_guard<std::recursive_mutex> lg(qmutex);
+        // qmutex is always locked by caller; this is no longer needed
+        //std::lock_guard<std::recursive_mutex> lg(qmutex);
         
         op->setSeqNumFromQueue();
 
@@ -5748,7 +5749,7 @@ hsa_status_t HSACopy::syncCopy2DExt(hc::hcCommandKind copyDir,
     hsa_status_t hsa_status = hcc_memory_async_copy_rect(copyDir, copyDevice, dstPtrInfo, srcPtrInfo, width, height, srcPitch, dstPitch);
     if (hsa_status == HSA_STATUS_SUCCESS) {
         DBOUT(DB_COPY, "HSACopy::syncCopy2DExt(), wait for completion...");
-        hsa_signal_wait_relaxed(_signal, HSA_SIGNAL_CONDITION_LT, 1, UINT64_MAX, waitMode);
+        waitComplete();
         DBOUT(DB_COPY,"done!\n");
     } else {
         DBOUT(DB_COPY, "HSACopy::syncCopy2DExt(), hcc_amd_memory_async_copy_rect() returns: 0x" << std::hex << hsa_status << std::dec <<"\n");
