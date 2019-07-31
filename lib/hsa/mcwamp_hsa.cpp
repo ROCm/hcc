@@ -5754,8 +5754,12 @@ hsa_status_t HSACopy::syncCopy2DExt(hc::hcCommandKind copyDir,
         throw Kalmar::runtime_exception("Null copyDevice can only be used with HostToHost or DeviceToDevice copy", -1);
     }
 
-    hsa_signal_store_relaxed(_signal, 1);
-    hsa_status_t hsa_status = hcc_memory_async_copy_rect(copyDir, copyDevice, dstPtrInfo, srcPtrInfo, width, height, srcPitch, dstPitch);
+    hsa_status_t hsa_status;
+    {
+        hsaQueue()->acquireLockedHsaQueue();
+        hsa_status = hcc_memory_async_copy_rect(copyDir, copyDevice, dstPtrInfo, srcPtrInfo, width, height, srcPitch, dstPitch);
+        hsaQueue()->releaseLockedHsaQueue();
+    }
     if (hsa_status == HSA_STATUS_SUCCESS) {
         DBOUT(DB_COPY, "HSACopy::syncCopy2DExt(), wait for completion...");
         waitComplete();
