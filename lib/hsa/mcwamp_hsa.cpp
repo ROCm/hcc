@@ -4641,7 +4641,7 @@ HSADispatch::dispatchKernelAsyncFromOp()
 
 inline std::shared_ptr<Kalmar::KalmarAsyncOp>
 HSADispatch::dispatchKernelAsync(const void *hostKernarg, int hostKernargSize, bool allocSignal) {
-    if (_activity_prof.is_enabled() || (HCC_PROFILE & HCC_PROFILE_TRACE) || HCC_FORCE_COMPLETION_FUTURE) {
+    if (_activity_prof.is_enabled() || (HCC_PROFILE & HCC_PROFILE_TRACE) || HCC_FORCE_COMPLETION_FUTURE || HCC_SERIALIZE_KERNEL) {
         allocSignal = true;
     }
 
@@ -4671,9 +4671,13 @@ HSADispatch::dispatchKernelAsync(const void *hostKernarg, int hostKernargSize, b
         op = hsaQueue()->pushAsyncOp(this);
 
         // dynamically allocate a std::shared_future<void> object
-        future = new std::shared_future<void>(std::async(std::launch::deferred, [&] {
-            waitComplete();
-        }).share());
+        // but only if the HSADispatch has a signal,
+        // otherwise HSAQueue::wait() might attempt to wait without a signal in some cases
+        if (((hsa_signal_t*)op->getNativeHandle())->handle != 0) {
+            future = new std::shared_future<void>(std::async(std::launch::deferred, [&] {
+                waitComplete();
+            }).share());
+        }
 
         hsaQueue()->releaseLockedHsaQueue();
     }
@@ -5123,7 +5127,12 @@ Kalmar::HSAQueue *HSAOp::hsaQueue() const
 };
 
 bool HSAOp::isReady() override {
-    return (hsa_signal_load_scacquire(_signal) == 0);
+    if (_signal.handle) {
+        return (hsa_signal_load_scacquire(_signal) == 0);
+    }
+    else {
+        return false;
+    }
 }
 
 
