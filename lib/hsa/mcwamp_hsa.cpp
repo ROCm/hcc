@@ -1591,13 +1591,13 @@ public:
 
 
     bool isEmpty() override {
+        // we need the lock because back() accesses asyncOps and youngestCommandKind is set in pushAsyncOp
+        std::lock_guard<std::recursive_mutex> lg(qmutex);
 
         if (youngestCommandKind == hcCommandInvalid) {
             return true; // no op ever inserted 
         }
 
-        // we need the lock because back() accesses asyncOps
-        std::lock_guard<std::recursive_mutex> lg(qmutex);
         hsa_signal_t signal = *(static_cast <hsa_signal_t*> (back()->getNativeHandle()));
         if (signal.handle) {
             hsa_signal_value_t v = hsa_signal_load_scacquire(signal);
@@ -5515,11 +5515,11 @@ HSACopy::enqueueAsyncCopyCommand(const Kalmar::HSADevice *copyDevice, const hc::
         STATUS_CHECK(HSA_STATUS_ERROR_INVALID_ARGUMENT, __LINE__);
     }
 
+    isAsync = true;
+    setCommandKind (resolveMemcpyDirection(srcPtrInfo._isInDeviceMem, dstPtrInfo._isInDeviceMem));
     std::shared_ptr<KalmarAsyncOp> op;
     {
         hsaQueue()->acquireLockedHsaQueue();
-        isAsync = true;
-        setCommandKind (resolveMemcpyDirection(srcPtrInfo._isInDeviceMem, dstPtrInfo._isInDeviceMem));
         hsa_status_t status = hcc_memory_async_copy(getCommandKind(), copyDevice, dstPtrInfo, srcPtrInfo, sizeBytes);
         STATUS_CHECK(status, __LINE__);
         op = hsaQueue()->pushAsyncOp(this);
@@ -5550,11 +5550,11 @@ HSACopy::enqueueAsyncCopy2dCommand(size_t width, size_t height, size_t srcPitch,
         STATUS_CHECK(HSA_STATUS_ERROR_INVALID_ARGUMENT, __LINE__);
     }
 
+    isAsync = true;
+    setCommandKind (resolveMemcpyDirection(srcPtrInfo._isInDeviceMem, dstPtrInfo._isInDeviceMem));
     std::shared_ptr<KalmarAsyncOp> op;
     {
         hsaQueue()->acquireLockedHsaQueue();
-        isAsync = true;
-        setCommandKind (resolveMemcpyDirection(srcPtrInfo._isInDeviceMem, dstPtrInfo._isInDeviceMem));
         hsa_status_t status = hcc_memory_async_copy_rect(getCommandKind(), copyDevice, dstPtrInfo, srcPtrInfo, width, height, srcPitch, dstPitch);
         STATUS_CHECK(status, __LINE__);
         op = hsaQueue()->pushAsyncOp(this);
