@@ -1,6 +1,8 @@
 #!/usr/bin/perl
 use strict;
 use File::Copy;
+use File::Spec;
+use FindBin;
 use Getopt::Std;
 use List::Util qw(max);
 
@@ -25,14 +27,13 @@ if (!%options || defined $options{h}) {
   usage();
 }
 
-my $rocm_path = "@ROCM_ROOT@";
-# set the default to rocm path
-my $llvm_objdump = "$rocm_path/hcc/bin/llvm-objdump";
-my $clang_offload_bundler = "$rocm_path/hcc/bin/clang-offload-bundler";
+# get the directory of this script
+my $tools_path_prefix = $FindBin::Bin;
 if (defined $ENV{'HCC_HOME'}) {
-  $llvm_objdump = "$ENV{'HCC_HOME'}/bin/llvm-objdump";
-  $clang_offload_bundler = "$ENV{'HCC_HOME'}/bin/clang-offload-bundler";
+  $tools_path_prefix = File::Spec->catfile($ENV{'HCC_HOME'}, "bin");
 }
+my $llvm_objdump = File::Spec->catfile($tools_path_prefix, "llvm-objdump");
+my $clang_offload_bundler = File::Spec->catfile($tools_path_prefix, "clang-offload-bundler");
 
 my $input_file;
 defined $options{i} || die("input not specified");

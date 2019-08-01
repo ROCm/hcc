@@ -1,5 +1,5 @@
 // RUN: %hc -fPIC -shared %S/Inputs/shared_object_with_global.cc -o %T/libglobal_from.so
-// RUN: %hc -L%T -lglobal_from %s -o %t.out && LD_LIBRARY_PATH=%T %t.out
+// RUN: %hc -L%T -lglobal_from %s -o %t.out && LD_LIBRARY_PATH=$LD_LIBRARY_PATH:%T %t.out
 
 #include "Inputs/test_parameters.hpp"
 

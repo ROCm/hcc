@@ -1,6 +1,6 @@
 
 // RUN: %hc -fPIC -shared -DSHARED_LIBRARY %s -o %T/libtest4.so
-// RUN: %hc %s -L%T -ltest4 -o %t.out && LD_LIBRARY_PATH=%T %t.out
+// RUN: %hc %s -L%T -ltest4 -o %t.out && LD_LIBRARY_PATH=$LD_LIBRARY_PATH:%T %t.out
 
 // kernels built as one single shared libary
 // linked dynamically with the main program which contains

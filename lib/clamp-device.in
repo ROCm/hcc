@@ -173,6 +173,10 @@ elif [ $AMDGPU_TARGET == "gfx906" ]; then
   OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_906.amdgcn.bc"
   HCC_EXTRA_ARCH_FILE=$HCC_EXTRA_LIBRARIES_GFX906
   KMOPTLLC+=" -mattr=+sram-ecc"
+elif [ $AMDGPU_TARGET == "gfx908" ]; then
+  OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_908.amdgcn.bc"
+  HCC_EXTRA_ARCH_FILE=$HCC_EXTRA_LIBRARIES_GFX908
+  KMOPTLLC+=" -mattr=+sram-ecc"
 fi
 HCC_BC_LIBS="$ROCM_LIB/hc.amdgcn.bc $ROCM_LIB/hip.amdgcn.bc $ROCM_LIB/opencl.amdgcn.bc $ROCM_LIB/ocml.amdgcn.bc $ROCM_LIB/ockl.amdgcn.bc $OCLC_ISA_VERSION_LIB $ROCM_LIB/oclc_finite_only_off.amdgcn.bc $ROCM_LIB/oclc_daz_opt_off.amdgcn.bc $ROCM_LIB/oclc_correctly_rounded_sqrt_on.amdgcn.bc $ROCM_LIB/oclc_unsafe_math_off.amdgcn.bc"
 

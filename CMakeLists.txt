@@ -195,8 +195,8 @@ endif()
 #################
 
 # define HCC version information
-SET(HCC_VERSION_MAJOR "1")
-SET(HCC_VERSION_MINOR "3")
+SET(HCC_VERSION_MAJOR "2")
+SET(HCC_VERSION_MINOR "7")
 
 include(GenerateVersionFromGit)
 
@@ -260,7 +260,7 @@ set(HSA_AMDGPU_GPU_TARGET "auto" CACHE STRING "Target AMDGPU ISA version")
 
 # Temporary workaround for use of old long-form GFX_ip names, to be removed once
 # we fully deprecate them.
-string(REGEX MATCHALL "AMD:AMDGPU:(7:0:0|7:0:1|8:0:1|8:0:2|8:0:3|9:0:0|9:0:1|9:0:6)"
+string(REGEX MATCHALL "AMD:AMDGPU:(7:0:0|7:0:1|8:0:1|8:0:2|8:0:3|9:0:0|9:0:1|9:0:6|9:0:8)"
                       tmp
                       ${HSA_AMDGPU_GPU_TARGET})
 foreach(long_form IN LISTS tmp)
@@ -427,6 +427,7 @@ if (HCC_INTEGRATE_ROCDL)
     COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_isa_version_901.amdgcn.bc              oclc_isa_version_901.amdgcn.bc
     COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_isa_version_804.amdgcn.bc              oclc_isa_version_804.amdgcn.bc
     COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_isa_version_906.amdgcn.bc              oclc_isa_version_906.amdgcn.bc
+    COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_isa_version_908.amdgcn.bc              oclc_isa_version_908.amdgcn.bc
     COMMAND ${CMAKE_COMMAND} -E create_symlink ../ocml/ocml.amdgcn.bc                              ocml.amdgcn.bc
     COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_wavefrontsize64_on.amdgcn.bc           oclc_wavefrontsize64_on.amdgcn.bc
     COMMAND ${CMAKE_COMMAND} -E create_symlink ../oclc/oclc_wavefrontsize64_off.amdgcn.bc          oclc_wavefrontsize64_off.amdgcn.bc
