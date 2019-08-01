@@ -45,26 +45,6 @@ CLANG_OFFLOAD_BUNDLER=$BINDIR/clang-offload-bundler
 # always be found either in build directory or installed directory.
 CXXFLAGS="-std=c++amp -I$BINDIR/../include -I$BINDIR/../../include -fPIC"
 
-# Set additional CXXFLAGS based on CMAKE_BUILD_TYPE
-shopt -s nocasematch
-CMAKE_BUILD_TYPE="@CMAKE_BUILD_TYPE@"
-case $CMAKE_BUILD_TYPE in
-  release)
-    CXXFLAGS=$CXXFLAGS" -O3"
-    ;;
-  relwithdebinfo)
-    CXXFLAGS=$CXXFLAGS" -O2 -g"
-    ;;
-  minsizerel)
-    CXXFLAGS=$CXXFLAGS" -Os"
-    ;;
-  debug)
-    CXXFLAGS=$CXXFLAGS" -g"
-    ;;
-  *)
-    CXXFLAGS=$CXXFLAGS
-esac
-
 if [ "$#" -lt 2 ]; then
   echo "Usage: $0 kernel-bitcode object" >&2
   exit_with_code -1
