@@ -25,9 +25,6 @@ fi
 # enable bundle dumping
 KMDUMPBUNDLE="${KMDUMPBUNDLE:=0}"
 
-# flag for function calls enabled
-AMDGPU_FUNC_CALLS="0"
-
 # flag for COV3
 HCC_COV3="0"
 
@@ -166,10 +163,6 @@ _thinlto_path() {
     fi
 
     # Perform clamp-device's opt and llc on each kernel individually in parallel
-    FUNC_CALLS=""
-    if [ $AMDGPU_FUNC_CALLS == "1" ]; then
-      FUNC_CALLS="--amdgpu-func-calls"
-    fi
     CODE_OBJECT=""
     if [ $HCC_COV3 == "1" ]; then
       CODE_OBJECT="--hcc-cov3"
@@ -177,7 +170,7 @@ _thinlto_path() {
     i=0
     for AMDGPU_TARGET in ${AMDGPU_TARGET_ARRAY[@]}
     do
-      $CLAMP_DEVICE $KERNEL.thinlto.imported.bc $KERNEL-$AMDGPU_TARGET.isabin --amdgpu-target=$AMDGPU_TARGET $FUNC_CALLS $CODE_OBJECT
+      $CLAMP_DEVICE $KERNEL.thinlto.imported.bc $KERNEL-$AMDGPU_TARGET.isabin --amdgpu-target=$AMDGPU_TARGET $CODE_OBJECT
 
       # error handling
       pids=("${pids[@]}" "$!")
@@ -245,16 +238,12 @@ _default_path() {
 
   declare -a pids
   # for each GPU target, lower to GCN ISA in HSACO format
-  FUNC_CALLS=""
-  if [ $AMDGPU_FUNC_CALLS == "1" ]; then
-    FUNC_CALLS="--amdgpu-func-calls"
-  fi
   CODE_OBJECT=""
   if [ $HCC_COV3 == "1" ]; then
     CODE_OBJECT="--hcc-cov3"
   fi
   for AMDGPU_TARGET in ${AMDGPU_TARGET_ARRAY[@]}; do
-    $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel-$AMDGPU_TARGET.hsaco --amdgpu-target=$AMDGPU_TARGET $FUNC_CALLS $CODE_OBJECT
+    $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel-$AMDGPU_TARGET.hsaco --amdgpu-target=$AMDGPU_TARGET $CODE_OBJECT
     # error handling
     pids+=("${pids[@]}" "$!")
 
@@ -329,10 +318,6 @@ do
     ######################
     --amdgpu-target=*)
     AMDGPU_TARGET_ARRAY+=("${ARG#*=}")
-    continue
-    ;;
-    --amdgpu-func-calls)
-    AMDGPU_FUNC_CALLS="1"
     continue
     ;;
     --hcc-cov3)
