@@ -124,8 +124,8 @@ if [ $AMDGPU_OBJ_CODEGEN == 1 ]; then
 
   declare -a pids
   # for each GPU target, lower to GCN ISA in HSACO format
-  CODE_OBJECT = ""
-  if [ $CODE_OBJECT_V3 == "1" ]; then
+  CODE_OBJECT=""
+  if [ $HCC_COV3 == "1" ]; then
     CODE_OBJECT = "--hcc-cov3"
   fi
   for AMDGPU_TARGET in ${AMDGPU_TARGET_ARRAY[@]}; do
