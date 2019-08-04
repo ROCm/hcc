@@ -2,7 +2,8 @@
 use strict;
 use File::Copy;
 use File::Spec;
-use FindBin;
+use File::Basename;
+use Cwd 'realpath';
 use Getopt::Std;
 use List::Util qw(max);
 
@@ -28,7 +29,7 @@ if (!%options || defined $options{h}) {
 }
 
 # get the directory of this script
-my $tools_path_prefix = $FindBin::Bin;
+my $tools_path_prefix = dirname(realpath($0));
 if (defined $ENV{'HCC_HOME'}) {
   $tools_path_prefix = File::Spec->catfile($ENV{'HCC_HOME'}, "bin");
 }
