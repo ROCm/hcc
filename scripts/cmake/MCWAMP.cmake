@@ -38,6 +38,11 @@ macro(amp_target name )
   if ((NOT HCC_RUNTIME_DEBUG) AND ("${CMAKE_BUILD_TYPE}" STREQUAL "Release"))
 	  target_compile_options(${name} PRIVATE -gline-tables-only)
   endif ((NOT HCC_RUNTIME_DEBUG) AND ("${CMAKE_BUILD_TYPE}" STREQUAL "Release"))
+
+  set_target_properties(${name} PROPERTIES
+    SOVERSION "${HCC_VERSION_MAJOR}"
+    VERSION   "${HCC_VERSION_MAJOR}.${HCC_VERSION_MINOR}"
+  )
 endmacro(amp_target name )
 
 ####################
