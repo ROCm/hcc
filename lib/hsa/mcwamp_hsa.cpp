@@ -2278,13 +2278,20 @@ public:
                                 return true;
                             } else if (rq->_hccQueue != thief)  {
                                 auto victimHccQueue = rq->_hccQueue;
-                                std::lock_guard<std::recursive_mutex> l(victimHccQueue->qmutex);
-                                if (victimHccQueue->isEmpty()) {
-                                    assert (victimHccQueue->rocrQueue == rq);  // ensure the link is consistent.
-                                    victimHccQueue->rocrQueue = nullptr;
-                                    DBOUT(DB_QUEUE, "Stole existing rocrQueue=" << rq << " from victimHccQueue=" << victimHccQueue << "\n")
-                                    return true;
+                                bool f = false;
+
+                                // Try locking the HSAQueue.
+                                // If unsuccesful, it means it's being used somewhere else so skip it; otherwise it may deadlock
+                                if (victimHccQueue->qmutex.try_lock()) {
+                                  if (victimHccQueue->isEmpty()) {
+                                      assert (victimHccQueue->rocrQueue == rq);  // ensure the link is consistent.
+                                      victimHccQueue->rocrQueue = nullptr;
+                                      DBOUT(DB_QUEUE, "Stole existing rocrQueue=" << rq << " from victimHccQueue=" << victimHccQueue << "\n")
+                                      f = true;
+                                  }
+                                  victimHccQueue->qmutex.unlock();
                                 }
+                                return f;
                             }
                             return false;
                         };
