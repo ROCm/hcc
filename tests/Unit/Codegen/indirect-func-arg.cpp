@@ -9,7 +9,7 @@
 
 #define GRID_SIZE (1024)
 
-// CHECK-LABEL: define weak_odr amdgpu_kernel void @"_ZZ4mainEN3$_019__cxxamp_trampolineEPjiii"(i32*, i32, i32, i32)
+// CHECK-LABEL: define weak_odr amdgpu_kernel void @"_ZZ4mainEN3$_019__cxxamp_trampolineEPjiii"(i32* %0, i32 %1, i32 %2, i32 %3) local_unnamed_addr #19
 struct A {
   int x[8];
   A()[[hc]] {
