@@ -2267,7 +2267,7 @@ public:
             // Second pass, try steal from a ROCR queue associated with an HCC queue, but with no active tasks
             {
                 std::lock_guard<std::mutex> lg(rocrQueuesMutex);
-                for (int p = priority_low; priority >= priority_high; --p) {
+                for (int p = priority_low; p >= priority_high; --p) {
                     auto& rqueues = rocrQueues[p];
                     for (auto it = rqueues.begin(); it != rqueues.end(); ++it) {
                         auto rq = *it;
