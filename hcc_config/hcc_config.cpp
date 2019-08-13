@@ -143,11 +143,6 @@ void ldflags(void) {
     }
 
     std::cout << " -ldl -lm -lpthread";
-
-    if (const char *p = getenv("TEST_CPU"))
-        if (p == std::string("ON"))
-        std::cout << " -lmcwamp_atomic";
-
     std::cout << " -lhc_am";
     std::cout << " -Wl,--whole-archive -lmcwamp -Wl,--no-whole-archive";
 
