@@ -19,7 +19,6 @@ SOFTLINKS=(
   "$LIBRARY_DIR" "lib" "libhc_am.so"
   "$LIBRARY_DIR" "lib" "libmcwamp.a"
   "$LIBRARY_DIR" "lib" "libmcwamp.so"
-  "$LIBRARY_DIR" "lib" "libmcwamp_atomic.a"
   "$LIBRARY_DIR" "lib" "libmcwamp_cpu.so"
   "$LIBRARY_DIR" "lib" "libmcwamp_hsa.so"
   "$LIBRARY_DIR" "lib" "libclang_rt.builtins-${PROCESSOR}.a"
