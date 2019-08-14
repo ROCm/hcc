@@ -350,14 +350,8 @@ add_custom_command(TARGET clang_links POST_BUILD
 )
 
 # install certain LLVM libraries needed by HIP
-install(PROGRAMS $<TARGET_FILE:LLVMAMDGPUDesc>
-                 $<TARGET_FILE:LLVMAMDGPUUtils>
-                 $<TARGET_FILE:LLVMMC>
-                 $<TARGET_FILE:LLVMCore>
-                 $<TARGET_FILE:LLVMSupport>
-                 $<TARGET_FILE:LLVMSelectAcceleratorCode>
+install(PROGRAMS $<TARGET_FILE:LLVMSelectAcceleratorCode>
                  $<TARGET_FILE:LLVMPromotePointerKernArgsToGlobal>
-                 $<TARGET_FILE:LLVMHello>
         DESTINATION lib
         COMPONENT compiler
 )
