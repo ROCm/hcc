@@ -490,6 +490,8 @@ execute_process(COMMAND ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/process_packaging_scri
                                                                                        ${HCC_PACKAGE_INSTALL_PREFIX}
                                                                                        ${CMAKE_INSTALL_LIBDIR}
                                                                                        ${CMAKE_SYSTEM_PROCESSOR}
+                                                                                       ${HCC_VERSION_MAJOR}
+                                                                                       ${HCC_VERSION_MINOR}
                 WORKING_DIRECTORY ${PROJECT_BINARY_DIR})
 
 execute_process(COMMAND ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/process_packaging_script.bsh ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/prerm.in
@@ -498,6 +500,8 @@ execute_process(COMMAND ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/process_packaging_scri
                                                                                        ${HCC_PACKAGE_INSTALL_PREFIX}
                                                                                        ${CMAKE_INSTALL_LIBDIR}
                                                                                        ${CMAKE_SYSTEM_PROCESSOR}
+                                                                                       ${HCC_VERSION_MAJOR}
+                                                                                       ${HCC_VERSION_MINOR}
                 WORKING_DIRECTORY ${PROJECT_BINARY_DIR})
 
 set(CPACK_PACKAGE_VENDOR "Advanced Micro Devices, Inc")
