@@ -22,6 +22,10 @@
 #include <link.h>
 #include <dlfcn.h>
 
+#define XSTRINGIFY(X) STRINGIFY(X)
+#define STRINGIFY(X) #X
+#define LIB_NAME_WITH_VERSION(library) library "." XSTRINGIFY(HCC_MAJOR_VERSION) "."  XSTRINGIFY(HCC_MINOR_VERSION)
+
 // interface of HCC runtime implementation
 struct RuntimeImpl {
   RuntimeImpl(const char* libraryName) :
@@ -128,7 +132,7 @@ private:
  */
 class HSAPlatformDetect : public PlatformDetect {
 public:
-  HSAPlatformDetect() : PlatformDetect("HSA", "libmcwamp_hsa.so", nullptr) {}
+  HSAPlatformDetect() : PlatformDetect("HSA", LIB_NAME_WITH_VERSION("libmcwamp_hsa.so"), nullptr) {}
 };
 
 
@@ -142,7 +146,7 @@ static RuntimeImpl* LoadHSARuntime() {
   // load HSA C++AMP runtime
   if (mcwamp_verbose)
     std::cout << "Use HSA runtime" << std::endl;
-  runtimeImpl = new RuntimeImpl("libmcwamp_hsa.so");
+  runtimeImpl = new RuntimeImpl(LIB_NAME_WITH_VERSION("libmcwamp_hsa.so"));
   if (!runtimeImpl->m_RuntimeHandle) {
     std::cerr << "Can't load HSA runtime!" << std::endl;
     delete runtimeImpl;
@@ -158,7 +162,7 @@ static RuntimeImpl* LoadCPURuntime() {
   // load CPU runtime
   if (mcwamp_verbose)
     std::cout << "Use CPU runtime" << std::endl;
-  runtimeImpl = new RuntimeImpl("libmcwamp_cpu.so");
+  runtimeImpl = new RuntimeImpl(LIB_NAME_WITH_VERSION("libmcwamp_cpu.so"));
   if (!runtimeImpl->m_RuntimeHandle) {
     std::cerr << "Can't load CPU runtime!" << std::endl;
     delete runtimeImpl;

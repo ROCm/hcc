@@ -22,6 +22,8 @@ include(ImportedTargets)
 macro(amp_target name )
   set(CMAKE_CXX_COMPILER "${PROJECT_BINARY_DIR}/compiler/bin/clang++")
   add_compile_options(-std=c++11)
+  add_definitions(-DHCC_MAJOR_VERSION=${HCC_VERSION_MAJOR})
+  add_definitions(-DHCC_MINOR_VERSION=${HCC_VERSION_MINOR})
 
   # printf has to be disable on RHEL/CentOS 7.x due to unstable support of std::regex
   # Disabling experimental hc::printf on all platforms due to breakage and lack of maintance
