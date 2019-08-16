@@ -36,7 +36,7 @@ struct RuntimeImpl {
     m_GetCmdNameImpl(nullptr),
     isCPU(false) {
     //std::cout << "dlopen(" << libraryName << ")\n";
-    m_RuntimeHandle = dlopen(libraryName, RTLD_LAZY|RTLD_NODELETE);
+    m_RuntimeHandle = dlopen(libraryName, RTLD_LAZY);
     if (!m_RuntimeHandle) {
       std::cerr << "C++AMP runtime load error: " << dlerror() << std::endl;
       return;
@@ -104,7 +104,7 @@ public:
     // detect if C++AMP runtime is available and
     // whether all platform library dependencies are satisfied
     //std::cout << "dlopen(" << m_ampRuntimeLibrary << ")\n";
-    handle = dlopen(m_ampRuntimeLibrary.c_str(), RTLD_LAZY|RTLD_NODELETE);
+    handle = dlopen(m_ampRuntimeLibrary.c_str(), RTLD_LAZY);
     if (!handle) {
       //std::cout << " C++AMP runtime not found" << std::endl;
       //std::cout << dlerror() << std::endl;
