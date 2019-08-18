@@ -28,6 +28,9 @@ KMDUMPBUNDLE="${KMDUMPBUNDLE:=0}"
 # flag for COV3
 HCC_COV3="0"
 
+# flag for optimisation level
+HCC_OPT=""
+
 BINDIR=$(dirname $0)
 LINK=$BINDIR/llvm-link
 LTO=$BINDIR/llvm-lto
@@ -170,7 +173,7 @@ _thinlto_path() {
     i=0
     for AMDGPU_TARGET in ${AMDGPU_TARGET_ARRAY[@]}
     do
-      $CLAMP_DEVICE $KERNEL.thinlto.imported.bc $KERNEL-$AMDGPU_TARGET.isabin --amdgpu-target=$AMDGPU_TARGET $CODE_OBJECT
+      $CLAMP_DEVICE $KERNEL.thinlto.imported.bc $KERNEL-$AMDGPU_TARGET.isabin --amdgpu-target=$AMDGPU_TARGET $CODE_OBJECT $HCC_OPT
 
       # error handling
       pids=("${pids[@]}" "$!")
@@ -231,7 +234,7 @@ _default_path() {
   if [ $ret != 0 ]; then
     exit $ret
   fi
-  
+
   if [ $VERBOSE == 1 ]; then
     echo "Generating AMD GCN kernel"
   fi
@@ -243,7 +246,7 @@ _default_path() {
     CODE_OBJECT="--hcc-cov3"
   fi
   for AMDGPU_TARGET in ${AMDGPU_TARGET_ARRAY[@]}; do
-    $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel-$AMDGPU_TARGET.hsaco --amdgpu-target=$AMDGPU_TARGET $CODE_OBJECT
+    $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel-$AMDGPU_TARGET.hsaco --amdgpu-target=$AMDGPU_TARGET $CODE_OBJECT $HCC_OPT
     # error handling
     pids+=("${pids[@]}" "$!")
 
@@ -311,8 +314,14 @@ done
 
 for ARG in "${INPUT_ARGUMENTS[@]}"
 do
-
   case $ARG in
+    ##########################
+    # Parse optimisation level
+    ##########################
+    -O*)
+    HCC_OPT=$ARG
+    continue
+    ;;
     ######################
     # Parse AMDGPU target
     ######################

@@ -13,6 +13,9 @@ AMDGPU_OBJ_CODEGEN="${AMDGPU_OBJ_CODEGEN:=0}"
 # flag for COV3
 HCC_COV3="0"
 
+# flag for optimisation level
+HCC_OPT=""
+
 # inject additional GPU archs through an env var
 HCC_EXTRA_GPU_ARCH="${HCC_EXTRA_GPU_ARCH:=0}"
 
@@ -72,6 +75,10 @@ do
     HCC_COV3="1"
     continue
     ;;
+    -O*)
+    HCC_OPT=$ARG
+    continue
+    ;;
   esac
 done
 
@@ -80,7 +87,7 @@ HC_REPLACE_GPU_FE_LLVM="${HC_REPLACE_GPU_FE_LLVM:=0}"
 KERNEL_INPUT=$1
 if [ $HC_REPLACE_GPU_FE_LLVM != "0" ]; then
   KERNEL_INPUT=$HC_REPLACE_GPU_FE_LLVM
-  echo "Replacing GPU input IR from clang with $KERNEL_INPUT" 
+  echo "Replacing GPU input IR from clang with $KERNEL_INPUT"
 fi
 
 if [ ! -f "$KERNEL_INPUT" ]; then
@@ -129,7 +136,7 @@ if [ $AMDGPU_OBJ_CODEGEN == 1 ]; then
     CODE_OBJECT = "--hcc-cov3"
   fi
   for AMDGPU_TARGET in ${AMDGPU_TARGET_ARRAY[@]}; do
-    $CLAMP_DEVICE "$KERNEL_INPUT" "$TEMP_DIR/kernel-$AMDGPU_TARGET.hsaco" --amdgpu-target=$AMDGPU_TARGET --early-finalize $CODE_OBJECT
+    $CLAMP_DEVICE "$KERNEL_INPUT" "$TEMP_DIR/kernel-$AMDGPU_TARGET.hsaco" --amdgpu-target=$AMDGPU_TARGET --early-finalize $CODE_OBJECT $HCC_OPT
     # error handling
     pids+=("${pids[@]}" "$!")
 
