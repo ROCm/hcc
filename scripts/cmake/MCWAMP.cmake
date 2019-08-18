@@ -22,6 +22,8 @@ include(ImportedTargets)
 macro(amp_target name )
   set(CMAKE_CXX_COMPILER "${PROJECT_BINARY_DIR}/compiler/bin/clang++")
   add_compile_options(-std=c++11)
+  add_definitions(-DHCC_MAJOR_VERSION=${HCC_VERSION_MAJOR})
+  add_definitions(-DHCC_MINOR_VERSION=${HCC_VERSION_MINOR})
 
   # printf has to be disable on RHEL/CentOS 7.x due to unstable support of std::regex
   # Disabling experimental hc::printf on all platforms due to breakage and lack of maintance
@@ -38,6 +40,11 @@ macro(amp_target name )
   if ((NOT HCC_RUNTIME_DEBUG) AND ("${CMAKE_BUILD_TYPE}" STREQUAL "Release"))
 	  target_compile_options(${name} PRIVATE -gline-tables-only)
   endif ((NOT HCC_RUNTIME_DEBUG) AND ("${CMAKE_BUILD_TYPE}" STREQUAL "Release"))
+
+  set_target_properties(${name} PROPERTIES
+    SOVERSION "${HCC_VERSION_MAJOR}"
+    VERSION   "${HCC_VERSION_MAJOR}.${HCC_VERSION_MINOR}"
+  )
 endmacro(amp_target name )
 
 ####################
