@@ -34,6 +34,9 @@ KMOPTLLC="${KMOPTLLC:="-O2"}"
 # enable LLVM hijacking
 KMHACKLLVM="${KMHACKLLVM:=0}"
 
+# enable ISA hijacking
+KMHACKISA="${KMHACKISA:=0}"
+
 # enable ThinLTO
 KMTHINLTO="${KMTHINLTO:=0}"
 
@@ -68,6 +71,7 @@ LLC=$BINDIR/llc
 LINK=$BINDIR/llvm-link
 LIB=$BINDIR/../lib
 LLD=$BINDIR/ld.lld
+MC=$BINDIR/llvm-mc
 
 
 ################
@@ -126,6 +130,10 @@ do
     ;;
     --dump-dir=*)
     KMDUMPDIR="${ARG#*=}"
+    continue
+    ;;
+    --input-filename=*)
+    INPUT_FILENAME="${ARG#*=}"
     continue
     ;;
   esac
@@ -230,34 +238,56 @@ if [ $KMDUMPLLVM == "1" ]; then
   cp $2.opt.bc ${KMDUMPDIR}/dump-$AMDGPU_TARGET.opt.bc
 fi
 
-
 # Disable code object v3, generate code object v2 for now
 CODE_OBJECT_FORMAT="-mattr=-code-object-v3"
 
-if [ $KMTHINLTO == "1" ]; then
-  $LLC -mtriple amdgcn-amd-amdhsa -mcpu=$AMDGPU_TARGET $CODE_OBJECT_FORMAT \
-    $KMOPTLLC -amdgpu-function-calls=$AMDGPU_FUNC_CALLS -filetype=obj -o $2 $2.opt.bc
-else
-  $LLC -mtriple amdgcn-amd-amdhsa -mcpu=$AMDGPU_TARGET $CODE_OBJECT_FORMAT \
-    $KMOPTLLC -amdgpu-function-calls=$AMDGPU_FUNC_CALLS -filetype=obj -o $2.isabin $2.opt.bc
-fi
-
-# error handling for llc
-RETVAL=$?
-if [ $RETVAL != 0 ]; then
-  echo "Generating AMD GCN kernel failed in llc for target: $AMDGPU_TARGET"
-  exit $RETVAL
-fi
-
-if [ $KMDUMPISA == "1" ]; then
+if [[ $KMHACKISA == "1" && -e ./hack-$INPUT_FILENAME-$AMDGPU_TARGET.isa ]]; then
+  # hijack ISA
   if [ $KMTHINLTO == "1" ]; then
-    cp $2 ${KMDUMPDIR}/dump-$AMDGPU_TARGET.isabin
+    echo "Use ./hack-$INPUT_FILENAME-$AMDGPU_TARGET.isa to hijack $2"
+    $MC --triple=amdgcn-amd-amdhsa -mcpu=$AMDGPU_TARGET $CODE_OBJECT_FORMAT \
+      -filetype=obj -o $2 ./hack-$INPUT_FILENAME-$AMDGPU_TARGET.isa
   else
-    cp $2.isabin ${KMDUMPDIR}/dump-$AMDGPU_TARGET.isabin
+    echo "Use ./hack-$INPUT_FILENAME-$AMDGPU_TARGET.isa to hijack $2.isabin"
+    $MC --triple=amdgcn-amd-amdhsa -mcpu=$AMDGPU_TARGET $CODE_OBJECT_FORMAT \
+      -filetype=obj -o $2.isabin ./hack-$INPUT_FILENAME-$AMDGPU_TARGET.isa
   fi
-  $LLC -mtriple amdgcn-amd-amdhsa -mcpu=$AMDGPU_TARGET $CODE_OBJECT_FORMAT \
-     $KMOPTLLC -amdgpu-function-calls=$AMDGPU_FUNC_CALLS -filetype=asm -o $2.isa $2.opt.bc
-  mv $2.isa ${KMDUMPDIR}/dump-$AMDGPU_TARGET.isa
+
+  if [ $KMDUMPISA == "1" ]; then
+    if [ $KMTHINLTO == "1" ]; then
+      cp $2 ${KMDUMPDIR}/dump-$AMDGPU_TARGET.isabin
+    else
+      cp $2.isabin ${KMDUMPDIR}/dump-$AMDGPU_TARGET.isabin
+    fi
+    cp ./hack-$INPUT_FILENAME-$AMDGPU_TARGET.isa ${KMDUMPDIR}/dump-$AMDGPU_TARGET.isa
+  fi
+else
+  if [ $KMTHINLTO == "1" ]; then
+    $LLC -mtriple amdgcn-amd-amdhsa -mcpu=$AMDGPU_TARGET $CODE_OBJECT_FORMAT \
+      $KMOPTLLC -amdgpu-function-calls=$AMDGPU_FUNC_CALLS -filetype=obj -o $2 $2.opt.bc
+  else
+    $LLC -mtriple amdgcn-amd-amdhsa -mcpu=$AMDGPU_TARGET $CODE_OBJECT_FORMAT \
+      $KMOPTLLC -amdgpu-function-calls=$AMDGPU_FUNC_CALLS -filetype=obj -o $2.isabin $2.opt.bc
+  fi
+  
+  # error handling for llc
+  RETVAL=$?
+  if [ $RETVAL != 0 ]; then
+    echo "Generating AMD GCN kernel failed in llc for target: $AMDGPU_TARGET"
+    exit $RETVAL
+  fi
+
+  if [ $KMDUMPISA == "1" ]; then
+    if [ $KMTHINLTO == "1" ]; then
+      cp $2 ${KMDUMPDIR}/dump-$AMDGPU_TARGET.isabin
+    else
+      cp $2.isabin ${KMDUMPDIR}/dump-$AMDGPU_TARGET.isabin
+    fi
+  
+    $LLC -mtriple amdgcn-amd-amdhsa -mcpu=$AMDGPU_TARGET $CODE_OBJECT_FORMAT \
+       $KMOPTLLC -amdgpu-function-calls=$AMDGPU_FUNC_CALLS -filetype=asm -o $2.isa $2.opt.bc
+    mv $2.isa ${KMDUMPDIR}/dump-$AMDGPU_TARGET.isa
+  fi
 fi
 
 # ThinLTO does not performs LLD here inside clamp-device.in.
