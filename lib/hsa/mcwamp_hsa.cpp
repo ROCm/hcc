@@ -721,9 +721,6 @@ public:
     Kalmar::HSAQueue *hsaQueue() const;
     bool isReady() override;
 
-    static constexpr uint32_t _max_dependency_chain_length = 32;
-    uint32_t           _dependency_chain_length;
-
 protected:
     uint64_t     apiStartTick;
     HSAOpCoord   _opCoord;
@@ -5132,7 +5129,6 @@ HSAOp::HSAOp(hc::HSAOpId id, Kalmar::KalmarQueue *queue, hc::hcCommandKind comma
     KalmarAsyncOp(queue, commandKind),
     _opCoord(static_cast<Kalmar::HSAQueue*> (queue)),
     _agent(static_cast<Kalmar::HSADevice*>(hsaQueue()->getDev())->getAgent()),
-    _dependency_chain_length(0),
     _activity_prof(id, _opCoord._queueId, _opCoord._deviceId)
 {
     _signal.handle=0;
@@ -5325,16 +5321,12 @@ hsa_status_t HSACopy::hcc_memory_async_copy(Kalmar::hcCommandKind copyKind, cons
             // For both of these cases, we create an additional barrier packet in the source, and attach the desired fence.
             // Then we make the copy depend on the signal written by this command.
             if ((depAsyncOp && depSignal.handle == 0x0) || 
-                  (fenceScope != hc::no_scope) ||
-                  (depAsyncOp && depAsyncOp->_dependency_chain_length > _max_dependency_chain_length)) {
+                  (fenceScope != hc::no_scope)) {
                 DBOUT( DB_CMD2, "  asyncCopy adding marker for needed dependency or release\n");
 
                 // Set depAsyncOp for use by the async copy below:
                 depAsyncOp = std::static_pointer_cast<HSAOp> (hsaQueue()->EnqueueMarkerWithDependency(0, nullptr, fenceScope));
                 depSignal = * (static_cast <hsa_signal_t*> (depAsyncOp->getNativeHandle()));
-            }
-            else if (depAsyncOp) {
-              this->_dependency_chain_length = depAsyncOp->_dependency_chain_length + 1;
             }
 
             depSignalCnt = 1;
