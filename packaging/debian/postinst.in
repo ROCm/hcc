@@ -67,6 +67,11 @@ do_softlinks() {
   done
 }
 
+if [ "$1" -gt "2" ]; then
+   # For RPM, any value greater than 1 is upgrade
+   1="upgrade" 
+fi
+
 case "$1" in
    configure|upgrade|1|2)
    do_softlinks
