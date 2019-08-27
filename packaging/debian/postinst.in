@@ -35,10 +35,6 @@ SOFTLINKS=(
 
 do_softlinks() {
 
-  if [ $PACKAGE_NAME == "hcc_hsail" ] && [ -L "$ROCM_PATH/hcc" ] && [ $(readlink -f $ROCM_PATH/hcc) == "$ROCM_PATH/hcc-lc" ] ; then
-      return
-  fi
-
   mkdir -p "$ROCM_PATH/lib"
   mkdir -p "$ROCM_PATH/lib/cmake"
   mkdir -p "$ROCM_PATH/bin"
@@ -58,28 +54,10 @@ do_softlinks() {
     SOURCE_DIR=${SOFTLINKS[i]}
     DEST_DIR=${SOFTLINKS[i+1]}
     FILE=${SOFTLINKS[i+2]}
-
-    if [ -e $ROCM_PATH/hcc/$SOURCE_DIR/$FILE ] ; then
-      if [ ! -e $ROCM_PATH/$DEST_DIR/$FILE ] ; then
-        ln -sf $ROCM_PATH/hcc/$SOURCE_DIR/$FILE $ROCM_PATH/$DEST_DIR/$FILE
-      fi
-    fi
+    ln -sf $ROCM_PATH/hcc/$SOURCE_DIR/$FILE $ROCM_PATH/$DEST_DIR/$FILE
   done
 }
 
-case "$1" in
-   configure|upgrade|1|2)
-   do_softlinks
-   ;;
-
-   abort-upgrade|abort-remove|abort-deconfigure)
-      echo "$1"
-    ;;
-
-   *)
-      echo "postinst called with unknown argument: $1" >&2
-      exit 0
-   ;;
-
-esac
-
+if [ $1 == "configure" ] || [ $1 == "upgrade" ] || [ "$1" -ge "1" ] ; then
+  do_softlinks
+fi

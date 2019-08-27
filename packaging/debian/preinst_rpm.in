@@ -1,0 +1,45 @@
+#!/bin/bash
+
+set -e
+
+PACKAGE_NAME=@PACKAGE_NAME@
+INSTALL_PATH=@INSTALL_PATH@
+LIBRARY_DIR=@LIBRARY_DIR@
+PROCESSOR=@PROCESSOR@
+HCC_VERSION_MAJOR=@HCC_VERSION_MAJOR@
+HCC_VERSION_MINOR=@HCC_VERSION_MINOR@
+
+ROCM_PATH="/opt/rocm"
+
+# NOTE: if you modify this table, also update the same table in postinst
+SOFTLINKS=(
+# <SOURCE DIRECTORY> <DESTINATION DIRECTORY> <FILE>
+  "bin" "bin" "clamp-config"
+  "bin" "bin" "extractkernel"
+  "bin" "bin" "hcc"
+  "bin" "bin" "hcc-config"
+  "$LIBRARY_DIR" "lib" "libhc_am.so*"
+  "$LIBRARY_DIR" "lib" "libmcwamp.so*"
+  "$LIBRARY_DIR" "lib" "libmcwamp_cpu.so*"
+  "$LIBRARY_DIR" "lib" "libmcwamp_hsa.so*"
+  "$LIBRARY_DIR" "lib" "libclang_rt.builtins-${PROCESSOR}.a"
+)
+
+remove_all_softlinks_before_upgrade() {
+
+  for (( i=0; i<${#SOFTLINKS[@]}; i+=3 ))
+  do
+    SOURCE_DIR=${SOFTLINKS[i]}
+    DEST_DIR=${SOFTLINKS[i+1]}
+    FILE=${SOFTLINKS[i+2]}
+
+    rm -f  $ROCM_PATH/$DEST_DIR/$FILE
+  done
+  rm -f $ROCM_PATH/include/hcc
+  rm -f $ROCM_PATH/lib/cmake/hcc
+}
+
+if [ "$1" -ge "2" ] ; then
+  remove_all_softlinks_before_upgrade
+fi
+
