@@ -6,6 +6,8 @@ PACKAGE_NAME=@PACKAGE_NAME@
 INSTALL_PATH=@INSTALL_PATH@
 LIBRARY_DIR=@LIBRARY_DIR@
 PROCESSOR=@PROCESSOR@
+HCC_VERSION_MAJOR=@HCC_VERSION_MAJOR@
+HCC_VERSION_MINOR=@HCC_VERSION_MINOR@
 
 ROCM_PATH="/opt/rocm"
 
@@ -16,18 +18,14 @@ SOFTLINKS=(
   "bin" "bin" "extractkernel"
   "bin" "bin" "hcc"
   "bin" "bin" "hcc-config"
-  "$LIBRARY_DIR" "lib" "libhc_am.so"
-  "$LIBRARY_DIR" "lib" "libmcwamp.a"
-  "$LIBRARY_DIR" "lib" "libmcwamp.so"
-  "$LIBRARY_DIR" "lib" "libmcwamp_atomic.a"
-  "$LIBRARY_DIR" "lib" "libmcwamp_cpu.so"
-  "$LIBRARY_DIR" "lib" "libmcwamp_hsa.so"
+  "$LIBRARY_DIR" "lib" "libhc_am.so*"
+  "$LIBRARY_DIR" "lib" "libmcwamp.so*"
+  "$LIBRARY_DIR" "lib" "libmcwamp_cpu.so*"
+  "$LIBRARY_DIR" "lib" "libmcwamp_hsa.so*"
   "$LIBRARY_DIR" "lib" "libclang_rt.builtins-${PROCESSOR}.a"
 )
 
-remove_all_softlinks() {
-
-  rm -f $INSTALL_PATH/include/hcc
+remove_all_softlinks_before_upgrade() {
 
   for (( i=0; i<${#SOFTLINKS[@]}; i+=3 ))
   do
@@ -39,14 +37,9 @@ remove_all_softlinks() {
   done
   rm -f $ROCM_PATH/include/hcc
   rm -f $ROCM_PATH/lib/cmake/hcc
-
-  rmdir --ignore-fail-on-non-empty /opt/rocm/lib 
-  rmdir --ignore-fail-on-non-empty /opt/rocm/lib/cmake
-  rmdir --ignore-fail-on-non-empty /opt/rocm/include
-  rmdir --ignore-fail-on-non-empty /opt/rocm/bin 
-  rmdir --ignore-fail-on-non-empty /opt/rocm     
 }
 
-if [ $1 == "remove" ] || [ $1 == "purge" ] || [ $1 == "upgrade" ] || [ "$1" -eq "0" ] ; then
-  remove_all_softlinks
+if [ "$1" -ge "2" ] ; then
+  remove_all_softlinks_before_upgrade
 fi
+

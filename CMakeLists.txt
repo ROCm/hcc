@@ -506,6 +506,16 @@ execute_process(COMMAND ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/process_packaging_scri
                                                                                        ${CMAKE_SYSTEM_PROCESSOR}
                 WORKING_DIRECTORY ${PROJECT_BINARY_DIR})
 
+execute_process(COMMAND ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/process_packaging_script.bsh ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/preinst_rpm.in
+                                                                                       ${DEBIAN_EXTRA_SCRIPT_DEST_DIR}/preinst_rpm
+                                                                                       ${CPACK_PACKAGE_NAME}
+                                                                                       ${HCC_PACKAGE_INSTALL_PREFIX}
+                                                                                       ${CMAKE_INSTALL_LIBDIR}
+                                                                                       ${CMAKE_SYSTEM_PROCESSOR}
+                                                                                       ${HCC_VERSION_MAJOR}
+                                                                                       ${HCC_VERSION_MINOR}
+                WORKING_DIRECTORY ${PROJECT_BINARY_DIR})
+
 set(CPACK_PACKAGE_VENDOR "Advanced Micro Devices, Inc")
 set(CPACK_PACKAGE_VERSION "${HCC_VERSION_MAJOR}.${HCC_VERSION_MINOR}.${HCC_VERSION_PATCH}")
 set(CPACK_PACKAGE_VERSION_MAJOR ${HCC_VERSION_MAJOR})
@@ -557,6 +567,7 @@ set(CPACK_DEBIAN_PACKAGE_DEPENDS "${HCC_GENERAL_DEBIAN_DEP} ${HCC_ROCR_DEP} ${HC
 # RPM package settings
 set(CPACK_RPM_PACKAGE_DESCRIPTION ${PACKAGE_DESCRIPTION})
 set(CPACK_RPM_POST_INSTALL_SCRIPT_FILE "${PROJECT_BINARY_DIR}/packaging/debian/postinst")
+set(CPACK_RPM_PRE_INSTALL_SCRIPT_FILE "${PROJECT_BINARY_DIR}/packaging/debian/preinst_rpm")
 set(CPACK_RPM_PRE_UNINSTALL_SCRIPT_FILE "${PROJECT_BINARY_DIR}/packaging/debian/prerm")
 
 # disable automatic shared libraries dependency detection
