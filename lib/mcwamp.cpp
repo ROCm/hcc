@@ -90,6 +90,9 @@ namespace CLAMP {
 ////////////////////////////////////////////////////////////
 // Class declaration
 ////////////////////////////////////////////////////////////
+
+static std::string library_path;
+
 /**
  * \brief Base class of platform detection
  */
@@ -132,7 +135,7 @@ private:
  */
 class HSAPlatformDetect : public PlatformDetect {
 public:
-  HSAPlatformDetect() : PlatformDetect("HSA", LIB_NAME_WITH_VERSION("libmcwamp_hsa.so"), nullptr) {}
+  HSAPlatformDetect() : PlatformDetect("HSA", library_path + LIB_NAME_WITH_VERSION("libmcwamp_hsa.so"), nullptr) {}
 };
 
 
@@ -146,7 +149,8 @@ static RuntimeImpl* LoadHSARuntime() {
   // load HSA C++AMP runtime
   if (mcwamp_verbose)
     std::cout << "Use HSA runtime" << std::endl;
-  runtimeImpl = new RuntimeImpl(LIB_NAME_WITH_VERSION("libmcwamp_hsa.so"));
+  std::string lib = library_path + LIB_NAME_WITH_VERSION("libmcwamp_hsa.so");
+  runtimeImpl = new RuntimeImpl(lib.c_str());
   if (!runtimeImpl->m_RuntimeHandle) {
     std::cerr << "Can't load HSA runtime!" << std::endl;
     delete runtimeImpl;
@@ -162,7 +166,8 @@ static RuntimeImpl* LoadCPURuntime() {
   // load CPU runtime
   if (mcwamp_verbose)
     std::cout << "Use CPU runtime" << std::endl;
-  runtimeImpl = new RuntimeImpl(LIB_NAME_WITH_VERSION("libmcwamp_cpu.so"));
+  std::string lib = library_path + LIB_NAME_WITH_VERSION("libmcwamp_cpu.so"); 
+  runtimeImpl = new RuntimeImpl(lib.c_str());
   if (!runtimeImpl->m_RuntimeHandle) {
     std::cerr << "Can't load CPU runtime!" << std::endl;
     delete runtimeImpl;
@@ -428,6 +433,21 @@ KalmarContext *getContext() {
 class KalmarBootstrap {
 public:
   KalmarBootstrap() {
+
+    // determine the search path for libmcwamp_hsa based on the
+    // path of this library
+    dl_iterate_phdr([](struct dl_phdr_info* info, size_t size, void* data) {
+      if (info->dlpi_name) {
+        std::string p(info->dlpi_name);
+        auto pos = p.find("libmcwamp.so");
+        if (pos != std::string::npos) {
+          CLAMP::library_path = p.substr(0, pos);
+          return 1;
+        }
+      }
+      return 0;
+    }, nullptr);
+
     bool to_init = false;
     char* lazyinit_env = getenv("HCC_LAZYINIT");
     if (lazyinit_env != nullptr) {
