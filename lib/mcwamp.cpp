@@ -91,7 +91,7 @@ namespace CLAMP {
 // Class declaration
 ////////////////////////////////////////////////////////////
 
-static std::string get_library_path()
+static std::string& get_library_path()
 {
     static std::string library_path;
     static std::once_flag once;
