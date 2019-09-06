@@ -441,7 +441,8 @@ public:
         std::string p(info->dlpi_name);
         auto pos = p.find("libmcwamp.so");
         if (pos != std::string::npos) {
-          CLAMP::library_path = p.substr(0, pos);
+          p.erase(p.begin()+pos, p.end());
+          CLAMP::library_path = std::move(p);
           return 1;
         }
       }
