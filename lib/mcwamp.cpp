@@ -95,23 +95,22 @@ static std::string& get_library_path()
 {
     static std::string library_path;
     static std::once_flag once;
-    std::call_once(once, [] (std::string &path) {
+    std::call_once(once, [] () {
         // determine the search path for libmcwamp_hsa based on the
         // path of this library
         dl_iterate_phdr([](struct dl_phdr_info* info, size_t size, void* data) {
-          std::string &cast_path = *reinterpret_cast<std::string*>(data);
           if (info->dlpi_name) {
             std::string p(info->dlpi_name);
             auto pos = p.find("libmcwamp.so");
             if (pos != std::string::npos) {
               p.erase(p.begin()+pos, p.end());
-              cast_path = std::move(p);
+              library_path = std::move(p);
               return 1;
             }
           }
           return 0;
-        }, reinterpret_cast<void*>(&path));
-    }, library_path);
+        } , nullptr);
+    });
 
     return library_path;
 }
