@@ -1,4 +1,5 @@
 // RUN: %cxxamp %s -o %t.out 2>&1 | %FileCheck --strict-whitespace %s
+// XFAIL: *
 
 //////////////////////////////////////////////////////////////////////////////////
 // Do not delete or add any line; it is referred to by absolute line number in the
