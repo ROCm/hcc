@@ -30,13 +30,13 @@ target_link_libraries(hccshared INTERFACE -fPIC)
 ####################
 # C++AMP tools
 ####################
-install(PROGRAMS ${PROJECT_BINARY_DIR}/compiler/bin/clamp-device
-    ${PROJECT_BINARY_DIR}/compiler/bin/clamp-embed
-    ${PROJECT_BINARY_DIR}/compiler/bin/clamp-assemble
-    ${PROJECT_BINARY_DIR}/compiler/bin/clamp-link
-    ${PROJECT_BINARY_DIR}/compiler/bin/error-check
-    ${PROJECT_BINARY_DIR}/compiler/bin/hc-kernel-assemble
-    ${PROJECT_BINARY_DIR}/compiler/bin/hc-host-assemble
+install(PROGRAMS ${PROJECT_BINARY_DIR}/llvm-project/llvm/bin/clamp-device
+    ${PROJECT_BINARY_DIR}/llvm-project/llvm/bin/clamp-embed
+    ${PROJECT_BINARY_DIR}/llvm-project/llvm/bin/clamp-assemble
+    ${PROJECT_BINARY_DIR}/llvm-project/llvm/bin/clamp-link
+    ${PROJECT_BINARY_DIR}/llvm-project/llvm/bin/error-check
+    ${PROJECT_BINARY_DIR}/llvm-project/llvm/bin/hc-kernel-assemble
+    ${PROJECT_BINARY_DIR}/llvm-project/llvm/bin/hc-host-assemble
     DESTINATION bin)
 
 ####################

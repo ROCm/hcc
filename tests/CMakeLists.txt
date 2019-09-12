@@ -14,7 +14,7 @@ file(MAKE_DIRECTORY ${GTEST_LIB_DIR})
 
 # MCWAMP
 set(MCWAMP_LIB_DIR "${LIBRARY_OUTPUT_PATH}")
-set(MCWAMP_TOOL_DIR "${PROJECT_BINARY_DIR}/compiler/bin")
+set(MCWAMP_TOOL_DIR "${PROJECT_BINARY_DIR}/llvm-project/llvm/bin")
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.in
   ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg)
@@ -25,31 +25,31 @@ configure_file(
 
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/../lib/clamp-device.in
-  ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-device @ONLY)
+  ${CMAKE_CURRENT_BINARY_DIR}/../llvm-project/llvm/bin/clamp-device @ONLY)
 
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/../lib/clamp-embed.in
-  ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-embed @ONLY)
+  ${CMAKE_CURRENT_BINARY_DIR}/../llvm-project/llvm/bin/clamp-embed @ONLY)
 
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/../lib/clamp-assemble.in
-  ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-assemble @ONLY)
+  ${CMAKE_CURRENT_BINARY_DIR}/../llvm-project/llvm/bin/clamp-assemble @ONLY)
 
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/../lib/error-check.in
-  ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/error-check @ONLY)
+  ${CMAKE_CURRENT_BINARY_DIR}/../llvm-project/llvm/bin/error-check @ONLY)
 
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/../lib/hc-kernel-assemble.in
-  ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/hc-kernel-assemble @ONLY)
+  ${CMAKE_CURRENT_BINARY_DIR}/../llvm-project/llvm/bin/hc-kernel-assemble @ONLY)
 
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/../lib/hc-host-assemble.in
-  ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/hc-host-assemble @ONLY)
+  ${CMAKE_CURRENT_BINARY_DIR}/../llvm-project/llvm/bin/hc-host-assemble @ONLY)
 
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/../lib/clamp-link.in
-  ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-link @ONLY)
+  ${CMAKE_CURRENT_BINARY_DIR}/../llvm-project/llvm/bin/clamp-link @ONLY)
 
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/../lib/extractkernel.in

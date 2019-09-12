@@ -1,6 +1,6 @@
 
 if(NOT CMAKE_CXX_COMPILER MATCHES ".*hcc")
-    set(CMAKE_CXX_COMPILER "${PROJECT_BINARY_DIR}/compiler/bin/clang++")
+    set(CMAKE_CXX_COMPILER "${PROJECT_BINARY_DIR}/llvm-project/llvm/bin/clang++")
 endif()
 
 add_executable(cmake-test cmake-test.cpp)

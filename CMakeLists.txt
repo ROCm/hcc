@@ -49,17 +49,17 @@ endif()
 include (MCWAMP)
 
 # Regression test
-set(LLVM_SRC "${PROJECT_SOURCE_DIR}/compiler")
-set(LLVM_ROOT "${PROJECT_BINARY_DIR}/compiler")
+set(LLVM_SRC "${PROJECT_SOURCE_DIR}/llvm-project/llvm")
+set(LLVM_ROOT "${PROJECT_BINARY_DIR}/llvm-project/llvm")
 
 # obtain specific information about llvm setup
-SET(LOCAL_LLVM_INCLUDE compiler/include)
+SET(LOCAL_LLVM_INCLUDE llvm-project/llvm/include)
 
 # setup compilation environment
 set(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}/bin" )
 set(LIBRARY_OUTPUT_PATH "${CMAKE_BINARY_DIR}/lib" )
 
-SET(PROJ_SEARCH_PATH "${PROJECT_BINARY_DIR}/include" "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/${LOCAL_LLVM_INCLUDE}") #  "${PROJECT_SOURCE_DIR}/compiler/utils/unittest/googletest/include" "${PROJECT_BINARY_DIR}/${LOCAL_LLVM_INCLUDE}"
+SET(PROJ_SEARCH_PATH "${PROJECT_BINARY_DIR}/include" "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/${LOCAL_LLVM_INCLUDE}") #  "${PROJECT_SOURCE_DIR}/llvm-project/llvm/utils/unittest/googletest/include" "${PROJECT_BINARY_DIR}/${LOCAL_LLVM_INCLUDE}"
 include_directories( ${PROJ_SEARCH_PATH} )
 
 LINK_DIRECTORIES( ${LLVM_LIB_DIR} )
@@ -291,8 +291,8 @@ set(KALMAR_BACKEND "HCC_BACKEND_AMDGPU")
 #########################
 
 # build Clang frontend + AMDGPU backend
-set(CLANG_SRC_DIR "${PROJECT_SOURCE_DIR}/compiler")
-set(CLANG_BIN_DIR "${PROJECT_BINARY_DIR}/compiler")
+set(CLANG_SRC_DIR "${PROJECT_SOURCE_DIR}/llvm-project/llvm")
+set(CLANG_BIN_DIR "${PROJECT_BINARY_DIR}/llvm-project/llvm")
 
 if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
   set(LLVM_ENABLE_ASSERTIONS "On" CACHE BOOL "Compile with assertion checks enabled")
@@ -300,9 +300,9 @@ else ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
   set(LLVM_ENABLE_ASSERTIONS "Off" CACHE BOOL "Compile with assertion checks enabled")
 endif ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
 
-set(LLVM_EXTERNAL_CLANG_SOURCE_DIR "${PROJECT_SOURCE_DIR}/clang")
-set(LLVM_EXTERNAL_COMPILER_RT_SOURCE_DIR "${PROJECT_SOURCE_DIR}/compiler-rt")
-set(LLVM_EXTERNAL_LLD_SOURCE_DIR "${PROJECT_SOURCE_DIR}/lld")
+set(LLVM_EXTERNAL_CLANG_SOURCE_DIR "${PROJECT_SOURCE_DIR}/llvm-project/clang")
+set(LLVM_EXTERNAL_COMPILER_RT_SOURCE_DIR "${PROJECT_SOURCE_DIR}/llvm-project/compiler-rt")
+set(LLVM_EXTERNAL_LLD_SOURCE_DIR "${PROJECT_SOURCE_DIR}/llvm-project/lld")
 
 # determine LLVM targets to be built
 # AMDGPU is always on
@@ -319,12 +319,12 @@ endif()
 set(LLVM_TARGETS_TO_BUILD "AMDGPU" ${LLVM_HOST_TARGET} CACHE STRING "" FORCE)
 set(LLVM_INSTALL_TOOLCHAIN_ONLY ON CACHE BOOL "" FORCE)
 
-if(EXISTS ${PROJECT_SOURCE_DIR}/clang-tools-extra/CMakeLists.txt)
-  set(LLVM_EXTERNAL_CLANG_TOOLS_EXTRA_SOURCE_DIR "${PROJECT_SOURCE_DIR}/clang-tools-extra")
+if(EXISTS ${PROJECT_SOURCE_DIR}/llvm-project/clang-tools-extra/CMakeLists.txt)
+  set(LLVM_EXTERNAL_CLANG_TOOLS_EXTRA_SOURCE_DIR "${PROJECT_SOURCE_DIR}/llvm-project/clang-tools-extra")
 endif()
 
 add_subdirectory(${CLANG_SRC_DIR})
-get_directory_property(CLANG_VERSION DIRECTORY clang DEFINITION CLANG_VERSION)
+get_directory_property(CLANG_VERSION DIRECTORY llvm-project/clang DEFINITION CLANG_VERSION)
 
 install(PROGRAMS $<TARGET_FILE:llvm-as>
                  $<TARGET_FILE:llvm-dis>
@@ -335,7 +335,7 @@ install(PROGRAMS $<TARGET_FILE:llvm-as>
                  $<TARGET_FILE:opt>
                  $<TARGET_FILE:llc>
         DESTINATION bin
-        COMPONENT compiler)
+        COMPONENT llvm-project/llvm )
 
 add_custom_target(clang_links DEPENDS clang)
 if (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "ppc64le")
@@ -354,7 +354,7 @@ add_custom_command(TARGET clang_links POST_BUILD
 install(PROGRAMS $<TARGET_FILE:LLVMSelectAcceleratorCode>
                  $<TARGET_FILE:LLVMPromotePointerKernArgsToGlobal>
         DESTINATION lib
-        COMPONENT compiler
+        COMPONENT llvm-project/llvm 
 )
 
 # force library install path to lib
@@ -362,7 +362,7 @@ set(CMAKE_INSTALL_LIBDIR "lib" CACHE INTERNAL "Installation directory for librar
 
 install(FILES ${CLANG_BIN_DIR}/lib/clang/${CLANG_VERSION}/lib/linux/libclang_rt.builtins-${RT_BUILTIN_SUFFIX}.a
         DESTINATION  ${CMAKE_INSTALL_LIBDIR}
-        COMPONENT compiler)
+        COMPONENT llvm-project/llvm)
 
 install( FILES ${CMAKE_CURRENT_SOURCE_DIR}/scripts/cmake/ImportedTargets.cmake
          DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/hcc )
@@ -386,7 +386,7 @@ if (HCC_INTEGRATE_ROCDL)
   set(GENERIC_IS_ZERO ON CACHE BOOL ON FORCE)
   set(BUILD_HC_LIB ON)
   set(AMDGCN_TARGETS_LIB_LIST "AMDGCN_LIB_TARGETS")
-  find_package(LLVM REQUIRED CONFIG PATHS ${CMAKE_BINARY_DIR}/compiler NO_DEFAULT_PATH)
+  find_package(LLVM REQUIRED CONFIG PATHS ${CMAKE_BINARY_DIR}/llvm-project/llvm NO_DEFAULT_PATH)
 
   list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
   include(AddLLVM)
@@ -582,7 +582,7 @@ endif ()
 
 set(CPACK_RPM_PACKAGE_REQUIRES "${HCC_GENERAL_RPM_DEP} ${HCC_ROCR_DEP} ${HCC_LIBCXX_RPM_DEP}" )
 
-set(CPACK_COMPONENTS_ALL compiler)
+set(CPACK_COMPONENTS_ALL llvm-project/llvm)
 
 include (CPack)
 MESSAGE("")
