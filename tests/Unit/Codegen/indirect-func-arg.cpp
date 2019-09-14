@@ -3,6 +3,8 @@
 // RUN: %hc %s -o %t.out -Xlinker -dump-llvm -Xlinker -dump-dir=%T/indirect-func-arg %target_all_gpus
 // RUN: %llvm-dis %T/indirect-func-arg/dump-gfx803.opt.bc -f -o - | %FileCheck %s
 // RUN: %t.out
+// XFAIL: *
+// Hardcoded codegen pattern no longer obtains with enabled function calls.
 
 #include <hc.hpp>
 #include <vector>

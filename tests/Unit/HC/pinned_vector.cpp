@@ -5,8 +5,10 @@
 #include <hc_am.hpp>
 #include <pinned_vector.hpp>
 
+#include <vector>
+
 constexpr size_t small_size = 1024;
-constexpr size_t gargantuan_size = static_cast<size_t>(-1);
+const size_t gargantuan_size = std::vector<char>{}.max_size();
 
 
 bool test_data_ptr() {

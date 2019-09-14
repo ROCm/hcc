@@ -40,8 +40,11 @@ KMTHINLTO="${KMTHINLTO:=0}"
 # flag for early finalization
 AMDGPU_OBJ_CODEGEN="0"
 
-# flag for function calls enabled
-AMDGPU_FUNC_CALLS="0"
+# flag for COV3
+HCC_COV3="0"
+
+# flag for optimisation level
+HCC_OPT=""
 
 if [ $KMDBSCRIPT == "1" ]
 then
@@ -110,8 +113,12 @@ do
     KMTHINLTO="0"
     continue
     ;;
-    --amdgpu-func-calls)
-    AMDGPU_FUNC_CALLS="1"
+    --hcc-cov3)
+    HCC_COV3="1"
+    continue
+    ;;
+    -O*)
+    HCC_OPT=$ARG
     continue
     ;;
     --hcc-extra-libs=*)
@@ -201,10 +208,10 @@ if [ $KMDUMPLLVM == "1" ]; then
 fi
 
 # Invoke HCC-specific opt passes
-$OPT ${KMOPTOPT} -mtriple amdgcn-amd-amdhsa -mcpu=$AMDGPU_TARGET \
+$OPT $HCC_OPT -mtriple amdgcn-amd-amdhsa -mcpu=$AMDGPU_TARGET \
   -load $LIB/LLVMSelectAcceleratorCode@CMAKE_SHARED_LIBRARY_SUFFIX@ \
   -load $LIB/LLVMPromotePointerKernArgsToGlobal@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-  -select-accelerator-code -sac-enable-function-calls=$AMDGPU_FUNC_CALLS \
+  -select-accelerator-code \
   -promote-pointer-kernargs-to-global \
   -infer-address-spaces \
   -verify < $2.linked.bc -o $2.opt.bc
@@ -231,15 +238,17 @@ if [ $KMDUMPLLVM == "1" ]; then
 fi
 
 
-# Disable code object v3, generate code object v2 for now
+# Handle code object v3 or code object v2
 CODE_OBJECT_FORMAT="-mattr=-code-object-v3"
-
+if [ $HCC_COV3 == "1" ]; then
+  CODE_OBJECT_FORMAT="-mattr=+code-object-v3"
+fi
 if [ $KMTHINLTO == "1" ]; then
   $LLC -mtriple amdgcn-amd-amdhsa -mcpu=$AMDGPU_TARGET $CODE_OBJECT_FORMAT \
-    $KMOPTLLC -amdgpu-function-calls=$AMDGPU_FUNC_CALLS -filetype=obj -o $2 $2.opt.bc
+    $HCC_OPT $KMOPTLLC -filetype=obj -o $2 $2.opt.bc
 else
   $LLC -mtriple amdgcn-amd-amdhsa -mcpu=$AMDGPU_TARGET $CODE_OBJECT_FORMAT \
-    $KMOPTLLC -amdgpu-function-calls=$AMDGPU_FUNC_CALLS -filetype=obj -o $2.isabin $2.opt.bc
+    $HCC_OPT $KMOPTLLC -filetype=obj -o $2.isabin $2.opt.bc
 fi
 
 # error handling for llc
@@ -256,7 +265,7 @@ if [ $KMDUMPISA == "1" ]; then
     cp $2.isabin ${KMDUMPDIR}/dump-$AMDGPU_TARGET.isabin
   fi
   $LLC -mtriple amdgcn-amd-amdhsa -mcpu=$AMDGPU_TARGET $CODE_OBJECT_FORMAT \
-     $KMOPTLLC -amdgpu-function-calls=$AMDGPU_FUNC_CALLS -filetype=asm -o $2.isa $2.opt.bc
+     $HCC_OPT $KMOPTLLC -filetype=asm -o $2.isa $2.opt.bc
   mv $2.isa ${KMDUMPDIR}/dump-$AMDGPU_TARGET.isa
 fi
 
