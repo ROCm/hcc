@@ -10,8 +10,11 @@ KMDUMPLLVM="${KMDUMPLLVM:=0}"
 
 AMDGPU_OBJ_CODEGEN="${AMDGPU_OBJ_CODEGEN:=0}"
 
-# flag for function calls enabled
-AMDGPU_FUNC_CALLS="0"
+# flag for COV3
+HCC_COV3="0"
+
+# flag for optimisation level
+HCC_OPT=""
 
 # inject additional GPU archs through an env var
 HCC_EXTRA_GPU_ARCH="${HCC_EXTRA_GPU_ARCH:=0}"
@@ -42,26 +45,6 @@ CLANG_OFFLOAD_BUNDLER=$BINDIR/clang-offload-bundler
 # always be found either in build directory or installed directory.
 CXXFLAGS="-std=c++amp -I$BINDIR/../include -I$BINDIR/../../include -fPIC"
 
-# Set additional CXXFLAGS based on CMAKE_BUILD_TYPE
-shopt -s nocasematch
-CMAKE_BUILD_TYPE="@CMAKE_BUILD_TYPE@"
-case $CMAKE_BUILD_TYPE in
-  release)
-    CXXFLAGS=$CXXFLAGS" -O3"
-    ;;
-  relwithdebinfo)
-    CXXFLAGS=$CXXFLAGS" -O2 -g"
-    ;;
-  minsizerel)
-    CXXFLAGS=$CXXFLAGS" -Os"
-    ;;
-  debug)
-    CXXFLAGS=$CXXFLAGS" -g"
-    ;;
-  *)
-    CXXFLAGS=$CXXFLAGS
-esac
-
 if [ "$#" -lt 2 ]; then
   echo "Usage: $0 kernel-bitcode object" >&2
   exit_with_code -1
@@ -88,8 +71,12 @@ do
     AMDGPU_OBJ_CODEGEN=1
     continue
     ;;
-    --amdgpu-func-calls)
-    AMDGPU_FUNC_CALLS="1"
+    --hcc-cov3)
+    HCC_COV3="1"
+    continue
+    ;;
+    -O*)
+    HCC_OPT=$ARG
     continue
     ;;
   esac
@@ -100,7 +87,7 @@ HC_REPLACE_GPU_FE_LLVM="${HC_REPLACE_GPU_FE_LLVM:=0}"
 KERNEL_INPUT=$1
 if [ $HC_REPLACE_GPU_FE_LLVM != "0" ]; then
   KERNEL_INPUT=$HC_REPLACE_GPU_FE_LLVM
-  echo "Replacing GPU input IR from clang with $KERNEL_INPUT" 
+  echo "Replacing GPU input IR from clang with $KERNEL_INPUT"
 fi
 
 if [ ! -f "$KERNEL_INPUT" ]; then
@@ -144,13 +131,12 @@ if [ $AMDGPU_OBJ_CODEGEN == 1 ]; then
 
   declare -a pids
   # for each GPU target, lower to GCN ISA in HSACO format
+  CODE_OBJECT=""
+  if [ $HCC_COV3 == "1" ]; then
+    CODE_OBJECT = "--hcc-cov3"
+  fi
   for AMDGPU_TARGET in ${AMDGPU_TARGET_ARRAY[@]}; do
-    if [ $AMDGPU_FUNC_CALLS == "1" ]; then
-      { $CLAMP_DEVICE "$KERNEL_INPUT" "$TEMP_DIR/kernel-$AMDGPU_TARGET.hsaco" --amdgpu-target=$AMDGPU_TARGET --early-finalize --amdgpu-func-calls; } &
-    else
-      { $CLAMP_DEVICE "$KERNEL_INPUT" "$TEMP_DIR/kernel-$AMDGPU_TARGET.hsaco" --amdgpu-target=$AMDGPU_TARGET --early-finalize ; } &
-    fi
-
+    $CLAMP_DEVICE "$KERNEL_INPUT" "$TEMP_DIR/kernel-$AMDGPU_TARGET.hsaco" --amdgpu-target=$AMDGPU_TARGET --early-finalize $CODE_OBJECT $HCC_OPT
     # error handling
     pids+=("${pids[@]}" "$!")
 

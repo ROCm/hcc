@@ -25,8 +25,11 @@ fi
 # enable bundle dumping
 KMDUMPBUNDLE="${KMDUMPBUNDLE:=0}"
 
-# flag for function calls enabled
-AMDGPU_FUNC_CALLS="0"
+# flag for COV3
+HCC_COV3="0"
+
+# flag for optimisation level
+HCC_OPT=""
 
 BINDIR=$(dirname $0)
 LINK=$BINDIR/llvm-link
@@ -163,14 +166,15 @@ _thinlto_path() {
     fi
 
     # Perform clamp-device's opt and llc on each kernel individually in parallel
+    CODE_OBJECT=""
+    if [ $HCC_COV3 == "1" ]; then
+      CODE_OBJECT="--hcc-cov3"
+    fi
     i=0
     for AMDGPU_TARGET in ${AMDGPU_TARGET_ARRAY[@]}
     do
-      if [ $AMDGPU_FUNC_CALLS == "1" ]; then
-        { $CLAMP_DEVICE $KERNEL.thinlto.imported.bc $KERNEL-$AMDGPU_TARGET.isabin --amdgpu-target=$AMDGPU_TARGET --amdgpu-func-calls; } &
-      else
-        { $CLAMP_DEVICE $KERNEL.thinlto.imported.bc $KERNEL-$AMDGPU_TARGET.isabin --amdgpu-target=$AMDGPU_TARGET; } &
-      fi
+      $CLAMP_DEVICE $KERNEL.thinlto.imported.bc $KERNEL-$AMDGPU_TARGET.isabin --amdgpu-target=$AMDGPU_TARGET $CODE_OBJECT $HCC_OPT
+
       # error handling
       pids=("${pids[@]}" "$!")
 
@@ -230,19 +234,19 @@ _default_path() {
   if [ $ret != 0 ]; then
     exit $ret
   fi
-  
+
   if [ $VERBOSE == 1 ]; then
     echo "Generating AMD GCN kernel"
   fi
 
   declare -a pids
   # for each GPU target, lower to GCN ISA in HSACO format
+  CODE_OBJECT=""
+  if [ $HCC_COV3 == "1" ]; then
+    CODE_OBJECT="--hcc-cov3"
+  fi
   for AMDGPU_TARGET in ${AMDGPU_TARGET_ARRAY[@]}; do
-    if [ $AMDGPU_FUNC_CALLS == "1" ]; then
-      { $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel-$AMDGPU_TARGET.hsaco --amdgpu-target=$AMDGPU_TARGET --amdgpu-func-calls; } &
-    else
-      { $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel-$AMDGPU_TARGET.hsaco --amdgpu-target=$AMDGPU_TARGET; } &
-    fi
+    $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel-$AMDGPU_TARGET.hsaco --amdgpu-target=$AMDGPU_TARGET $CODE_OBJECT $HCC_OPT
     # error handling
     pids+=("${pids[@]}" "$!")
 
@@ -310,8 +314,14 @@ done
 
 for ARG in "${INPUT_ARGUMENTS[@]}"
 do
-
   case $ARG in
+    ##########################
+    # Parse optimisation level
+    ##########################
+    -O*)
+    HCC_OPT=$ARG
+    continue
+    ;;
     ######################
     # Parse AMDGPU target
     ######################
@@ -319,8 +329,8 @@ do
     AMDGPU_TARGET_ARRAY+=("${ARG#*=}")
     continue
     ;;
-    --amdgpu-func-calls)
-    AMDGPU_FUNC_CALLS="1"
+    --hcc-cov3)
+    HCC_COV3="1"
     continue
     ;;
     ################################################

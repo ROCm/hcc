@@ -120,6 +120,7 @@ int HCC_MAX_QUEUES = 20;
 #define HCC_PROFILE_SUMMARY (1<<0)
 #define HCC_PROFILE_TRACE   (1<<1)
 int HCC_PROFILE=0;
+int HCC_FLUSH_ON_WAIT=1;
 
 
 #define HCC_PROFILE_VERBOSE_BASIC                   (1 << 0)   // 0x1
@@ -719,9 +720,6 @@ public:
 
     Kalmar::HSAQueue *hsaQueue() const;
     bool isReady() override;
-
-    static constexpr uint32_t _max_dependency_chain_length = 32;
-    uint32_t           _dependency_chain_length;
 
     std::vector< std::shared_ptr<HSAOp> > asyncOpsWithoutSignal;
 
@@ -1655,6 +1653,16 @@ public:
             DBOUT(DB_CMD2, "No future found in wait, enqueued marker into " << *this << "\n");
         }
         back()->getFuture()->wait();
+        if (HCC_FLUSH_ON_WAIT) {
+            // aggressively cleanup resources
+            // but keep back() as a valid HSAOp, so decrement current insert index twice
+            int back_op_index = decrement(asyncOpsIndex); // index of back() op
+            int index = decrement(back_op_index); // index of first op to free
+            while (asyncOps[index] != nullptr && index != back_op_index) {
+                asyncOps[index] = nullptr;
+                index = decrement(index);
+            }
+        }
     }
 
     void LaunchKernel(void *ker, size_t nr_dim, size_t *global, size_t *local) override {
@@ -2280,7 +2288,7 @@ public:
             // Second pass, try steal from a ROCR queue associated with an HCC queue, but with no active tasks
             {
                 std::lock_guard<std::mutex> lg(rocrQueuesMutex);
-                for (int p = priority_low; priority >= priority_high; --p) {
+                for (int p = priority_low; p >= priority_high; --p) {
                     auto& rqueues = rocrQueues[p];
                     for (auto it = rqueues.begin(); it != rqueues.end(); ++it) {
                         auto rq = *it;
@@ -2291,13 +2299,20 @@ public:
                                 return true;
                             } else if (rq->_hccQueue != thief)  {
                                 auto victimHccQueue = rq->_hccQueue;
-                                std::lock_guard<std::recursive_mutex> l(victimHccQueue->qmutex);
-                                if (victimHccQueue->isEmpty()) {
-                                    assert (victimHccQueue->rocrQueue == rq);  // ensure the link is consistent.
-                                    victimHccQueue->rocrQueue = nullptr;
-                                    DBOUT(DB_QUEUE, "Stole existing rocrQueue=" << rq << " from victimHccQueue=" << victimHccQueue << "\n")
-                                    return true;
+                                bool f = false;
+
+                                // Try locking the HSAQueue.
+                                // If unsuccesful, it means it's being used somewhere else so skip it; otherwise it may deadlock
+                                if (victimHccQueue->qmutex.try_lock()) {
+                                  if (victimHccQueue->isEmpty()) {
+                                      assert (victimHccQueue->rocrQueue == rq);  // ensure the link is consistent.
+                                      victimHccQueue->rocrQueue = nullptr;
+                                      DBOUT(DB_QUEUE, "Stole existing rocrQueue=" << rq << " from victimHccQueue=" << victimHccQueue << "\n")
+                                      f = true;
+                                  }
+                                  victimHccQueue->qmutex.unlock();
                                 }
+                                return f;
                             }
                             return false;
                         };
@@ -3783,6 +3798,7 @@ void HSAContext::ReadHccEnv()
     GET_ENV_INT    (HCC_PROFILE,         "Enable HCC kernel and data profiling.  1=summary, 2=trace");
     GET_ENV_INT    (HCC_PROFILE_VERBOSE, "Bitmark to control profile verbosity and format. 0x1=default, 0x2=show begin/end, 0x4=show barrier");
     GET_ENV_STRING (HCC_PROFILE_FILE,    "Set file name for HCC_PROFILE mode.  Default=stderr");
+    GET_ENV_INT    (HCC_FLUSH_ON_WAIT,   "recover all resources on queue wait");
 
 };
 
@@ -5111,7 +5127,6 @@ HSAOp::HSAOp(hc::HSAOpId id, Kalmar::KalmarQueue *queue, hc::hcCommandKind comma
     KalmarAsyncOp(queue, commandKind),
     _opCoord(static_cast<Kalmar::HSAQueue*> (queue)),
     _agent(static_cast<Kalmar::HSADevice*>(hsaQueue()->getDev())->getAgent()),
-    _dependency_chain_length(0),
     _activity_prof(id, _opCoord._queueId, _opCoord._deviceId),
     future(nullptr)
 {
@@ -5309,16 +5324,12 @@ hsa_status_t HSACopy::hcc_memory_async_copy(Kalmar::hcCommandKind copyKind, cons
             // For both of these cases, we create an additional barrier packet in the source, and attach the desired fence.
             // Then we make the copy depend on the signal written by this command.
             if ((depAsyncOp && depSignal.handle == 0x0) || 
-                  (fenceScope != hc::no_scope) ||
-                  (depAsyncOp && depAsyncOp->_dependency_chain_length > _max_dependency_chain_length)) {
+                  (fenceScope != hc::no_scope)) {
                 DBOUT( DB_CMD2, "  asyncCopy adding marker for needed dependency or release\n");
 
                 // Set depAsyncOp for use by the async copy below:
                 depAsyncOp = std::static_pointer_cast<HSAOp> (hsaQueue()->EnqueueMarkerWithDependency(0, nullptr, fenceScope));
                 depSignal = * (static_cast <hsa_signal_t*> (depAsyncOp->getNativeHandle()));
-            }
-            else if (depAsyncOp) {
-              this->_dependency_chain_length = depAsyncOp->_dependency_chain_length + 1;
             }
 
             depSignalCnt = 1;

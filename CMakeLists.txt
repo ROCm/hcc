@@ -30,7 +30,8 @@ endif( )
 string(TOLOWER "${DISTRO_ID}" DISTRO_ID )
 if( DISTRO_ID MATCHES "ubuntu" OR DISTRO_ID MATCHES "fedora"
    OR DISTRO_ID MATCHES "centos" OR DISTRO_ID MATCHES "redhatenterpriseserver"
-   OR DISTRO_ID MATCHES "opensuse")
+   OR DISTRO_ID MATCHES "opensuse"
+   OR DISTRO_ID MATCHES "sles" )
   message( STATUS "Detected distribution: ${DISTRO_ID}:${DISTRO_RELEASE}" )
 else()
   message( "This cmakefile does not natively support ${DISTRO_ID}:${DISTRO_RELEASE}.  Continuing with Ubuntu logic" )
@@ -196,7 +197,7 @@ endif()
 
 # define HCC version information
 SET(HCC_VERSION_MAJOR "2")
-SET(HCC_VERSION_MINOR "7")
+SET(HCC_VERSION_MINOR "8")
 
 include(GenerateVersionFromGit)
 
@@ -350,14 +351,8 @@ add_custom_command(TARGET clang_links POST_BUILD
 )
 
 # install certain LLVM libraries needed by HIP
-install(PROGRAMS $<TARGET_FILE:LLVMAMDGPUDesc>
-                 $<TARGET_FILE:LLVMAMDGPUUtils>
-                 $<TARGET_FILE:LLVMMC>
-                 $<TARGET_FILE:LLVMCore>
-                 $<TARGET_FILE:LLVMSupport>
-                 $<TARGET_FILE:LLVMSelectAcceleratorCode>
+install(PROGRAMS $<TARGET_FILE:LLVMSelectAcceleratorCode>
                  $<TARGET_FILE:LLVMPromotePointerKernArgsToGlobal>
-                 $<TARGET_FILE:LLVMHello>
         DESTINATION lib
         COMPONENT compiler
 )
@@ -496,6 +491,8 @@ execute_process(COMMAND ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/process_packaging_scri
                                                                                        ${HCC_PACKAGE_INSTALL_PREFIX}
                                                                                        ${CMAKE_INSTALL_LIBDIR}
                                                                                        ${CMAKE_SYSTEM_PROCESSOR}
+                                                                                       ${HCC_VERSION_MAJOR}
+                                                                                       ${HCC_VERSION_MINOR}
                 WORKING_DIRECTORY ${PROJECT_BINARY_DIR})
 
 execute_process(COMMAND ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/process_packaging_script.bsh ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/prerm.in
@@ -504,6 +501,18 @@ execute_process(COMMAND ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/process_packaging_scri
                                                                                        ${HCC_PACKAGE_INSTALL_PREFIX}
                                                                                        ${CMAKE_INSTALL_LIBDIR}
                                                                                        ${CMAKE_SYSTEM_PROCESSOR}
+                                                                                       ${HCC_VERSION_MAJOR}
+                                                                                       ${HCC_VERSION_MINOR}
+                WORKING_DIRECTORY ${PROJECT_BINARY_DIR})
+
+execute_process(COMMAND ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/process_packaging_script.bsh ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/preinst_rpm.in
+                                                                                       ${DEBIAN_EXTRA_SCRIPT_DEST_DIR}/preinst_rpm
+                                                                                       ${CPACK_PACKAGE_NAME}
+                                                                                       ${HCC_PACKAGE_INSTALL_PREFIX}
+                                                                                       ${CMAKE_INSTALL_LIBDIR}
+                                                                                       ${CMAKE_SYSTEM_PROCESSOR}
+                                                                                       ${HCC_VERSION_MAJOR}
+                                                                                       ${HCC_VERSION_MINOR}
                 WORKING_DIRECTORY ${PROJECT_BINARY_DIR})
 
 set(CPACK_PACKAGE_VENDOR "Advanced Micro Devices, Inc")
@@ -523,7 +532,9 @@ if( "${DISTRO_ID}" MATCHES "ubuntu" )
 elseif ("${DISTRO_ID}" MATCHES "fedora" OR
         "${DISTRO_ID}" MATCHES "centos" OR
         "${DISTRO_ID}" MATCHES "redhatenterpriseserver" OR
-        "${DISTRO_ID}" MATCHES "opensuse")
+        "${DISTRO_ID}" MATCHES "opensuse" OR
+        "${DISTRO_ID}" MATCHES "sles" )
+
   set( CPACK_GENERATOR "RPM" CACHE STRING "cpack list: 7Z, DEB, IFW, NSIS, NSIS64, RPM, STGZ, TBZ2, TGZ, TXZ, TZ, ZIP" FORCE )
 else()
   # generate a tarball for unknown DISTRO_ID
@@ -557,12 +568,17 @@ set(CPACK_DEBIAN_PACKAGE_DEPENDS "${HCC_GENERAL_DEBIAN_DEP} ${HCC_ROCR_DEP} ${HC
 # RPM package settings
 set(CPACK_RPM_PACKAGE_DESCRIPTION ${PACKAGE_DESCRIPTION})
 set(CPACK_RPM_POST_INSTALL_SCRIPT_FILE "${PROJECT_BINARY_DIR}/packaging/debian/postinst")
+set(CPACK_RPM_PRE_INSTALL_SCRIPT_FILE "${PROJECT_BINARY_DIR}/packaging/debian/preinst_rpm")
 set(CPACK_RPM_PRE_UNINSTALL_SCRIPT_FILE "${PROJECT_BINARY_DIR}/packaging/debian/prerm")
 
 # disable automatic shared libraries dependency detection
 set(CPACK_RPM_PACKAGE_AUTOREQ 0)
 
-set(HCC_GENERAL_RPM_DEP "coreutils, findutils, elfutils-libelf, pciutils-libs, file, pth")
+if( "${DISTRO_ID}" MATCHES "sles" )
+   set(HCC_GENERAL_RPM_DEP "coreutils, findutils, libelf-devel, pciutils, file")
+else()
+   set(HCC_GENERAL_RPM_DEP "coreutils, findutils, elfutils-libelf, pciutils-libs, file, pth")
+endif ()
 
 set(CPACK_RPM_PACKAGE_REQUIRES "${HCC_GENERAL_RPM_DEP} ${HCC_ROCR_DEP} ${HCC_LIBCXX_RPM_DEP}" )
 

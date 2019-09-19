@@ -3,13 +3,15 @@
 // RUN: %hc %s -o %t.out -Xlinker -dump-llvm -Xlinker -dump-dir=%T/indirect-func-arg %target_all_gpus
 // RUN: %llvm-dis %T/indirect-func-arg/dump-gfx803.opt.bc -f -o - | %FileCheck %s
 // RUN: %t.out
+// XFAIL: *
+// Hardcoded codegen pattern no longer obtains with enabled function calls.
 
 #include <hc.hpp>
 #include <vector>
 
 #define GRID_SIZE (1024)
 
-// CHECK-LABEL: define weak_odr amdgpu_kernel void @"_ZZ4mainEN3$_019__cxxamp_trampolineEPjiii"(i32*, i32, i32, i32)
+// CHECK-LABEL: define weak_odr amdgpu_kernel void @"_ZZ4mainEN3$_019__cxxamp_trampolineEPjiii"(i32* %0, i32 %1, i32 %2, i32 %3) local_unnamed_addr #19
 struct A {
   int x[8];
   A()[[hc]] {

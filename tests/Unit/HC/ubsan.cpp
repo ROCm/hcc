@@ -6,7 +6,7 @@
 
 void fill(hc::array_view<int,1>& input, int x) {
 
-  hc::parallel_for_each(input.get_extent(), [=](hc::index<1> idx) [[hc]] {
+  hc::parallel_for_each(input.get_extent(), [=](const hc::index<1>& idx) [[hc]] {
     input[idx[0]] = x;
   }).wait();
 

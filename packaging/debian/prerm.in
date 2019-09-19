@@ -6,6 +6,8 @@ PACKAGE_NAME=@PACKAGE_NAME@
 INSTALL_PATH=@INSTALL_PATH@
 LIBRARY_DIR=@LIBRARY_DIR@
 PROCESSOR=@PROCESSOR@
+HCC_VERSION_MAJOR=@HCC_VERSION_MAJOR@
+HCC_VERSION_MINOR=@HCC_VERSION_MINOR@
 
 ROCM_PATH="/opt/rocm"
 
@@ -17,21 +19,23 @@ SOFTLINKS=(
   "bin" "bin" "hcc"
   "bin" "bin" "hcc-config"
   "$LIBRARY_DIR" "lib" "libhc_am.so"
-  "$LIBRARY_DIR" "lib" "libmcwamp.a"
+  "$LIBRARY_DIR" "lib" "libhc_am.so.${HCC_VERSION_MAJOR}"
+  "$LIBRARY_DIR" "lib" "libhc_am.so.${HCC_VERSION_MAJOR}.${HCC_VERSION_MINOR}"
   "$LIBRARY_DIR" "lib" "libmcwamp.so"
-  "$LIBRARY_DIR" "lib" "libmcwamp_atomic.a"
+  "$LIBRARY_DIR" "lib" "libmcwamp.so.${HCC_VERSION_MAJOR}"
+  "$LIBRARY_DIR" "lib" "libmcwamp.so.${HCC_VERSION_MAJOR}.${HCC_VERSION_MINOR}"
   "$LIBRARY_DIR" "lib" "libmcwamp_cpu.so"
+  "$LIBRARY_DIR" "lib" "libmcwamp_cpu.so.${HCC_VERSION_MAJOR}"
+  "$LIBRARY_DIR" "lib" "libmcwamp_cpu.so.${HCC_VERSION_MAJOR}.${HCC_VERSION_MINOR}"
   "$LIBRARY_DIR" "lib" "libmcwamp_hsa.so"
+  "$LIBRARY_DIR" "lib" "libmcwamp_hsa.so.${HCC_VERSION_MAJOR}"
+  "$LIBRARY_DIR" "lib" "libmcwamp_hsa.so.${HCC_VERSION_MAJOR}.${HCC_VERSION_MINOR}"
   "$LIBRARY_DIR" "lib" "libclang_rt.builtins-${PROCESSOR}.a"
 )
 
-do_softlinks() {
+remove_all_softlinks() {
 
   rm -f $INSTALL_PATH/include/hcc
-
-  if [ $PACKAGE_NAME == "hcc_hsail" ] && [ -L "$ROCM_PATH/hcc" ] && [ $(readlink -f $ROCM_PATH/hcc) == "$ROCM_PATH/hcc-lc" ] ; then
-      return
-  fi
 
   for (( i=0; i<${#SOFTLINKS[@]}; i+=3 ))
   do
@@ -51,17 +55,6 @@ do_softlinks() {
   rmdir --ignore-fail-on-non-empty /opt/rocm     
 }
 
-
-case "$1" in
-   remove|purge|upgrade|0|1)
-   do_softlinks
-   ;;
-
-   *)
-      echo "postrm called with unknown argument: $1" >&2
-      exit 0
-   ;;
-
-esac
-
-
+if [ $1 == "remove" ] || [ $1 == "purge" ] || [ $1 == "upgrade" ] || [ "$1" -eq "0" ] ; then
+  remove_all_softlinks
+fi

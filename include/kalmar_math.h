@@ -26,17 +26,17 @@ extern "C" _Float16 __ocml_asinh_f16(_Float16 x) [[hc]];
 extern "C" float __ocml_asinh_f32(float x) [[hc]];
 extern "C" double __ocml_asinh_f64(double x) [[hc]];
 
-extern "C" _Float16 __ocml_atan_f16(_Float16 x) [[hc]];
-extern "C" float __ocml_atan_f32(float x) [[hc]];
-extern "C" double __ocml_atan_f64(double x) [[hc]];
+extern "C" _Float16 __ocml_atan_f16(_Float16 x) __attribute__((const, hc));
+extern "C" float __ocml_atan_f32(float x) __attribute__((const, hc));
+extern "C" double __ocml_atan_f64(double x) __attribute__((const, hc));
 
-extern "C" _Float16 __ocml_atanh_f16(_Float16 x) [[hc]];
-extern "C" float __ocml_atanh_f32(float x) [[hc]];
-extern "C" double __ocml_atanh_f64(double x) [[hc]];
+extern "C" _Float16 __ocml_atanh_f16(_Float16 x) __attribute__((const, hc));
+extern "C" float __ocml_atanh_f32(float x) __attribute__((const, hc));
+extern "C" double __ocml_atanh_f64(double x) __attribute__((const, hc));
 
-extern "C" _Float16 __ocml_atan2_f16(_Float16 y, _Float16 x) [[hc]];
-extern "C" float __ocml_atan2_f32(float y, float x) [[hc]];
-extern "C" double __ocml_atan2_f64(double y, double x) [[hc]];
+extern "C" _Float16 __ocml_atan2_f16(_Float16 y, _Float16 x) __attribute__((const, hc));
+extern "C" float __ocml_atan2_f32(float y, float x) __attribute__((const, hc));
+extern "C" double __ocml_atan2_f64(double y, double x) __attribute__((const, hc));
 
 extern "C" _Float16 __ocml_cbrt_f16(_Float16 x) [[hc]];
 extern "C" float __ocml_cbrt_f32(float x) [[hc]];
