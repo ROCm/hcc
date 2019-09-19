@@ -38,8 +38,8 @@ macro(amp_target name )
   endif ((NOT HCC_RUNTIME_DEBUG) AND ("${CMAKE_BUILD_TYPE}" STREQUAL "Release"))
 
   set_target_properties(${name} PROPERTIES
-    SOVERSION "${HCC_VERSION_MAJOR}"
-    VERSION   "${HCC_VERSION_MAJOR}.${HCC_VERSION_MINOR}"
+    SOVERSION "${HCC_LIB_VERSION_MAJOR}"
+    VERSION   "${HCC_LIB_VERSION_STRING}"
   )
 endmacro(amp_target name )
 
