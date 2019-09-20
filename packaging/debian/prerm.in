@@ -6,12 +6,13 @@ PACKAGE_NAME=@PACKAGE_NAME@
 INSTALL_PATH=@INSTALL_PATH@
 LIBRARY_DIR=@LIBRARY_DIR@
 PROCESSOR=@PROCESSOR@
-HCC_VERSION_MAJOR=@HCC_VERSION_MAJOR@
-HCC_VERSION_MINOR=@HCC_VERSION_MINOR@
+HCC_LIB_VERSION_MAJOR=@HCC_LIB_VERSION_MAJOR@
+HCC_LIB_VERSION_STRING=@HCC_LIB_VERSION_STRING@
+ROCM_INSTALL_PREFIX=@ROCM_INSTALL_PREFIX@
 
-ROCM_PATH="/opt/rocm"
+ROCM_PATH=${ROCM_INSTALL_PREFIX}
 
-# NOTE: if you modify this table, also update the same table in postinst
+# TODO: NOTE: if you modify this table, also update the same table in postinst
 SOFTLINKS=(
 # <SOURCE DIRECTORY> <DESTINATION DIRECTORY> <FILE>
   "bin" "bin" "clamp-config"
@@ -19,17 +20,17 @@ SOFTLINKS=(
   "bin" "bin" "hcc"
   "bin" "bin" "hcc-config"
   "$LIBRARY_DIR" "lib" "libhc_am.so"
-  "$LIBRARY_DIR" "lib" "libhc_am.so.${HCC_VERSION_MAJOR}"
-  "$LIBRARY_DIR" "lib" "libhc_am.so.${HCC_VERSION_MAJOR}.${HCC_VERSION_MINOR}"
+  "$LIBRARY_DIR" "lib" "libhc_am.so.${HCC_LIB_VERSION_MAJOR}"
+  "$LIBRARY_DIR" "lib" "libhc_am.so.${HCC_LIB_VERSION_STRING}"
   "$LIBRARY_DIR" "lib" "libmcwamp.so"
-  "$LIBRARY_DIR" "lib" "libmcwamp.so.${HCC_VERSION_MAJOR}"
-  "$LIBRARY_DIR" "lib" "libmcwamp.so.${HCC_VERSION_MAJOR}.${HCC_VERSION_MINOR}"
+  "$LIBRARY_DIR" "lib" "libmcwamp.so.${HCC_LIB_VERSION_MAJOR}"
+  "$LIBRARY_DIR" "lib" "libmcwamp.so.${HCC_LIB_VERSION_STRING}"
   "$LIBRARY_DIR" "lib" "libmcwamp_cpu.so"
-  "$LIBRARY_DIR" "lib" "libmcwamp_cpu.so.${HCC_VERSION_MAJOR}"
-  "$LIBRARY_DIR" "lib" "libmcwamp_cpu.so.${HCC_VERSION_MAJOR}.${HCC_VERSION_MINOR}"
+  "$LIBRARY_DIR" "lib" "libmcwamp_cpu.so.${HCC_LIB_VERSION_MAJOR}"
+  "$LIBRARY_DIR" "lib" "libmcwamp_cpu.so.${HCC_LIB_VERSION_STRING}"
   "$LIBRARY_DIR" "lib" "libmcwamp_hsa.so"
-  "$LIBRARY_DIR" "lib" "libmcwamp_hsa.so.${HCC_VERSION_MAJOR}"
-  "$LIBRARY_DIR" "lib" "libmcwamp_hsa.so.${HCC_VERSION_MAJOR}.${HCC_VERSION_MINOR}"
+  "$LIBRARY_DIR" "lib" "libmcwamp_hsa.so.${HCC_LIB_VERSION_MAJOR}"
+  "$LIBRARY_DIR" "lib" "libmcwamp_hsa.so.${HCC_LIB_VERSION_STRING}"
   "$LIBRARY_DIR" "lib" "libclang_rt.builtins-${PROCESSOR}.a"
 )
 
@@ -48,11 +49,11 @@ remove_all_softlinks() {
   rm -f $ROCM_PATH/include/hcc
   rm -f $ROCM_PATH/lib/cmake/hcc
 
-  rmdir --ignore-fail-on-non-empty /opt/rocm/lib 
-  rmdir --ignore-fail-on-non-empty /opt/rocm/lib/cmake
-  rmdir --ignore-fail-on-non-empty /opt/rocm/include
-  rmdir --ignore-fail-on-non-empty /opt/rocm/bin 
-  rmdir --ignore-fail-on-non-empty /opt/rocm     
+  rmdir --ignore-fail-on-non-empty $ROCM_PATH/lib
+  rmdir --ignore-fail-on-non-empty $ROCM_PATH/lib/cmake
+  rmdir --ignore-fail-on-non-empty $ROCM_PATH/include
+  rmdir --ignore-fail-on-non-empty $ROCM_PATH/bin
+  rmdir --ignore-fail-on-non-empty $ROCM_PATH
 }
 
 if [ $1 == "remove" ] || [ $1 == "purge" ] || [ $1 == "upgrade" ] || [ "$1" -eq "0" ] ; then
