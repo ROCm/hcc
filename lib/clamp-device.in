@@ -44,7 +44,7 @@ AMDGPU_OBJ_CODEGEN="0"
 HCC_COV3="0"
 
 # flag for optimisation level
-HCC_OPT=""
+HCC_OPT="-O3"
 
 if [ $KMDBSCRIPT == "1" ]
 then

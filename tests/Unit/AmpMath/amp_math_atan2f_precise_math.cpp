@@ -1,6 +1,5 @@
 // RUN: %cxxamp %s -o %t.out && %t.out
-// XFAIL:*
-// See http://ontrack-internal.amd.com/browse/LIGHTNING-319
+
 #include <hc.hpp>
 #include <hc_math.hpp>
 
