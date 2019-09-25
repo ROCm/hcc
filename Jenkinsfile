@@ -112,7 +112,7 @@ node( 'hcctest' )
       }
 
       // Cap the maximum amount of testing, in case of hangs
-      timeout(time: 1, unit: 'HOURS')
+      timeout(time: 2, unit: 'HOURS')
       {
         stage("cmake-test testing")
         {

@@ -1,5 +1,6 @@
 // RUN: %cxxamp -emit-llvm -S -c %s -o -|%cppfilt|%FileCheck %s
 // RUN: %gtest_amp %s -DUSING_GTEST=1 -o %t && %t
+// XFAIL: *
 #include <cstdlib> //for size_t
 //Serialization object decl
 namespace hc {

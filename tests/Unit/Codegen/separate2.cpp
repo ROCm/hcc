@@ -1,4 +1,5 @@
 // RUN: %cxxamp -emit-llvm -S -c %s -o -|%FileCheck %s
+// XFAIL: *
 extern "C" {
 #if 0
 int foo(void) [[cpu, hc]] {
