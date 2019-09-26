@@ -1,4 +1,3 @@
-
 // RUN: %hc %s -g -fno-omit-frame-pointer -fsanitize=undefined -fno-sanitize-recover=undefined -fno-sanitize=vptr -o %t.out && %t.out
 
 #include <hc.hpp>
