@@ -1,5 +1,6 @@
 
 // RUN: %hc %s -o %t.out && %t.out
+// XFAIL: *
 
 // Parallel STL headers
 #include <coordinate>
