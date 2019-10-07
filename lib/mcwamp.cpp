@@ -26,6 +26,14 @@
 #define STRINGIFY(X) #X
 #define LIB_NAME_WITH_VERSION(library) library "." XSTRINGIFY(HCC_MAJOR_VERSION) "."  XSTRINGIFY(HCC_MINOR_VERSION)
 
+extern "C" void* PushArgImpl(void*, int, size_t, const void*);
+extern "C" void* PushArgPtrImpl(void*, int, size_t, const void*);
+extern "C" void* GetContextImpl();
+extern "C" void ShutdownImpl();
+extern "C" void InitActivityCallbackImpl(void*, void*, void*);
+extern "C" bool EnableActivityCallbackImpl(unsigned, bool);
+extern "C" const char* GetCmdNameImpl(unsigned);
+
 // interface of HCC runtime implementation
 struct RuntimeImpl {
   RuntimeImpl(const char* libraryName) :
@@ -40,23 +48,34 @@ struct RuntimeImpl {
     m_GetCmdNameImpl(nullptr),
     isCPU(false) {
     //std::cout << "dlopen(" << libraryName << ")\n";
+  
+  #if 0
     m_RuntimeHandle = dlopen(libraryName, RTLD_LAZY);
     if (!m_RuntimeHandle) {
       std::cerr << "C++AMP runtime load error: " << dlerror() << std::endl;
       return;
     }
+  #endif
+  
+    // FIXME: horrible hack to get things to work!
+    m_RuntimeHandle = (void*)0x01;
+
     LoadSymbols();
   }
 
   ~RuntimeImpl() {
     if (m_RuntimeHandle) {
       m_ShutdownImpl();
+  #if 0
       dlclose(m_RuntimeHandle);
+  #endif
     }
   }
 
   // load symbols from C++AMP runtime implementation
   void LoadSymbols() {
+
+#if 0
     m_PushArgImpl = (PushArgImpl_t) dlsym(m_RuntimeHandle, "PushArgImpl");
     m_PushArgPtrImpl = (PushArgPtrImpl_t) dlsym(m_RuntimeHandle, "PushArgPtrImpl");
     m_GetContextImpl= (GetContextImpl_t) dlsym(m_RuntimeHandle, "GetContextImpl");
@@ -64,6 +83,17 @@ struct RuntimeImpl {
     m_InitActivityCallbackImpl = (InitActivityCallbackImpl_t) dlsym(m_RuntimeHandle, "InitActivityCallbackImpl");
     m_EnableActivityCallbackImpl = (EnableActivityCallbackImpl_t) dlsym(m_RuntimeHandle, "EnableActivityCallbackImpl");
     m_GetCmdNameImpl = (GetCmdNameImpl_t) dlsym(m_RuntimeHandle, "GetCmdNameImpl");
+#else
+
+    m_PushArgImpl = PushArgImpl;
+    m_PushArgPtrImpl = PushArgPtrImpl;
+    m_GetContextImpl = GetContextImpl;
+    m_ShutdownImpl = ShutdownImpl;
+    m_InitActivityCallbackImpl = InitActivityCallbackImpl;
+    m_EnableActivityCallbackImpl = EnableActivityCallbackImpl;
+    m_GetCmdNameImpl = GetCmdNameImpl;
+
+#endif
   }
 
   void set_cpu() { isCPU = true; }
@@ -128,6 +158,8 @@ public:
       m_kernel_source(kernel_source) {}
 
   virtual bool detect() {
+
+  #if 0
     void* handle = nullptr;
 
     // detect if C++AMP runtime is available and
@@ -142,7 +174,7 @@ public:
     dlerror();  // clear any existing error
     //std::cout << " C++AMP runtime found" << std::endl;
     dlclose(handle);
-
+#endif
     return true;
   }
 
