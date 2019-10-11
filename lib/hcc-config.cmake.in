@@ -14,13 +14,16 @@ find_library(HSA_LIBRARY hsa-runtime64
     /opt/rocm/lib
 )
 
-add_library(hsa-runtime64 SHARED IMPORTED)
+if (NOT HSA_FOUND)
+  add_library(hsa-runtime64 SHARED IMPORTED)
 
-set_target_properties(hsa-runtime64 PROPERTIES
-  INTERFACE_INCLUDE_DIRECTORIES "${HSA_HEADER}"
-  IMPORTED_LOCATION "${HSA_LIBRARY}"
-  INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${HSA_HEADER}"
-)
+  set_target_properties(hsa-runtime64 PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "${HSA_HEADER}"
+    IMPORTED_LOCATION "${HSA_LIBRARY}"
+    INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${HSA_HEADER}"
+  )
+  set(HSA_FOUND YES)
+endif()
 
 include( "${CMAKE_CURRENT_LIST_DIR}/ImportedTargets.cmake" )
 include( "${CMAKE_CURRENT_LIST_DIR}/hcc-targets.cmake" )
