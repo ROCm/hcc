@@ -523,8 +523,9 @@ do
 
       FILE=`basename "$OBJ"` # remove path
       FILENAME="${FILE%.*}"
-      KERNEL_FILE="$TEMP_DIR/$FILENAME.kernel.bc"
-      HOST_FILE="$TEMP_DIR/$FILENAME.host.o"
+      HASH=($(md5sum $OBJ))
+      KERNEL_FILE="$TEMP_DIR/$FILENAME.$HASH.kernel.bc"
+      HOST_FILE="$TEMP_DIR/$FILENAME.$HASH.host.o"
 
       # extract kernel section
       objcopy -O binary -j "$KERNEL_IR_SECTION" "$OBJ" "$KERNEL_FILE"
