@@ -6,7 +6,6 @@
 #include <cassert>
 #include <atomic>
 #include <string>
-#include <regex>
 #include <iostream>
 #include <algorithm>
 
@@ -15,16 +14,11 @@
 
 // The printf on the accelerator is only enabled when
 // The HCC_ENABLE_ACCELERATOR_PRINTF is defined
-
-// Disabling hc::printf it's broken on certain platform
-// and this experimental feature is not longer being maintained.  
-#ifdef HCC_ENABLE_ACCELERATOR_PRINTF
-  #undef HCC_ENABLE_ACCELERATOR_PRINTF
-  #warning "The experimental hc::printf is no longer supported and is disabled"
-#endif
+//
+//#define HCC_ENABLE_ACCELERATOR_PRINTF (1)
 
 // Indicate whether hc::printf is supported
-//#define HC_FEATURE_PRINTF (1)
+#define HC_FEATURE_PRINTF (1)
 
 // Enable extra debug messages
 #define HC_PRINTF_DEBUG  (0)
@@ -49,12 +43,8 @@ namespace hc {
 */
 
 union PrintfPacketData {
-  uint32_t        ui;
-  int32_t         i;
   uint64_t        uli;
   int64_t         li;
-  hc::half        h;
-  float           f;
   double          d;
   void*           ptr;
   const void*     cptr;
@@ -98,14 +88,14 @@ enum PrintfPacketDataType {
 class PrintfPacket {
 public:
   void clear()             [[hc,cpu]] { type = PRINTF_UNUSED; }
-  void set(uint32_t d)     [[hc,cpu]] { type = PRINTF_UINT32_T;       data.ui = d; }
-  void set(int32_t d)      [[hc,cpu]] { type = PRINTF_INT32_T;        data.i = d; }
+  void set(uint32_t d)     [[hc,cpu]] { type = PRINTF_UINT32_T;       data.uli = d; }
+  void set(int32_t d)      [[hc,cpu]] { type = PRINTF_INT32_T;        data.li = d; }
   void set(uint64_t d)     [[hc,cpu]] { type = PRINTF_UINT64_T;       data.uli = d; }
   void set(int64_t d)      [[hc,cpu]] { type = PRINTF_INT64_T;        data.li = d; }
   void set(unsigned long long d) [[hc,cpu]] { type = PRINTF_UINT64_T; data.uli = d; }
   void set(long long d)    [[hc,cpu]] { type = PRINTF_INT64_T;        data.li = d; }
-  void set(hc::half d)     [[hc,cpu]] { type = PRINTF_HALF;           data.h = d; }
-  void set(float d)        [[hc,cpu]] { type = PRINTF_FLOAT;          data.f = d; }
+  void set(hc::half d)     [[hc,cpu]] { type = PRINTF_HALF;           data.d = d; }
+  void set(float d)        [[hc,cpu]] { type = PRINTF_FLOAT;          data.d = d; }
   void set(double d)       [[hc,cpu]] { type = PRINTF_DOUBLE;         data.d = d; }
   void set(void* d)        [[hc,cpu]] { type = PRINTF_VOID_PTR;       data.ptr = d; }
   void set(const void* d)  [[hc,cpu]] { type = PRINTF_CONST_VOID_PTR; data.cptr = d; }
@@ -134,14 +124,14 @@ static inline PrintfPacket* createPrintfBuffer(const unsigned int numElements) {
 
     // Initialize the Header elements of the Printf Buffer
     printfBuffer[PRINTF_BUFFER_SIZE].type = PRINTF_BUFFER_SIZE;
-    printfBuffer[PRINTF_BUFFER_SIZE].data.ui = numElements;
+    printfBuffer[PRINTF_BUFFER_SIZE].data.uli = numElements;
 
     // Header includes a helper string buffer which holds all char* args
     // PrintfPacket is 12 bytes, equivalent string buffer size used
     printfBuffer[PRINTF_STRING_BUFFER].type = PRINTF_STRING_BUFFER;
     printfBuffer[PRINTF_STRING_BUFFER].data.ptr = hc::internal::am_alloc_host_coherent(sizeof(char) * numElements * 12);
     printfBuffer[PRINTF_STRING_BUFFER_SIZE].type = PRINTF_STRING_BUFFER_SIZE;
-    printfBuffer[PRINTF_STRING_BUFFER_SIZE].data.ui = numElements * 12;
+    printfBuffer[PRINTF_STRING_BUFFER_SIZE].data.uli = numElements * 12;
 
     // Using one atomic offset to maintain order and atomicity
     printfBuffer[PRINTF_OFFSETS].type = PRINTF_OFFSETS;
@@ -210,7 +200,7 @@ PrintfError process_str_batch(PrintfPacket* queue, int poffset, unsigned int& so
   unsigned int str_len = string_length(string);
   unsigned int sb_offset = soffset;
   char* string_buffer = (char*) queue[PRINTF_STRING_BUFFER].data.ptr;
-  if (!string_buffer || soffset + str_len + 1 > queue[PRINTF_STRING_BUFFER_SIZE].data.ui){
+  if (!string_buffer || soffset + str_len + 1 > queue[PRINTF_STRING_BUFFER_SIZE].data.uli){
     return PRINTF_STRING_BUFFER_OVERFLOW;
   }
   copy_n(&string_buffer[sb_offset], string, str_len + 1);
@@ -260,10 +250,10 @@ static inline PrintfError printf(PrintfPacket* queue, All... all) [[hc,cpu]] {
   if (!queue) {
     error = PRINTF_BUFFER_NULLPTR;
   }
-  else if (count_arg + 1 + queue[PRINTF_OFFSETS].data.uia[0] > queue[PRINTF_BUFFER_SIZE].data.ui) {
+  else if (count_arg + 1 + queue[PRINTF_OFFSETS].data.uia[0] > queue[PRINTF_BUFFER_SIZE].data.uli) {
     error = PRINTF_BUFFER_OVERFLOW;
   }
-  else if (!queue[PRINTF_STRING_BUFFER].data.ptr || count_char + queue[PRINTF_OFFSETS].data.uia[1] > queue[PRINTF_STRING_BUFFER_SIZE].data.ui){
+  else if (!queue[PRINTF_STRING_BUFFER].data.ptr || count_char + queue[PRINTF_OFFSETS].data.uia[1] > queue[PRINTF_STRING_BUFFER_SIZE].data.uli){
     error = PRINTF_STRING_BUFFER_OVERFLOW;
   }
   else {
@@ -280,10 +270,10 @@ static inline PrintfError printf(PrintfPacket* queue, All... all) [[hc,cpu]] {
     unsigned int poffset = (unsigned int)old_off.uia[0];
     unsigned int soffset = (unsigned int)old_off.uia[1];
 
-    if (poffset + count_arg + 1 > queue[PRINTF_BUFFER_SIZE].data.ui) {
+    if (poffset + count_arg + 1 > queue[PRINTF_BUFFER_SIZE].data.uli) {
       error = PRINTF_BUFFER_OVERFLOW;
     }
-    else if (soffset + count_char > queue[PRINTF_STRING_BUFFER_SIZE].data.ui){
+    else if (soffset + count_char > queue[PRINTF_STRING_BUFFER_SIZE].data.uli){
       error = PRINTF_STRING_BUFFER_OVERFLOW;
     }
     else {

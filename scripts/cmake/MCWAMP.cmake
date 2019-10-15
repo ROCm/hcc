@@ -25,10 +25,6 @@ macro(amp_target name )
   add_definitions(-DHCC_MAJOR_VERSION=${HCC_VERSION_MAJOR})
   add_definitions(-DHCC_MINOR_VERSION=${HCC_VERSION_MINOR})
 
-  # printf has to be disable on RHEL/CentOS 7.x due to unstable support of std::regex
-  # Disabling experimental hc::printf on all platforms due to breakage and lack of maintance
-  # target_compile_definitions(${name} PRIVATE HC_PRINTF_SUPPORT_ENABLE)
-
   target_compile_definitions(${name} PRIVATE "GTEST_HAS_TR1_TUPLE=0")
   target_include_directories(${name} SYSTEM PRIVATE ${GTEST_INC_DIR} ${LIBCXX_INC_DIR})
   target_include_directories(${name} PRIVATE ${MCWAMP_INC_DIR})
