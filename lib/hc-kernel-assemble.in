@@ -133,7 +133,7 @@ if [ $AMDGPU_OBJ_CODEGEN == 1 ]; then
   # for each GPU target, lower to GCN ISA in HSACO format
   CODE_OBJECT=""
   if [ $HCC_COV3 == "1" ]; then
-    CODE_OBJECT = "--hcc-cov3"
+    CODE_OBJECT="--hcc-cov3"
   fi
   for AMDGPU_TARGET in ${AMDGPU_TARGET_ARRAY[@]}; do
     $CLAMP_DEVICE "$KERNEL_INPUT" "$TEMP_DIR/kernel-$AMDGPU_TARGET.hsaco" --amdgpu-target=$AMDGPU_TARGET --early-finalize $CODE_OBJECT $HCC_OPT
