@@ -10,6 +10,9 @@ KMDUMPLLVM="${KMDUMPLLVM:=0}"
 
 AMDGPU_OBJ_CODEGEN="${AMDGPU_OBJ_CODEGEN:=0}"
 
+# flag for function calls enabled
+AMDGPU_FUNC_CALLS="0"
+
 # flag for COV3
 HCC_COV3="0"
 
@@ -69,6 +72,10 @@ do
     ;;
     --early_finalize)
     AMDGPU_OBJ_CODEGEN=1
+    continue
+    ;;
+    --amdgpu-func-calls)
+    AMDGPU_FUNC_CALLS="1"
     continue
     ;;
     --hcc-cov3)
@@ -131,12 +138,16 @@ if [ $AMDGPU_OBJ_CODEGEN == 1 ]; then
 
   declare -a pids
   # for each GPU target, lower to GCN ISA in HSACO format
+  FUNC_CALLS=""
+  if [ $AMDGPU_FUNC_CALLS == "1" ]; then
+    FUNC_CALLS="--amdgpu-func-calls"
+  fi
   CODE_OBJECT=""
   if [ $HCC_COV3 == "1" ]; then
     CODE_OBJECT="--hcc-cov3"
   fi
   for AMDGPU_TARGET in ${AMDGPU_TARGET_ARRAY[@]}; do
-    $CLAMP_DEVICE "$KERNEL_INPUT" "$TEMP_DIR/kernel-$AMDGPU_TARGET.hsaco" --amdgpu-target=$AMDGPU_TARGET --early-finalize $CODE_OBJECT $HCC_OPT
+    $CLAMP_DEVICE "$KERNEL_INPUT" "$TEMP_DIR/kernel-$AMDGPU_TARGET.hsaco" --amdgpu-target=$AMDGPU_TARGET --early-finalize $FUNC_CALLS $CODE_OBJECT $HCC_OPT
     # error handling
     pids+=("${pids[@]}" "$!")
 
