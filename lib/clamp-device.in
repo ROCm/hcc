@@ -40,6 +40,9 @@ KMTHINLTO="${KMTHINLTO:=0}"
 # flag for early finalization
 AMDGPU_OBJ_CODEGEN="0"
 
+# flag for function calls enabled
+AMDGPU_FUNC_CALLS="0"
+
 # flag for COV3
 HCC_COV3="0"
 
@@ -111,6 +114,10 @@ do
     --early-finalize)
     AMDGPU_OBJ_CODEGEN="1"
     KMTHINLTO="0"
+    continue
+    ;;
+    --amdgpu-func-calls)
+    AMDGPU_FUNC_CALLS="1"
     continue
     ;;
     --hcc-cov3)
@@ -211,7 +218,7 @@ fi
 $OPT $HCC_OPT -mtriple amdgcn-amd-amdhsa -mcpu=$AMDGPU_TARGET \
   -load $LIB/LLVMSelectAcceleratorCode@CMAKE_SHARED_LIBRARY_SUFFIX@ \
   -load $LIB/LLVMPromotePointerKernArgsToGlobal@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-  -select-accelerator-code \
+  -select-accelerator-code -sac-enable-function-calls=$AMDGPU_FUNC_CALLS \
   -promote-pointer-kernargs-to-global \
   -infer-address-spaces \
   -verify < $2.linked.bc -o $2.opt.bc
@@ -245,10 +252,10 @@ if [ $HCC_COV3 == "1" ]; then
 fi
 if [ $KMTHINLTO == "1" ]; then
   $LLC -mtriple amdgcn-amd-amdhsa -mcpu=$AMDGPU_TARGET $CODE_OBJECT_FORMAT \
-    $HCC_OPT $KMOPTLLC -filetype=obj -o $2 $2.opt.bc
+    $HCC_OPT $KMOPTLLC -amdgpu-function-calls=$AMDGPU_FUNC_CALLS -filetype=obj -o $2 $2.opt.bc
 else
   $LLC -mtriple amdgcn-amd-amdhsa -mcpu=$AMDGPU_TARGET $CODE_OBJECT_FORMAT \
-    $HCC_OPT $KMOPTLLC -filetype=obj -o $2.isabin $2.opt.bc
+    $HCC_OPT $KMOPTLLC -amdgpu-function-calls=$AMDGPU_FUNC_CALLS -filetype=obj -o $2.isabin $2.opt.bc
 fi
 
 # error handling for llc
@@ -265,7 +272,7 @@ if [ $KMDUMPISA == "1" ]; then
     cp $2.isabin ${KMDUMPDIR}/dump-$AMDGPU_TARGET.isabin
   fi
   $LLC -mtriple amdgcn-amd-amdhsa -mcpu=$AMDGPU_TARGET $CODE_OBJECT_FORMAT \
-     $HCC_OPT $KMOPTLLC -filetype=asm -o $2.isa $2.opt.bc
+     $HCC_OPT $KMOPTLLC -amdgpu-function-calls=$AMDGPU_FUNC_CALLS -filetype=asm -o $2.isa $2.opt.bc
   mv $2.isa ${KMDUMPDIR}/dump-$AMDGPU_TARGET.isa
 fi
 
