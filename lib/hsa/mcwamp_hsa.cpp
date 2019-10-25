@@ -1228,29 +1228,7 @@ struct RocrQueue {
     static void callbackQueue(hsa_status_t status, hsa_queue_t* queue, void *data) {
         STATUS_CHECK(status, __LINE__);
     }
-
-    RocrQueue(hsa_agent_t agent, size_t queue_size, HSAQueue *hccQueue, queue_priority priority)
-        : _priority(priority_normal)
-    {
-        assert(queue_size != 0);
-
-        /// Create a queue using the maximum size.
-        hsa_status_t status = hsa_queue_create(agent, queue_size, HSA_QUEUE_TYPE_SINGLE, callbackQueue, NULL,
-                                  UINT32_MAX, UINT32_MAX, &_hwQueue);
-        DBOUT(DB_QUEUE, "  " <<  __func__ << ": created an HSA command queue: " << _hwQueue << "\n");
-        STATUS_CHECK(status, __LINE__);
-
-        // Set queue priority
-        status = setPriority(priority);
-        STATUS_CHECK(status, __LINE__);
-
-        // TODO - should we provide a mechanism to conditionally enable profiling as a performance optimization?
-        status = hsa_amd_profiling_set_profiler_enabled(_hwQueue, 1);
-
-        // Create the links between the queues:
-        assignHccQueue(hccQueue);
-    }
-
+    RocrQueue(hsa_agent_t agent, size_t queue_size, HSAQueue *hccQueue, queue_priority priority);
     ~RocrQueue() {
 
         DBOUT(DB_QUEUE, "  " <<  __func__ << ": destroy an HSA command queue: " << _hwQueue << "\n");
@@ -1371,12 +1349,15 @@ private:
     // signal used by sync copy only
     hsa_signal_t  sync_copy_signal;
 
-    // indicated whether this HSAQueue has already been used
+    // indicate whether this HSAQueue has already been used
     // for compute or copy tasks 
     bool has_been_used;
 
+    // indicate whether this is a cooperative queue
+    bool is_cooperative;
+
 public:
-    HSAQueue(KalmarDevice* pDev, hsa_agent_t agent, execute_order order, queue_priority priority) ;
+    HSAQueue(KalmarDevice* pDev, hsa_agent_t agent, execute_order order, queue_priority priority, bool cooperative = false) ;
 
     bool nextKernelNeedsSysAcquire() const { return _nextKernelNeedsSysAcquire; };
     void setNextKernelNeedsSysAcquire(bool r) { _nextKernelNeedsSysAcquire = r; };
@@ -1393,6 +1374,8 @@ public:
     uint64_t getSeqNum() const { return queueSeqNum; };
 
     Kalmar::HSADevice * getHSADev() const;
+
+    bool isCooperative() { return is_cooperative; }
 
     void dispose() override;
 
@@ -2194,6 +2177,32 @@ public:
 
 };
 
+RocrQueue::RocrQueue(hsa_agent_t agent, size_t queue_size, HSAQueue *hccQueue, queue_priority priority)
+    : _priority(priority_normal)
+{
+    assert(queue_size != 0);
+
+    /// Create a queue using the maximum size.
+    auto qtype = HSA_QUEUE_TYPE_SINGLE;
+    if (hccQueue->isCooperative())
+    {
+        qtype = HSA_QUEUE_TYPE_COOPERATIVE;
+    }
+    hsa_status_t status = hsa_queue_create(agent, queue_size, qtype, callbackQueue, NULL,
+                                           UINT32_MAX, UINT32_MAX, &_hwQueue);
+    DBOUT(DB_QUEUE, "  " << __func__ << ": created an HSA command queue: " << _hwQueue << "\n");
+    STATUS_CHECK(status, __LINE__);
+
+    // Set queue priority
+    status = setPriority(priority);
+    STATUS_CHECK(status, __LINE__);
+
+    // TODO - should we provide a mechanism to conditionally enable profiling as a performance optimization?
+    status = hsa_amd_profiling_set_profiler_enabled(_hwQueue, 1);
+
+    // Create the links between the queues:
+    assignHccQueue(hccQueue);
+}
 
 void RocrQueue::assignHccQueue(HSAQueue *hccQueue) {
     assert (hccQueue->rocrQueue == nullptr);  // only needy should assign new queue
@@ -2266,6 +2275,9 @@ private:
     size_t queue_size;
     std::mutex queues_mutex; // protects access to the queues vector:
     std::vector< std::weak_ptr<KalmarQueue> > queues;
+
+    bool support_cooperative_queue = false;
+    std::shared_ptr<KalmarQueue> cooperative_queue = nullptr;
 
     // TODO: Do we need to maintain a different mutex for each queue priority?
     // In which case HSAQueue::dispose needs to handle locking the appropriate mutex
@@ -2449,6 +2461,10 @@ private:
     };
 
 public:
+
+    size_t getQueueSize() {
+        return queue_size;
+    }
 
     uint32_t getWorkgroupMaxSize() {
         return workgroup_max_size;
@@ -2981,6 +2997,20 @@ public:
         queues_mutex.unlock();
         return q;
     }
+
+    std::shared_ptr<KalmarQueue> createCooperativeQueue() override {
+        if (cooperative_queue == nullptr) {
+            std::lock_guard<std::mutex> l(queues_mutex);
+            if (cooperative_queue == nullptr) {
+                if (!support_cooperative_queue) {
+                    throw Kalmar::runtime_exception("agent doesn't support cooperative queue", -1);
+                }
+                cooperative_queue = std::make_shared<HSAQueue>(this, agent, execute_in_order, priority_normal, true);
+            }
+        }
+        return cooperative_queue;
+    }
+
 
     size_t GetMaxTileStaticSize() override {
         return max_tile_static_size;
@@ -3991,10 +4021,11 @@ HSADevice::HSADevice(hsa_agent_t a, hsa_agent_t host, int x_accSeqNum) :
         assert (__builtin_popcount(MAX_INFLIGHT_COMMANDS_PER_QUEUE) == 1); // make sure this is power of 2.
     }
 
-    status = hsa_amd_profiling_async_copy_enable(1);
+    status = hsa_agent_get_info(agent, (hsa_agent_info_t)HSA_AMD_AGENT_INFO_COOPERATIVE_QUEUES, &support_cooperative_queue);
     STATUS_CHECK(status, __LINE__);
 
-
+    status = hsa_amd_profiling_async_copy_enable(1);
+    STATUS_CHECK(status, __LINE__);
 
     /// Iterate over memory pool of the device and its host
     status = hsa_amd_agent_iterate_memory_pools(agent, HSADevice::find_group_memory, &max_tile_static_size);
@@ -4139,18 +4170,20 @@ std::ostream& operator<<(std::ostream& os, const HSAQueue & hav)
     return os;
 }
 
-
-
-
-HSAQueue::HSAQueue(KalmarDevice* pDev, hsa_agent_t agent, execute_order order, queue_priority priority) :
+HSAQueue::HSAQueue(KalmarDevice* pDev, hsa_agent_t agent, execute_order order, queue_priority priority, 
+                     bool cooperative) :
     KalmarQueue(pDev, queuing_mode_automatic, order, priority),
     rocrQueue(nullptr),
     asyncOps(HCC_ASYNCOPS_SIZE), asyncOpsIndex(0),
     valid(true), _nextSyncNeedsSysRelease(false), _nextKernelNeedsSysAcquire(false), bufferKernelMap(), kernelBufferMap(),
-    has_been_used(false)
+    has_been_used(false), is_cooperative(cooperative)
 {
 
-    if (!HCC_LAZY_QUEUE_CREATION) {
+    if (is_cooperative) {
+        HSADevice* device = reinterpret_cast<HSADevice*>(pDev);
+        rocrQueue = new RocrQueue(agent, device->getQueueSize(), this, priority);
+    }
+    else if (!HCC_LAZY_QUEUE_CREATION) {
         // Protect the HSA queue we can steal it.
         DBOUT(DB_LOCK, " ptr:" << this << " create lock_guard...\n");
 
@@ -4165,7 +4198,6 @@ HSAQueue::HSAQueue(KalmarDevice* pDev, hsa_agent_t agent, execute_order order, q
     hsa_status_t status= hsa_signal_create(1, 1, &agent, &sync_copy_signal);
     STATUS_CHECK(status, __LINE__);
 }
-
 
 void HSAQueue::dispose() {
     hsa_status_t status;
@@ -4204,7 +4236,14 @@ void HSAQueue::dispose() {
         kernelBufferMap.clear();
 
         if (this->rocrQueue != nullptr) {
-            device->removeRocrQueue(rocrQueue);
+            if (is_cooperative) {
+              // the cooperative queue is not in the queue pool
+              // so just delete it
+              delete(rocrQueue);
+            }
+            else {
+              device->removeRocrQueue(rocrQueue);
+            }
             rocrQueue = nullptr;
         }
     }

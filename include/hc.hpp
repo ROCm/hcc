@@ -874,6 +874,19 @@ public:
         return pQueue;
     }
 
+     /**
+     * Creates and returns a new accelerator view on the accelerator that
+     * support cooperative queueing.
+     *
+     * @param[in] qmode The queuing mode of the accelerator_view to be created.
+     *                  See "Queuing Mode". The default value would be
+     *                  queueing_mdoe_automatic if not specified.
+     */
+    accelerator_view create_cooperative_view() {
+        auto pQueue = pDev->createCooperativeQueue();
+        return pQueue;
+    }
+
     /**
      * Clients can use the underlying device as an identifier for the
      * accelerator. This complies with the equality opertor below,
