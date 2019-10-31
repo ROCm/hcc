@@ -3333,89 +3333,106 @@ private:
 
 namespace hc {
 
-#ifdef HC_PRINTF_SUPPORT_ENABLE
+static void printArgument(const std::string &spec, const PrintfPacket *ptr) {
+    switch (spec.back()) {
+    case 'c':
+    case 'd':
+    case 'i':
+      std::printf(spec.c_str(), ptr->data.li);
+      return;
+    case 'o':
+    case 'u':
+    case 'x':
+    case 'X':
+      std::printf(spec.c_str(), ptr->data.uli);
+      return;
+    case 'f':
+    case 'F':
+    case 'e':
+    case 'E':
+    case 'g':
+    case 'G':
+    case 'a':
+    case 'A':
+      std::printf(spec.c_str(), ptr->data.d);
+      return;
+    case 's':
+    case 'p':
+      std::printf(spec.c_str(), ptr->data.cptr);
+      return;
+    }
+}
 
-// regex for finding format string specifiers
-static const std::regex specifierPattern("(%){1}[-+#0]*[0-9]*((.)[0-9]+){0,1}([hl]*)([diuoxXfFeEgGaAcsp]){1}");
-static const std::regex signedIntegerPattern("(%){1}[-+#0]*[0-9]*((.)[0-9]+){0,1}([hl]*)([cdi]){1}");
-static const std::regex unsignedIntegerPattern("(%){1}[-+#0]*[0-9]*((.)[0-9]+){0,1}([hl]*)([uoxX]){1}");
-static const std::regex floatPattern("(%){1}[-+#0]*[0-9]*((.)[0-9]+){0,1}([fFeEgGaA]){1}");
-static const std::regex pointerPattern("(%){1}[ps]");
-static const std::regex doubleAmpersandPattern("(%){2}");
-static const std::string ampersand("%");
+void format(const std::string &fmt, const PrintfPacket *ptr, const PrintfPacket *end) {
+  const char conv_specifiers[] = "diuoxXfFeEgGaAcsp";
+
+  size_t point = 0;
+
+  while (true) {
+    // Each segment of the format string delineated by [mark, point)
+    // is handled seprately.
+    auto mark = point;
+    point = fmt.find('%', point);
+
+    // Two different cases where a literal segment is printed out.
+    // 1. When the point reaches the end of the format string.
+    // 2. When the point is at the start of a format specifier.
+    if (point == std::string::npos) {
+      std::printf("%s", &fmt[mark]);
+      return;
+    }
+
+    std::printf("%.*s", (int)(point - mark), &fmt[mark]);
+
+    mark = point;
+    ++point;
+
+    // Handle the simplest specifier, '%%'.
+    if (fmt[point] == '%') {
+      std::printf("%%");
+      ++point;
+      continue;
+    }
+
+    // If we have run out of arguments, bail out.
+    if (ptr == end) {
+      return;
+    }
+
+    // Undefined behaviour if we don't see a conversion specifier.
+    point = fmt.find_first_of(conv_specifiers, point);
+    if (point == std::string::npos) {
+      return;
+    }
+    ++point;
+
+    // [mark,point) now contains a complete specifier.
+    const std::string spec(fmt, mark, point - mark);
+    printArgument(spec, ptr);
+    ++ptr;
+  }
+}
 
 static inline void processPrintfPackets(PrintfPacket* packets, const unsigned int numPackets) {
+  auto pkt = packets;
+  auto end = pkt + numPackets;
 
-  for (unsigned int i = 0; i < numPackets; ) {
-
-    unsigned int numPrintfArgs = packets[i++].data.ui;
+  while (pkt != end) {
+    unsigned int numPrintfArgs = pkt->data.uli;
+    ++pkt;
     if (numPrintfArgs == 0)
       continue;
 
     // get the format
-    unsigned int formatStringIndex = i++;
-    assert(packets[formatStringIndex].type == PRINTF_CHAR_PTR
-           || packets[formatStringIndex].type == PRINTF_CONST_CHAR_PTR);
-    std::string formatString((const char*)packets[formatStringIndex].data.cptr);
-    std::smatch specifierMatches;
+    assert(pkt->type == PRINTF_CHAR_PKT || pkt->type == PRINTF_CONST_CHAR_PKT);
+    const std::string formatString((const char*)pkt->data.cptr);
+    ++pkt;
 
-#if HC_PRINTF_DEBUG
-    std::printf("%s:%d \t number of matches = %d\n", __FUNCTION__, __LINE__, (int)specifierMatches.size());
-#endif
-
-    for (unsigned int j = 1; j < numPrintfArgs; ++j, ++i) {
-
-      if (!std::regex_search(formatString, specifierMatches, specifierPattern)) {
-        // More printf argument than format specifier??
-        // Just skip to the next printf request
-        i+=(numPrintfArgs - j);
-        break;
-      }
-
-      std::string specifier = specifierMatches.str();
-#if HC_PRINTF_DEBUG
-      std::cout << " (specifier found: " << specifier << ") ";
-#endif
-
-      // print the substring before the specifier
-      // clean up all the double ampersands
-      std::string prefix = specifierMatches.prefix();
-      prefix = std::regex_replace(prefix,doubleAmpersandPattern,ampersand);
-      std::printf("%s",prefix.c_str());
-
-      std::smatch specifierTypeMatch;
-      if (std::regex_search(specifier, specifierTypeMatch, unsignedIntegerPattern)) {
-        std::printf(specifier.c_str(), packets[i].data.ui);
-      } else if (std::regex_search(specifier, specifierTypeMatch, signedIntegerPattern)) {
-        std::printf(specifier.c_str(), packets[i].data.i);
-      } else if (std::regex_search(specifier, specifierTypeMatch, floatPattern)) {
-        if (packets[i].type == PRINTF_HALF)
-          std::cout << static_cast<float>(packets[i].data.h);
-        else if (packets[i].type == PRINTF_FLOAT)
-          std::printf(specifier.c_str(), packets[i].data.f);
-        else
-          std::printf(specifier.c_str(), packets[i].data.d);
-      } else if (std::regex_search(specifier, specifierTypeMatch, pointerPattern)) {
-        std::printf(specifier.c_str(), packets[i].data.cptr);
-      }
-      else {
-        assert(false);
-      }
-      formatString = specifierMatches.suffix();
-    }
-    // print the substring after the last specifier
-    // clean up all the double ampersands before printing
-    formatString = std::regex_replace(formatString,doubleAmpersandPattern,ampersand);
-    std::printf("%s",formatString.c_str());
+    format(formatString, pkt, end);
+    pkt += numPrintfArgs - 1;
   }
   std::flush(std::cout);
 }
-
-#else
-
-static inline void processPrintfPackets(PrintfPacket* packets, const unsigned int numPackets) { }
-
-#endif  // #ifdef HC_PRINTF_SUPPORT_ENABLE
 
 static inline void processPrintfBuffer(PrintfPacket* gpuBuffer) {
 
@@ -3425,7 +3442,7 @@ static inline void processPrintfBuffer(PrintfPacket* gpuBuffer) {
 
   // check whether the printf buffer is non-empty
   if (cursor !=  PRINTF_HEADER_SIZE) {
-    unsigned int bufferSize = gpuBuffer[PRINTF_BUFFER_SIZE].data.ui;
+    unsigned int bufferSize = gpuBuffer[PRINTF_BUFFER_SIZE].data.uli;
     unsigned int numPackets = ((bufferSize<cursor)?bufferSize:cursor) - PRINTF_HEADER_SIZE;
 
     processPrintfPackets(gpuBuffer+PRINTF_HEADER_SIZE, numPackets);
@@ -3623,7 +3640,6 @@ public:
         }
         def = Devices[first_gpu_index + HCC_DEFAULT_GPU];
 
-#ifdef HC_PRINTF_SUPPORT_ENABLE
         // pinned hc::printf_buffer so that the GPUs could access it
         if (hc::printf_buffer_locked_va == nullptr) {
           hsa_status_t status = HSA_STATUS_SUCCESS;
@@ -3632,7 +3648,6 @@ public:
                                        hsa_agents, agents.size(), (void**)&hc::printf_buffer_locked_va);
           STATUS_CHECK(status, __LINE__);
         }
-#endif
 
         init_success = true;
     }
@@ -3659,7 +3674,11 @@ public:
         if (!init_success)
           return;
 
-#if HC_PRINTF_SUPPORT_ENABLE
+#if 0
+        // For reasons that we don't understand, the printf buffer
+        // occasionally disappears before this point. As a workaround,
+        // we avoid accessing the printf buffer here.
+        //
         // deallocate the printf buffer
         if (HCC_ENABLE_PRINTF &&
             hc::printf_buffer != nullptr) {
@@ -3668,10 +3687,10 @@ public:
 
            hc::deletePrintfBuffer(hc::printf_buffer);
         }
+#endif
         status = hsa_amd_memory_unlock(&hc::printf_buffer);
         STATUS_CHECK(status, __LINE__);
         hc::printf_buffer_locked_va = nullptr;
-#endif
 
         // destroy all KalmarDevices associated with this context
         for (auto dev : Devices)
