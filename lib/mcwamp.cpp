@@ -51,7 +51,9 @@ struct RuntimeImpl {
   ~RuntimeImpl() {
     if (m_RuntimeHandle) {
       m_ShutdownImpl();
-      dlclose(m_RuntimeHandle);
+      // shutdown call above has already cleaned up all resources,
+      // dlclose not needed and was causing seg fault for some applications
+      //dlclose(m_RuntimeHandle);
     }
   }
 

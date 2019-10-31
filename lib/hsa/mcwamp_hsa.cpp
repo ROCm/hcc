@@ -149,7 +149,7 @@ char * HCC_PROFILE_FILE=nullptr;
             sstream << "\t" << *op << ";";\
     }\
    sstream <<  msg << "\n";\
-   Kalmar::ctx->getHccProfileStream() << sstream.str();\
+   Kalmar::ctx()->getHccProfileStream() << sstream.str();\
 }
 
 // Track a short thread-id, for debugging:
@@ -3726,8 +3726,32 @@ public:
     }
 };
 
-static HSAContext* ctx = new HSAContext;
 thread_local bool initPrintfBufferGuard = true;
+static HSAContext* __ctx;
+static HSAContext* ctx() {
+  static std::once_flag ctx_create_flag;
+  std::call_once(ctx_create_flag, []() {
+    __ctx = new HSAContext;
+  });
+
+#ifdef HC_PRINTF_SUPPORT_ENABLE
+  // If hc::printf is enabled, it must be initialized *after* the Kalmar::ctx is created.
+  // We only want to do this once, but the call to initPrintfBuffer will recurse back
+  // into this getter. We use TLS to make sure the same thread is the one recursing.
+  if (HCC_ENABLE_PRINTF) {
+    if (Kalmar::initPrintfBufferGuard) {
+      static std::once_flag flag;
+      std::call_once(flag, []() {
+        Kalmar::initPrintfBufferGuard = false;
+        __ctx->initPrintfBuffer();
+        Kalmar::initPrintfBufferGuard = true;
+      });
+    }
+  }
+#endif
+
+  return __ctx;
+}
 
 } // namespace Kalmar
 
@@ -3976,8 +4000,8 @@ HSADevice::getHSAAgent() override {
 
 static int get_seqnum_from_agent(hsa_agent_t hsaAgent)
 {
-    auto i = ctx->agentToDeviceMap_.find(hsaAgent.handle);
-    if (i != ctx->agentToDeviceMap_.end()) {
+    auto i = ctx()->agentToDeviceMap_.find(hsaAgent.handle);
+    if (i != ctx()->agentToDeviceMap_.end()) {
         return i->second->get_seqnum();
     } else {
         return -1;
@@ -4557,7 +4581,7 @@ HSADispatch::dispatchKernel(hsa_queue_t* lockedHsaQueue, const void *hostKernarg
         /*
          * Create a signal to wait for the dispatch to finish.
          */
-        _signal = Kalmar::ctx->getSignal();
+        _signal = Kalmar::ctx()->getSignal();
         q_aql->completion_signal = _signal;
     } else {
         _signal.handle = 0;
@@ -4734,7 +4758,7 @@ HSADispatch::dispose() {
       future = nullptr;
     }
 
-    Kalmar::ctx->releaseSignal(_signal);
+    Kalmar::ctx()->releaseSignal(_signal);
 }
 
 inline uint64_t
@@ -5013,7 +5037,7 @@ HSABarrier::enqueueAsync(hc::memory_scope fenceScope) {
     }
 
     // Create a signal to wait for the barrier to finish.
-    _signal = Kalmar::ctx->getSignal();
+    _signal = Kalmar::ctx()->getSignal();
 
     // setup header
     header = HSA_PACKET_TYPE_BARRIER_AND << HSA_PACKET_HEADER_TYPE;
@@ -5100,7 +5124,7 @@ HSABarrier::dispose() {
       future = nullptr;
     }
 
-    Kalmar::ctx->releaseSignal(_signal);
+    Kalmar::ctx()->releaseSignal(_signal);
 }
 
 inline uint64_t
@@ -5132,7 +5156,7 @@ HSAOp::HSAOp(hc::HSAOpId id, Kalmar::KalmarQueue *queue, hc::hcCommandKind comma
     _activity_prof(id, _opCoord._queueId, _opCoord._deviceId)
 {
     _signal.handle=0;
-    apiStartTick = Kalmar::ctx->getSystemTicks();
+    apiStartTick = Kalmar::ctx()->getSystemTicks();
 
     _activity_prof.initialize();
 };
@@ -5160,7 +5184,7 @@ HSACopy::HSACopy(Kalmar::KalmarQueue *queue, const void* src_, void* dst_, size_
 {
 
 
-    apiStartTick = Kalmar::ctx->getSystemTicks();
+    apiStartTick = Kalmar::ctx()->getSystemTicks();
 }
 
 // wait for the async copy to complete
@@ -5296,7 +5320,7 @@ hsa_status_t HSACopy::hcc_memory_async_copy(Kalmar::hcCommandKind copyKind, cons
     hsa_signal_t depSignal = { .handle = 0x0 };
     {
         // Create a signal to wait for the async copy command to finish.
-        _signal = Kalmar::ctx->getSignal();
+        _signal = Kalmar::ctx()->getSignal();
 
         if (!hsaQueue()->nextSyncNeedsSysRelease()) {
             DBOUT( DB_CMD2, "  copy launching without adding system release\n");
@@ -5455,7 +5479,7 @@ hsa_status_t HSACopy::hcc_memory_async_copy_rect(Kalmar::hcCommandKind copyKind,
     hsa_signal_t depSignal = { .handle = 0x0 };
     {
         //Create a signal to wait for the async copy command to finish.
-        _signal = Kalmar::ctx->getSignal();
+        _signal = Kalmar::ctx()->getSignal();
 
         if (!hsaQueue()->nextSyncNeedsSysRelease()) {
             DBOUT( DB_CMD2, "  copy launching without adding system release\n");
@@ -5604,11 +5628,11 @@ HSACopy::dispose() {
             LOG_PROFILE(this, start, end, "copy", getCopyCommandString(),  "\t" << sizeBytes << " bytes;\t" << sizeBytes/1024.0/1024 << " MB;\t" << bw << " GB/s;");
         }
         _activity_prof.report_gpu_timestamps<HSACopy>(this, sizeBytes);
-        Kalmar::ctx->releaseSignal(_signal);
+        Kalmar::ctx()->releaseSignal(_signal);
     } else {
         if (HCC_PROFILE & HCC_PROFILE_TRACE) {
             uint64_t start = apiStartTick;
-            uint64_t end   = Kalmar::ctx->getSystemTicks();
+            uint64_t end   = Kalmar::ctx()->getSystemTicks();
             double bw = (double)(sizeBytes)/(end-start) * (1000.0/1024.0) * (1000.0/1024.0);
             LOG_PROFILE(this, start, end, "copyslo", getCopyCommandString(),  "\t" << sizeBytes << " bytes;\t" << sizeBytes/1024.0/1024 << " MB;\t" << bw << " GB/s;");
         }
@@ -5637,7 +5661,7 @@ HSACopy::getStartTick() {
 
 inline uint64_t
 HSACopy::getSystemTicks() {
-    return Kalmar::ctx->getSystemTicks();
+    return Kalmar::ctx()->getSystemTicks();
 }
 
 void
@@ -5827,28 +5851,11 @@ HSACopy::syncCopy() {
 // ----------------------------------------------------------------------
 
 extern "C" void *GetContextImpl() {
-
-#ifdef HC_PRINTF_SUPPORT_ENABLE
-  // If hc::printf is enabled, it must be initialized *after* the Kalmar::ctx is created.
-  // We only want to do this once, but the call to initPrintfBuffer will recurse back
-  // into this getter. We use TLS to make sure the same thread is the one recursing.
-  if (HCC_ENABLE_PRINTF) {
-    if (Kalmar::initPrintfBufferGuard) {
-      static std::once_flag flag;
-      std::call_once(flag, []() {
-        Kalmar::initPrintfBufferGuard = false;
-        Kalmar::ctx->initPrintfBuffer();
-        Kalmar::initPrintfBufferGuard = true;
-      });
-    }
-  }
-#endif
-
-  return Kalmar::ctx;
+  return Kalmar::ctx();
 }
 
 extern "C" void ShutdownImpl() {
-  delete Kalmar::ctx;
+  delete Kalmar::__ctx;
 }
 
 extern "C" void PushArgImpl(void *ker, int idx, size_t sz, const void *v) {
