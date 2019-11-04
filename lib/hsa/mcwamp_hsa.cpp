@@ -3753,7 +3753,6 @@ static HSAContext* ctx() {
     __ctx = new HSAContext;
   });
 
-#ifdef HC_PRINTF_SUPPORT_ENABLE
   // If hc::printf is enabled, it must be initialized *after* the Kalmar::ctx is created.
   // We only want to do this once, but the call to initPrintfBuffer will recurse back
   // into this getter. We use TLS to make sure the same thread is the one recursing.
@@ -3767,7 +3766,6 @@ static HSAContext* ctx() {
       });
     }
   }
-#endif
 
   return __ctx;
 }
