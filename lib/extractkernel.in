@@ -41,10 +41,26 @@ defined $options{i} || die("input not specified");
 $input_file = $options{i};
 (-f $input_file) || die("can't find $input_file");
 
-my $kernel_section_size =  hex(`objdump -h $input_file | grep ".kernel" | awk '{print \$3}'`);
-my $kernel_section_offset =  hex(`objdump -h $input_file | grep ".kernel" | awk '{print \$6}'`);
+# kernel section information for HCC
+my $kernel_section_name = ".kernel";
+my $kernel_triple = "hcc-amdgcn-amd-amdhsa--";
+my $kernel_blob_alignment = 1;
+
+my $kernel_section_size =  hex(`objdump -h $input_file | grep $kernel_section_name | awk '{print \$3}'`);
+if (!$kernel_section_size) {
+
+  # If there isn't a section created by HCC,
+  # try to detect a kernel section created by HIP-Clang
+  $kernel_section_name = ".hip_fatbin";
+  $kernel_triple = "hip-amdgcn-amd-amdhsa-";
+  $kernel_blob_alignment = 8;
+
+  $kernel_section_size =  hex(`objdump -h $input_file | grep $kernel_section_name | awk '{print \$3}'`);
+  $kernel_section_size or die("No kernel section found\n");
+}
+
+my $kernel_section_offset =  hex(`objdump -h $input_file | grep $kernel_section_name | awk '{print \$6}'`);
 my $kernel_section_end = $kernel_section_offset + $kernel_section_size;
-$kernel_section_size or die("No .kernel section found\n");
 if ($debug) {
   print "kernel section size: $kernel_section_size\n";
   print "kernel section offset: $kernel_section_offset\n";
@@ -60,6 +76,8 @@ my $num_blobs = 0;
 #while ($current_blob_offset < $kernel_section_end) {
 while(1) {
 
+  # adjust the offset to the blob alignment
+  $current_blob_offset = int(($current_blob_offset + ($kernel_blob_alignment - 1)) / $kernel_blob_alignment) * $kernel_blob_alignment;  
   if ($debug) {
     print "Current blob offset: $current_blob_offset\n";
   }
@@ -138,8 +156,9 @@ while(1) {
     }
 
     # Only process GPU targets, skip host targets
-    if ($triple =~ /^hcc-amdgcn-amd-amdhsa--/) {
-      my $asic_target = substr($triple, 23); # hcc-amdgcn-amd-amdhsa--
+    my $triple_pattern = "^$kernel_triple";
+    if ($triple =~ /$triple_pattern/) {
+      my $asic_target = substr($triple, length($kernel_triple));
 
       # augment arguments for clang-offload-bundler
       my $hsaco_file_name = "${filename_prefix}-${asic_target}.hsaco";
