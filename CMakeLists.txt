@@ -534,6 +534,7 @@ elseif ("${DISTRO_ID}" MATCHES "fedora" OR
         "${DISTRO_ID}" MATCHES "centos" OR
         "${DISTRO_ID}" MATCHES "redhatenterpriseserver" OR
         "${DISTRO_ID}" MATCHES "opensuse" OR
+        "${DISTRO_ID}" MATCHES "suse" OR
         "${DISTRO_ID}" MATCHES "sles" )
 
   set( CPACK_GENERATOR "RPM" CACHE STRING "cpack list: 7Z, DEB, IFW, NSIS, NSIS64, RPM, STGZ, TBZ2, TGZ, TXZ, TZ, ZIP" FORCE )
