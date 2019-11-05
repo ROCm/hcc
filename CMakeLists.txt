@@ -31,6 +31,7 @@ string(TOLOWER "${DISTRO_ID}" DISTRO_ID )
 if( DISTRO_ID MATCHES "ubuntu" OR DISTRO_ID MATCHES "fedora"
    OR DISTRO_ID MATCHES "centos" OR DISTRO_ID MATCHES "redhatenterpriseserver"
    OR DISTRO_ID MATCHES "opensuse"
+   OR DISTRO_ID MATCHES "suse"
    OR DISTRO_ID MATCHES "sles" )
   message( STATUS "Detected distribution: ${DISTRO_ID}:${DISTRO_RELEASE}" )
 else()
