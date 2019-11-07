@@ -3,6 +3,7 @@ use strict;
 use File::Copy;
 use File::Spec;
 use File::Basename;
+use File::Which;
 use Cwd 'realpath';
 use Getopt::Std;
 use List::Util qw(max);
@@ -28,18 +29,45 @@ if (!%options || defined $options{h}) {
   usage();
 }
 
-# get the directory of this script
-my $tools_path_prefix = dirname(realpath($0));
-if (defined $ENV{'HCC_HOME'}) {
-  $tools_path_prefix = File::Spec->catfile($ENV{'HCC_HOME'}, "bin");
-}
-my $llvm_objdump = File::Spec->catfile($tools_path_prefix, "llvm-objdump");
-my $clang_offload_bundler = File::Spec->catfile($tools_path_prefix, "clang-offload-bundler");
-
 my $input_file;
 defined $options{i} || die("input not specified");
 $input_file = $options{i};
 (-f $input_file) || die("can't find $input_file");
+
+# look for llvm-objdump and clang-offload-bundler
+my $tools_path_prefix;
+my $llvm_objdump;
+my $clang_offload_bundler;
+
+if (defined $ENV{'HCC_HOME'}) {
+  $tools_path_prefix = File::Spec->catfile($ENV{'HCC_HOME'}, "bin");
+  $llvm_objdump = File::Spec->catfile($tools_path_prefix, "llvm-objdump");
+  $clang_offload_bundler = File::Spec->catfile($tools_path_prefix, "clang-offload-bundler");
+}
+else {
+  $tools_path_prefix = dirname(realpath($0));
+  $llvm_objdump = File::Spec->catfile($tools_path_prefix, "llvm-objdump");
+  $clang_offload_bundler = File::Spec->catfile($tools_path_prefix, "clang-offload-bundler");
+  if (!(-f $llvm_objdump)) {
+    $tools_path_prefix = File::Spec->catfile($tools_path_prefix, "/../../hcc/bin");
+    $llvm_objdump = File::Spec->catfile($tools_path_prefix, "llvm-objdump");
+    $clang_offload_bundler = File::Spec->catfile($tools_path_prefix, "clang-offload-bundler");
+  }
+}
+
+if (!(-f $llvm_objdump)) {
+  $llvm_objdump = which("llvm-objdump");
+  if (!(-f $llvm_objdump)) {
+    die("Can't find llvm-objdump\n");
+  }
+}
+
+if (!(-f $clang_offload_bundler)) {
+  $clang_offload_bundler = which("clang-offload-bundler");
+  if (!(-f $clang_offload_bundler)) {
+    die("Can't find clang-offload-bundler\n");
+  }
+}
 
 # kernel section information for HCC
 my $kernel_section_name = ".kernel";
@@ -190,34 +218,26 @@ while(1) {
     or die("Extracting kernel bundle file failed: $?");
 
   if ($use_clang_offload_bundler) {
-    if (-f $clang_offload_bundler) {
-      # use clang-offload-bundler to unbundle HSACO
-      my $command = "${clang_offload_bundler} -unbundle -type=o -inputs=${blob_filename} ${clang_offloadbundler_outputs} ${clang_offloadbundler_targets}";
-      if ($debug) {
-        print("clang offload bundler command: $command\n");
-      }
-      system($command) == 0 
-        or die("Fail to execute clang-offload-bundler");
-    } else {
-      die("Can't find clang-offload-bundler\n");
+    # use clang-offload-bundler to unbundle HSACO
+    my $command = "${clang_offload_bundler} -unbundle -type=o -inputs=${blob_filename} ${clang_offloadbundler_outputs} ${clang_offloadbundler_targets}";
+    if ($debug) {
+      print("clang offload bundler command: $command\n");
     }
+    system($command) == 0 
+      or die("Fail to execute clang-offload-bundler");
   }
 
-  if (-f $llvm_objdump) {
-    for (my $iter = 0; $iter <= $#asic_target_array; $iter++) {
-      my $asic_target = $asic_target_array[$iter];
-      my $hsaco_file_name = "${filename_prefix}-${asic_target}.hsaco";
-      my $isa_file_name = "${filename_prefix}-${asic_target}.isa";
+  for (my $iter = 0; $iter <= $#asic_target_array; $iter++) {
+    my $asic_target = $asic_target_array[$iter];
+    my $hsaco_file_name = "${filename_prefix}-${asic_target}.hsaco";
+    my $isa_file_name = "${filename_prefix}-${asic_target}.isa";
 
-      # use llvm-objdump to dump out GCN ISA
-      system("$llvm_objdump -disassemble -mcpu=$asic_target $hsaco_file_name > $isa_file_name") == 0 or die("Fail to disassemble AMDGPU ISA for target" . $asic_target);
+    # use llvm-objdump to dump out GCN ISA
+    system("$llvm_objdump -disassemble -mcpu=$asic_target $hsaco_file_name > $isa_file_name") == 0 or die("Fail to disassemble AMDGPU ISA for target" . $asic_target);
       
-      if ($debug) {
-        print("Generated GCN ISA for " . $asic_target . " at: " . $isa_file_name . "\n");
-      }
+    if ($debug) {
+      print("Generated GCN ISA for " . $asic_target . " at: " . $isa_file_name . "\n");
     }
-  } else {
-    die("Can't find llvm-objdump\n");
   }
 
   $current_blob_offset = $current_blob_offset + $last_bundle_offset + $last_bundle_size;
