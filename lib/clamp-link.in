@@ -180,7 +180,7 @@ _thinlto_path() {
     i=0
     for AMDGPU_TARGET in ${AMDGPU_TARGET_ARRAY[@]}
     do
-      $CLAMP_DEVICE $KERNEL.thinlto.imported.bc $KERNEL-$AMDGPU_TARGET.isabin --amdgpu-target=$AMDGPU_TARGET $FUNC_CALLS $CODE_OBJECT $HCC_OPT
+      { $CLAMP_DEVICE $KERNEL.thinlto.imported.bc $KERNEL-$AMDGPU_TARGET.isabin --amdgpu-target=$AMDGPU_TARGET $FUNC_CALLS $CODE_OBJECT $HCC_OPT ; } &
 
       # error handling
       pids=("${pids[@]}" "$!")
@@ -257,7 +257,7 @@ _default_path() {
     CODE_OBJECT="--hcc-cov3"
   fi
   for AMDGPU_TARGET in ${AMDGPU_TARGET_ARRAY[@]}; do
-    $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel-$AMDGPU_TARGET.hsaco --amdgpu-target=$AMDGPU_TARGET $FUNC_CALLS $CODE_OBJECT $HCC_OPT
+    { $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel-$AMDGPU_TARGET.hsaco --amdgpu-target=$AMDGPU_TARGET $FUNC_CALLS $CODE_OBJECT $HCC_OPT ; } &
     # error handling
     pids+=("${pids[@]}" "$!")
 
