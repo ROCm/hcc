@@ -147,7 +147,7 @@ if [ $AMDGPU_OBJ_CODEGEN == 1 ]; then
     CODE_OBJECT="--hcc-cov3"
   fi
   for AMDGPU_TARGET in ${AMDGPU_TARGET_ARRAY[@]}; do
-    $CLAMP_DEVICE "$KERNEL_INPUT" "$TEMP_DIR/kernel-$AMDGPU_TARGET.hsaco" --amdgpu-target=$AMDGPU_TARGET --early-finalize $FUNC_CALLS $CODE_OBJECT $HCC_OPT
+    { $CLAMP_DEVICE "$KERNEL_INPUT" "$TEMP_DIR/kernel-$AMDGPU_TARGET.hsaco" --amdgpu-target=$AMDGPU_TARGET --early-finalize $FUNC_CALLS $CODE_OBJECT $HCC_OPT ; } &
     # error handling
     pids+=("${pids[@]}" "$!")
 
