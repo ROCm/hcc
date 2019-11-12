@@ -3746,7 +3746,7 @@ public:
 };
 
 thread_local bool initPrintfBufferGuard = true;
-static HSAContext* __ctx;
+static HSAContext* __ctx = nullptr;
 static HSAContext* ctx() {
   static std::once_flag ctx_create_flag;
   std::call_once(ctx_create_flag, []() {
@@ -5872,7 +5872,10 @@ extern "C" void *GetContextImpl() {
 }
 
 extern "C" void ShutdownImpl() {
-  delete Kalmar::__ctx;
+  if (Kalmar::__ctx != nullptr) {
+    delete Kalmar::__ctx;
+    Kalmar::__ctx = nullptr;
+  }
 }
 
 extern "C" void PushArgImpl(void *ker, int idx, size_t sz, const void *v) {
