@@ -197,8 +197,8 @@ endif()
 #################
 
 # define HCC version information
-SET(HCC_VERSION_MAJOR "2")
-SET(HCC_VERSION_MINOR "10")
+SET(HCC_VERSION_MAJOR "3")
+SET(HCC_VERSION_MINOR "0")
 
 include(GenerateVersionFromGit)
 
