@@ -551,7 +551,8 @@ set(CPACK_DEBIAN_PACKAGE_SECTION "devel")
 set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA
   "${PROJECT_BINARY_DIR}/packaging/debian/postinst;${PROJECT_BINARY_DIR}/packaging/debian/prerm")
 
-set(HCC_GENERAL_DEBIAN_DEP "coreutils, g++-multilib, gcc-multilib, findutils, libelf1, libpci3, file")
+set(HCC_GENERAL_DEBIAN_DEP "coreutils, g++-multilib, gcc-multilib, findutils, libelf1, libpci3, file, 
+                             libfile-basedir-perl, libfile-copy-recursive-perl, libfile-listing-perl, libfile-which-perl")
 
 # control the list of package dependency depending on whether this is an official release build.
 # for non-official release build, we want to relax the dependency on rocr runtime
@@ -577,9 +578,11 @@ set(CPACK_RPM_PRE_UNINSTALL_SCRIPT_FILE "${PROJECT_BINARY_DIR}/packaging/debian/
 set(CPACK_RPM_PACKAGE_AUTOREQ 0)
 
 if( "${DISTRO_ID}" MATCHES "sles" )
-   set(HCC_GENERAL_RPM_DEP "coreutils, findutils, libelf-devel, pciutils, file")
+   set(HCC_GENERAL_RPM_DEP "coreutils, findutils, libelf-devel, pciutils, file,
+                             perl-File-BaseDir, perl-File-Copy-Recursive, perl-File-Listing, perl-File-Which")
 else()
-   set(HCC_GENERAL_RPM_DEP "coreutils, findutils, elfutils-libelf, pciutils-libs, file, pth")
+   set(HCC_GENERAL_RPM_DEP "coreutils, findutils, elfutils-libelf, pciutils-libs, file, pth,
+                             perl-File-BaseDir, perl-File-Copy-Recursive, perl-File-Listing, perl-File-Which")
 endif ()
 
 set(CPACK_RPM_PACKAGE_REQUIRES "${HCC_GENERAL_RPM_DEP} ${HCC_ROCR_DEP} ${HCC_LIBCXX_RPM_DEP}" )
