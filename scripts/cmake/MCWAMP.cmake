@@ -57,8 +57,9 @@ macro(add_mcwamp_shared_library name )
   add_library( ${name} SHARED ${ARGN} )
   amp_target(${name})
   # LLVM and Clang shall be compiled beforehand
-  target_link_libraries(${name} PUBLIC hsa-runtime64 dl)
-  add_dependencies(${name} llvm-link opt clang rocdl)
+  target_link_libraries(${name} PUBLIC hsa-runtime64 dl hc_am)
+  target_link_libraries(${name} PRIVATE pthread)
+  add_dependencies(${name} llvm-link opt clang rocdl hc_am)
 endmacro(add_mcwamp_shared_library name )
 
 ####################
@@ -74,16 +75,6 @@ endmacro(add_mcwamp_library_cpu name )
 ####################
 # C++AMP runtime (HSA implementation) 
 ####################
-macro(add_mcwamp_library_hsa name )
-  add_library( ${name} SHARED ${ARGN} )
-  amp_target(${name})
-  # LLVM and Clang shall be compiled beforehand
-  add_dependencies(${name} llvm-link opt clang hc_am rocdl)
-  # add HSA libraries
-  target_link_libraries(${name} PUBLIC hsa-runtime64)
-  target_link_libraries(${name} PRIVATE pthread)
-  target_link_libraries(${name} PUBLIC hc_am)
-endmacro(add_mcwamp_library_hsa name )
 
 macro(add_mcwamp_library_hc_am name )
   add_library( ${name} SHARED ${ARGN} )

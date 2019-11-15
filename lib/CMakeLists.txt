@@ -15,7 +15,7 @@ set( CONFIG_PACKAGE_INSTALL_DIR ${LIB_INSTALL_DIR}/cmake/hcc )
 ####################
 # C++AMP runtime (mcwamp)
 ####################
-add_mcwamp_shared_library(mcwamp mcwamp.cpp)
+add_mcwamp_shared_library(mcwamp mcwamp.cpp hsa/mcwamp_hsa.cpp hsa/unpinned_copy_engine.cpp)
 
 # Library interface to use runtime
 add_library(hccrt INTERFACE)
@@ -67,7 +67,6 @@ endif (USE_CODEXL_ACTIVITY_LOGGER EQUAL 1)
 # add subdirectories
 ####################
 add_subdirectory(hsa)
-add_subdirectory(cpu)
 
 ####################
 # install targets
