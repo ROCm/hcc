@@ -24,12 +24,6 @@ SOFTLINKS=(
   "$LIBRARY_DIR" "lib" "libmcwamp.so"
   "$LIBRARY_DIR" "lib" "libmcwamp.so.${HCC_VERSION_MAJOR}"
   "$LIBRARY_DIR" "lib" "libmcwamp.so.${HCC_VERSION_MAJOR}.${HCC_VERSION_MINOR}"
-  "$LIBRARY_DIR" "lib" "libmcwamp_cpu.so"
-  "$LIBRARY_DIR" "lib" "libmcwamp_cpu.so.${HCC_VERSION_MAJOR}"
-  "$LIBRARY_DIR" "lib" "libmcwamp_cpu.so.${HCC_VERSION_MAJOR}.${HCC_VERSION_MINOR}"
-  "$LIBRARY_DIR" "lib" "libmcwamp_hsa.so"
-  "$LIBRARY_DIR" "lib" "libmcwamp_hsa.so.${HCC_VERSION_MAJOR}"
-  "$LIBRARY_DIR" "lib" "libmcwamp_hsa.so.${HCC_VERSION_MAJOR}.${HCC_VERSION_MINOR}"
   "$LIBRARY_DIR" "lib" "libclang_rt.builtins-${PROCESSOR}.a"
 )
 
