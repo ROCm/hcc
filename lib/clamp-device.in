@@ -87,13 +87,13 @@ ROCM_DEVICE_LIBS_SEARCH_PATHS="$HCC_BIN_PATH/../../../rocdl/lib;$HCC_BIN_PATH/..
 ROCM_LIB=""
 for SEARCH_PATH in $(echo $ROCM_DEVICE_LIBS_SEARCH_PATHS | tr ";" "\n")
 do
-  if [ -f "$SEARCH_PATH/ocml.amdgcn.bc" ]; then
+  if [ -f "$SEARCH_PATH/ocml.bc" ]; then
     ROCM_LIB="$(readlink -f -- "$SEARCH_PATH")"
     break
   fi
 done
-if [ ! -f "$ROCM_LIB/ocml.amdgcn.bc" ]; then
-  echo "ROCm Device Libs file ocml.amdgcn.bc is missing from "$ROCM_LIB
+if [ ! -f "$ROCM_LIB/ocml.bc" ]; then
+  echo "ROCm Device Libs file ocml.bc is missing from "$ROCM_LIB
   exit 1
 fi
 
@@ -164,39 +164,39 @@ HCC_EXTRA_ARCH_FILE=""
 
 # select appropriate ROCm-Device-Libs per AMDGPU_TARGET
 if [ $AMDGPU_TARGET == "gfx700" ]; then
-  OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_700.amdgcn.bc"
+  OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_700.bc"
   HCC_EXTRA_ARCH_FILE=$HCC_EXTRA_LIBRARIES_GFX700
 elif [ $AMDGPU_TARGET == "gfx701" ]; then
-  OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_701.amdgcn.bc"
+  OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_701.bc"
   HCC_EXTRA_ARCH_FILE=$HCC_EXTRA_LIBRARIES_GFX701
 elif [ $AMDGPU_TARGET == "gfx801" ]; then
-  OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_801.amdgcn.bc"
+  OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_801.bc"
   HCC_EXTRA_ARCH_FILE=$HCC_EXTRA_LIBRARIES_GFX801
 elif [ $AMDGPU_TARGET == "gfx802" ]; then
-  OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_802.amdgcn.bc"
+  OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_802.bc"
   HCC_EXTRA_ARCH_FILE=$HCC_EXTRA_LIBRARIES_GFX802
 elif [ $AMDGPU_TARGET == "gfx803" ]; then
-  OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_803.amdgcn.bc"
+  OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_803.bc"
   HCC_EXTRA_ARCH_FILE=$HCC_EXTRA_LIBRARIES_GFX803
 elif [ $AMDGPU_TARGET == "gfx900" ]; then
-  OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_900.amdgcn.bc"
+  OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_900.bc"
   HCC_EXTRA_ARCH_FILE=$HCC_EXTRA_LIBRARIES_GFX900
 elif [ $AMDGPU_TARGET == "gfx901" ]; then
-  OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_901.amdgcn.bc"
+  OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_901.bc"
   HCC_EXTRA_ARCH_FILE=$HCC_EXTRA_LIBRARIES_GFX901
 elif [ $AMDGPU_TARGET == "gfx906" ]; then
-  OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_906.amdgcn.bc"
+  OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_906.bc"
   HCC_EXTRA_ARCH_FILE=$HCC_EXTRA_LIBRARIES_GFX906
   KMOPTLLC+=" -mattr=+sram-ecc"
 elif [ $AMDGPU_TARGET == "gfx908" ]; then
-  OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_908.amdgcn.bc"
+  OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_908.bc"
   HCC_EXTRA_ARCH_FILE=$HCC_EXTRA_LIBRARIES_GFX908
   KMOPTLLC+=" -mattr=+sram-ecc"
 fi
-HCC_BC_LIBS="$ROCM_LIB/hc.amdgcn.bc $ROCM_LIB/hip.amdgcn.bc $ROCM_LIB/opencl.amdgcn.bc $ROCM_LIB/ocml.amdgcn.bc $ROCM_LIB/ockl.amdgcn.bc $OCLC_ISA_VERSION_LIB $ROCM_LIB/oclc_finite_only_off.amdgcn.bc $ROCM_LIB/oclc_daz_opt_off.amdgcn.bc $ROCM_LIB/oclc_correctly_rounded_sqrt_on.amdgcn.bc $ROCM_LIB/oclc_unsafe_math_off.amdgcn.bc"
+HCC_BC_LIBS="$ROCM_LIB/hc.bc $ROCM_LIB/hip.bc $ROCM_LIB/opencl.bc $ROCM_LIB/ocml.bc $ROCM_LIB/ockl.bc $OCLC_ISA_VERSION_LIB $ROCM_LIB/oclc_finite_only_off.bc $ROCM_LIB/oclc_daz_opt_off.bc $ROCM_LIB/oclc_correctly_rounded_sqrt_on.bc $ROCM_LIB/oclc_unsafe_math_off.bc"
 
-if [ -f "$ROCM_LIB/oclc_wavefrontsize64_on.amdgcn.bc" ]; then
-   HCC_BC_LIBS="$HCC_BC_LIBS $ROCM_LIB/oclc_wavefrontsize64_on.amdgcn.bc"
+if [ -f "$ROCM_LIB/oclc_wavefrontsize64_on.bc" ]; then
+   HCC_BC_LIBS="$HCC_BC_LIBS $ROCM_LIB/oclc_wavefrontsize64_on.bc"
 fi
 
 # include libraries specified through the HCC_EXTRA_LIBRARIES environment variable

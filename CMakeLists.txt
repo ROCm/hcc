@@ -114,7 +114,7 @@ if (NOT HCC_INTEGRATE_ROCDL)
   # If not using the integrated ROCm Device Library,
   # then the one installed on the system
   # or provided by a user
-  find_path(ROCM_DEVICE_LIB ocml.amdgcn.bc
+  find_path(ROCM_DEVICE_LIB ocml.bc
     PATH_SUFFIXES
       lib
     HINTS
@@ -124,7 +124,7 @@ if (NOT HCC_INTEGRATE_ROCDL)
   )
 
   if (NOT ROCM_DEVICE_LIB)
-    MESSAGE(FATAL_ERROR "ROCm Device Libs not found. Use -DROCM_DEVICE_LIB=<path_to_ocml.amdgcn.bc>.")
+    MESSAGE(FATAL_ERROR "ROCm Device Libs not found. Use -DROCM_DEVICE_LIB=<path_to_ocml.bc>.")
   endif (NOT ROCM_DEVICE_LIB)
 
   set(ROCM_DEVICE_LIB_PATHS ${ROCM_DEVICE_LIB})
