@@ -718,6 +718,8 @@ public:
     virtual bool barrierNextSyncNeedsSysRelease() const { return 0; };
     virtual bool barrierNextKernelNeedsSysAcquire() const { return 0; };
 
+    virtual void activityReport() = 0;
+
     Kalmar::HSAQueue *hsaQueue() const;
     bool isReady() override;
 
@@ -837,6 +839,7 @@ public:
     // wait for the async copy to complete
     hsa_status_t waitComplete();
 
+    void activityReport() override;
     void dispose();
 
     uint64_t getTimestampFrequency() override {
@@ -985,6 +988,7 @@ public:
     // wait for the barrier to complete
     hsa_status_t waitComplete();
 
+    void activityReport() override;
     void dispose();
 
     uint64_t getTimestampFrequency() override {
@@ -1086,6 +1090,7 @@ public:
     // wait for the kernel to finish execution
     hsa_status_t waitComplete();
 
+    void activityReport() override;
     void dispose();
 
     uint64_t getTimestampFrequency() override {
@@ -4527,6 +4532,15 @@ static void printKernarg(const void *kernarg_address, int bytesToPrint)
 
 }
 
+static bool signalCallback(hsa_signal_value_t value, void *arg) {
+    if (arg != nullptr) {
+        HSAOp *op = reinterpret_cast<HSAOp*>(arg);
+        if (op != nullptr) {
+            op->activityReport();
+        }
+    }
+    return false; // do not re-use callback.
+}
 
 // dispatch a kernel asynchronously
 // -  allocates signal, copies arguments into kernarg buffer, and places aql packet into queue.
@@ -4615,6 +4629,14 @@ HSADispatch::dispatchKernel(hsa_queue_t* lockedHsaQueue, const void *hostKernarg
         printKernarg(q_aql->kernarg_address, hostKernargSize);
     }
 
+    // Register signal callback.
+    if (_activity_prof.is_enabled() && allocSignal) {
+        status = hsa_amd_signal_async_handler(_signal, HSA_SIGNAL_CONDITION_LT,
+                                              1, signalCallback, this);
+        if (status != HSA_STATUS_SUCCESS) {
+            throw Kalmar::runtime_exception("hsa_amd_signal_async_handler error", status);
+        }
+    }
 
     // Ring door bell
     hsa_signal_store_relaxed(lockedHsaQueue->doorbell_signal, index);
@@ -4749,6 +4771,11 @@ HSADispatch::dispatchKernelAsync(const void *hostKernarg, int hostKernargSize, b
 }
 
 inline void
+HSADispatch::activityReport() {
+    _activity_prof.report_gpu_timestamps<HSADispatch>(this);
+}
+
+inline void
 HSADispatch::dispose() {
     hsa_status_t status;
     if (kernargMemory != nullptr) {
@@ -4767,8 +4794,6 @@ HSADispatch::dispose() {
         //LOG_PROFILE(this, start, end, "kernel", kname.c_str(), std::hex << "kernel="<< kernel << " " << (kernel? kernel->kernelCodeHandle:0x0) << " aql.kernel_object=" << aql.kernel_object << std::dec);
         LOG_PROFILE(this, start, end, "kernel", getKernelName(), "");
     }
-
-    _activity_prof.report_gpu_timestamps<HSADispatch>(this);
 
     if (future != nullptr) {
       delete future;
@@ -5091,8 +5116,19 @@ HSABarrier::enqueueAsync(hc::memory_scope fenceScope) {
     DBOUTL(DB_AQL, " barrier_aql " << *this << " "<< *barrier );
     DBOUTL(DB_AQL2, rawAql(*barrier));
 
-    // Increment write index and ring doorbell to dispatch the kernel
+    // Increment write index.
     hsa_queue_store_write_index_relaxed(rocrQueue, nextIndex);
+
+    // Register signal callback.
+    if (_activity_prof.is_enabled()) {
+        hsa_status_t status = hsa_amd_signal_async_handler(_signal, HSA_SIGNAL_CONDITION_LT,
+                                              1, signalCallback, this);
+        if (status != HSA_STATUS_SUCCESS) {
+            throw Kalmar::runtime_exception("hsa_amd_signal_async_handler error", status);
+        }
+    }
+
+    // Ring doorbell.
     hsa_signal_store_relaxed(rocrQueue->doorbell_signal, index);
 
     isDispatched = true;
@@ -5123,6 +5159,10 @@ static std::string fenceToString(int fenceBits)
     };
 }
 
+inline void
+HSABarrier::activityReport() {
+    _activity_prof.report_gpu_timestamps<HSABarrier>(this);
+}
 
 inline void
 HSABarrier::dispose() {
@@ -5133,8 +5173,6 @@ HSABarrier::dispose() {
         int relBits = extractBits(header, HSA_PACKET_HEADER_SCRELEASE_FENCE_SCOPE, HSA_PACKET_HEADER_WIDTH_SCRELEASE_FENCE_SCOPE);
         LOG_PROFILE(this, start, end, "barrier", "depcnt=" + std::to_string(depCount) + ",acq=" + fenceToString(acqBits) + ",rel=" + fenceToString(relBits), depAsyncOpsStr)
     }
-
-    _activity_prof.report_gpu_timestamps<HSABarrier>(this);
 
     if (future != nullptr) {
       delete future;
@@ -5407,6 +5445,15 @@ hsa_status_t HSACopy::hcc_memory_async_copy(Kalmar::hcCommandKind copyKind, cons
                    << ",depSignalCnt=" << depSignalCnt << "," << &depSignal << ","
                    << std::hex << _signal.handle << "\n" << std::dec);
 
+    // Register signal callback.
+    if (_activity_prof.is_enabled()) {
+        status = hsa_amd_signal_async_handler(_signal, HSA_SIGNAL_CONDITION_LT,
+                                              1, signalCallback, this);
+        if (status != HSA_STATUS_SUCCESS) {
+            throw Kalmar::runtime_exception("hsa_amd_signal_async_handler error", status);
+        }
+    }
+
     status = hsa_amd_memory_async_copy(dstPtr, dstAgent, srcPtr, srcAgent, sizeBytes,
                                          depSignalCnt, depSignalCnt?&depSignal:nullptr, _signal);
     if (status != HSA_STATUS_SUCCESS) {
@@ -5530,11 +5577,21 @@ hsa_status_t HSACopy::hcc_memory_async_copy_rect(Kalmar::hcCommandKind copyKind,
         }
     }
 
+    // Register signal callback.
+    if (_activity_prof.is_enabled()) {
+        status = hsa_amd_signal_async_handler(_signal, HSA_SIGNAL_CONDITION_LT,
+                                              1, signalCallback, this);
+        if (status != HSA_STATUS_SUCCESS) {
+            throw Kalmar::runtime_exception("hsa_amd_signal_async_handler error", status);
+        }
+    }
+
     status = hsa_amd_memory_async_copy_rect(&dst, &dstOff, &src, &srcOff, &range, copyAgent, hsa_amd_copy_direction_t(copyKind),depSignalCnt, depSignalCnt ? &depSignal:NULL,_signal);
 
     if (status != HSA_STATUS_SUCCESS) {
         return status;
     }
+
     DBOUT( DB_CMD2, "  copy setNextKernelNeedsSysAcquire(true)\n");
     hsaQueue()->setNextKernelNeedsSysAcquire(true);
 
@@ -5626,6 +5683,17 @@ HSACopy::enqueueAsyncCopy2dCommand(size_t width, size_t height, size_t srcPitch,
 }
 
 inline void
+HSACopy::activityReport() {
+    // HSA signal may not necessarily be allocated by HSACopy instance
+    // only release the signal if it was really allocated
+    if (_signal.handle) {
+        _activity_prof.report_gpu_timestamps<HSACopy>(this, sizeBytes);
+    } else {
+        _activity_prof.report_system_ticks<HSACopy>(this, sizeBytes);
+    }
+}
+
+inline void
 HSACopy::dispose() {
 
     if (future != nullptr) {
@@ -5644,7 +5712,6 @@ HSACopy::dispose() {
 
             LOG_PROFILE(this, start, end, "copy", getCopyCommandString(),  "\t" << sizeBytes << " bytes;\t" << sizeBytes/1024.0/1024 << " MB;\t" << bw << " GB/s;");
         }
-        _activity_prof.report_gpu_timestamps<HSACopy>(this, sizeBytes);
         Kalmar::ctx()->releaseSignal(_signal);
     } else {
         if (HCC_PROFILE & HCC_PROFILE_TRACE) {
@@ -5653,7 +5720,6 @@ HSACopy::dispose() {
             double bw = (double)(sizeBytes)/(end-start) * (1000.0/1024.0) * (1000.0/1024.0);
             LOG_PROFILE(this, start, end, "copyslo", getCopyCommandString(),  "\t" << sizeBytes << " bytes;\t" << sizeBytes/1024.0/1024 << " MB;\t" << bw << " GB/s;");
         }
-        _activity_prof.report_system_ticks<HSACopy>(this, sizeBytes);
     }
 }
 
