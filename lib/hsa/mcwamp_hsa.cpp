@@ -751,6 +751,8 @@ public:
         return false; // do not re-use callback.
     }
 
+    virtual void registerSignalCallback();
+
 protected:
     uint64_t     apiStartTick;
     HSAOpCoord   _opCoord;
@@ -4652,12 +4654,8 @@ HSADispatch::dispatchKernel(hsa_queue_t* lockedHsaQueue, const void *hostKernarg
     }
 
     // Register signal callback.
-    if (_activity_prof.is_enabled() && allocSignal) {
-        status = hsa_amd_signal_async_handler(_signal, HSA_SIGNAL_CONDITION_LT,
-                                              1, HSAOp::signalCallback, new HSAOp::SharedWrapper(_self));
-        if (status != HSA_STATUS_SUCCESS) {
-            throw Kalmar::runtime_exception("hsa_amd_signal_async_handler error", status);
-        }
+    if (_activity_prof.is_enabled()) {
+        registerSignalCallback();
     }
 
     // Ring door bell
@@ -5143,11 +5141,7 @@ HSABarrier::enqueueAsync(hc::memory_scope fenceScope) {
 
     // Register signal callback.
     if (_activity_prof.is_enabled()) {
-        hsa_status_t status = hsa_amd_signal_async_handler(_signal, HSA_SIGNAL_CONDITION_LT,
-                                              1, HSAOp::signalCallback, new HSAOp::SharedWrapper(_self));
-        if (status != HSA_STATUS_SUCCESS) {
-            throw Kalmar::runtime_exception("hsa_amd_signal_async_handler error", status);
-        }
+        registerSignalCallback();
     }
 
     // Ring doorbell.
@@ -5247,6 +5241,15 @@ bool HSAOp::isReady() override {
     return (hsa_signal_load_scacquire(_signal) == 0);
 }
 
+void HSAOp::registerSignalCallback() {
+    hsa_status_t status = hsa_amd_signal_async_handler(_signal,
+                                                       HSA_SIGNAL_CONDITION_LT, 1,
+                                                       HSAOp::signalCallback,
+                                                       new HSAOp::SharedWrapper(_self));
+    if (status != HSA_STATUS_SUCCESS) {
+        throw Kalmar::runtime_exception("hsa_amd_signal_async_handler error", status);
+    }
+}
 
 // ----------------------------------------------------------------------
 // member function implementation of HSACopy
@@ -5469,11 +5472,7 @@ hsa_status_t HSACopy::hcc_memory_async_copy(Kalmar::hcCommandKind copyKind, cons
 
     // Register signal callback.
     if (_activity_prof.is_enabled()) {
-        status = hsa_amd_signal_async_handler(_signal, HSA_SIGNAL_CONDITION_LT,
-                                              1, HSAOp::signalCallback, new HSAOp::SharedWrapper(_self));
-        if (status != HSA_STATUS_SUCCESS) {
-            throw Kalmar::runtime_exception("hsa_amd_signal_async_handler error", status);
-        }
+        registerSignalCallback();
     }
 
     status = hsa_amd_memory_async_copy(dstPtr, dstAgent, srcPtr, srcAgent, sizeBytes,
@@ -5601,11 +5600,7 @@ hsa_status_t HSACopy::hcc_memory_async_copy_rect(Kalmar::hcCommandKind copyKind,
 
     // Register signal callback.
     if (_activity_prof.is_enabled()) {
-        status = hsa_amd_signal_async_handler(_signal, HSA_SIGNAL_CONDITION_LT,
-                                              1, HSAOp::signalCallback, new HSAOp::SharedWrapper(_self));
-        if (status != HSA_STATUS_SUCCESS) {
-            throw Kalmar::runtime_exception("hsa_amd_signal_async_handler error", status);
-        }
+        registerSignalCallback();
     }
 
     status = hsa_amd_memory_async_copy_rect(&dst, &dstOff, &src, &srcOff, &range, copyAgent, hsa_amd_copy_direction_t(copyKind),depSignalCnt, depSignalCnt ? &depSignal:NULL,_signal);
