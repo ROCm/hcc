@@ -1,6 +1,5 @@
 
 // RUN: %hc %s -o %t.out && %t.out
-// XFAIL: *
 
 // Parallel STL headers
 #include <coordinate>
@@ -22,11 +21,11 @@ bool test(void) {
 
   bool ret = true;
 
-  // std::vector
-  typedef std::vector<T> stdVector;
-  ret &= run_and_compare<T, SIZE, stdVector>([op, binary_op, init]
-                                             (stdVector &input, stdVector &output1,
-                                                                stdVector &output2) {
+  // std::array
+  typedef std::array<T, SIZE> stdArray;
+  ret &= run_and_compare<T, SIZE, stdArray>([op, binary_op, init]
+                                            (stdArray &input, stdArray &output1,
+                                                              stdArray &output2) {
     // transform_inclusive_scan = transform + partial_sum (inclusive)
     std::transform(std::begin(input), std::end(input), std::begin(output1), op);
     std::partial_sum(std::begin(output1), std::end(output1), std::begin(output1), binary_op);

@@ -1,6 +1,5 @@
 
 // RUN: %hc %s -o %t.out && %t.out
-// XFAIL: *
 
 // Parallel STL headers
 #include <coordinate>
@@ -22,20 +21,24 @@ bool test(void) {
 
   bool ret = true;
 
-  // C array
-  typedef T cArray[SIZE];
-  ret &= run_and_compare<T, SIZE>([op, binary_op, init]
-                                  (cArray &input, cArray &output1,
-                                                  cArray &output2) {
-    // transform_inclusive_scan = transform + partial_sum (inclusive)
+  // std::array
+  typedef std::array<T, SIZE> stdArray;
+  ret &= run_and_compare<T, SIZE, stdArray>([op, binary_op, init]
+                                            (stdArray &input, stdArray &output1,
+                                                              stdArray &output2) {
+    // transform_exclusive_scan = transform + partial_sum (exclusive)
     std::transform(std::begin(input), std::end(input), std::begin(output1), op);
     std::partial_sum(std::begin(output1), std::end(output1), std::begin(output1), binary_op);
+    for (int i = SIZE-2; i >= 0; i--)
+      output1[i+1] = binary_op(init, output1[i]);
+    output1[0] = init;
 
-    // parallel::transform_inclusive_scan
+    // parallel::transform_exclusive_scan
     std::experimental::parallel::
-    transform_inclusive_scan(par, std::begin(input), std::end(input),
-                                  std::begin(output2), op, binary_op, init);
+    transform_exclusive_scan(par, std::begin(input), std::end(input),
+                                  std::begin(output2), op, init, binary_op);
   });
+
   return ret;
 }
 
