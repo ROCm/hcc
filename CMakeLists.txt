@@ -578,11 +578,9 @@ set(CPACK_RPM_PRE_UNINSTALL_SCRIPT_FILE "${PROJECT_BINARY_DIR}/packaging/debian/
 set(CPACK_RPM_PACKAGE_AUTOREQ 0)
 
 if( "${DISTRO_ID}" MATCHES "sles" )
-   set(HCC_GENERAL_RPM_DEP "coreutils, findutils, libelf-devel, pciutils, file,
-                             perl-File-BaseDir, perl-File-Copy-Recursive, perl-File-Listing, perl-File-Which")
+   set(HCC_GENERAL_RPM_DEP "coreutils, findutils, libelf-devel, pciutils, file, perl-File-BaseDir, perl-File-Copy-Recursive, perl-File-Listing, perl-File-Which")
 else()
-   set(HCC_GENERAL_RPM_DEP "coreutils, findutils, elfutils-libelf, pciutils-libs, file, pth,
-                             perl-File-BaseDir, perl-File-Copy-Recursive, perl-File-Listing, perl-File-Which")
+   set(HCC_GENERAL_RPM_DEP "coreutils, findutils, elfutils-libelf, pciutils-libs, file, pth, perl-File-BaseDir, perl-File-Copy-Recursive, perl-File-Listing, perl-File-Which")
 endif ()
 
 set(CPACK_RPM_PACKAGE_REQUIRES "${HCC_GENERAL_RPM_DEP} ${HCC_ROCR_DEP} ${HCC_LIBCXX_RPM_DEP}" )
