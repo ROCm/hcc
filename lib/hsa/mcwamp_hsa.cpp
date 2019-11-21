@@ -723,6 +723,8 @@ public:
     Kalmar::HSAQueue *hsaQueue() const;
     bool isReady() override;
 
+    virtual void setSelf(const std::shared_ptr<HSAOp> &self) { _self = self; }
+
 protected:
     uint64_t     apiStartTick;
     HSAOpCoord   _opCoord;
@@ -734,6 +736,11 @@ protected:
     activity_prof::ActivityProf _activity_prof;
 
     hsa_status_t _wait_complete_status;
+
+    // A weak pointer to the instance itself.
+    // Helps to track reference count of shared_ptr<HSAOp> within
+    // HSAQueue::asyncOps.
+    std::weak_ptr<HSAOp> _self;
 };
 std::ostream& operator<<(std::ostream& os, const HSAOp & op);
 
@@ -2006,6 +2013,7 @@ public:
 
         // create shared_ptr instance
         std::shared_ptr<HSABarrier> barrier = std::make_shared<HSABarrier>(this, 0, nullptr);
+        barrier->setSelf(barrier);
         // associate the barrier with this queue
         pushAsyncOp(barrier);
 
@@ -2038,6 +2046,7 @@ public:
 
             // create shared_ptr instance
             std::shared_ptr<HSABarrier> barrier = std::make_shared<HSABarrier>(this, count, depOps);
+            barrier->setSelf(barrier);
             // associate the barrier with this queue
             pushAsyncOp(barrier);
 
@@ -4246,6 +4255,7 @@ std::shared_ptr<KalmarAsyncOp> HSAQueue::EnqueueAsyncCopyExt(const void* src, vo
     // create shared_ptr instance
     const Kalmar::HSADevice *copyDeviceHsa = static_cast<const Kalmar::HSADevice*> (copyDevice);
     std::shared_ptr<HSACopy> copyCommand = std::make_shared<HSACopy>(this, src, dst, size_bytes);
+    copyCommand->setSelf(copyCommand);
 
     // euqueue the async copy command
     status = copyCommand.get()->enqueueAsyncCopyCommand(copyDeviceHsa, srcPtrInfo, dstPtrInfo);
@@ -4267,6 +4277,7 @@ std::shared_ptr<KalmarAsyncOp> HSAQueue::EnqueueAsyncCopy2dExt(const void* src, 
     //create shared_ptr instance
     const Kalmar::HSADevice *copy2dDeviceHsa = static_cast<const Kalmar::HSADevice*> (copyDevice);
     std::shared_ptr<HSACopy> copy2dCommand = std::make_shared<HSACopy>(this, src, dst, width*height);
+    copy2dCommand->setSelf(copy2dCommand);
 
     //euqueue the async copy command
     status = copy2dCommand.get()->enqueueAsyncCopy2dCommand(width, height, srcPitch, dstPitch, copy2dDeviceHsa, srcPtrInfo, dstPtrInfo);
@@ -4284,7 +4295,7 @@ std::shared_ptr<KalmarAsyncOp> HSAQueue::EnqueueAsyncCopy(const void *src, void 
 
     // create shared_ptr instance
     std::shared_ptr<HSACopy> copyCommand = std::make_shared<HSACopy>(this, src, dst, size_bytes);
-
+    copyCommand->setSelf(copyCommand);
 
     hc::accelerator acc;
     hc::AmPointerInfo srcPtrInfo(NULL, NULL, NULL, 0, acc, 0, 0);
@@ -4353,6 +4364,7 @@ HSAQueue::dispatch_hsa_kernel(const hsa_kernel_dispatch_packet_t *aql,
     Kalmar::HSADevice* device = static_cast<Kalmar::HSADevice*>(this->getDev());
 
     std::shared_ptr<HSADispatch> sp_dispatch = std::make_shared<HSADispatch>(device, this/*queue*/, nullptr, aql);
+    sp_dispatch->setSelf(sp_dispatch);
 
     HSADispatch *dispatch = sp_dispatch.get();
     waitForStreamDeps(dispatch);
@@ -4532,12 +4544,20 @@ static void printKernarg(const void *kernarg_address, int bytesToPrint)
 
 }
 
+// SharedWrapper is a utility class to keep an extra refernce to HSAOp.
+// So when the HSA signal of an HSAOp is registered to be notified in a
+// ROCR runtime signal callback, the HSAOp is guaranteed to exist.
+struct SharedWrapper {
+    std::shared_ptr<HSAOp> _op;
+    SharedWrapper(const std::weak_ptr<HSAOp> &op) : _op(op) {}
+    ~SharedWrapper() { _op = nullptr; }
+};
+
 static bool signalCallback(hsa_signal_value_t value, void *arg) {
     if (arg != nullptr) {
-        HSAOp *op = reinterpret_cast<HSAOp*>(arg);
-        if (op != nullptr) {
-            op->activityReport();
-        }
+        SharedWrapper *wrapper = reinterpret_cast<SharedWrapper*>(arg);
+        wrapper->_op->activityReport();
+        delete wrapper;
     }
     return false; // do not re-use callback.
 }
@@ -4632,7 +4652,7 @@ HSADispatch::dispatchKernel(hsa_queue_t* lockedHsaQueue, const void *hostKernarg
     // Register signal callback.
     if (_activity_prof.is_enabled() && allocSignal) {
         status = hsa_amd_signal_async_handler(_signal, HSA_SIGNAL_CONDITION_LT,
-                                              1, signalCallback, this);
+                                              1, signalCallback, new SharedWrapper(_self));
         if (status != HSA_STATUS_SUCCESS) {
             throw Kalmar::runtime_exception("hsa_amd_signal_async_handler error", status);
         }
@@ -5122,7 +5142,7 @@ HSABarrier::enqueueAsync(hc::memory_scope fenceScope) {
     // Register signal callback.
     if (_activity_prof.is_enabled()) {
         hsa_status_t status = hsa_amd_signal_async_handler(_signal, HSA_SIGNAL_CONDITION_LT,
-                                              1, signalCallback, this);
+                                              1, signalCallback, new SharedWrapper(_self));
         if (status != HSA_STATUS_SUCCESS) {
             throw Kalmar::runtime_exception("hsa_amd_signal_async_handler error", status);
         }
@@ -5448,7 +5468,7 @@ hsa_status_t HSACopy::hcc_memory_async_copy(Kalmar::hcCommandKind copyKind, cons
     // Register signal callback.
     if (_activity_prof.is_enabled()) {
         status = hsa_amd_signal_async_handler(_signal, HSA_SIGNAL_CONDITION_LT,
-                                              1, signalCallback, this);
+                                              1, signalCallback, new SharedWrapper(_self));
         if (status != HSA_STATUS_SUCCESS) {
             throw Kalmar::runtime_exception("hsa_amd_signal_async_handler error", status);
         }
@@ -5580,7 +5600,7 @@ hsa_status_t HSACopy::hcc_memory_async_copy_rect(Kalmar::hcCommandKind copyKind,
     // Register signal callback.
     if (_activity_prof.is_enabled()) {
         status = hsa_amd_signal_async_handler(_signal, HSA_SIGNAL_CONDITION_LT,
-                                              1, signalCallback, this);
+                                              1, signalCallback, new SharedWrapper(_self));
         if (status != HSA_STATUS_SUCCESS) {
             throw Kalmar::runtime_exception("hsa_amd_signal_async_handler error", status);
         }
