@@ -725,6 +725,14 @@ public:
 
     virtual void setSelf(const std::shared_ptr<HSAOp> &self) { _self = self; }
 
+    // Factory method to build HSAOp.
+    template<typename T, typename ... Ts>
+    static std::shared_ptr<T> buildOp(Ts ... args) {
+        auto op = std::make_shared<T>(args...);
+        op->setSelf(op);
+        return op;
+    }
+
 protected:
     uint64_t     apiStartTick;
     HSAOpCoord   _opCoord;
@@ -2012,8 +2020,7 @@ public:
         hsa_status_t status = HSA_STATUS_SUCCESS;
 
         // create shared_ptr instance
-        std::shared_ptr<HSABarrier> barrier = std::make_shared<HSABarrier>(this, 0, nullptr);
-        barrier->setSelf(barrier);
+        std::shared_ptr<HSABarrier> barrier = HSAOp::buildOp<HSABarrier>(this, 0, nullptr);
         // associate the barrier with this queue
         pushAsyncOp(barrier);
 
@@ -2045,8 +2052,7 @@ public:
         if ((count >= 0) && (count <= HSA_BARRIER_DEP_SIGNAL_CNT)) {
 
             // create shared_ptr instance
-            std::shared_ptr<HSABarrier> barrier = std::make_shared<HSABarrier>(this, count, depOps);
-            barrier->setSelf(barrier);
+            std::shared_ptr<HSABarrier> barrier = HSAOp::buildOp<HSABarrier>(this, count, depOps);
             // associate the barrier with this queue
             pushAsyncOp(barrier);
 
@@ -4254,8 +4260,7 @@ std::shared_ptr<KalmarAsyncOp> HSAQueue::EnqueueAsyncCopyExt(const void* src, vo
 
     // create shared_ptr instance
     const Kalmar::HSADevice *copyDeviceHsa = static_cast<const Kalmar::HSADevice*> (copyDevice);
-    std::shared_ptr<HSACopy> copyCommand = std::make_shared<HSACopy>(this, src, dst, size_bytes);
-    copyCommand->setSelf(copyCommand);
+    std::shared_ptr<HSACopy> copyCommand = HSAOp::buildOp<HSACopy>(this, src, dst, size_bytes);
 
     // euqueue the async copy command
     status = copyCommand.get()->enqueueAsyncCopyCommand(copyDeviceHsa, srcPtrInfo, dstPtrInfo);
@@ -4276,8 +4281,7 @@ std::shared_ptr<KalmarAsyncOp> HSAQueue::EnqueueAsyncCopy2dExt(const void* src, 
 
     //create shared_ptr instance
     const Kalmar::HSADevice *copy2dDeviceHsa = static_cast<const Kalmar::HSADevice*> (copyDevice);
-    std::shared_ptr<HSACopy> copy2dCommand = std::make_shared<HSACopy>(this, src, dst, width*height);
-    copy2dCommand->setSelf(copy2dCommand);
+    std::shared_ptr<HSACopy> copy2dCommand = HSAOp::buildOp<HSACopy>(this, src, dst, width*height);
 
     //euqueue the async copy command
     status = copy2dCommand.get()->enqueueAsyncCopy2dCommand(width, height, srcPitch, dstPitch, copy2dDeviceHsa, srcPtrInfo, dstPtrInfo);
@@ -4294,8 +4298,7 @@ std::shared_ptr<KalmarAsyncOp> HSAQueue::EnqueueAsyncCopy(const void *src, void 
     hsa_status_t status = HSA_STATUS_SUCCESS;
 
     // create shared_ptr instance
-    std::shared_ptr<HSACopy> copyCommand = std::make_shared<HSACopy>(this, src, dst, size_bytes);
-    copyCommand->setSelf(copyCommand);
+    std::shared_ptr<HSACopy> copyCommand = HSAOp::buildOp<HSACopy>(this, src, dst, size_bytes);
 
     hc::accelerator acc;
     hc::AmPointerInfo srcPtrInfo(NULL, NULL, NULL, 0, acc, 0, 0);
@@ -4363,8 +4366,7 @@ HSAQueue::dispatch_hsa_kernel(const hsa_kernel_dispatch_packet_t *aql,
 
     Kalmar::HSADevice* device = static_cast<Kalmar::HSADevice*>(this->getDev());
 
-    std::shared_ptr<HSADispatch> sp_dispatch = std::make_shared<HSADispatch>(device, this/*queue*/, nullptr, aql);
-    sp_dispatch->setSelf(sp_dispatch);
+    std::shared_ptr<HSADispatch> sp_dispatch = HSAOp::buildOp<HSADispatch>(device, this/*queue*/, nullptr, aql);
 
     HSADispatch *dispatch = sp_dispatch.get();
     waitForStreamDeps(dispatch);
