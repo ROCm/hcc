@@ -135,7 +135,6 @@ public:
   KalmarAsyncOp(KalmarQueue *xqueue, hcCommandKind xCommandKind) : queue(xqueue), commandKind(xCommandKind), seqNum(0) {} 
 
   virtual ~KalmarAsyncOp() {} 
-  virtual std::shared_future<void>* getFuture() { return nullptr; }
   virtual void* getNativeHandle() { return nullptr;}
 
   /**
@@ -172,6 +171,11 @@ public:
    * @param mode[in] wait mode, must be one of the value in hcWaitMode enum.
    */
   virtual void setWaitMode(hcWaitMode mode) {}
+
+  /**
+   * Wait for this op to complete.
+   */
+  virtual void wait() {}
 
   void setSeqNumFromQueue();
   uint64_t getSeqNum () const { return seqNum;};
