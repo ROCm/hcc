@@ -1305,12 +1305,14 @@ public:
      *                     the expense of using one CPU core for active waiting.
      */
     void wait(hcWaitMode mode = hcWaitModeBlocked) const {
-        if (this->valid()) {
-            if (__asyncOp != nullptr) {
-                __asyncOp->setWaitMode(mode);
-            }   
-            //TODO-ASYNC - need to reclaim older AsyncOps here.
+        if (__amp_future.valid()) {
+            if (__asyncOp != nullptr) throw runtime_exception("completion_future expected amp, had async op", 0);
             __amp_future.wait();
+        }
+        if (__asyncOp != nullptr) {
+            if (__amp_future.valid()) throw runtime_exception("completion_future expected async op, had amp", 0);
+            __asyncOp->setWaitMode(mode);
+            __asyncOp->wait();
         }
 
         Kalmar::getContext()->flushPrintfBuffer();
@@ -1327,15 +1329,6 @@ public:
     }
 
     /** @} */
-
-    /**
-     * Conversion operator to std::shared_future<void>. This method returns a
-     * shared_future<void> object corresponding to this completion_future
-     * object and refers to the same asynchronous operation.
-     */
-    operator std::shared_future<void>() const {
-        return __amp_future;
-    }
 
     /**
      * This method enables specification of a completion callback func which is
@@ -1355,8 +1348,7 @@ public:
         // spawn a new thread to wait on the future and then execute the callback functor
         __thread_then = new std::thread([&]() __CPU__ {
           this->wait();
-          if(this->valid())
-            func();
+          func();
         });
       }
 #endif
@@ -1457,7 +1449,7 @@ private:
     std::thread* __thread_then = nullptr;
     std::shared_ptr<Kalmar::KalmarAsyncOp> __asyncOp;
 
-    completion_future(std::shared_ptr<Kalmar::KalmarAsyncOp> event) : __amp_future(*(event->getFuture())), __asyncOp(event) {}
+    completion_future(std::shared_ptr<Kalmar::KalmarAsyncOp> event) : __asyncOp(event) {}
 
     completion_future(const std::shared_future<void> &__future)
         : __amp_future(__future), __thread_then(nullptr), __asyncOp(nullptr) {}
