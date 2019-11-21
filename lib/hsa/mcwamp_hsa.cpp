@@ -733,6 +733,24 @@ public:
         return op;
     }
 
+    // SharedWrapper is a utility class to keep an extra refernce to HSAOp.
+    // So when the HSA signal of an HSAOp is registered to be notified in a
+    // ROCR runtime signal callback, the HSAOp is guaranteed to exist.
+    struct SharedWrapper {
+        std::shared_ptr<HSAOp> _op;
+        SharedWrapper(const std::weak_ptr<HSAOp> &op) : _op(op) {}
+        ~SharedWrapper() { _op = nullptr; }
+    };
+
+    static bool signalCallback(hsa_signal_value_t value, void *arg) {
+        if (arg != nullptr) {
+            SharedWrapper *wrapper = reinterpret_cast<SharedWrapper*>(arg);
+            wrapper->_op->activityReport();
+            delete wrapper;
+        }
+        return false; // do not re-use callback.
+    }
+
 protected:
     uint64_t     apiStartTick;
     HSAOpCoord   _opCoord;
@@ -4546,24 +4564,6 @@ static void printKernarg(const void *kernarg_address, int bytesToPrint)
 
 }
 
-// SharedWrapper is a utility class to keep an extra refernce to HSAOp.
-// So when the HSA signal of an HSAOp is registered to be notified in a
-// ROCR runtime signal callback, the HSAOp is guaranteed to exist.
-struct SharedWrapper {
-    std::shared_ptr<HSAOp> _op;
-    SharedWrapper(const std::weak_ptr<HSAOp> &op) : _op(op) {}
-    ~SharedWrapper() { _op = nullptr; }
-};
-
-static bool signalCallback(hsa_signal_value_t value, void *arg) {
-    if (arg != nullptr) {
-        SharedWrapper *wrapper = reinterpret_cast<SharedWrapper*>(arg);
-        wrapper->_op->activityReport();
-        delete wrapper;
-    }
-    return false; // do not re-use callback.
-}
-
 // dispatch a kernel asynchronously
 // -  allocates signal, copies arguments into kernarg buffer, and places aql packet into queue.
 hsa_status_t
@@ -4654,7 +4654,7 @@ HSADispatch::dispatchKernel(hsa_queue_t* lockedHsaQueue, const void *hostKernarg
     // Register signal callback.
     if (_activity_prof.is_enabled() && allocSignal) {
         status = hsa_amd_signal_async_handler(_signal, HSA_SIGNAL_CONDITION_LT,
-                                              1, signalCallback, new SharedWrapper(_self));
+                                              1, HSAOp::signalCallback, new HSAOp::SharedWrapper(_self));
         if (status != HSA_STATUS_SUCCESS) {
             throw Kalmar::runtime_exception("hsa_amd_signal_async_handler error", status);
         }
@@ -5144,7 +5144,7 @@ HSABarrier::enqueueAsync(hc::memory_scope fenceScope) {
     // Register signal callback.
     if (_activity_prof.is_enabled()) {
         hsa_status_t status = hsa_amd_signal_async_handler(_signal, HSA_SIGNAL_CONDITION_LT,
-                                              1, signalCallback, new SharedWrapper(_self));
+                                              1, HSAOp::signalCallback, new HSAOp::SharedWrapper(_self));
         if (status != HSA_STATUS_SUCCESS) {
             throw Kalmar::runtime_exception("hsa_amd_signal_async_handler error", status);
         }
@@ -5470,7 +5470,7 @@ hsa_status_t HSACopy::hcc_memory_async_copy(Kalmar::hcCommandKind copyKind, cons
     // Register signal callback.
     if (_activity_prof.is_enabled()) {
         status = hsa_amd_signal_async_handler(_signal, HSA_SIGNAL_CONDITION_LT,
-                                              1, signalCallback, new SharedWrapper(_self));
+                                              1, HSAOp::signalCallback, new HSAOp::SharedWrapper(_self));
         if (status != HSA_STATUS_SUCCESS) {
             throw Kalmar::runtime_exception("hsa_amd_signal_async_handler error", status);
         }
@@ -5602,7 +5602,7 @@ hsa_status_t HSACopy::hcc_memory_async_copy_rect(Kalmar::hcCommandKind copyKind,
     // Register signal callback.
     if (_activity_prof.is_enabled()) {
         status = hsa_amd_signal_async_handler(_signal, HSA_SIGNAL_CONDITION_LT,
-                                              1, signalCallback, new SharedWrapper(_self));
+                                              1, HSAOp::signalCallback, new HSAOp::SharedWrapper(_self));
         if (status != HSA_STATUS_SUCCESS) {
             throw Kalmar::runtime_exception("hsa_amd_signal_async_handler error", status);
         }
