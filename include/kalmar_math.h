@@ -10,6 +10,10 @@
 #include <cmath>
 #include <stdexcept>
 
+#ifdef __PPC64__
+#define _Float16 __fp16
+#endif
+
 extern "C" _Float16 __ocml_acos_f16(_Float16 x) [[hc]];
 extern "C" float __ocml_acos_f32(float x) [[hc]];
 extern "C" double __ocml_acos_f64(double x) [[hc]];
