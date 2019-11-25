@@ -304,8 +304,6 @@ public:
   virtual void copy(const void *src, void *dst, size_t size_bytes) { }
 
   /// copy src to dst, with caller providing extended information about the pointers.
-  //// TODO - remove me, this form is deprecated.
-  virtual void copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, bool forceUnpinnedCopy) { };
   virtual void copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, 
                         const Kalmar::KalmarDevice *copyDev, bool forceUnpinnedCopy) { };
   virtual bool copy2d_ext(const void *src, void *dst, size_t width, size_t height, size_t srcPitch, size_t dstPitch, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo,const Kalmar::KalmarDevice *copyDev, bool forceUnpinnedCopy) {return true; };
