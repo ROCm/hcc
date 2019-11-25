@@ -21,7 +21,7 @@ include(ImportedTargets)
 
 macro(amp_target name )
   set(CMAKE_CXX_COMPILER "${PROJECT_BINARY_DIR}/llvm-project/llvm/bin/clang++")
-  add_compile_options(-std=c++11)
+  add_compile_options(-std=c++14)
   add_definitions(-DHCC_MAJOR_VERSION=${HCC_VERSION_MAJOR})
   add_definitions(-DHCC_MINOR_VERSION=${HCC_VERSION_MINOR})
 
