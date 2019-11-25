@@ -11,13 +11,13 @@
 
 #include <kalmar_runtime.h>
 
-#include <iostream>
-#include <string>
 #include <cassert>
 #include <cstddef>
-#include <tuple>
-
+#include <iostream>
+#include <memory>
 #include <mutex>
+#include <string>
+#include <tuple>
 
 #include <link.h>
 #include <dlfcn.h>
