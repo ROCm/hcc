@@ -4191,22 +4191,6 @@ void HSAQueue::copy_ext(const void *src, void *dst, size_t size_bytes, hc::hcCom
 
 };
 
-
-// TODO - remove me
-void HSAQueue::copy_ext(const void *src, void *dst, size_t size_bytes, hc::hcCommandKind copyDir, const hc::AmPointerInfo &srcPtrInfo, const hc::AmPointerInfo &dstPtrInfo, bool foo) override {
-
-    const Kalmar::KalmarDevice *copyDevice;
-    if (srcPtrInfo._isInDeviceMem) {
-        copyDevice = (srcPtrInfo._acc.get_dev_ptr());
-    } else if (dstPtrInfo._isInDeviceMem) {
-        copyDevice = (dstPtrInfo._acc.get_dev_ptr());
-    } else {
-        copyDevice = nullptr;
-    }
-
-    copy_ext(src, dst, size_bytes, copyDir, srcPtrInfo, dstPtrInfo, copyDevice);
-}
-
 bool HSAQueue::copy2d_ext(const void *src, void *dst, size_t width, size_t height, size_t srcPitch, size_t dstPitch, hc::hcCommandKind copyDir, const hc::AmPointerInfo &srcPtrInfo, const hc::AmPointerInfo &dstPtrInfo, const Kalmar::KalmarDevice *copyDevice, bool forceUnpinnedCopy) { 
     this->wait();
     const Kalmar::HSADevice *copyDeviceHsa = static_cast<const Kalmar::HSADevice*> (copyDevice);
