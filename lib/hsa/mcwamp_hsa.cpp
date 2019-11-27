@@ -710,6 +710,8 @@ class HSAOp : public Kalmar::KalmarAsyncOp {
 public:
     HSAOp(hc::HSAOpId id, Kalmar::KalmarQueue *queue, hc::hcCommandKind commandKind);
 
+    ~HSAOp();
+
     const HSAOpCoord opCoord() const { return _opCoord; };
 
     void* getNativeHandle() override { return &_signal; }
@@ -753,7 +755,6 @@ public:
     virtual void registerSignalCallback();
 
 protected:
-    uint64_t     apiStartTick;
     HSAOpCoord   _opCoord;
 
     hsa_signal_t _signal;
@@ -761,6 +762,8 @@ protected:
     hsa_agent_t  _agent;
 
     activity_prof::ActivityProf _activity_prof;
+
+    std::atomic_flag _dispose_flag;
 
     // A weak pointer to the instance itself.
     // Helps to track reference count of shared_ptr<HSAOp> within
@@ -1047,7 +1050,6 @@ private:
     size_t prevArgVecCapacity;
     void* kernargMemory;
     int kernargMemoryIndex;
-
 
     hsa_kernel_dispatch_packet_t aql;
     hsa_wait_state_t waitMode;
@@ -4612,6 +4614,7 @@ HSADispatch::wait() {
     if (_signal.handle) {
         // wait for completion
         hsa_signal_wait_scacquire(_signal, HSA_SIGNAL_CONDITION_LT, 1, UINT64_MAX, waitMode);
+        dispose();
     } else {
         // Some commands may have null signal - in this case we can't actually
         // track their status so assume they are complete.
@@ -4690,6 +4693,9 @@ HSADispatch::activityReport() {
 
 inline void
 HSADispatch::dispose() {
+    // call_once
+    if (_dispose_flag.test_and_set()) return;
+
     if (kernargMemory != nullptr) {
       //std::cerr << "op#" << getSeqNum() << " releasing kernal arg buffer index=" << kernargMemoryIndex<< "\n";
       device->releaseKernargBuffer(kernargMemory, kernargMemoryIndex);
@@ -4706,8 +4712,6 @@ HSADispatch::dispose() {
         //LOG_PROFILE(this, start, end, "kernel", kname.c_str(), std::hex << "kernel="<< kernel << " " << (kernel? kernel->kernelCodeHandle:0x0) << " aql.kernel_object=" << aql.kernel_object << std::dec);
         LOG_PROFILE(this, start, end, "kernel", getKernelName(), "");
     }
-
-    Kalmar::ctx()->releaseSignal(_signal);
 }
 
 inline uint64_t
@@ -4890,6 +4894,7 @@ inline void
 HSABarrier::wait() {
     // Wait on completion signal until the barrier is finished
     hsa_signal_wait_scacquire(_signal, HSA_SIGNAL_CONDITION_LT, 1, UINT64_MAX, waitMode);
+    dispose();
 }
 
 
@@ -5025,6 +5030,9 @@ HSABarrier::activityReport() {
 
 inline void
 HSABarrier::dispose() {
+    // call_once
+    if (_dispose_flag.test_and_set()) return;
+
     if ((HCC_PROFILE & HCC_PROFILE_TRACE) && (HCC_PROFILE_VERBOSE & HCC_PROFILE_VERBOSE_BARRIER)) {
         uint64_t start = getBeginTimestamp();
         uint64_t end   = getEndTimestamp();
@@ -5037,8 +5045,6 @@ HSABarrier::dispose() {
     for (int i=0; i<depCount; i++) {
         depAsyncOps[i] = nullptr;
     }
-
-    Kalmar::ctx()->releaseSignal(_signal);
 }
 
 inline uint64_t
@@ -5070,10 +5076,17 @@ HSAOp::HSAOp(hc::HSAOpId id, Kalmar::KalmarQueue *queue, hc::hcCommandKind comma
     _activity_prof(id, _opCoord._queueId, _opCoord._deviceId)
 {
     _signal.handle=0;
-    apiStartTick = Kalmar::ctx()->getSystemTicks();
-
     _activity_prof.initialize();
+    _dispose_flag.clear();
 };
+
+HSAOp::~HSAOp()
+{
+    // HSA signal may not necessarily be allocated by all HSAOp subclasses
+    if (_signal.handle) {
+        Kalmar::ctx()->releaseSignal(_signal);
+    }
+}
 
 Kalmar::HSAQueue *HSAOp::hsaQueue() const 
 { 
@@ -5105,8 +5118,6 @@ HSACopy::HSACopy(Kalmar::KalmarQueue *queue, const void* src_, void* dst_, size_
     src(src_), dst(dst_),
     sizeBytes(sizeBytes_)
 {
-
-
     apiStartTick = Kalmar::ctx()->getSystemTicks();
 }
 
@@ -5116,6 +5127,7 @@ HSACopy::wait() {
     // Wait on completion signal until the async copy is finished
     if (_signal.handle) {
         hsa_signal_wait_scacquire(_signal, HSA_SIGNAL_CONDITION_LT, 1, UINT64_MAX, waitMode);
+        dispose();
     }
 }
 
@@ -5515,11 +5527,13 @@ HSACopy::activityReport() {
 
 inline void
 HSACopy::dispose() {
+    // call_once
+    if (_dispose_flag.test_and_set()) return;
+
     // clear reference counts for dependent ops.
     depAsyncOp = nullptr;
 
     // HSA signal may not necessarily be allocated by HSACopy instance
-    // only release the signal if it was really allocated
     if (_signal.handle) {
         if (HCC_PROFILE & HCC_PROFILE_TRACE) {
             uint64_t start = getBeginTimestamp();
@@ -5529,7 +5543,6 @@ HSACopy::dispose() {
 
             LOG_PROFILE(this, start, end, "copy", getCopyCommandString(),  "\t" << sizeBytes << " bytes;\t" << sizeBytes/1024.0/1024 << " MB;\t" << bw << " GB/s;");
         }
-        Kalmar::ctx()->releaseSignal(_signal);
     } else {
         if (HCC_PROFILE & HCC_PROFILE_TRACE) {
             uint64_t start = apiStartTick;
