@@ -31,6 +31,7 @@ string(TOLOWER "${DISTRO_ID}" DISTRO_ID )
 if( DISTRO_ID MATCHES "ubuntu" OR DISTRO_ID MATCHES "fedora"
    OR DISTRO_ID MATCHES "centos" OR DISTRO_ID MATCHES "redhatenterpriseserver"
    OR DISTRO_ID MATCHES "opensuse"
+   OR DISTRO_ID MATCHES "suse"
    OR DISTRO_ID MATCHES "sles" )
   message( STATUS "Detected distribution: ${DISTRO_ID}:${DISTRO_RELEASE}" )
 else()
@@ -196,8 +197,8 @@ endif()
 #################
 
 # define HCC version information
-SET(HCC_VERSION_MAJOR "2")
-SET(HCC_VERSION_MINOR "10")
+SET(HCC_VERSION_MAJOR "3")
+SET(HCC_VERSION_MINOR "0")
 
 include(GenerateVersionFromGit)
 
@@ -207,9 +208,9 @@ if (NOT HCC_VERSION_STRING)
 endif()
 
 # Set HCC version string. The rule for version string is:
-# HCC_VERSION_MAJOR . HCC_VERSION_MINOR . HCC_VERSION_PATCH-KALMAR_SDK_COMIT-KALMAR_FRONTEND_COMMIT-KALMAR_BACKEND_COMMIT
+# HCC_VERSION_MAJOR . HCC_VERSION_MINOR . HCC_VERSION_PATCH-KALMAR_SDK_COMIT-HCC_LLVM_COMMIT
 add_version_info_from_git(HCC_VERSION_STRING
-  HCC_VERSION_PATCH KALMAR_SDK_COMMIT KALMAR_FRONTEND_COMMIT KALMAR_BACKEND_COMMIT)
+  HCC_VERSION_PATCH KALMAR_SDK_COMMIT HCC_LLVM_COMMIT)
 
 # set default installation path
 set(INSTALL_DIR_NAME "hcc")
@@ -533,6 +534,7 @@ elseif ("${DISTRO_ID}" MATCHES "fedora" OR
         "${DISTRO_ID}" MATCHES "centos" OR
         "${DISTRO_ID}" MATCHES "redhatenterpriseserver" OR
         "${DISTRO_ID}" MATCHES "opensuse" OR
+        "${DISTRO_ID}" MATCHES "suse" OR
         "${DISTRO_ID}" MATCHES "sles" )
 
   set( CPACK_GENERATOR "RPM" CACHE STRING "cpack list: 7Z, DEB, IFW, NSIS, NSIS64, RPM, STGZ, TBZ2, TGZ, TXZ, TZ, ZIP" FORCE )
@@ -549,7 +551,8 @@ set(CPACK_DEBIAN_PACKAGE_SECTION "devel")
 set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA
   "${PROJECT_BINARY_DIR}/packaging/debian/postinst;${PROJECT_BINARY_DIR}/packaging/debian/prerm")
 
-set(HCC_GENERAL_DEBIAN_DEP "coreutils, g++-multilib, gcc-multilib, findutils, libelf1, libpci3, file")
+set(HCC_GENERAL_DEBIAN_DEP "coreutils, g++-multilib, gcc-multilib, findutils, libelf1, libpci3, file, 
+                             libfile-basedir-perl, libfile-copy-recursive-perl, libfile-listing-perl, libfile-which-perl")
 
 # control the list of package dependency depending on whether this is an official release build.
 # for non-official release build, we want to relax the dependency on rocr runtime
@@ -575,9 +578,11 @@ set(CPACK_RPM_PRE_UNINSTALL_SCRIPT_FILE "${PROJECT_BINARY_DIR}/packaging/debian/
 set(CPACK_RPM_PACKAGE_AUTOREQ 0)
 
 if( "${DISTRO_ID}" MATCHES "sles" )
-   set(HCC_GENERAL_RPM_DEP "coreutils, findutils, libelf-devel, pciutils, file")
+   set(HCC_GENERAL_RPM_DEP "coreutils, findutils, libelf-devel, pciutils, file,
+                             perl-File-BaseDir, perl-File-Copy-Recursive, perl-File-Listing, perl-File-Which")
 else()
-   set(HCC_GENERAL_RPM_DEP "coreutils, findutils, elfutils-libelf, pciutils-libs, file, pth")
+   set(HCC_GENERAL_RPM_DEP "coreutils, findutils, elfutils-libelf, pciutils-libs, file, pth,
+                             perl-File-BaseDir, perl-File-Copy-Recursive, perl-File-Listing, perl-File-Which")
 endif ()
 
 set(CPACK_RPM_PACKAGE_REQUIRES "${HCC_GENERAL_RPM_DEP} ${HCC_ROCR_DEP} ${HCC_LIBCXX_RPM_DEP}" )
