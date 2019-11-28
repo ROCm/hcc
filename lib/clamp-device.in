@@ -28,10 +28,9 @@ KMOPTOPT="${KMOPTOPT:="-O3"}"
 
 # pass extra options to LLC
 # KMOPTLLC can be used to pass last-minute options to llc in the backend
-# if not set, then "-O2" will be passed to llc
 # add "--frame-pointer=none" as deafult option to llc to enable frame
 # pointer elimination, so saved registers can be used for SGPR spill
-KMOPTLLC="${KMOPTLLC:="-O2 --frame-pointer=none"}"
+KMOPTLLC="${KMOPTLLC:="--frame-pointer=none"}"
 
 # enable LLVM hijacking
 KMHACKLLVM="${KMHACKLLVM:=0}"
