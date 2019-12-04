@@ -22,8 +22,9 @@ include(ImportedTargets)
 macro(amp_target name )
   set(CMAKE_CXX_COMPILER "${PROJECT_BINARY_DIR}/llvm-project/llvm/bin/clang++")
   add_compile_options(-std=c++14)
-  add_definitions(-DHCC_MAJOR_VERSION=${HCC_VERSION_MAJOR})
-  add_definitions(-DHCC_MINOR_VERSION=${HCC_VERSION_MINOR})
+  add_definitions(-DHCC_LIB_VERSION_MAJOR=${HCC_LIB_VERSION_MAJOR})
+  add_definitions(-DHCC_LIB_VERSION_MINOR=${HCC_LIB_VERSION_MINOR})
+  add_definitions(-DHCC_LIB_VERSION_PATCH=${HCC_LIB_VERSION_PATCH})
 
   target_compile_definitions(${name} PRIVATE "GTEST_HAS_TR1_TUPLE=0")
   target_include_directories(${name} SYSTEM PRIVATE ${GTEST_INC_DIR} ${LIBCXX_INC_DIR})
@@ -38,8 +39,8 @@ macro(amp_target name )
   endif ((NOT HCC_RUNTIME_DEBUG) AND ("${CMAKE_BUILD_TYPE}" STREQUAL "Release"))
 
   set_target_properties(${name} PROPERTIES
-    SOVERSION "${HCC_VERSION_MAJOR}"
-    VERSION   "${HCC_VERSION_MAJOR}.${HCC_VERSION_MINOR}"
+    SOVERSION "${HCC_LIB_VERSION_MAJOR}"
+    VERSION   "${HCC_LIB_VERSION_STRING}"
   )
 endmacro(amp_target name )
 

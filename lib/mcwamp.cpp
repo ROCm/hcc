@@ -24,7 +24,7 @@
 
 #define XSTRINGIFY(X) STRINGIFY(X)
 #define STRINGIFY(X) #X
-#define LIB_NAME_WITH_VERSION(library) library "." XSTRINGIFY(HCC_MAJOR_VERSION) "."  XSTRINGIFY(HCC_MINOR_VERSION)
+#define LIB_NAME_WITH_VERSION(library) library "." XSTRINGIFY(HCC_LIB_VERSION_MAJOR) "."  XSTRINGIFY(HCC_LIB_VERSION_MINOR) "." XSTRINGIFY(HCC_LIB_VERSION_PATCH)
 
 extern "C" void* PushArgImpl(void*, int, size_t, const void*);
 extern "C" void* PushArgPtrImpl(void*, int, size_t, const void*);

@@ -199,12 +199,26 @@ endif()
 # define HCC version information
 SET(HCC_VERSION_MAJOR "3")
 SET(HCC_VERSION_MINOR "0")
+SET(HCC_VERSION_PATCH "0")
+
+SET(HCC_LIB_VERSION_MAJOR "${HCC_VERSION_MAJOR}")
+SET(HCC_LIB_VERSION_MINOR "${HCC_VERSION_MINOR}")
+if ( ${ROCM_PATCH_VERSION} )
+    SET(HCC_LIB_VERSION_PATCH "${ROCM_PATCH_VERSION}")
+else()
+    SET(HCC_LIB_VERSION_PATCH "${HCC_VERSION_PATCH}")
+endif()
 
 include(GenerateVersionFromGit)
 
 if (NOT HCC_VERSION_STRING)
   set(HCC_VERSION_STRING
     "${HCC_VERSION_MAJOR}.${HCC_VERSION_MINOR}")
+endif()
+
+if (NOT HCC_LIB_VERSION_STRING)
+  set(HCC_LIB_VERSION_STRING
+    "${HCC_LIB_VERSION_MAJOR}.${HCC_LIB_VERSION_MINOR}.${HCC_LIB_VERSION_PATCH}")
 endif()
 
 # Set HCC version string. The rule for version string is:
@@ -228,6 +242,12 @@ else (CPACK_SET_DESTDIR)
   set(HCC_PACKAGE_INSTALL_PREFIX ${CPACK_PACKAGING_INSTALL_PREFIX})
 endif (CPACK_SET_DESTDIR)
 MESSAGE("Installer package installation path: ${HCC_PACKAGE_INSTALL_PREFIX}")
+
+if ( NOT DEFINED ROCM_INSTALL_PATH )
+    set ( ROCM_INSTALL_PATH "/opt/rocm"  CACHE STRING "Default ROCM installation directory." )
+endif ()
+MESSAGE("ROCM Installation path: ${ROCM_INSTALL_PATH}")
+
 
 # show HCC version string
 MESSAGE("=============================================")
@@ -492,8 +512,9 @@ execute_process(COMMAND ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/process_packaging_scri
                                                                                        ${HCC_PACKAGE_INSTALL_PREFIX}
                                                                                        ${CMAKE_INSTALL_LIBDIR}
                                                                                        ${CMAKE_SYSTEM_PROCESSOR}
-                                                                                       ${HCC_VERSION_MAJOR}
-                                                                                       ${HCC_VERSION_MINOR}
+                                                                                       ${HCC_LIB_VERSION_MAJOR}
+                                                                                       ${HCC_LIB_VERSION_STRING}
+                                                                                       ${ROCM_INSTALL_PATH}
                 WORKING_DIRECTORY ${PROJECT_BINARY_DIR})
 
 execute_process(COMMAND ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/process_packaging_script.bsh ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/prerm.in
@@ -502,8 +523,9 @@ execute_process(COMMAND ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/process_packaging_scri
                                                                                        ${HCC_PACKAGE_INSTALL_PREFIX}
                                                                                        ${CMAKE_INSTALL_LIBDIR}
                                                                                        ${CMAKE_SYSTEM_PROCESSOR}
-                                                                                       ${HCC_VERSION_MAJOR}
-                                                                                       ${HCC_VERSION_MINOR}
+                                                                                       ${HCC_LIB_VERSION_MAJOR}
+                                                                                       ${HCC_LIB_VERSION_STRING}
+                                                                                       ${ROCM_INSTALL_PATH}
                 WORKING_DIRECTORY ${PROJECT_BINARY_DIR})
 
 execute_process(COMMAND ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/process_packaging_script.bsh ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/preinst_rpm.in
@@ -512,8 +534,9 @@ execute_process(COMMAND ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/process_packaging_scri
                                                                                        ${HCC_PACKAGE_INSTALL_PREFIX}
                                                                                        ${CMAKE_INSTALL_LIBDIR}
                                                                                        ${CMAKE_SYSTEM_PROCESSOR}
-                                                                                       ${HCC_VERSION_MAJOR}
-                                                                                       ${HCC_VERSION_MINOR}
+                                                                                       ${HCC_LIB_VERSION_MAJOR}
+                                                                                       ${HCC_LIB_VERSION_STRING}
+                                                                                       ${ROCM_INSTALL_PATH}
                 WORKING_DIRECTORY ${PROJECT_BINARY_DIR})
 
 set(CPACK_PACKAGE_VENDOR "Advanced Micro Devices, Inc")
