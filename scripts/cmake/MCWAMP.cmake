@@ -21,7 +21,6 @@ include(ImportedTargets)
 
 macro(amp_target name )
   set(CMAKE_CXX_COMPILER "${PROJECT_BINARY_DIR}/llvm-project/llvm/bin/clang++")
-  add_compile_options(-std=c++14)
   add_definitions(-DHCC_LIB_VERSION_MAJOR=${HCC_LIB_VERSION_MAJOR})
   add_definitions(-DHCC_LIB_VERSION_MINOR=${HCC_LIB_VERSION_MINOR})
   add_definitions(-DHCC_LIB_VERSION_PATCH=${HCC_LIB_VERSION_PATCH})
@@ -30,7 +29,7 @@ macro(amp_target name )
   target_include_directories(${name} SYSTEM PRIVATE ${GTEST_INC_DIR} ${LIBCXX_INC_DIR})
   target_include_directories(${name} PRIVATE ${MCWAMP_INC_DIR})
   target_include_directories(${name} SYSTEM INTERFACE $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include>)
-  target_compile_options(${name} PUBLIC -hc -fPIC)
+  target_compile_options(${name} PUBLIC -hc -fPIC -std=c++14)
 
   # Enable debug line info only if it's a release build and HCC_RUNTIME_DEBUG is OFF
   # Otherwise, -gline-tables-only would override other existing debug flags
