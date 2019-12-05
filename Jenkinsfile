@@ -105,9 +105,14 @@ node( 'hcctest' )
       {
         stage("unit testing")
         {
-          sh  """#!/usr/bin/env bash
+          def rc = 1
+          def retry_count = 3
+          while (rc && (retry_count >0)) {
+            rc = sh(script: """#!/usr/bin/env bash
               cd ${build_dir_release_abs} && make test
-              """
+              """, returnStatus:true)
+            retry_count--
+          }
         }
       }
 
