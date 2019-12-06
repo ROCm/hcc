@@ -23,8 +23,8 @@ SOFTLINKS=(
   "$LIBRARY_DIR" "lib" "libhc_am.so.${HCC_LIB_VERSION_MAJOR}"
   "$LIBRARY_DIR" "lib" "libhc_am.so.${HCC_LIB_VERSION_STRING}"
   "$LIBRARY_DIR" "lib" "libmcwamp.so"
-  "$LIBRARY_DIR" "lib" "libmcwamp.so.${HCC_VERSION_MAJOR}"
-  "$LIBRARY_DIR" "lib" "libmcwamp.so.${HCC_VERSION_MAJOR}.${HCC_VERSION_MINOR}"
+  "$LIBRARY_DIR" "lib" "libmcwamp.so.${HCC_LIB_VERSION_MAJOR}"
+  "$LIBRARY_DIR" "lib" "libmcwamp.so.${HCC_LIB_VERSION_STRING}"
   "$LIBRARY_DIR" "lib" "libclang_rt.builtins-${PROCESSOR}.a"
 )
 
