@@ -290,7 +290,7 @@ extern "C" _Float16 __ocml_trunc_f16(_Float16 x) [[hc]];
 extern "C" float __ocml_trunc_f32(float x) [[hc]];
 extern "C" double __ocml_trunc_f64(double x) [[hc]];
 
-#define HCC_MATH_LIB_FN inline __attribute__((used, hc))
+#define HCC_MATH_LIB_FN inline __attribute__((hc))
 namespace Kalmar
 {
     namespace fast_math

@@ -17,7 +17,7 @@ endif()
 set_target_properties(cmake-test PROPERTIES LINK_FLAGS ${new_cmake_test_link_flags})
 
 if(TARGET hccrt)
-    add_dependencies(cmake-test clang_links rocdl_links mcwamp_hsa mcwamp)
+    add_dependencies(cmake-test clang_links rocdl_links mcwamp)
     target_link_libraries(cmake-test hccrt hc_am)
 else()
     # Append default hcc installation

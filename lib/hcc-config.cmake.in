@@ -6,11 +6,13 @@ set_and_check( hcc_LIB_INSTALL_DIR "@PACKAGE_LIB_INSTALL_DIR@" )
 
 find_path(HSA_HEADER hsa/hsa.h
   PATHS
+    "${hcc_INCLUDE_DIR}/../../include"
     /opt/rocm/include
 )
 
 find_library(HSA_LIBRARY hsa-runtime64
   PATHS
+    "${hcc_LIB_INSTALL_DIR}/../../lib"
     /opt/rocm/lib
 )
 

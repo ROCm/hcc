@@ -21,15 +21,15 @@ include(ImportedTargets)
 
 macro(amp_target name )
   set(CMAKE_CXX_COMPILER "${PROJECT_BINARY_DIR}/llvm-project/llvm/bin/clang++")
-  add_compile_options(-std=c++11)
-  add_definitions(-DHCC_MAJOR_VERSION=${HCC_VERSION_MAJOR})
-  add_definitions(-DHCC_MINOR_VERSION=${HCC_VERSION_MINOR})
+  add_definitions(-DHCC_LIB_VERSION_MAJOR=${HCC_LIB_VERSION_MAJOR})
+  add_definitions(-DHCC_LIB_VERSION_MINOR=${HCC_LIB_VERSION_MINOR})
+  add_definitions(-DHCC_LIB_VERSION_PATCH=${HCC_LIB_VERSION_PATCH})
 
   target_compile_definitions(${name} PRIVATE "GTEST_HAS_TR1_TUPLE=0")
   target_include_directories(${name} SYSTEM PRIVATE ${GTEST_INC_DIR} ${LIBCXX_INC_DIR})
   target_include_directories(${name} PRIVATE ${MCWAMP_INC_DIR})
   target_include_directories(${name} SYSTEM INTERFACE $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include>)
-  target_compile_options(${name} PUBLIC -hc -fPIC)
+  target_compile_options(${name} PUBLIC -hc -fPIC -std=c++14)
 
   # Enable debug line info only if it's a release build and HCC_RUNTIME_DEBUG is OFF
   # Otherwise, -gline-tables-only would override other existing debug flags
@@ -38,8 +38,8 @@ macro(amp_target name )
   endif ((NOT HCC_RUNTIME_DEBUG) AND ("${CMAKE_BUILD_TYPE}" STREQUAL "Release"))
 
   set_target_properties(${name} PROPERTIES
-    SOVERSION "${HCC_VERSION_MAJOR}"
-    VERSION   "${HCC_VERSION_MAJOR}.${HCC_VERSION_MINOR}"
+    SOVERSION "${HCC_LIB_VERSION_MAJOR}"
+    VERSION   "${HCC_LIB_VERSION_STRING}"
   )
 endmacro(amp_target name )
 
@@ -57,8 +57,9 @@ macro(add_mcwamp_shared_library name )
   add_library( ${name} SHARED ${ARGN} )
   amp_target(${name})
   # LLVM and Clang shall be compiled beforehand
-  target_link_libraries(${name} PUBLIC hsa-runtime64 dl)
-  add_dependencies(${name} llvm-link opt clang rocdl)
+  target_link_libraries(${name} PUBLIC hsa-runtime64 dl hc_am)
+  target_link_libraries(${name} PRIVATE pthread)
+  add_dependencies(${name} llvm-link opt clang rocdl hc_am)
 endmacro(add_mcwamp_shared_library name )
 
 ####################
@@ -74,16 +75,6 @@ endmacro(add_mcwamp_library_cpu name )
 ####################
 # C++AMP runtime (HSA implementation) 
 ####################
-macro(add_mcwamp_library_hsa name )
-  add_library( ${name} SHARED ${ARGN} )
-  amp_target(${name})
-  # LLVM and Clang shall be compiled beforehand
-  add_dependencies(${name} llvm-link opt clang hc_am rocdl)
-  # add HSA libraries
-  target_link_libraries(${name} PUBLIC hsa-runtime64)
-  target_link_libraries(${name} PRIVATE pthread)
-  target_link_libraries(${name} PUBLIC hc_am)
-endmacro(add_mcwamp_library_hsa name )
 
 macro(add_mcwamp_library_hc_am name )
   add_library( ${name} SHARED ${ARGN} )

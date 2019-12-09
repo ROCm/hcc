@@ -15,12 +15,12 @@ set( CONFIG_PACKAGE_INSTALL_DIR ${LIB_INSTALL_DIR}/cmake/hcc )
 ####################
 # C++AMP runtime (mcwamp)
 ####################
-add_mcwamp_shared_library(mcwamp mcwamp.cpp)
+add_mcwamp_shared_library(mcwamp mcwamp.cpp hsa/mcwamp_hsa.cpp hsa/unpinned_copy_engine.cpp)
 
 # Library interface to use runtime
 add_library(hccrt INTERFACE)
 target_compile_options(hccrt INTERFACE -hc)
-target_link_libraries(hccrt INTERFACE "-hc -L $<TARGET_FILE_DIR:$<TARGET_NAME:mcwamp>> -Wl,-rpath $<TARGET_FILE_DIR:$<TARGET_NAME:mcwamp>>" "-Wl,--whole-archive" mcwamp "-Wl,--no-whole-archive")
+target_link_libraries(hccrt INTERFACE "-Wl,--enable-new-dtags -hc -L $<TARGET_FILE_DIR:$<TARGET_NAME:mcwamp>> -Wl,-rpath $<TARGET_FILE_DIR:$<TARGET_NAME:mcwamp>>" "-Wl,--whole-archive" mcwamp "-Wl,--no-whole-archive")
 target_link_libraries(hccrt INTERFACE dl m)
 
 # Library interface for building shared libraries
@@ -67,8 +67,16 @@ endif (USE_CODEXL_ACTIVITY_LOGGER EQUAL 1)
 # add subdirectories
 ####################
 add_subdirectory(hsa)
-add_subdirectory(cpu)
 
+# Fix rpath
+if ( DEFINED ENV{ROCM_RPATH} )
+  set ( CMAKE_INSTALL_RPATH "$ENV{ROCM_RPATH}" )
+  set ( CMAKE_SKIP_BUILD_RPATH TRUE )
+else()
+  #Use curent path of library which is <intstall>/hcc/lib for hcc libraries
+  #Add rocm library path as the defaul
+  set ( CMAKE_INSTALL_RPATH "$ORIGIN:${ROCM_ROOT}/lib:${ROCM_ROOT}/lib64" )
+endif()
 ####################
 # install targets
 ####################

@@ -9,7 +9,8 @@ package_name=$1; shift
 install_path=$1; shift
 library_dir=$1; shift
 processor=$1; shift
-hcc_version_major=$1; shift
-hcc_version_minor=$1; shift
+hcc_lib_version_major=$1; shift
+hcc_lib_version_string=$1; shift
+rocm_install_prefix=$1; shift
 
-sed "s|@PACKAGE_NAME@|\"$package_name\"|g;s|@INSTALL_PATH@|\"$install_path\"|g;s|@LIBRARY_DIR@|\"$library_dir\"|g;s|@PROCESSOR@|\"$processor\"|g;s|@HCC_VERSION_MAJOR@|\"$hcc_version_major\"|g;s|@HCC_VERSION_MINOR@|\"$hcc_version_minor\"|g" <$input >$output
+sed "s|@PACKAGE_NAME@|\"$package_name\"|g;s|@INSTALL_PATH@|\"$install_path\"|g;s|@LIBRARY_DIR@|\"$library_dir\"|g;s|@PROCESSOR@|\"$processor\"|g;s|@HCC_LIB_VERSION_MAJOR@|\"$hcc_lib_version_major\"|g;s|@HCC_LIB_VERSION_STRING@|\"$hcc_lib_version_string\"|g;s|@ROCM_INSTALL_PREFIX@|\"$rocm_install_prefix\"|g" <$input >$output

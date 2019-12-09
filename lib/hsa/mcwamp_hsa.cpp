@@ -718,8 +718,40 @@ public:
     virtual bool barrierNextSyncNeedsSysRelease() const { return 0; };
     virtual bool barrierNextKernelNeedsSysAcquire() const { return 0; };
 
+    virtual void activityReport() = 0;
+
     Kalmar::HSAQueue *hsaQueue() const;
     bool isReady() override;
+
+    virtual void setSelf(const std::shared_ptr<HSAOp> &self) { _self = self; }
+
+    // Factory method to build HSAOp.
+    template<typename T, typename ... Ts>
+    static std::shared_ptr<T> buildOp(Ts ... args) {
+        auto op = std::make_shared<T>(args...);
+        op->setSelf(op);
+        return op;
+    }
+
+    // SharedWrapper is a utility class to keep an extra refernce to HSAOp.
+    // So when the HSA signal of an HSAOp is registered to be notified in a
+    // ROCR runtime signal callback, the HSAOp is guaranteed to exist.
+    struct SharedWrapper {
+        std::shared_ptr<HSAOp> _op;
+        SharedWrapper(const std::weak_ptr<HSAOp> &op) : _op(op) {}
+        ~SharedWrapper() { _op = nullptr; }
+    };
+
+    static bool signalCallback(hsa_signal_value_t value, void *arg) {
+        if (arg != nullptr) {
+            SharedWrapper *wrapper = reinterpret_cast<SharedWrapper*>(arg);
+            wrapper->_op->activityReport();
+            delete wrapper;
+        }
+        return false; // do not re-use callback.
+    }
+
+    virtual void registerSignalCallback();
 
 protected:
     uint64_t     apiStartTick;
@@ -732,6 +764,11 @@ protected:
     activity_prof::ActivityProf _activity_prof;
 
     hsa_status_t _wait_complete_status;
+
+    // A weak pointer to the instance itself.
+    // Helps to track reference count of shared_ptr<HSAOp> within
+    // HSAQueue::asyncOps.
+    std::weak_ptr<HSAOp> _self;
 };
 std::ostream& operator<<(std::ostream& os, const HSAOp & op);
 
@@ -837,6 +874,7 @@ public:
     // wait for the async copy to complete
     hsa_status_t waitComplete();
 
+    void activityReport() override;
     void dispose();
 
     uint64_t getTimestampFrequency() override {
@@ -985,6 +1023,7 @@ public:
     // wait for the barrier to complete
     hsa_status_t waitComplete();
 
+    void activityReport() override;
     void dispose();
 
     uint64_t getTimestampFrequency() override {
@@ -1086,6 +1125,7 @@ public:
     // wait for the kernel to finish execution
     hsa_status_t waitComplete();
 
+    void activityReport() override;
     void dispose();
 
     uint64_t getTimestampFrequency() override {
@@ -2000,7 +2040,7 @@ public:
         hsa_status_t status = HSA_STATUS_SUCCESS;
 
         // create shared_ptr instance
-        std::shared_ptr<HSABarrier> barrier = std::make_shared<HSABarrier>(this, 0, nullptr);
+        std::shared_ptr<HSABarrier> barrier = HSAOp::buildOp<HSABarrier>(this, 0, nullptr);
         // associate the barrier with this queue
         pushAsyncOp(barrier);
 
@@ -2032,7 +2072,7 @@ public:
         if ((count >= 0) && (count <= HSA_BARRIER_DEP_SIGNAL_CNT)) {
 
             // create shared_ptr instance
-            std::shared_ptr<HSABarrier> barrier = std::make_shared<HSABarrier>(this, count, depOps);
+            std::shared_ptr<HSABarrier> barrier = HSAOp::buildOp<HSABarrier>(this, count, depOps);
             // associate the barrier with this queue
             pushAsyncOp(barrier);
 
@@ -4240,7 +4280,7 @@ std::shared_ptr<KalmarAsyncOp> HSAQueue::EnqueueAsyncCopyExt(const void* src, vo
 
     // create shared_ptr instance
     const Kalmar::HSADevice *copyDeviceHsa = static_cast<const Kalmar::HSADevice*> (copyDevice);
-    std::shared_ptr<HSACopy> copyCommand = std::make_shared<HSACopy>(this, src, dst, size_bytes);
+    std::shared_ptr<HSACopy> copyCommand = HSAOp::buildOp<HSACopy>(this, src, dst, size_bytes);
 
     // euqueue the async copy command
     status = copyCommand.get()->enqueueAsyncCopyCommand(copyDeviceHsa, srcPtrInfo, dstPtrInfo);
@@ -4261,7 +4301,7 @@ std::shared_ptr<KalmarAsyncOp> HSAQueue::EnqueueAsyncCopy2dExt(const void* src, 
 
     //create shared_ptr instance
     const Kalmar::HSADevice *copy2dDeviceHsa = static_cast<const Kalmar::HSADevice*> (copyDevice);
-    std::shared_ptr<HSACopy> copy2dCommand = std::make_shared<HSACopy>(this, src, dst, width*height);
+    std::shared_ptr<HSACopy> copy2dCommand = HSAOp::buildOp<HSACopy>(this, src, dst, width*height);
 
     //euqueue the async copy command
     status = copy2dCommand.get()->enqueueAsyncCopy2dCommand(width, height, srcPitch, dstPitch, copy2dDeviceHsa, srcPtrInfo, dstPtrInfo);
@@ -4278,8 +4318,7 @@ std::shared_ptr<KalmarAsyncOp> HSAQueue::EnqueueAsyncCopy(const void *src, void 
     hsa_status_t status = HSA_STATUS_SUCCESS;
 
     // create shared_ptr instance
-    std::shared_ptr<HSACopy> copyCommand = std::make_shared<HSACopy>(this, src, dst, size_bytes);
-
+    std::shared_ptr<HSACopy> copyCommand = HSAOp::buildOp<HSACopy>(this, src, dst, size_bytes);
 
     hc::accelerator acc;
     hc::AmPointerInfo srcPtrInfo(NULL, NULL, NULL, 0, acc, 0, 0);
@@ -4347,7 +4386,7 @@ HSAQueue::dispatch_hsa_kernel(const hsa_kernel_dispatch_packet_t *aql,
 
     Kalmar::HSADevice* device = static_cast<Kalmar::HSADevice*>(this->getDev());
 
-    std::shared_ptr<HSADispatch> sp_dispatch = std::make_shared<HSADispatch>(device, this/*queue*/, nullptr, aql);
+    std::shared_ptr<HSADispatch> sp_dispatch = HSAOp::buildOp<HSADispatch>(device, this/*queue*/, nullptr, aql);
 
     HSADispatch *dispatch = sp_dispatch.get();
     waitForStreamDeps(dispatch);
@@ -4527,7 +4566,6 @@ static void printKernarg(const void *kernarg_address, int bytesToPrint)
 
 }
 
-
 // dispatch a kernel asynchronously
 // -  allocates signal, copies arguments into kernarg buffer, and places aql packet into queue.
 hsa_status_t
@@ -4615,6 +4653,10 @@ HSADispatch::dispatchKernel(hsa_queue_t* lockedHsaQueue, const void *hostKernarg
         printKernarg(q_aql->kernarg_address, hostKernargSize);
     }
 
+    // Register signal callback.
+    if (_activity_prof.is_enabled()) {
+        registerSignalCallback();
+    }
 
     // Ring door bell
     hsa_signal_store_relaxed(lockedHsaQueue->doorbell_signal, index);
@@ -4749,6 +4791,11 @@ HSADispatch::dispatchKernelAsync(const void *hostKernarg, int hostKernargSize, b
 }
 
 inline void
+HSADispatch::activityReport() {
+    _activity_prof.report_gpu_timestamps<HSADispatch>(this);
+}
+
+inline void
 HSADispatch::dispose() {
     hsa_status_t status;
     if (kernargMemory != nullptr) {
@@ -4767,8 +4814,6 @@ HSADispatch::dispose() {
         //LOG_PROFILE(this, start, end, "kernel", kname.c_str(), std::hex << "kernel="<< kernel << " " << (kernel? kernel->kernelCodeHandle:0x0) << " aql.kernel_object=" << aql.kernel_object << std::dec);
         LOG_PROFILE(this, start, end, "kernel", getKernelName(), "");
     }
-
-    _activity_prof.report_gpu_timestamps<HSADispatch>(this);
 
     if (future != nullptr) {
       delete future;
@@ -5091,8 +5136,15 @@ HSABarrier::enqueueAsync(hc::memory_scope fenceScope) {
     DBOUTL(DB_AQL, " barrier_aql " << *this << " "<< *barrier );
     DBOUTL(DB_AQL2, rawAql(*barrier));
 
-    // Increment write index and ring doorbell to dispatch the kernel
+    // Increment write index.
     hsa_queue_store_write_index_relaxed(rocrQueue, nextIndex);
+
+    // Register signal callback.
+    if (_activity_prof.is_enabled()) {
+        registerSignalCallback();
+    }
+
+    // Ring doorbell.
     hsa_signal_store_relaxed(rocrQueue->doorbell_signal, index);
 
     isDispatched = true;
@@ -5123,6 +5175,10 @@ static std::string fenceToString(int fenceBits)
     };
 }
 
+inline void
+HSABarrier::activityReport() {
+    _activity_prof.report_gpu_timestamps<HSABarrier>(this);
+}
 
 inline void
 HSABarrier::dispose() {
@@ -5133,8 +5189,6 @@ HSABarrier::dispose() {
         int relBits = extractBits(header, HSA_PACKET_HEADER_SCRELEASE_FENCE_SCOPE, HSA_PACKET_HEADER_WIDTH_SCRELEASE_FENCE_SCOPE);
         LOG_PROFILE(this, start, end, "barrier", "depcnt=" + std::to_string(depCount) + ",acq=" + fenceToString(acqBits) + ",rel=" + fenceToString(relBits), depAsyncOpsStr)
     }
-
-    _activity_prof.report_gpu_timestamps<HSABarrier>(this);
 
     if (future != nullptr) {
       delete future;
@@ -5187,6 +5241,15 @@ bool HSAOp::isReady() override {
     return (hsa_signal_load_scacquire(_signal) == 0);
 }
 
+void HSAOp::registerSignalCallback() {
+    hsa_status_t status = hsa_amd_signal_async_handler(_signal,
+                                                       HSA_SIGNAL_CONDITION_LT, 1,
+                                                       HSAOp::signalCallback,
+                                                       new HSAOp::SharedWrapper(_self));
+    if (status != HSA_STATUS_SUCCESS) {
+        throw Kalmar::runtime_exception("hsa_amd_signal_async_handler error", status);
+    }
+}
 
 // ----------------------------------------------------------------------
 // member function implementation of HSACopy
@@ -5407,6 +5470,11 @@ hsa_status_t HSACopy::hcc_memory_async_copy(Kalmar::hcCommandKind copyKind, cons
                    << ",depSignalCnt=" << depSignalCnt << "," << &depSignal << ","
                    << std::hex << _signal.handle << "\n" << std::dec);
 
+    // Register signal callback.
+    if (_activity_prof.is_enabled()) {
+        registerSignalCallback();
+    }
+
     status = hsa_amd_memory_async_copy(dstPtr, dstAgent, srcPtr, srcAgent, sizeBytes,
                                          depSignalCnt, depSignalCnt?&depSignal:nullptr, _signal);
     if (status != HSA_STATUS_SUCCESS) {
@@ -5530,11 +5598,17 @@ hsa_status_t HSACopy::hcc_memory_async_copy_rect(Kalmar::hcCommandKind copyKind,
         }
     }
 
+    // Register signal callback.
+    if (_activity_prof.is_enabled()) {
+        registerSignalCallback();
+    }
+
     status = hsa_amd_memory_async_copy_rect(&dst, &dstOff, &src, &srcOff, &range, copyAgent, hsa_amd_copy_direction_t(copyKind),depSignalCnt, depSignalCnt ? &depSignal:NULL,_signal);
 
     if (status != HSA_STATUS_SUCCESS) {
         return status;
     }
+
     DBOUT( DB_CMD2, "  copy setNextKernelNeedsSysAcquire(true)\n");
     hsaQueue()->setNextKernelNeedsSysAcquire(true);
 
@@ -5626,6 +5700,17 @@ HSACopy::enqueueAsyncCopy2dCommand(size_t width, size_t height, size_t srcPitch,
 }
 
 inline void
+HSACopy::activityReport() {
+    // HSA signal may not necessarily be allocated by HSACopy instance
+    // only release the signal if it was really allocated
+    if (_signal.handle) {
+        _activity_prof.report_gpu_timestamps<HSACopy>(this, sizeBytes);
+    } else {
+        _activity_prof.report_system_ticks<HSACopy>(this, sizeBytes);
+    }
+}
+
+inline void
 HSACopy::dispose() {
 
     if (future != nullptr) {
@@ -5644,7 +5729,6 @@ HSACopy::dispose() {
 
             LOG_PROFILE(this, start, end, "copy", getCopyCommandString(),  "\t" << sizeBytes << " bytes;\t" << sizeBytes/1024.0/1024 << " MB;\t" << bw << " GB/s;");
         }
-        _activity_prof.report_gpu_timestamps<HSACopy>(this, sizeBytes);
         Kalmar::ctx()->releaseSignal(_signal);
     } else {
         if (HCC_PROFILE & HCC_PROFILE_TRACE) {
@@ -5653,7 +5737,6 @@ HSACopy::dispose() {
             double bw = (double)(sizeBytes)/(end-start) * (1000.0/1024.0) * (1000.0/1024.0);
             LOG_PROFILE(this, start, end, "copyslo", getCopyCommandString(),  "\t" << sizeBytes << " bytes;\t" << sizeBytes/1024.0/1024 << " MB;\t" << bw << " GB/s;");
         }
-        _activity_prof.report_system_ticks<HSACopy>(this, sizeBytes);
     }
 }
 

@@ -6,12 +6,13 @@ PACKAGE_NAME=@PACKAGE_NAME@
 INSTALL_PATH=@INSTALL_PATH@
 LIBRARY_DIR=@LIBRARY_DIR@
 PROCESSOR=@PROCESSOR@
-HCC_VERSION_MAJOR=@HCC_VERSION_MAJOR@
-HCC_VERSION_MINOR=@HCC_VERSION_MINOR@
+HCC_LIB_VERSION_MAJOR=@HCC_LIB_VERSION_MAJOR@
+HCC_LIB_VERSION_STRING=@HCC_LIB_VERSION_STRING@
+ROCM_INSTALL_PREFIX=@ROCM_INSTALL_PREFIX@
 
-ROCM_PATH="/opt/rocm"
+ROCM_PATH=${ROCM_INSTALL_PREFIX}
 
-# NOTE: if you modify this table, also update the same table in prerm
+# TODO: NOTE: if you modify this table, also update the same table in prerm
 SOFTLINKS=(
 # <SOURCE DIRECTORY> <DESTINATION DIRECTORY> <FILE>
   "bin" "bin" "clamp-config"
@@ -19,17 +20,11 @@ SOFTLINKS=(
   "bin" "bin" "hcc"
   "bin" "bin" "hcc-config"
   "$LIBRARY_DIR" "lib" "libhc_am.so"
-  "$LIBRARY_DIR" "lib" "libhc_am.so.${HCC_VERSION_MAJOR}"
-  "$LIBRARY_DIR" "lib" "libhc_am.so.${HCC_VERSION_MAJOR}.${HCC_VERSION_MINOR}"
+  "$LIBRARY_DIR" "lib" "libhc_am.so.${HCC_LIB_VERSION_MAJOR}"
+  "$LIBRARY_DIR" "lib" "libhc_am.so.${HCC_LIB_VERSION_STRING}"
   "$LIBRARY_DIR" "lib" "libmcwamp.so"
-  "$LIBRARY_DIR" "lib" "libmcwamp.so.${HCC_VERSION_MAJOR}"
-  "$LIBRARY_DIR" "lib" "libmcwamp.so.${HCC_VERSION_MAJOR}.${HCC_VERSION_MINOR}"
-  "$LIBRARY_DIR" "lib" "libmcwamp_cpu.so"
-  "$LIBRARY_DIR" "lib" "libmcwamp_cpu.so.${HCC_VERSION_MAJOR}"
-  "$LIBRARY_DIR" "lib" "libmcwamp_cpu.so.${HCC_VERSION_MAJOR}.${HCC_VERSION_MINOR}"
-  "$LIBRARY_DIR" "lib" "libmcwamp_hsa.so"
-  "$LIBRARY_DIR" "lib" "libmcwamp_hsa.so.${HCC_VERSION_MAJOR}"
-  "$LIBRARY_DIR" "lib" "libmcwamp_hsa.so.${HCC_VERSION_MAJOR}.${HCC_VERSION_MINOR}"
+  "$LIBRARY_DIR" "lib" "libmcwamp.so.${HCC_LIB_VERSION_MAJOR}"
+  "$LIBRARY_DIR" "lib" "libmcwamp.so.${HCC_LIB_VERSION_STRING}"
   "$LIBRARY_DIR" "lib" "libclang_rt.builtins-${PROCESSOR}.a"
 )
 
@@ -43,10 +38,10 @@ do_softlinks() {
     rm -f "$ROCM_PATH/hcc" 
   fi
 
-  ln -sf $ROCM_PATH/hcc/$LIBRARY_DIR/cmake/hcc $ROCM_PATH/lib/cmake/hcc
+  ln -rsf $ROCM_PATH/hcc/$LIBRARY_DIR/cmake/hcc $ROCM_PATH/lib/cmake/hcc
 
   if [ ! -e $ROCM_PATH/include/hcc ] ; then
-    ln -sf $ROCM_PATH/hcc/include $ROCM_PATH/include/hcc
+    ln -rsf $ROCM_PATH/hcc/include $ROCM_PATH/include/hcc
   fi
 
   for (( i=0; i<${#SOFTLINKS[@]}; i+=3 ))
@@ -54,7 +49,7 @@ do_softlinks() {
     SOURCE_DIR=${SOFTLINKS[i]}
     DEST_DIR=${SOFTLINKS[i+1]}
     FILE=${SOFTLINKS[i+2]}
-    ln -sf $ROCM_PATH/hcc/$SOURCE_DIR/$FILE $ROCM_PATH/$DEST_DIR/$FILE
+    ln -rsf $ROCM_PATH/hcc/$SOURCE_DIR/$FILE $ROCM_PATH/$DEST_DIR/$FILE
   done
 }
 
