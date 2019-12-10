@@ -1495,14 +1495,14 @@ public:
         asyncOps[asyncOpsIndex] = std::move(op);
         asyncOpsIndex = increment(asyncOpsIndex);
 
-        // There are cases where no op is created that has a signal.
+        // There are cases where rarely, if ever, an op is created that has a signal.
         // To avoid uncontrolled growth of the asyncOpsWithoutSignal vector,
         // once we reach capacity, force a signal via barrier.
         // This will recurse eventually back into this pushAsyncOp function,
         // but is guaranteed to skip this check here.
         if (asyncOpsWithoutSignal.size() > HCC_ASYNCOPS_WITHOUT_SIGNAL_SIZE) {
             DBOUT(DB_SIG, "ops without signals reached capacity, enqueuing marker\n");
-            EnqueueMarker(hc::no_scope);
+            EnqueueMarkerNoLock(hc::no_scope);
         }
 
         has_been_used = true;
