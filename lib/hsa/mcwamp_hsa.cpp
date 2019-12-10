@@ -1630,7 +1630,7 @@ public:
             }
         } else {
             // youngest has no signal - enqueue a new one:
-            auto marker = EnqueueMarker(hc::system_scope);
+            auto marker = EnqueueMarkerNoLock(hc::system_scope);
             DBOUTL(DB_CMD2, "Inside HSAQueue::isEmpty and queue contained only no-signal ops, enqueued marker " << marker << " into " << *this);
             return false;
         }
