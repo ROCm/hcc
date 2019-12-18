@@ -3683,12 +3683,6 @@ public:
         if (!init_success)
           return;
 
-#if 0
-        // For reasons that we don't understand, the printf buffer
-        // occasionally disappears before this point. As a workaround,
-        // we avoid accessing the printf buffer here.
-        //
-        // deallocate the printf buffer
         if (HCC_ENABLE_PRINTF &&
             hc::printf_buffer != nullptr) {
            // do a final flush
@@ -3696,7 +3690,7 @@ public:
 
            hc::deletePrintfBuffer(hc::printf_buffer);
         }
-#endif
+
         status = hsa_amd_memory_unlock(&hc::printf_buffer);
         STATUS_CHECK(status, __LINE__);
         hc::printf_buffer_locked_va = nullptr;
