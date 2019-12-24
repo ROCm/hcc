@@ -1575,10 +1575,7 @@ public:
         return count;
     }
 
-
-    bool isEmpty() override {
-        std::lock_guard<std::mutex> lg(qmutex);
-
+    bool isEmptyNoLock() {
         if (!has_been_used) return true;
 
         hsa_signal_t signal = *(static_cast <hsa_signal_t*> (back()->getNativeHandle()));
@@ -1597,6 +1594,10 @@ public:
         return true;
     };
 
+    bool isEmpty() override {
+        std::lock_guard<std::mutex> lg(qmutex);
+        return isEmptyNoLock();
+    }
 
     void wait_no_lock(hcWaitMode mode = hcWaitModeBlocked) {
         // wait on all previous async operations to complete
@@ -2301,7 +2302,7 @@ public:
                                 // Try locking the HSAQueue.
                                 // If unsuccesful, it means it's being used somewhere else so skip it; otherwise it may deadlock
                                 if (victimHccQueue->qmutex.try_lock()) {
-                                  if (victimHccQueue->isEmpty()) {
+                                  if (victimHccQueue->isEmptyNoLock()) {
                                       assert (victimHccQueue->rocrQueue == rq);  // ensure the link is consistent.
                                       victimHccQueue->rocrQueue = nullptr;
                                       DBOUT(DB_QUEUE, "Stole existing rocrQueue=" << rq << " from victimHccQueue=" << victimHccQueue << "\n")
