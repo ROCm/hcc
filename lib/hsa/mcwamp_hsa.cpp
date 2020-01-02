@@ -490,6 +490,8 @@ PrintfPacket* printf_buffer = nullptr;
 // store the address of agent accessible hc::printf_buffer;
 PrintfPacket** printf_buffer_locked_va = nullptr;
 
+std::mutex printf_buffer_lock;
+
 } // namespace hc
 
 
@@ -3580,6 +3582,41 @@ private:
         return HSA_STATUS_SUCCESS;
     }
 
+    hc::PrintfPacket *createPrintfBuffer(const unsigned int numElements)
+    {
+        hc::PrintfPacket *printfBuffer = nullptr;
+        if (numElements > hc::PRINTF_MIN_SIZE)
+        {
+            printfBuffer = hc::internal::am_alloc_host_coherent(sizeof(hc::PrintfPacket) * numElements);
+
+            // Initialize the Header elements of the Printf Buffer
+            printfBuffer[hc::PRINTF_BUFFER_SIZE].type = hc::PRINTF_BUFFER_SIZE;
+            printfBuffer[hc::PRINTF_BUFFER_SIZE].data.uli = numElements;
+
+            // Header includes a helper string buffer which holds all char* args
+            // PrintfPacket is 12 bytes, equivalent string buffer size used
+            printfBuffer[hc::PRINTF_STRING_BUFFER].type = hc::PRINTF_STRING_BUFFER;
+            printfBuffer[hc::PRINTF_STRING_BUFFER].data.ptr = hc::internal::am_alloc_host_coherent(sizeof(char) * numElements * 12);
+            printfBuffer[hc::PRINTF_STRING_BUFFER_SIZE].type = hc::PRINTF_STRING_BUFFER_SIZE;
+            printfBuffer[hc::PRINTF_STRING_BUFFER_SIZE].data.uli = numElements * 12;
+
+            // Using one atomic offset to maintain order and atomicity
+            printfBuffer[hc::PRINTF_OFFSETS].type = hc::PRINTF_OFFSETS;
+            printfBuffer[hc::PRINTF_OFFSETS].data.uia[0] = hc::PRINTF_HEADER_SIZE;
+            printfBuffer[hc::PRINTF_OFFSETS].data.uia[1] = 0;
+        }
+        return printfBuffer;
+    }
+
+    void deletePrintfBuffer(hc::PrintfPacket*& buffer) {
+      std::lock_guard<std::mutex> lock{hc::printf_buffer_lock}; 
+      if (buffer){
+        if (buffer[hc::PRINTF_STRING_BUFFER].data.ptr)
+        hc::am_free(buffer[hc::PRINTF_STRING_BUFFER].data.ptr);
+        hc::am_free(buffer);
+      }
+      buffer = NULL;
+    }
 
 public:
     void ReadHccEnv() ;
@@ -3688,7 +3725,7 @@ public:
            // do a final flush
            flushPrintfBuffer();
 
-           hc::deletePrintfBuffer(hc::printf_buffer);
+           deletePrintfBuffer(hc::printf_buffer);
         }
 
         status = hsa_amd_memory_unlock(&hc::printf_buffer);
@@ -3723,6 +3760,7 @@ public:
 
     void initPrintfBuffer() override {
         if (HCC_ENABLE_PRINTF) {
+          std::lock_guard<std::mutex> lock{hc::printf_buffer_lock};
           if (hc::printf_buffer != nullptr) {
             // Check whether the printf buffer is still valid
             // because it may have been annihilated by HIP's hipDeviceReset().
@@ -3734,13 +3772,16 @@ public:
             }
           }
           if (hc::printf_buffer == nullptr) {
-            hc::printf_buffer = hc::createPrintfBuffer(hc::default_printf_buffer_size);
+            hc::printf_buffer = createPrintfBuffer(hc::default_printf_buffer_size);
           }
         }
     }
 
     void flushPrintfBuffer() override {
-      if (HCC_ENABLE_PRINTF) hc::processPrintfBuffer(hc::printf_buffer);
+      if (HCC_ENABLE_PRINTF) {
+          std::lock_guard<std::mutex> lock{hc::printf_buffer_lock};
+          hc::processPrintfBuffer(hc::printf_buffer);
+      }
     }
 
     void* getPrintfBufferPointerVA() override {

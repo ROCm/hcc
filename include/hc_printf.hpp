@@ -1,15 +1,8 @@
 #pragma once
 
 #include <type_traits>
-#include <cstdlib>
-#include <cstdio>
-#include <cassert>
 #include <atomic>
-#include <string>
-#include <iostream>
-#include <algorithm>
-
-#include "hc_am_internal.hpp"
+#include "hc_am.hpp"
 #include "hsa_atomic.h"
 
 // The printf on the accelerator is only enabled when
@@ -116,39 +109,6 @@ enum PrintfError {
   ,PRINTF_UNKNOWN_ERROR = 3
   ,PRINTF_BUFFER_NULLPTR = 4
 };
-
-static inline PrintfPacket* createPrintfBuffer(const unsigned int numElements) {
-  PrintfPacket* printfBuffer = NULL;
-  if (numElements > PRINTF_MIN_SIZE) {
-    printfBuffer = hc::internal::am_alloc_host_coherent(sizeof(PrintfPacket) * numElements);
-
-    // Initialize the Header elements of the Printf Buffer
-    printfBuffer[PRINTF_BUFFER_SIZE].type = PRINTF_BUFFER_SIZE;
-    printfBuffer[PRINTF_BUFFER_SIZE].data.uli = numElements;
-
-    // Header includes a helper string buffer which holds all char* args
-    // PrintfPacket is 12 bytes, equivalent string buffer size used
-    printfBuffer[PRINTF_STRING_BUFFER].type = PRINTF_STRING_BUFFER;
-    printfBuffer[PRINTF_STRING_BUFFER].data.ptr = hc::internal::am_alloc_host_coherent(sizeof(char) * numElements * 12);
-    printfBuffer[PRINTF_STRING_BUFFER_SIZE].type = PRINTF_STRING_BUFFER_SIZE;
-    printfBuffer[PRINTF_STRING_BUFFER_SIZE].data.uli = numElements * 12;
-
-    // Using one atomic offset to maintain order and atomicity
-    printfBuffer[PRINTF_OFFSETS].type = PRINTF_OFFSETS;
-    printfBuffer[PRINTF_OFFSETS].data.uia[0] = PRINTF_HEADER_SIZE;
-    printfBuffer[PRINTF_OFFSETS].data.uia[1] = 0;
-  }
-  return printfBuffer;
-}
-
-static inline void deletePrintfBuffer(PrintfPacket*& buffer) {
-  if (buffer){
-    if (buffer[PRINTF_STRING_BUFFER].data.ptr)
-      hc::am_free(buffer[PRINTF_STRING_BUFFER].data.ptr);
-    hc::am_free(buffer);
-  }
-  buffer = NULL;
-}
 
 static inline unsigned int string_length(const char* str) [[hc,cpu]]{
   unsigned int size = 0;
