@@ -378,9 +378,6 @@ public:
      */
     bool copy2d_ext(const void *src, void *dst, size_t width, size_t height, size_t srcPitch, size_t dstPitch, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, const hc::accelerator *copyAcc, bool forceUnpinnedCopy);
 
-    // TODO - this form is deprecated, provided for use with older HIP runtimes.
-    void copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, bool forceUnpinnedCopy) ;
-
     /**
      * Copies size_bytes bytes from src to dst.  
      * Src and dst must not overlap.  
@@ -1305,12 +1302,14 @@ public:
      *                     the expense of using one CPU core for active waiting.
      */
     void wait(hcWaitMode mode = hcWaitModeBlocked) const {
-        if (this->valid()) {
-            if (__asyncOp != nullptr) {
-                __asyncOp->setWaitMode(mode);
-            }   
-            //TODO-ASYNC - need to reclaim older AsyncOps here.
+        if (__amp_future.valid()) {
+            if (__asyncOp != nullptr) throw runtime_exception("completion_future expected amp, had async op", 0);
             __amp_future.wait();
+        }
+        if (__asyncOp != nullptr) {
+            if (__amp_future.valid()) throw runtime_exception("completion_future expected async op, had amp", 0);
+            __asyncOp->setWaitMode(mode);
+            __asyncOp->wait();
         }
 
         Kalmar::getContext()->flushPrintfBuffer();
@@ -1327,15 +1326,6 @@ public:
     }
 
     /** @} */
-
-    /**
-     * Conversion operator to std::shared_future<void>. This method returns a
-     * shared_future<void> object corresponding to this completion_future
-     * object and refers to the same asynchronous operation.
-     */
-    operator std::shared_future<void>() const {
-        return __amp_future;
-    }
 
     /**
      * This method enables specification of a completion callback func which is
@@ -1355,8 +1345,7 @@ public:
         // spawn a new thread to wait on the future and then execute the callback functor
         __thread_then = new std::thread([&]() __CPU__ {
           this->wait();
-          if(this->valid())
-            func();
+          func();
         });
       }
 #endif
@@ -1457,7 +1446,7 @@ private:
     std::thread* __thread_then = nullptr;
     std::shared_ptr<Kalmar::KalmarAsyncOp> __asyncOp;
 
-    completion_future(std::shared_ptr<Kalmar::KalmarAsyncOp> event) : __amp_future(*(event->getFuture())), __asyncOp(event) {}
+    completion_future(std::shared_ptr<Kalmar::KalmarAsyncOp> event) : __asyncOp(event) {}
 
     completion_future(const std::shared_future<void> &__future)
         : __amp_future(__future), __thread_then(nullptr), __asyncOp(nullptr) {}
@@ -1616,12 +1605,8 @@ inline void accelerator_view::copy_ext(const void *src, void *dst, size_t size_b
     pQueue->copy_ext(src, dst, size_bytes, copyDir, srcInfo, dstInfo, copyAcc ? copyAcc->pDev : nullptr, forceUnpinnedCopy);
 };
 
-inline void accelerator_view::copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, bool forceHostCopyEngine) {
-    pQueue->copy_ext(src, dst, size_bytes, copyDir, srcInfo, dstInfo, forceHostCopyEngine);
-};
-
 inline bool accelerator_view::copy2d_ext(const void *src, void *dst, size_t width, size_t height, size_t srcPitch, size_t dstPitch, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, const hc::accelerator *copyAcc, bool forceUnpinnedCopy) {
-    return (pQueue->copy2d_ext(src, dst, width, height, srcPitch, dstPitch, copyDir, srcInfo, dstInfo, copyAcc ? copyAcc->pDev : nullptr, forceUnpinnedCopy));
+    return pQueue->copy2d_ext(src, dst, width, height, srcPitch, dstPitch, copyDir, srcInfo, dstInfo, copyAcc ? copyAcc->pDev : nullptr, forceUnpinnedCopy);
 };
 
 inline completion_future
