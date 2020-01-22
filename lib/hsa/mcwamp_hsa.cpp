@@ -1058,8 +1058,11 @@ private:
     std::vector<uint8_t> arg_vec;
     uint32_t arg_count;
     size_t prevArgVecCapacity;
+#if 0
     void* kernargMemory;
     int kernargMemoryIndex;
+#endif
+    std::pair<void*, size_t> kernargMemory = {nullptr, 0};
 
     hsa_kernel_dispatch_packet_t aql;
     hsa_wait_state_t waitMode;
@@ -3124,6 +3127,97 @@ public:
         return cpu_accessible_am;
     };
 
+
+    class KernargBufferPools {
+        // std::tuple<size_per_buffer, free_buffers, released_buffers>
+        using BufferPool = std::tuple<size_t, std::vector<void*>, std::vector<void*>>;
+    public:
+        KernargBufferPools(HSADevice& device, hsa_amd_memory_pool_t rocr_mem_pool) 
+            : device(device), rocr_mem_pool(rocr_mem_pool) {
+        }
+        std::pair<void*, size_t> getKernargBuffer(const size_t size) {
+            std::lock_guard<std::mutex> l{lock};
+            std::call_once(init_flag, [this]() { this->grow_pool(512, 1024); });
+            for (auto& p : pools) {
+                if (std::get<0>(p) >= size) {
+                    if (std::get<1>(p).empty()) {
+                        if (std::get<2>(p).empty()) {
+                            // FIXME: replenish the pool
+                            throw Kalmar::runtime_exception("Kernarg pool is empty.", -1);
+                        }
+                        std::get<1>(p).swap(std::get<2>(p));
+                    }
+                    auto r = std::make_pair(std::get<1>(p).back(), std::get<0>(p));
+                    std::get<1>(p).pop_back();
+                    return r;
+                }               
+            }
+
+            // FIXME: allocate a larger buffer
+            throw Kalmar::runtime_exception("Can't find suitable kernarg buffer.", -1);
+        }
+
+        void releaseKernargBuffer(const std::pair<void*, size_t>& b) {
+            if (b.first == nullptr) return;
+            std::lock_guard<std::mutex> l{lock};
+            for (auto& p : pools) {
+                if (std::get<0>(p) == b.second) {
+                    std::get<2>(p).push_back(b.first);
+                    return;
+                }
+            }
+            throw Kalmar::runtime_exception("Error when releasing kernarg buffer.", -1);
+        }
+
+    private:
+
+        void grow_pool(size_t buffer_size, size_t num_buffers) {
+            auto p = pools.begin();
+            for (; p != pools.end(); ++p) {
+                if (std::get<0>(*p) == buffer_size)
+                    break;
+            }
+            if (p == pools.end()) {
+                pools.emplace_back(std::make_tuple(buffer_size, std::vector<void*>(0), std::vector<void*>(0)));
+                p = pools.end() - 1;
+            }
+            std::get<1>(*p).reserve(std::get<1>(*p).capacity() + num_buffers);
+            std::get<2>(*p).reserve(std::get<2>(*p).capacity() + num_buffers);
+
+            char* rocr_alloc = nullptr;
+            hsa_status_t status;
+            status = hsa_amd_memory_pool_allocate(rocr_mem_pool, buffer_size * num_buffers, 0, reinterpret_cast<void**>(&rocr_alloc));
+            STATUS_CHECK(status, __LINE__);
+
+            status = hsa_amd_agents_allow_access(1, &device.agent, NULL, rocr_alloc);
+            STATUS_CHECK(status, __LINE__);
+
+            for (int i = 0; i < num_buffers; i++) {
+                std::get<1>(*p).push_back(rocr_alloc + i * buffer_size);
+            }
+            rocr_allocs.push_back(rocr_alloc);
+        }
+
+        HSADevice& device;
+        hsa_amd_memory_pool_t rocr_mem_pool;
+        std::mutex lock;
+        std::once_flag init_flag;
+        std::vector<BufferPool> pools;
+        std::vector<void*> rocr_allocs;
+    };
+
+    std::shared_ptr<KernargBufferPools> kernargBufferPools;
+
+    std::pair<void*, size_t> getKernargBuffer(size_t size) {
+        return kernargBufferPools->getKernargBuffer(size);
+    }
+
+    void releaseKernargBuffer(const std::pair<void*, size_t>& b) {
+        kernargBufferPools->releaseKernargBuffer(b);
+    }
+
+#if 0
+
     void releaseKernargBuffer(void* kernargBuffer, int kernargBufferIndex) {
         if ( (KERNARG_POOL_SIZE > 0) && (kernargBufferIndex >= 0) ) {
             kernargPoolMutex.lock();
@@ -3268,6 +3362,9 @@ public:
 
         return std::make_pair(ret, cursor);
     }
+#endif
+
+
 
     void* getSymbolAddress(const char* symbolName) override {
         hsa_status_t status;
@@ -4052,11 +4149,15 @@ HSADevice::HSADevice(hsa_agent_t a, hsa_agent_t host, int x_accSeqNum) :
     }
     useCoarseGrainedRegion = result;
 
+    kernargBufferPools = std::make_shared<KernargBufferPools>(*this, getHSAKernargRegion());
+
+#if 0
     /// pre-allocate a pool of kernarg buffers in case:
     /// - kernarg region is available
     /// - compile-time macro KERNARG_POOL_SIZE is larger than 0
 #if KERNARG_POOL_SIZE > 0
     growKernargBuffer();
+#endif
 #endif
 
     // Setup AM pool.
@@ -4546,8 +4647,7 @@ HSADispatch::HSADispatch(Kalmar::HSADevice* _device, Kalmar::KalmarQueue *queue,
     HSAOp(hc::HSA_OP_ID_DISPATCH, queue, Kalmar::hcCommandKernel),
     device(_device),
     kernel(_kernel),
-    waitMode(HSA_WAIT_STATE_BLOCKED),
-    kernargMemory(nullptr)
+    waitMode(HSA_WAIT_STATE_BLOCKED)
 {
     if (aql) {
         this->aql = *aql;
@@ -4683,6 +4783,9 @@ HSADispatch::dispatchKernel(hsa_queue_t* lockedHsaQueue, const void *hostKernarg
     //printf("hostKernargSize size: %d in bytesn", hostKernargSize);
 
     if (hostKernargSize > 0) {
+
+
+#if 0
         hsa_amd_memory_pool_t kernarg_region = device->getHSAKernargRegion();
         std::pair<void*, int> ret = device->getKernargBuffer(hostKernargSize);
         kernargMemory = ret.first;
@@ -4691,8 +4794,14 @@ HSADispatch::dispatchKernel(hsa_queue_t* lockedHsaQueue, const void *hostKernarg
 
         // as kernarg buffers are fine-grained, we can directly use memcpy
         memcpy(kernargMemory, hostKernarg, hostKernargSize);
-
         aql.kernarg_address = kernargMemory;
+#endif
+
+        
+        kernargMemory = device->getKernargBuffer(hostKernargSize);
+        memcpy(kernargMemory.first, hostKernarg, hostKernargSize);
+
+        aql.kernarg_address = kernargMemory.first;
     } else {
         aql.kernarg_address = nullptr;
     }
@@ -4838,12 +4947,17 @@ HSADispatch::dispose() {
     // clear reference counts for signal-less ops.
     asyncOpsWithoutSignal.clear();
 
+#if 0
     if (kernargMemory != nullptr) {
       //std::cerr << "op#" << getSeqNum() << " releasing kernal arg buffer index=" << kernargMemoryIndex<< "\n";
       device->releaseKernargBuffer(kernargMemory, kernargMemoryIndex);
       kernargMemory = nullptr;
     }
-
+#endif
+    if (kernargMemory.first) {
+        device->releaseKernargBuffer(kernargMemory);
+        kernargMemory = {nullptr, 0};
+    }
     clearArgs();
     std::vector<uint8_t>().swap(arg_vec);
 
