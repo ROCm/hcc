@@ -76,7 +76,7 @@
 #define MAX_INFLIGHT_COMMANDS_PER_QUEUE  (2*8192)
 
 // threshold to clean up finished kernel in HSAQueue.asyncOps
-int HCC_ASYNCOPS_SIZE = (2*8192);
+int HCC_ASYNCOPS_SIZE = 128;
 
 
 //---
