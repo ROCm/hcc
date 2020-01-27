@@ -62,7 +62,7 @@
 /////////////////////////////////////////////////
 
 // size of default kernarg buffer in the kernarg pool in HSAContext
-#define KERNARG_BUFFER_SIZE (512)
+#define KERNARG_BUFFER_SIZE (4096)
 
 // number of pre-allocated kernarg buffers in HSAContext
 // (some kernels don't allocate signals but nearly all need kernargs)
@@ -76,7 +76,7 @@
 #define MAX_INFLIGHT_COMMANDS_PER_QUEUE  (2*8192)
 
 // threshold to clean up finished kernel in HSAQueue.asyncOps
-int HCC_ASYNCOPS_SIZE = (2*8192);
+int HCC_ASYNCOPS_SIZE = (1024);
 
 
 //---
