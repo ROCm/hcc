@@ -61,7 +61,10 @@
 // kernel dispatch speed optimization flags
 /////////////////////////////////////////////////
 
-// size of default kernarg buffer in the kernarg pool in HSAContext
+// Size of default kernarg buffer in the kernarg pool in HSAContext, in bytes.
+// Increased from 512 to 4k to match CUDA default. See
+// https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#function-parameters
+// When this size is exceeded, on-demand allocation of the kernarg buffer is slow.
 #define KERNARG_BUFFER_SIZE (4096)
 
 // number of pre-allocated kernarg buffers in HSAContext
@@ -75,7 +78,9 @@
 // MUST be a power of 2.
 #define MAX_INFLIGHT_COMMANDS_PER_QUEUE  (2*8192)
 
-// threshold to clean up finished kernel in HSAQueue.asyncOps
+// Threshold to clean up finished kernel in HSAQueue.asyncOps.
+// Reduced from 16k to 1k at the same time when the HCC_KERNARG_BUFFER_SIZE
+// was increased, in order to offset the increase in memory pressure.
 int HCC_ASYNCOPS_SIZE = (1024);
 
 
