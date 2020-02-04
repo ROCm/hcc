@@ -3131,29 +3131,45 @@ public:
     class KernargBufferPools {
         // std::tuple<size_per_buffer, free_buffers, released_buffers>
         using BufferPool = std::tuple<size_t, std::vector<void*>, std::vector<void*>>;
+        enum {
+            _buffer_size = 0,
+            _free_pool = 1,
+            _released_pool = 2
+        };
     public:
         KernargBufferPools(HSADevice& device, hsa_amd_memory_pool_t rocr_mem_pool) 
             : device(device), rocr_mem_pool(rocr_mem_pool) {
+            // support kernarg buffer size up to 4k
+            pools.emplace_back(std::make_tuple( 512, std::vector<void*>(0), std::vector<void*>(0)));
+            pools.emplace_back(std::make_tuple(1024, std::vector<void*>(0), std::vector<void*>(0)));
+            pools.emplace_back(std::make_tuple(2048, std::vector<void*>(0), std::vector<void*>(0)));
+            pools.emplace_back(std::make_tuple(4096, std::vector<void*>(0), std::vector<void*>(0)));
+        }
+        ~KernargBufferPools() {
+            for (const auto b : rocr_allocs) {
+                hsa_amd_memory_pool_free(b);
+            }
         }
         std::pair<void*, size_t> getKernargBuffer(const size_t size) {
             std::lock_guard<std::mutex> l{lock};
-            std::call_once(init_flag, [this]() { this->grow_pool(512, 1024); });
             for (auto& p : pools) {
-                if (std::get<0>(p) >= size) {
-                    if (std::get<1>(p).empty()) {
-                        if (std::get<2>(p).empty()) {
-                            // FIXME: replenish the pool
-                            throw Kalmar::runtime_exception("Kernarg pool is empty.", -1);
+                if (std::get<_buffer_size>(p) >= size) {
+                    if (std::get<_free_pool>(p).empty()) {
+                        constexpr float grow_threshold = 0.2f;
+                        if (std::get<_released_pool>(p).size() <=
+                                static_cast<size_t>(grow_threshold * std::get<_free_pool>(p).capacity())) {
+                            constexpr size_t grow_mem_bytes = (1024 * 1024);
+                            grow(p, grow_mem_bytes);
                         }
-                        std::get<1>(p).swap(std::get<2>(p));
+                        else {
+                           std::get<_free_pool>(p).swap(std::get<_released_pool>(p));
+                        }
                     }
-                    auto r = std::make_pair(std::get<1>(p).back(), std::get<0>(p));
-                    std::get<1>(p).pop_back();
+                    auto r = std::make_pair(std::get<_free_pool>(p).back(), std::get<_buffer_size>(p));
+                    std::get<_free_pool>(p).pop_back();
                     return r;
                 }               
             }
-
-            // FIXME: allocate a larger buffer
             throw Kalmar::runtime_exception("Can't find suitable kernarg buffer.", -1);
         }
 
@@ -3161,8 +3177,8 @@ public:
             if (b.first == nullptr) return;
             std::lock_guard<std::mutex> l{lock};
             for (auto& p : pools) {
-                if (std::get<0>(p) == b.second) {
-                    std::get<2>(p).push_back(b.first);
+                if (std::get<_buffer_size>(p) == b.second) {
+                    std::get<_released_pool>(p).push_back(b.first);
                     return;
                 }
             }
@@ -3171,18 +3187,18 @@ public:
 
     private:
 
-        void grow_pool(size_t buffer_size, size_t num_buffers) {
-            auto p = pools.begin();
-            for (; p != pools.end(); ++p) {
-                if (std::get<0>(*p) == buffer_size)
-                    break;
+        void grow(BufferPool& p, size_t mem_size) {
+
+            const auto buffer_size = std::get<_buffer_size>(p);
+
+            if (mem_size < buffer_size) {
+                throw Kalmar::runtime_exception("Error when growing the kernarg buffer pool", -1);
             }
-            if (p == pools.end()) {
-                pools.emplace_back(std::make_tuple(buffer_size, std::vector<void*>(0), std::vector<void*>(0)));
-                p = pools.end() - 1;
-            }
-            std::get<1>(*p).reserve(std::get<1>(*p).capacity() + num_buffers);
-            std::get<2>(*p).reserve(std::get<2>(*p).capacity() + num_buffers);
+            const auto num_buffers = mem_size / buffer_size;
+            const auto new_capacity = std::get<_free_pool>(p).capacity() + num_buffers;
+
+            std::get<_free_pool>(p).reserve(new_capacity);
+            std::get<_released_pool>(p).reserve(new_capacity);
 
             char* rocr_alloc = nullptr;
             hsa_status_t status;
@@ -3192,11 +3208,13 @@ public:
             status = hsa_amd_agents_allow_access(1, &device.agent, NULL, rocr_alloc);
             STATUS_CHECK(status, __LINE__);
 
-            for (int i = 0; i < num_buffers; i++) {
-                std::get<1>(*p).push_back(rocr_alloc + i * buffer_size);
-            }
             rocr_allocs.push_back(rocr_alloc);
+            auto& fp = std::get<_free_pool>(p);
+            for (int i = 0; i < num_buffers; i++, rocr_alloc+=buffer_size) {
+                fp.push_back(rocr_alloc);
+            }
         }
+
 
         HSADevice& device;
         hsa_amd_memory_pool_t rocr_mem_pool;
