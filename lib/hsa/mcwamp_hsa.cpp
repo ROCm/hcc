@@ -134,9 +134,9 @@ int HCC_FLUSH_ON_WAIT=1;
 #define HCC_PROFILE_VERBOSE_BARRIER                 (1 << 4)   // 0x10
 int HCC_PROFILE_VERBOSE=0x1F;
 
-
-
 char * HCC_PROFILE_FILE=nullptr;
+
+int HCC_NEW_KERNARG_MANAGER=1;
 
 // Profiler:
 // Use str::stream so output is atomic wrt other threads:
@@ -1058,10 +1058,6 @@ private:
     std::vector<uint8_t> arg_vec;
     uint32_t arg_count;
     size_t prevArgVecCapacity;
-#if 0
-    void* kernargMemory;
-    int kernargMemoryIndex;
-#endif
     std::pair<void*, size_t> kernargMemory = {nullptr, 0};
 
     hsa_kernel_dispatch_packet_t aql;
@@ -3226,15 +3222,14 @@ public:
 
     std::shared_ptr<KernargBufferPools> kernargBufferPools;
 
-    std::pair<void*, size_t> getKernargBuffer(size_t size) {
-        return kernargBufferPools->getKernargBuffer(size);
-    }
-
     void releaseKernargBuffer(const std::pair<void*, size_t>& b) {
-        kernargBufferPools->releaseKernargBuffer(b);
+        if (HCC_NEW_KERNARG_MANAGER) {
+            return kernargBufferPools->releaseKernargBuffer(b);
+        }
+        else if (b.first) {
+            return releaseKernargBuffer(b.first, b.second);
+        }
     }
-
-#if 0
 
     void releaseKernargBuffer(void* kernargBuffer, int kernargBufferIndex) {
         if ( (KERNARG_POOL_SIZE > 0) && (kernargBufferIndex >= 0) ) {
@@ -3270,7 +3265,12 @@ public:
         };
     }
 
-    std::pair<void*, int> getKernargBuffer(int size) {
+    std::pair<void*, int> getKernargBuffer(size_t size) {
+
+        if (HCC_NEW_KERNARG_MANAGER) {
+            return kernargBufferPools->getKernargBuffer(size);
+        }
+
         void* ret = nullptr;
         int cursor = 0;
 
@@ -3380,9 +3380,6 @@ public:
 
         return std::make_pair(ret, cursor);
     }
-#endif
-
-
 
     void* getSymbolAddress(const char* symbolName) override {
         hsa_status_t status;
@@ -4072,6 +4069,7 @@ void HSAContext::ReadHccEnv()
     GET_ENV_STRING (HCC_PROFILE_FILE,    "Set file name for HCC_PROFILE mode.  Default=stderr");
     GET_ENV_INT    (HCC_FLUSH_ON_WAIT,   "recover all resources on queue wait");
 
+    GET_ENV_INT    (HCC_NEW_KERNARG_MANAGER, "Enable the new kernarg pool manager.  Default=1");
 };
 
 
@@ -4169,14 +4167,14 @@ HSADevice::HSADevice(hsa_agent_t a, hsa_agent_t host, int x_accSeqNum) :
 
     kernargBufferPools = std::make_shared<KernargBufferPools>(*this, getHSAKernargRegion());
 
-#if 0
-    /// pre-allocate a pool of kernarg buffers in case:
-    /// - kernarg region is available
-    /// - compile-time macro KERNARG_POOL_SIZE is larger than 0
-#if KERNARG_POOL_SIZE > 0
-    growKernargBuffer();
+    if (!HCC_NEW_KERNARG_MANAGER) {
+        /// pre-allocate a pool of kernarg buffers in case:
+        /// - kernarg region is available
+        /// - compile-time macro KERNARG_POOL_SIZE is larger than 0
+#if KERNARG_POOL_SIZE 
+        growKernargBuffer();
 #endif
-#endif
+    }
 
     // Setup AM pool.
     ri._am_memory_pool = (ri._found_local_memory_pool)
@@ -4801,29 +4799,12 @@ HSADispatch::dispatchKernel(hsa_queue_t* lockedHsaQueue, const void *hostKernarg
     //printf("hostKernargSize size: %d in bytesn", hostKernargSize);
 
     if (hostKernargSize > 0) {
-
-
-#if 0
-        hsa_amd_memory_pool_t kernarg_region = device->getHSAKernargRegion();
-        std::pair<void*, int> ret = device->getKernargBuffer(hostKernargSize);
-        kernargMemory = ret.first;
-        kernargMemoryIndex = ret.second;
-        //std::cerr << "op #" << getSeqNum() << " allocated kernarg cursor=" << kernargMemoryIndex << "\n";
-
-        // as kernarg buffers are fine-grained, we can directly use memcpy
-        memcpy(kernargMemory, hostKernarg, hostKernargSize);
-        aql.kernarg_address = kernargMemory;
-#endif
-
-        
         kernargMemory = device->getKernargBuffer(hostKernargSize);
         memcpy(kernargMemory.first, hostKernarg, hostKernargSize);
-
         aql.kernarg_address = kernargMemory.first;
     } else {
         aql.kernarg_address = nullptr;
     }
-
 
     // write packet
     uint32_t queueMask = lockedHsaQueue->size - 1;
@@ -4965,13 +4946,6 @@ HSADispatch::dispose() {
     // clear reference counts for signal-less ops.
     asyncOpsWithoutSignal.clear();
 
-#if 0
-    if (kernargMemory != nullptr) {
-      //std::cerr << "op#" << getSeqNum() << " releasing kernal arg buffer index=" << kernargMemoryIndex<< "\n";
-      device->releaseKernargBuffer(kernargMemory, kernargMemoryIndex);
-      kernargMemory = nullptr;
-    }
-#endif
     if (kernargMemory.first) {
         device->releaseKernargBuffer(kernargMemory);
         kernargMemory = {nullptr, 0};
