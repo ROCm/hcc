@@ -3150,19 +3150,23 @@ public:
             std::lock_guard<std::mutex> l{lock};
             for (auto& p : pools) {
                 if (std::get<_buffer_size>(p) >= size) {
-                    if (std::get<_free_pool>(p).empty()) {
+                    auto& fp = std::get<_free_pool>(p);
+                    auto& rp = std::get<_released_pool>(p);
+                    if (fp.empty()) {
                         constexpr float grow_threshold = 0.2f;
-                        if (std::get<_released_pool>(p).size() <=
-                                static_cast<size_t>(grow_threshold * std::get<_free_pool>(p).capacity())) {
+                        if (rp.size() <=
+                                static_cast<size_t>(grow_threshold * fp.capacity())) {
                             constexpr size_t grow_mem_bytes = (1024 * 1024);
                             grow(p, grow_mem_bytes);
+                            fp.insert(fp.cend(), rp.begin(), rp.end());
+                            rp.clear();
                         }
                         else {
-                           std::get<_free_pool>(p).swap(std::get<_released_pool>(p));
+                           fp.swap(rp);
                         }
                     }
-                    auto r = std::make_pair(std::get<_free_pool>(p).back(), std::get<_buffer_size>(p));
-                    std::get<_free_pool>(p).pop_back();
+                    auto r = std::make_pair(fp.back(), std::get<_buffer_size>(p));
+                    fp.pop_back();
                     return r;
                 }               
             }
