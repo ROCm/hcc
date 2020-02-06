@@ -1585,7 +1585,11 @@ public:
     bool isEmptyNoLock() {
         if (!has_been_used) return true;
 
-        hsa_signal_t signal = *(static_cast <hsa_signal_t*> (back()->getNativeHandle()));
+        auto lastOp = back();
+
+        if (lastOp.get() == nullptr) return true;
+
+        hsa_signal_t signal = *(static_cast <hsa_signal_t*> (lastOp->getNativeHandle()));
         if (signal.handle) {
             hsa_signal_value_t v = hsa_signal_load_scacquire(signal);
             if (v != 0) {
