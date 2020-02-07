@@ -137,6 +137,7 @@ int HCC_PROFILE_VERBOSE=0x1F;
 char * HCC_PROFILE_FILE=nullptr;
 
 int HCC_NEW_KERNARG_MANAGER=1;
+int HCC_NEW_KERNARG_MANAGER_COARSE_GRAINED=0;
 
 // Profiler:
 // Use str::stream so output is atomic wrt other threads:
@@ -2545,23 +2546,19 @@ public:
             DBOUT(DB_INIT, "found coarse-grain system memory pool=" << region.handle << " size(MB) = " << size << std::endl);
             ri->_coarsegrained_system_memory_pool = region;
             ri->_found_coarsegrained_system_memory_pool = true;
+            if (HCC_NEW_KERNARG_MANAGER_COARSE_GRAINED) {
+                ri->_kernarg_memory_pool = region;
+                ri->_found_kernarg_memory_pool = true;
+            }
         }
 
         // choose coarse grained system for kernarg, if not available, fall back to fine grained system.
         if (flags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_KERNARG_INIT) {
-          if (flags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_COARSE_GRAINED) {
-            DBOUT(DB_INIT, "using coarse grained system for kernarg memory, size(MB) = " << size << std::endl);
-            ri->_kernarg_memory_pool = region;
-            ri->_found_kernarg_memory_pool = true;
-          }
-          else if (flags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_FINE_GRAINED
+          if (flags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_FINE_GRAINED
                    && ri->_found_kernarg_memory_pool == false) {
             DBOUT(DB_INIT, "using fine grained system for kernarg memory, size(MB) = " << size << std::endl);
             ri->_kernarg_memory_pool = region;
             ri->_found_kernarg_memory_pool = true;
-          }
-          else {
-            DBOUT(DB_INIT, "Unknown memory pool with kernarg_init flag set!!!, size(MB) = " << size << std::endl);
           }
         }
 
@@ -4074,6 +4071,7 @@ void HSAContext::ReadHccEnv()
     GET_ENV_INT    (HCC_FLUSH_ON_WAIT,   "recover all resources on queue wait");
 
     GET_ENV_INT    (HCC_NEW_KERNARG_MANAGER, "Enable the new kernarg pool manager.  Default=1");
+    GET_ENV_INT    (HCC_NEW_KERNARG_MANAGER_COARSE_GRAINED, "Use coarse grained memory for kernarg.  Default=0");
 };
 
 
