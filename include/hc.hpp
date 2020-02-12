@@ -1629,10 +1629,7 @@ accelerator_view::copy2d_async_ext(const void *src, void *dst, size_t width, siz
                              const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo,
                              const hc::accelerator *copyAcc)
 {
-    const auto& asyncOp = pQueue->EnqueueAsyncCopy2dExt(src, dst, width, height, srcPitch, dstPitch, copyDir, srcInfo, dstInfo, copyAcc ? copyAcc->pDev : nullptr);
-    if(asyncOp == nullptr)
-        return completion_future();
-    return completion_future(asyncOp);
+    return completion_future(pQueue->EnqueueAsyncCopy2dExt(src, dst, width, height, srcPitch, dstPitch, copyDir, srcInfo, dstInfo, copyAcc ? copyAcc->pDev : nullptr));
 };
 
 // ------------------------------------------------------------------------
