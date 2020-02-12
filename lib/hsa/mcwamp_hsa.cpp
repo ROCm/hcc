@@ -868,7 +868,7 @@ public:
     }
 
     void enqueueAsyncCopyCommand(const Kalmar::HSADevice *copyDevice, const hc::AmPointerInfo &srcPtrInfo, const hc::AmPointerInfo &dstPtrInfo);
-    void enqueueAsyncCopy2dCommand(size_t width, size_t height, size_t srcPitch, size_t dstPitch, const Kalmar::HSADevice *copyDevice, const hc::AmPointerInfo &srcPtrInfo, const hc::AmPointerInfo &dstPtrInfo);
+    hsa_status_t enqueueAsyncCopy2dCommand(size_t width, size_t height, size_t srcPitch, size_t dstPitch, const Kalmar::HSADevice *copyDevice, const hc::AmPointerInfo &srcPtrInfo, const hc::AmPointerInfo &dstPtrInfo);
 
     // wait for the async copy to complete
     void wait() override;
@@ -896,7 +896,7 @@ public:
     void syncCopyExt(hc::hcCommandKind copyDir,
                      const hc::AmPointerInfo &srcPtrInfo, const hc::AmPointerInfo &dstPtrInfo,
                      const Kalmar::HSADevice *copyDevice, bool forceUnpinnedCopy);
-    void syncCopy2DExt(hc::hcCommandKind copyDir,
+    hsa_status_t syncCopy2DExt(hc::hcCommandKind copyDir,
                      const hc::AmPointerInfo &srcPtrInfo, const hc::AmPointerInfo &dstPtrInfo,size_t width, size_t height, size_t srcPitch, size_t dstPitch,
                      const Kalmar::HSADevice *copyDevice, bool forceUnpinnedCopy);
 
@@ -906,7 +906,7 @@ private:
                              const hc::AmPointerInfo &dstPtrInfo, const hc::AmPointerInfo &srcPtrInfo,
                              size_t sizeBytes);
 
-  void hcc_memory_async_copy_rect(Kalmar::hcCommandKind copyKind, const Kalmar::HSADevice *copyDevice,
+  hsa_status_t hcc_memory_async_copy_rect(Kalmar::hcCommandKind copyKind, const Kalmar::HSADevice *copyDevice,
                                   const hc::AmPointerInfo &dstPtrInfo, const hc::AmPointerInfo &srcPtrInfo,
                                   size_t width, size_t height, size_t srcPitch, size_t dstPitch);
 
@@ -4259,9 +4259,9 @@ bool HSAQueue::copy2d_ext(const void *src, void *dst, size_t width, size_t heigh
     const Kalmar::HSADevice *copyDeviceHsa = static_cast<const Kalmar::HSADevice*> (copyDevice);
     HSACopy* copyCommand = new HSACopy(this, src, dst, width*height);
     copyCommand->setCommandKind(copyDir);
-    copyCommand->syncCopy2DExt(copyDir, srcPtrInfo, dstPtrInfo, width, height, srcPitch, dstPitch,copyDeviceHsa, forceUnpinnedCopy);
-    delete(copyCommand);
-    return true;
+    auto status = copyCommand->syncCopy2DExt(copyDir, srcPtrInfo, dstPtrInfo, width, height, srcPitch, dstPitch,copyDeviceHsa, forceUnpinnedCopy);
+    delete copyCommand;
+    return (status == HSA_STATUS_SUCCESS);
 };
 
 std::shared_ptr<KalmarAsyncOp> HSAQueue::EnqueueAsyncCopyExt(const void* src, void* dst, size_t size_bytes,
@@ -4290,7 +4290,11 @@ std::shared_ptr<KalmarAsyncOp> HSAQueue::EnqueueAsyncCopy2dExt(const void* src, 
     std::shared_ptr<HSACopy> copy2dCommand = HSAOp::buildOp<HSACopy>(this, src, dst, width*height);
 
     //euqueue the async copy command
-    copy2dCommand.get()->enqueueAsyncCopy2dCommand(width, height, srcPitch, dstPitch, copy2dDeviceHsa, srcPtrInfo, dstPtrInfo);
+    auto status = copy2dCommand.get()->enqueueAsyncCopy2dCommand(width, height, srcPitch, dstPitch, copy2dDeviceHsa, srcPtrInfo, dstPtrInfo);
+    if (status != HSA_STATUS_SUCCESS) {
+        copy2dCommand = nullptr;
+        return nullptr;
+    }
 
     //associate the async copy command with this queue
     pushAsyncOp(copy2dCommand);
@@ -5380,7 +5384,8 @@ void HSACopy::hcc_memory_async_copy(Kalmar::hcCommandKind copyKind, const Kalmar
     }
 }
 
-void HSACopy::hcc_memory_async_copy_rect(Kalmar::hcCommandKind copyKind, const Kalmar::HSADevice *copyDeviceArg,
+hsa_status_t
+HSACopy::hcc_memory_async_copy_rect(Kalmar::hcCommandKind copyKind, const Kalmar::HSADevice *copyDeviceArg,
                       const hc::AmPointerInfo &dstPtrInfo, const hc::AmPointerInfo &srcPtrInfo, size_t width,
                       size_t height, size_t srcPitch, size_t dstPitch) {
                       
@@ -5495,13 +5500,15 @@ void HSACopy::hcc_memory_async_copy_rect(Kalmar::hcCommandKind copyKind, const K
     status = hsa_amd_memory_async_copy_rect(&dst, &dstOff, &src, &srcOff, &range, copyAgent, hsa_amd_copy_direction_t(copyKind),depSignalCnt, depSignalCnt ? &depSignal:NULL,_signal);
 
     if (status != HSA_STATUS_SUCCESS) {
-        throw Kalmar::runtime_exception("hsa_amd_memory_async_copy_rect error", status);
+        return status;
     }
 
     if (isAsync) {
         DBOUT( DB_CMD2, "  copy setNextKernelNeedsSysAcquire(true)\n");
         hsaQueue()->setNextKernelNeedsSysAcquire(true);
     }
+
+    return status;
 }
 
 static Kalmar::hcCommandKind resolveMemcpyDirection(bool srcInDeviceMem, bool dstInDeviceMem)
@@ -5540,7 +5547,7 @@ HSACopy::enqueueAsyncCopyCommand(const Kalmar::HSADevice *copyDevice, const hc::
     };
 }
 
-inline void
+inline hsa_status_t
 HSACopy::enqueueAsyncCopy2dCommand(size_t width, size_t height, size_t srcPitch, size_t dstPitch, 
                                     const Kalmar::HSADevice *copyDevice, 
                                     const hc::AmPointerInfo &srcPtrInfo, const hc::AmPointerInfo &dstPtrInfo) {
@@ -5552,11 +5559,15 @@ HSACopy::enqueueAsyncCopy2dCommand(size_t width, size_t height, size_t srcPitch,
 
     isAsync = true;
     setCommandKind (resolveMemcpyDirection(srcPtrInfo._isInDeviceMem, dstPtrInfo._isInDeviceMem));
-    hcc_memory_async_copy_rect(getCommandKind(), copyDevice, dstPtrInfo, srcPtrInfo, width, height, srcPitch, dstPitch);
+    auto status = hcc_memory_async_copy_rect(getCommandKind(), copyDevice, dstPtrInfo, srcPtrInfo, width, height, srcPitch, dstPitch);
+    if (status != HSA_STATUS_SUCCESS)
+        return status;
 
     if (HCC_SERIALIZE_COPY & 0x2) {
         wait();
     };
+
+    return status;
 }
 
 inline void
@@ -5717,7 +5728,7 @@ HSACopy::syncCopyExt(hc::hcCommandKind copyDir, const hc::AmPointerInfo &srcPtrI
     }
 }
 
-void HSACopy::syncCopy2DExt(hc::hcCommandKind copyDir,
+hsa_status_t HSACopy::syncCopy2DExt(hc::hcCommandKind copyDir,
                      const hc::AmPointerInfo &srcPtrInfo, const hc::AmPointerInfo &dstPtrInfo,size_t width, size_t height, size_t srcPitch, size_t dstPitch,
                      const Kalmar::HSADevice *copyDevice, bool forceUnpinnedCopy)
 {
@@ -5728,10 +5739,16 @@ void HSACopy::syncCopy2DExt(hc::hcCommandKind copyDir,
         throw Kalmar::runtime_exception("Null copyDevice can only be used with HostToHost or DeviceToDevice copy", -1);
     }
 
-    hcc_memory_async_copy_rect(copyDir, copyDevice, dstPtrInfo, srcPtrInfo, width, height, srcPitch, dstPitch);
-    DBOUT(DB_COPY, "HSACopy::syncCopy2DExt(), wait for completion...");
-    hsa_signal_wait_relaxed(_signal, HSA_SIGNAL_CONDITION_LT, 1, UINT64_MAX, waitMode);
-    DBOUT(DB_COPY,"done!\n");
+    auto status = hcc_memory_async_copy_rect(copyDir, copyDevice, dstPtrInfo, srcPtrInfo, width, height, srcPitch, dstPitch);
+    if (status == HSA_STATUS_SUCCESS) {
+        DBOUT(DB_COPY, "HSACopy::syncCopy2DExt(), wait for completion...");
+        hsa_signal_wait_relaxed(_signal, HSA_SIGNAL_CONDITION_LT, 1, UINT64_MAX, waitMode);
+        DBOUT(DB_COPY,"done!\n");
+    }
+    else {
+        DBOUT(DB_COPY, "HSACopy::syncCopy2DExt(), hcc_amd_memory_async_copy_rect() returns: 0x" << std::hex <<       status << std::dec <<"\n");
+    }
+    return status;
 }
 
 // Performs a copy, potentially through a staging buffer .
