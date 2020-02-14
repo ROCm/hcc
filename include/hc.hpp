@@ -1280,7 +1280,15 @@ public:
      * completion_future is associated with an asynchronous operation.
      */
     bool valid() const {
-        return __amp_future.valid();
+        if (__amp_future.valid()) {
+            if (__asyncOp != nullptr) throw runtime_exception("completion_future expected amp, had async op", 0);
+            return true;
+        }
+        if (__asyncOp != nullptr) {
+            if (__amp_future.valid()) throw runtime_exception("completion_future expected async op, had amp", 0);
+            return true;
+        }
+        return false;
     }
 
     /** @{ */
@@ -1630,7 +1638,7 @@ accelerator_view::copy2d_async_ext(const void *src, void *dst, size_t width, siz
                              const hc::accelerator *copyAcc)
 {
     const auto& asyncOp = pQueue->EnqueueAsyncCopy2dExt(src, dst, width, height, srcPitch, dstPitch, copyDir, srcInfo, dstInfo, copyAcc ? copyAcc->pDev : nullptr);
-    if(asyncOp == nullptr)
+    if (asyncOp == nullptr)
         return completion_future();
     return completion_future(asyncOp);
 };
