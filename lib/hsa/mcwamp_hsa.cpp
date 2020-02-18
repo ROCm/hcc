@@ -136,8 +136,8 @@ int HCC_PROFILE_VERBOSE=0x1F;
 
 char * HCC_PROFILE_FILE=nullptr;
 
-int HCC_NEW_KERNARG_MANAGER=1;
-int HCC_NEW_KERNARG_MANAGER_COARSE_GRAINED=0;
+int HCC_KERNARG_MANAGER=1;
+int HCC_KERNARG_MANAGER_COARSE_GRAINED=0;
 
 // Profiler:
 // Use str::stream so output is atomic wrt other threads:
@@ -2546,10 +2546,6 @@ public:
             DBOUT(DB_INIT, "found coarse-grain system memory pool=" << region.handle << " size(MB) = " << size << std::endl);
             ri->_coarsegrained_system_memory_pool = region;
             ri->_found_coarsegrained_system_memory_pool = true;
-            if (HCC_NEW_KERNARG_MANAGER_COARSE_GRAINED) {
-                ri->_kernarg_memory_pool = region;
-                ri->_found_kernarg_memory_pool = true;
-            }
         }
 
         // choose coarse grained system for kernarg, if not available, fall back to fine grained system.
@@ -2602,13 +2598,13 @@ public:
 
     // Returns true if specified agent has access to the specified pool.
     // Typically used to detect when a CPU agent has access to GPU device memory via large-bar:
-    int hasAccess(hsa_agent_t agent, hsa_amd_memory_pool_t pool)
+    bool hasAccess(hsa_agent_t agent, hsa_amd_memory_pool_t pool)
     {
         hsa_status_t err;
         hsa_amd_memory_pool_access_t access;
         err = hsa_amd_agent_memory_pool_get_info(agent, pool, HSA_AMD_AGENT_MEMORY_POOL_INFO_ACCESS, &access);
         STATUS_CHECK(err, __LINE__);
-        return access;
+        return (access != HSA_AMD_MEMORY_POOL_ACCESS_NEVER_ALLOWED);
     }
 
 
@@ -3130,13 +3126,19 @@ public:
             _released_pool = 2
         };
     public:
-        KernargBufferPools(HSADevice& device, hsa_amd_memory_pool_t rocr_mem_pool) 
-            : device(device), rocr_mem_pool(rocr_mem_pool) {
+        KernargBufferPools(HSADevice& device) : device(device) {
+            rocr_mem_pool = device.ri._kernarg_memory_pool;
+            mem_pool_is_coarse_grained = device.ri._kernarg_memory_pool.handle ==
+                                           device.ri._local_memory_pool.handle;
             // support kernarg buffer size up to 4k
             pools.emplace_back(std::make_tuple( 512, std::vector<void*>(0), std::vector<void*>(0)));
             pools.emplace_back(std::make_tuple(1024, std::vector<void*>(0), std::vector<void*>(0)));
             pools.emplace_back(std::make_tuple(2048, std::vector<void*>(0), std::vector<void*>(0)));
             pools.emplace_back(std::make_tuple(4096, std::vector<void*>(0), std::vector<void*>(0)));
+
+            if (mem_pool_is_coarse_grained) {
+                sync_id++;
+            }
         }
         ~KernargBufferPools() {
             for (const auto b : rocr_allocs) {
@@ -3159,7 +3161,10 @@ public:
                             rp.clear();
                         }
                         else {
-                           fp.swap(rp);
+                            fp.swap(rp);
+                        }
+                        if (mem_pool_is_coarse_grained) {
+                            sync_id++;
                         }
                     }
                     auto r = std::make_pair(fp.back(), std::get<_buffer_size>(p));
@@ -3180,6 +3185,14 @@ public:
                 }
             }
             throw Kalmar::runtime_exception("Error when releasing kernarg buffer.", -1);
+        }
+
+        uint32_t getSyncID() {
+            return sync_id;
+        }
+        
+        bool isKernargCoarseGrained() {
+            return mem_pool_is_coarse_grained;
         }
 
     private:
@@ -3215,16 +3228,25 @@ public:
 
         HSADevice& device;
         hsa_amd_memory_pool_t rocr_mem_pool;
+        bool mem_pool_is_coarse_grained;
+        uint32_t sync_id = 0;
         std::mutex lock;
         std::once_flag init_flag;
         std::vector<BufferPool> pools;
         std::vector<void*> rocr_allocs;
     };
-
+    friend class KernargBufferPools;
     std::shared_ptr<KernargBufferPools> kernargBufferPools;
 
+    bool isKernargCoarseGrained() {
+        if (HCC_KERNARG_MANAGER) {
+            return kernargBufferPools->isKernargCoarseGrained();
+        }
+        return false;
+    }
+
     void releaseKernargBuffer(const std::pair<void*, size_t>& b) {
-        if (HCC_NEW_KERNARG_MANAGER) {
+        if (HCC_KERNARG_MANAGER) {
             return kernargBufferPools->releaseKernargBuffer(b);
         }
         else if (b.first) {
@@ -3268,7 +3290,7 @@ public:
 
     std::pair<void*, int> getKernargBuffer(size_t size) {
 
-        if (HCC_NEW_KERNARG_MANAGER) {
+        if (HCC_KERNARG_MANAGER) {
             return kernargBufferPools->getKernargBuffer(size);
         }
 
@@ -4070,8 +4092,8 @@ void HSAContext::ReadHccEnv()
     GET_ENV_STRING (HCC_PROFILE_FILE,    "Set file name for HCC_PROFILE mode.  Default=stderr");
     GET_ENV_INT    (HCC_FLUSH_ON_WAIT,   "recover all resources on queue wait");
 
-    GET_ENV_INT    (HCC_NEW_KERNARG_MANAGER, "Enable the new kernarg pool manager.  Default=1");
-    GET_ENV_INT    (HCC_NEW_KERNARG_MANAGER_COARSE_GRAINED, "Use coarse grained memory for kernarg.  Default=0");
+    GET_ENV_INT    (HCC_KERNARG_MANAGER, "Enable the new kernarg pool manager.  Default=1");
+    GET_ENV_INT    (HCC_KERNARG_MANAGER_COARSE_GRAINED, "Use coarse grained memory for kernarg.  Default=0");
 };
 
 
@@ -4149,6 +4171,15 @@ HSADevice::HSADevice(hsa_agent_t a, hsa_agent_t host, int x_accSeqNum) :
     status = hsa_amd_agent_iterate_memory_pools(agent, &HSADevice::get_memory_pools, &ri);
     STATUS_CHECK(status, __LINE__);
 
+    if (HCC_KERNARG_MANAGER && HCC_KERNARG_MANAGER_COARSE_GRAINED) {
+        if (ri._found_local_memory_pool &&
+            hasAccess(getHostAgent(), ri._local_memory_pool)) {
+            DBOUT(DB_INIT, "using coarse-grained GPU local memory for kernarg, size(MB) = " << ri._local_memory_pool_size << std::endl);
+            ri._kernarg_memory_pool = ri._local_memory_pool;
+            ri._found_kernarg_memory_pool = true;
+        }
+    }
+
     status = hsa_amd_agent_iterate_memory_pools(hostAgent, HSADevice::get_host_pools, &ri);
     STATUS_CHECK(status, __LINE__);
 
@@ -4167,9 +4198,9 @@ HSADevice::HSADevice(hsa_agent_t a, hsa_agent_t host, int x_accSeqNum) :
     }
     useCoarseGrainedRegion = result;
 
-    kernargBufferPools = std::make_shared<KernargBufferPools>(*this, getHSAKernargRegion());
+    kernargBufferPools = std::make_shared<KernargBufferPools>(*this);
 
-    if (!HCC_NEW_KERNARG_MANAGER) {
+    if (!HCC_KERNARG_MANAGER) {
         /// pre-allocate a pool of kernarg buffers in case:
         /// - kernarg region is available
         /// - compile-time macro KERNARG_POOL_SIZE is larger than 0
@@ -4803,6 +4834,9 @@ HSADispatch::dispatchKernel(hsa_queue_t* lockedHsaQueue, const void *hostKernarg
     if (hostKernargSize > 0) {
         kernargMemory = device->getKernargBuffer(hostKernargSize);
         memcpy(kernargMemory.first, hostKernarg, hostKernargSize);
+        if (device->isKernargCoarseGrained()) {
+            // TODO:  flush HDP
+        }
         aql.kernarg_address = kernargMemory.first;
     } else {
         aql.kernarg_address = nullptr;
