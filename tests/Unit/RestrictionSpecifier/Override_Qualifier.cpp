@@ -4,12 +4,14 @@ using namespace hc;
 
 #define LLVM_OVERRIDE override
 
-int64_t current_pos() LLVM_OVERRIDE { return 1; }
+class A {
+   public:
+    virtual void foo() = 0;
+};
 
-  /// preferred_buffer_size - Determine an efficient buffer size.
-size_t preferred_buffer_size() LLVM_OVERRIDE;
+class B : public A {
+   public:
+    virtual void foo() noexcept LLVM_OVERRIDE {}
+};
 
-int main(void)
-{
-  return 0;
-}
+int main(void) { return 0; }

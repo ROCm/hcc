@@ -504,7 +504,7 @@ public:
     std::shared_ptr<KalmarQueue> createQueue(execute_order order = execute_in_order, queue_priority priority = priority_normal) override { return std::shared_ptr<KalmarQueue>(new CPUQueue(this)); }
     void* create(size_t count, struct rw_info* /* not used */ ) override { return kalmar_aligned_alloc(0x1000, count); }
     void release(void* ptr, struct rw_info* /* nout used */) override { kalmar_aligned_free(ptr); }
-    void* CreateKernel(const char* fun, KalmarQueue *queue) { return nullptr; }
+    void* CreateKernel(const char* fun, KalmarQueue *queue) override { return nullptr; }
 };
 
 /// KalmarContext
