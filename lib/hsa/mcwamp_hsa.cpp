@@ -2270,6 +2270,11 @@ private:
 
     std::map<std::string, HSAKernel *> programs;
     hsa_agent_t agent;
+
+    // Information related to executing an HDP flush
+    hsa_amd_hdp_flush_t hdp;
+    bool has_hdp_access;
+
     size_t max_tile_static_size;
 
     size_t queue_size;
@@ -3404,6 +3409,12 @@ public:
         return std::make_pair(ret, cursor);
     }
 
+    void hdp_mem_flush() {
+        if (!has_hdp_access)
+            throw Kalmar::runtime_exception("HDP flush error", 0);
+        __atomic_store_n(reinterpret_cast<uint32_t*>(hdp.HDP_MEM_FLUSH_CNTL), 0x1, __ATOMIC_SEQ_CST);
+    }
+
     void* getSymbolAddress(const char* symbolName) override {
         hsa_status_t status;
 
@@ -4171,7 +4182,13 @@ HSADevice::HSADevice(hsa_agent_t a, hsa_agent_t host, int x_accSeqNum) :
     status = hsa_amd_agent_iterate_memory_pools(agent, &HSADevice::get_memory_pools, &ri);
     STATUS_CHECK(status, __LINE__);
 
-    if (HCC_KERNARG_MANAGER && HCC_KERNARG_MANAGER_COARSE_GRAINED) {
+    hdp.HDP_MEM_FLUSH_CNTL = nullptr;
+    hdp.HDP_REG_FLUSH_CNTL = nullptr;
+    status = hsa_agent_get_info(agent, (hsa_agent_info_t)HSA_AMD_AGENT_INFO_HDP_FLUSH, &hdp);
+    has_hdp_access = (status == HSA_STATUS_SUCCESS &&
+                      hdp.HDP_MEM_FLUSH_CNTL != nullptr);
+
+    if (HCC_KERNARG_MANAGER && HCC_KERNARG_MANAGER_COARSE_GRAINED && has_hdp_access) {
         if (ri._found_local_memory_pool &&
             hasAccess(getHostAgent(), ri._local_memory_pool)) {
             DBOUT(DB_INIT, "using coarse-grained GPU local memory for kernarg, size(MB) = " << ri._local_memory_pool_size << std::endl);
@@ -4835,7 +4852,9 @@ HSADispatch::dispatchKernel(hsa_queue_t* lockedHsaQueue, const void *hostKernarg
         kernargMemory = device->getKernargBuffer(hostKernargSize);
         memcpy(kernargMemory.first, hostKernarg, hostKernargSize);
         if (device->isKernargCoarseGrained()) {
-            // TODO:  flush HDP
+            // If kernarg is in GPU coarse grained memory, flush the HDP
+            // content visible to the GPU
+            device->hdp_mem_flush();
         }
         aql.kernarg_address = kernargMemory.first;
     } else {
