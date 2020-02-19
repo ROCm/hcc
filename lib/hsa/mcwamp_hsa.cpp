@@ -1990,11 +1990,11 @@ public:
 
     void* getHSAAgent() override;
 
-    void* getHostAgent() override;
+    void* getHostAgent();
 
     void* getHSAAMRegion() override;
 
-    void* getHSACoherentAMHostRegion() override;
+    void* getHSACoherentAMHostRegion();
 
     void* getHSAAMHostRegion() override;
 
@@ -2047,7 +2047,7 @@ public:
     // applied after the marker executes.  See hc::memory_scope
     std::shared_ptr<KalmarAsyncOp> EnqueueMarkerWithDependencyNoLock(int count,
             std::shared_ptr <KalmarAsyncOp> *depOps,
-            hc::memory_scope fenceScope) override {
+            hc::memory_scope fenceScope) {
 
         if ((count >= 0) && (count <= HSA_BARRIER_DEP_SIGNAL_CNT)) {
 
@@ -2116,7 +2116,7 @@ public:
 
     std::shared_ptr<KalmarAsyncOp> EnqueueMarkerWithDependency(int count,
             std::shared_ptr <KalmarAsyncOp> *depOps,
-            hc::memory_scope fenceScope) override {
+            hc::memory_scope fenceScope) {
         std::lock_guard<std::mutex> lg(qmutex);
         return EnqueueMarkerWithDependencyNoLock(count, depOps, fenceScope);
     }
@@ -2636,9 +2636,9 @@ public:
     bool is_emulated() const override { return false; }
     uint32_t get_version() const { return ((static_cast<unsigned int>(versionMajor) << 16) | versionMinor); }
 
-    bool has_cpu_accessible_am() const override { return cpu_accessible_am; }
+    bool has_cpu_accessible_am() const { return cpu_accessible_am; }
 
-    void* create(size_t count, struct rw_info* key) override {
+    void* create(size_t count, struct rw_info* key) {
         void *data = nullptr;
 
         if (!is_unified()) {
@@ -4065,7 +4065,7 @@ HSADevice::HSADevice(hsa_agent_t a, hsa_agent_t host, int x_accSeqNum) :
 }
 
 inline void*
-HSADevice::getHSAAgent() override {
+HSADevice::getHSAAgent() {
     return static_cast<void*>(&getAgent());
 }
 
@@ -4122,7 +4122,7 @@ HSAQueue::HSAQueue(KalmarDevice* pDev, hsa_agent_t agent, execute_order order, q
 }
 
 
-void HSAQueue::dispose() override {
+void HSAQueue::dispose() {
     hsa_status_t status;
 
     DBOUT(DB_INIT, "HSAQueue::dispose() " << this << "in\n");
@@ -4202,38 +4202,38 @@ void HSAQueue::releaseLockedHsaQueue()
 }
 
 inline void*
-HSAQueue::getHSAAgent() override {
+HSAQueue::getHSAAgent() {
     return static_cast<void*>(&(static_cast<HSADevice*>(getDev())->getAgent()));
 }
 inline void*
-HSAQueue::getHostAgent() override {
+HSAQueue::getHostAgent() {
     return static_cast<void*>(&(static_cast<HSADevice*>(getDev())->getHostAgent()));
 }
 inline void*
-HSAQueue::getHSAAMRegion() override {
+HSAQueue::getHSAAMRegion() {
     return static_cast<void*>(&(static_cast<HSADevice*>(getDev())->getHSAAMRegion()));
 }
 inline void*
-HSAQueue::getHSAFinegrainedAMRegion() override {
+HSAQueue::getHSAFinegrainedAMRegion() {
     return static_cast<void*>(&(static_cast<HSADevice*>(getDev())->getHSAFinegrainedAMRegion()));
 }
 inline void*
-HSAQueue::getHSACoherentAMHostRegion() override {
+HSAQueue::getHSACoherentAMHostRegion() {
     return static_cast<void*>(&(static_cast<HSADevice*>(getDev())->getHSACoherentAMHostRegion()));
 }
 inline void*
-HSAQueue::getHSAAMHostRegion() override {
+HSAQueue::getHSAAMHostRegion() {
     return static_cast<void*>(&(static_cast<HSADevice*>(getDev())->getHSAAMHostRegion()));
 }
 
 
 inline void*
-HSAQueue::getHSAKernargRegion() override {
+HSAQueue::getHSAKernargRegion() {
     return static_cast<void*>(&(static_cast<HSADevice*>(getDev())->getHSAKernargRegion()));
 }
 
 void HSAQueue::copy_ext(const void *src, void *dst, size_t size_bytes, hc::hcCommandKind copyDir, const hc::AmPointerInfo &srcPtrInfo, const hc::AmPointerInfo &dstPtrInfo,
-              const Kalmar::KalmarDevice *copyDevice, bool forceUnpinnedCopy) override {
+              const Kalmar::KalmarDevice *copyDevice, bool forceUnpinnedCopy) {
     // wait for all previous async commands in this queue to finish
     // TODO - can remove this synchronization, copy is tail-synchronous not required on front end.
     this->wait();
@@ -4266,7 +4266,7 @@ bool HSAQueue::copy2d_ext(const void *src, void *dst, size_t width, size_t heigh
 
 std::shared_ptr<KalmarAsyncOp> HSAQueue::EnqueueAsyncCopyExt(const void* src, void* dst, size_t size_bytes,
                                                    hcCommandKind copyDir, const hc::AmPointerInfo &srcPtrInfo, const hc::AmPointerInfo &dstPtrInfo,
-                                                   const Kalmar::KalmarDevice *copyDevice) override {
+                                                   const Kalmar::KalmarDevice *copyDevice) {
     std::lock_guard<std::mutex> lg(qmutex);
     // create shared_ptr instance
     const Kalmar::HSADevice *copyDeviceHsa = static_cast<const Kalmar::HSADevice*> (copyDevice);
@@ -4283,7 +4283,7 @@ std::shared_ptr<KalmarAsyncOp> HSAQueue::EnqueueAsyncCopyExt(const void* src, vo
 
 std::shared_ptr<KalmarAsyncOp> HSAQueue::EnqueueAsyncCopy2dExt(const void* src, void* dst, size_t width, size_t height, size_t srcPitch, size_t dstPitch,
                                                    hcCommandKind copyDir, const hc::AmPointerInfo &srcPtrInfo, const hc::AmPointerInfo &dstPtrInfo,
-                                                   const Kalmar::KalmarDevice *copyDevice) override {
+                                                   const Kalmar::KalmarDevice *copyDevice) {
     std::lock_guard<std::mutex> lg(qmutex);
     //create shared_ptr instance
     const Kalmar::HSADevice *copy2dDeviceHsa = static_cast<const Kalmar::HSADevice*> (copyDevice);
@@ -4303,7 +4303,7 @@ std::shared_ptr<KalmarAsyncOp> HSAQueue::EnqueueAsyncCopy2dExt(const void* src, 
 };
 
 // enqueue an async copy command
-std::shared_ptr<KalmarAsyncOp> HSAQueue::EnqueueAsyncCopy(const void *src, void *dst, size_t size_bytes) override {
+std::shared_ptr<KalmarAsyncOp> HSAQueue::EnqueueAsyncCopy(const void *src, void *dst, size_t size_bytes) {
     std::lock_guard<std::mutex> lg(qmutex);
     // create shared_ptr instance
     std::shared_ptr<HSACopy> copyCommand = HSAOp::buildOp<HSACopy>(this, src, dst, size_bytes);
@@ -4393,7 +4393,7 @@ HSAQueue::dispatch_hsa_kernel_no_lock(const hsa_kernel_dispatch_packet_t *aql,
 void
 HSAQueue::dispatch_hsa_kernel(const hsa_kernel_dispatch_packet_t *aql,
                          const void * args, size_t argSize,
-                         hc::completion_future *cf, const char *kernelName) override
+                         hc::completion_future *cf, const char *kernelName)
 {
     // caller might already hold lock from acquireLockedHsaQueue()
     if (qmutex_thread_id == std::this_thread::get_id()) {
@@ -4406,7 +4406,7 @@ HSAQueue::dispatch_hsa_kernel(const hsa_kernel_dispatch_packet_t *aql,
 }
 
 bool 
-HSAQueue::set_cu_mask(const std::vector<bool>& cu_mask) override {
+HSAQueue::set_cu_mask(const std::vector<bool>& cu_mask) {
     // get device's total compute unit count
     auto device = getDev();
     unsigned int physical_count = device->get_compute_unit_count();
@@ -4764,14 +4764,14 @@ HSADispatch::dispose() {
 }
 
 inline uint64_t
-HSADispatch::getBeginTimestamp() override {
+HSADispatch::getBeginTimestamp() {
     hsa_amd_profiling_dispatch_time_t time;
     hsa_amd_profiling_get_dispatch_time(_agent, _signal, &time);
     return time.start;
 }
 
 inline uint64_t
-HSADispatch::getEndTimestamp() override {
+HSADispatch::getEndTimestamp() {
     hsa_amd_profiling_dispatch_time_t time;
     hsa_amd_profiling_get_dispatch_time(_agent, _signal, &time);
     return time.end;
@@ -5097,14 +5097,14 @@ HSABarrier::dispose() {
 }
 
 inline uint64_t
-HSABarrier::getBeginTimestamp() override {
+HSABarrier::getBeginTimestamp() {
     hsa_amd_profiling_dispatch_time_t time;
     hsa_amd_profiling_get_dispatch_time(_agent, _signal, &time);
     return time.start;
 }
 
 inline uint64_t
-HSABarrier::getEndTimestamp() override {
+HSABarrier::getEndTimestamp() {
     hsa_amd_profiling_dispatch_time_t time;
     hsa_amd_profiling_get_dispatch_time(_agent, _signal, &time);
     return time.end;
@@ -5142,7 +5142,7 @@ Kalmar::HSAQueue *HSAOp::hsaQueue() const
     return static_cast<Kalmar::HSAQueue *> (this->getQueue()); 
 };
 
-bool HSAOp::isReady() override {
+bool HSAOp::isReady() {
     return (hsa_signal_load_scacquire(_signal) == 0);
 }
 
@@ -5610,14 +5610,14 @@ HSACopy::dispose() {
 }
 
 inline uint64_t
-HSACopy::getBeginTimestamp() override {
+HSACopy::getBeginTimestamp() {
     hsa_amd_profiling_async_copy_time_t time;
     hsa_amd_profiling_get_async_copy_time(_signal, &time);
     return time.start;
 }
 
 inline uint64_t
-HSACopy::getEndTimestamp() override {
+HSACopy::getEndTimestamp() {
     hsa_amd_profiling_async_copy_time_t time;
     hsa_amd_profiling_get_async_copy_time(_signal, &time);
     return time.end;
