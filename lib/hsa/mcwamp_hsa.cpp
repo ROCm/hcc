@@ -9,6 +9,7 @@
 #include "../hc2/headers/types/program_state.hpp"
 
 #include <algorithm>
+#include <atomic>
 #include <cassert>
 #include <chrono>
 #include <cstdio>
@@ -3184,7 +3185,9 @@ public:
                     return r;
                 }               
             }
-            throw Kalmar::runtime_exception("Can't find suitable kernarg buffer.", -1);
+            std::stringstream err_msg;
+            err_msg << "Can't find suitable kernarg buffer for size " << size << " bytes.";
+            throw Kalmar::runtime_exception(err_msg.str().c_str(), -1);
         }
 
         void releaseKernargBuffer(const std::tuple<void*, size_t, uint32_t>& b) {
@@ -4868,9 +4871,23 @@ HSADispatch::dispatchKernel(hsa_queue_t* lockedHsaQueue, const void *hostKernarg
         auto kernarg_ptr = std::get<0>(kernargMemory);
         memcpy(kernarg_ptr, hostKernarg, hostKernargSize);
         if (device->isKernargCoarseGrained()) {
-            // If kernarg is in GPU coarse grained memory, flush the HDP
-            // content visible to the GPU
+            // If kernarg is in GPU coarse grained memory, we need the
+            // following magic sequence to avoid race conditions between
+            // the CPU and GPU (to ensure the kernarg is visible before
+            // the GPU's CP start processing the AQL packet):
+            //   1- write to kernarg buffer in GPU VRAM (the previous memcpy)
+            //   2- flush the HDP cache
+            //   3- Do a readback from GPU VRAM to ensure the flush has been completed
+            //      and to prevent the GPU's CP from processing the AQL packet
+            //   4- Write the AQL packet
+    
+            atomic_thread_fence(std::memory_order_acq_rel);
             device->hdp_mem_flush();
+            atomic_thread_fence(std::memory_order_acq_rel);
+            volatile char* read_back = reinterpret_cast<decltype(read_back)>(kernarg_ptr);
+            read_back[0];
+            atomic_thread_fence(std::memory_order_acq_rel);
+
             auto sync_id = std::get<2>(kernargMemory);
             auto q_ptr = reinterpret_cast<Kalmar::HSAQueue*>(getQueue());
             auto queue_last_kernarg_sync_id = q_ptr->get_last_kernarg_sync_id();
