@@ -140,6 +140,11 @@ char * HCC_PROFILE_FILE=nullptr;
 
 int HCC_KERNARG_MANAGER=1;
 int HCC_KERNARG_MANAGER_COARSE_GRAINED=0;
+int HCC_KERNARG_MANAGER_COARSE_GRAINED_FORCED_SYS_ACQ_FENCE=0;
+int HCC_KERNARG_MANAGER_GROW_THRESHOLD=20;
+int HCC_KERNARG_MANAGER_GROW_MIN_CHUNK_SIZE=(1024 * 1024);
+int HCC_KERNARG_MANAGER_GROW_MIN_NUM_BUFFERS=64;
+int HCC_KERNARG_MANAGER_EXTRA_BUFFER_SIZE=0;
 
 // Profiler:
 // Use str::stream so output is atomic wrt other threads:
@@ -3149,6 +3154,11 @@ public:
             pools.emplace_back(std::make_tuple(2048, std::vector<void*>(0), std::vector<void*>(0)));
             pools.emplace_back(std::make_tuple(4096, std::vector<void*>(0), std::vector<void*>(0)));
 
+            if (HCC_KERNARG_MANAGER_EXTRA_BUFFER_SIZE > std::get<_buffer_size>(pools.back())) {
+                pools.emplace_back(std::make_tuple(HCC_KERNARG_MANAGER_EXTRA_BUFFER_SIZE,
+                                                   std::vector<void*>(0), std::vector<void*>(0)));
+            }
+
             if (mem_pool_is_coarse_grained) {
                 sync_id++;
             }
@@ -3165,11 +3175,8 @@ public:
                     auto& fp = std::get<_free_pool>(p);
                     auto& rp = std::get<_released_pool>(p);
                     if (fp.empty()) {
-                        constexpr float grow_threshold = 0.2f;
-                        if (rp.size() <=
-                                static_cast<size_t>(grow_threshold * fp.capacity())) {
-                            constexpr size_t grow_mem_bytes = (1024 * 1024);
-                            grow(p, grow_mem_bytes);
+                        if (rp.size() < HCC_KERNARG_MANAGER_GROW_THRESHOLD) {
+                            grow(p);
                             fp.insert(fp.cend(), rp.begin(), rp.end());
                             rp.clear();
                         }
@@ -3214,34 +3221,33 @@ public:
 
     private:
 
-        void grow(BufferPool& p, size_t mem_size) {
+        void grow(BufferPool& p) {
 
             const auto buffer_size = std::get<_buffer_size>(p);
-
-            if (mem_size < buffer_size) {
-                throw Kalmar::runtime_exception("Error when growing the kernarg buffer pool", -1);
-            }
-            const auto num_buffers = mem_size / buffer_size;
-            const auto new_capacity = std::get<_free_pool>(p).capacity() + num_buffers;
-
-            std::get<_free_pool>(p).reserve(new_capacity);
-            std::get<_released_pool>(p).reserve(new_capacity);
+            const int chunk_size_per_num_buffers = HCC_KERNARG_MANAGER_GROW_MIN_NUM_BUFFERS *
+                                                   buffer_size;
+            auto actual_chunk_size = std::max(chunk_size_per_num_buffers,
+                                              HCC_KERNARG_MANAGER_GROW_MIN_CHUNK_SIZE);
+            const auto num_buffers = actual_chunk_size / buffer_size;
+            actual_chunk_size = buffer_size * num_buffers;
 
             char* rocr_alloc = nullptr;
             hsa_status_t status;
-            status = hsa_amd_memory_pool_allocate(rocr_mem_pool, buffer_size * num_buffers, 0, reinterpret_cast<void**>(&rocr_alloc));
+            status = hsa_amd_memory_pool_allocate(rocr_mem_pool, actual_chunk_size, 0, reinterpret_cast<void**>(&rocr_alloc));
             STATUS_CHECK(status, __LINE__);
-
             status = hsa_amd_agents_allow_access(1, &device.agent, NULL, rocr_alloc);
             STATUS_CHECK(status, __LINE__);
-
             rocr_allocs.push_back(rocr_alloc);
+
+            const auto new_capacity = std::get<_free_pool>(p).capacity() + num_buffers;
+            std::get<_free_pool>(p).reserve(new_capacity);
+            std::get<_released_pool>(p).reserve(new_capacity);
+
             auto& fp = std::get<_free_pool>(p);
             for (int i = 0; i < num_buffers; i++, rocr_alloc+=buffer_size) {
                 fp.push_back(rocr_alloc);
             }
         }
-
 
         HSADevice& device;
         hsa_amd_memory_pool_t rocr_mem_pool;
@@ -4119,8 +4125,39 @@ void HSAContext::ReadHccEnv()
     GET_ENV_STRING (HCC_PROFILE_FILE,    "Set file name for HCC_PROFILE mode.  Default=stderr");
     GET_ENV_INT    (HCC_FLUSH_ON_WAIT,   "recover all resources on queue wait");
 
-    GET_ENV_INT    (HCC_KERNARG_MANAGER, "Enable the new kernarg pool manager.  Default=1");
-    GET_ENV_INT    (HCC_KERNARG_MANAGER_COARSE_GRAINED, "Use coarse grained memory for kernarg.  Default=0");
+    {
+        std::stringstream ss;
+        ss << "Enable the new kernarg pool manager.  Default=" << HCC_KERNARG_MANAGER;
+        GET_ENV_INT(HCC_KERNARG_MANAGER, ss.str().c_str());
+    }
+    {
+        std::stringstream ss;
+        ss << "Use coarse grained memory for kernarg.  Default=" << HCC_KERNARG_MANAGER_COARSE_GRAINED;
+        GET_ENV_INT(HCC_KERNARG_MANAGER_COARSE_GRAINED, ss.str().c_str());
+    }
+    {
+        std::stringstream ss;
+        ss << "When using coarse grained memory kernarg, add a system-scope acquire fence for for every kernel dispatch.  Default=" 
+           << HCC_KERNARG_MANAGER_COARSE_GRAINED_FORCED_SYS_ACQ_FENCE;
+        GET_ENV_INT(HCC_KERNARG_MANAGER_COARSE_GRAINED_FORCED_SYS_ACQ_FENCE, ss.str().c_str());
+    }
+    {
+        std::stringstream ss;
+        ss << "Grow the kernarg pool if the number of old buffers being recycled is below this threshold.  Default=" << HCC_KERNARG_MANAGER_GROW_THRESHOLD;
+        GET_ENV_INT(HCC_KERNARG_MANAGER_GROW_THRESHOLD, ss.str().c_str());
+    }
+    {
+        std::stringstream ss;
+        ss << "Minimum amount of memory (in bytes) to allocate when growing the kernarg pool.  Default=" << HCC_KERNARG_MANAGER_GROW_MIN_CHUNK_SIZE;
+        GET_ENV_INT(HCC_KERNARG_MANAGER_GROW_MIN_CHUNK_SIZE, ss.str().c_str());
+    }
+    {
+        std::stringstream ss;
+        ss << "Minimum number of buffers when growing the kernarg pool.  Default=" << HCC_KERNARG_MANAGER_GROW_MIN_NUM_BUFFERS;
+        GET_ENV_INT(HCC_KERNARG_MANAGER_GROW_MIN_NUM_BUFFERS, ss.str().c_str());
+    }
+    
+    GET_ENV_INT(HCC_KERNARG_MANAGER_EXTRA_BUFFER_SIZE, "Create an exta kernarg pool for the specified buffer size (in bytes).  The size must be greater than 4096");
 };
 
 
@@ -4891,7 +4928,8 @@ HSADispatch::dispatchKernel(hsa_queue_t* lockedHsaQueue, const void *hostKernarg
             auto sync_id = std::get<2>(kernargMemory);
             auto q_ptr = reinterpret_cast<Kalmar::HSAQueue*>(getQueue());
             auto queue_last_kernarg_sync_id = q_ptr->get_last_kernarg_sync_id();
-            if (queue_last_kernarg_sync_id != sync_id) {
+            if (queue_last_kernarg_sync_id != sync_id ||
+                HCC_KERNARG_MANAGER_COARSE_GRAINED_FORCED_SYS_ACQ_FENCE != 0) {
                 // kernarg buffers have been recycled, put a system scope acquire fence to
                 // clear the GPU cache to purge the content of staled kernarg buffers
                 header |= (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE);
