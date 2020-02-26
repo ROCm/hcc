@@ -3177,7 +3177,7 @@ public:
                     if (fp.empty()) {
                         fp.swap(rp);
                         DBOUT(DB_KERNARG, "recycling " << fp.size() << 
-                                          " kernarg buffers of size " << std::get<_buffer_size>(p));
+                                          " kernarg buffers of size " << std::get<_buffer_size>(p) << std::endl);
                         if (fp.size() < HCC_KERNARG_MANAGER_GROW_THRESHOLD) {
                             grow(p);
                         }
@@ -3241,7 +3241,7 @@ public:
 
             DBOUT(DB_KERNARG, "growing kernarg pool (" << std::get<_buffer_size>(p) << ") from " << 
                               std::get<_free_pool>(p).capacity() << " to " << 
-                              new_capacity << " buffers");
+                              new_capacity << " buffers" << std::endl);
 
             std::get<_free_pool>(p).reserve(new_capacity);
             std::get<_released_pool>(p).reserve(new_capacity);
@@ -4246,14 +4246,21 @@ HSADevice::HSADevice(hsa_agent_t a, hsa_agent_t host, int x_accSeqNum) :
 
     if (HCC_KERNARG_MANAGER && HCC_KERNARG_MANAGER_COARSE_GRAINED) {
         if (has_hdp_access) {
-            if (ri._found_local_memory_pool &&
-                hasAccess(getHostAgent(), ri._local_memory_pool)) {
-                DBOUT(DB_KERNARG, "Using coarse-grained GPU memory for kernarg, size(MB) = " << ri._local_memory_pool_size << std::endl);
-                ri._kernarg_memory_pool = ri._local_memory_pool;
-                ri._found_kernarg_memory_pool = true;
+            if (ri._found_local_memory_pool) {
+                if (hasAccess(getHostAgent(), ri._local_memory_pool)) {
+                    DBOUT(DB_KERNARG, "Using coarse-grained GPU memory for kernarg, size(MB) = " << ri._local_memory_pool_size << std::endl);
+                    ri._kernarg_memory_pool = ri._local_memory_pool;
+                    ri._found_kernarg_memory_pool = true;
+                }
+                else {
+                    DBOUT(DB_KERNARG, "Not using coarse-grained GPU memory for kernarg since host agent has no access to this memory.\n");
+                }
+            }
+            else {
+                DBOUT(DB_KERNARG, "Not using coarse-grained GPU memory for kernarg since this memory is unavailable.\n");
             }
         } else {
-            DBOUT(DB_KERNARG, "Not using coarse-grained GPU memory for kernarg due to no access to HDP registers.");
+            DBOUT(DB_KERNARG, "Not using coarse-grained GPU memory for kernarg due to no access to HDP registers.\n");
         }
     }
 
