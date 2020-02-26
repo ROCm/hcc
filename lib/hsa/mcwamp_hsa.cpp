@@ -86,7 +86,7 @@
 int HCC_ASYNCOPS_SIZE = (1024);
 int HCC_ASYNCOPS_WITHOUT_SIGNAL_SIZE = (HCC_ASYNCOPS_SIZE/2);
 
-//---
+//--
 // Environment variables:
 int HCC_PRINT_ENV=0;
 
@@ -3175,13 +3175,11 @@ public:
                     auto& fp = std::get<_free_pool>(p);
                     auto& rp = std::get<_released_pool>(p);
                     if (fp.empty()) {
-                        if (rp.size() < HCC_KERNARG_MANAGER_GROW_THRESHOLD) {
+                        fp.swap(rp);
+                        DBOUT(DB_KERNARG, "recycling " << fp.size() << 
+                                          " kernarg buffers of size " << std::get<_buffer_size>(p));
+                        if (fp.size() < HCC_KERNARG_MANAGER_GROW_THRESHOLD) {
                             grow(p);
-                            fp.insert(fp.cend(), rp.begin(), rp.end());
-                            rp.clear();
-                        }
-                        else {
-                            fp.swap(rp);
                         }
                         if (mem_pool_is_coarse_grained) {
                             sync_id++;
@@ -3240,6 +3238,11 @@ public:
             rocr_allocs.push_back(rocr_alloc);
 
             const auto new_capacity = std::get<_free_pool>(p).capacity() + num_buffers;
+
+            DBOUT(DB_KERNARG, "growing kernarg pool (" << std::get<_buffer_size>(p) << ") from " << 
+                              std::get<_free_pool>(p).capacity() << " to " << 
+                              new_capacity << " buffers");
+
             std::get<_free_pool>(p).reserve(new_capacity);
             std::get<_released_pool>(p).reserve(new_capacity);
 
@@ -4241,12 +4244,16 @@ HSADevice::HSADevice(hsa_agent_t a, hsa_agent_t host, int x_accSeqNum) :
     has_hdp_access = (status == HSA_STATUS_SUCCESS &&
                       hdp.HDP_MEM_FLUSH_CNTL != nullptr);
 
-    if (HCC_KERNARG_MANAGER && HCC_KERNARG_MANAGER_COARSE_GRAINED && has_hdp_access) {
-        if (ri._found_local_memory_pool &&
-            hasAccess(getHostAgent(), ri._local_memory_pool)) {
-            DBOUT(DB_INIT, "using coarse-grained GPU local memory for kernarg, size(MB) = " << ri._local_memory_pool_size << std::endl);
-            ri._kernarg_memory_pool = ri._local_memory_pool;
-            ri._found_kernarg_memory_pool = true;
+    if (HCC_KERNARG_MANAGER && HCC_KERNARG_MANAGER_COARSE_GRAINED) {
+        if (has_hdp_access) {
+            if (ri._found_local_memory_pool &&
+                hasAccess(getHostAgent(), ri._local_memory_pool)) {
+                DBOUT(DB_KERNARG, "Using coarse-grained GPU memory for kernarg, size(MB) = " << ri._local_memory_pool_size << std::endl);
+                ri._kernarg_memory_pool = ri._local_memory_pool;
+                ri._found_kernarg_memory_pool = true;
+            }
+        } else {
+            DBOUT(DB_KERNARG, "Not using coarse-grained GPU memory for kernarg due to no access to HDP registers.");
         }
     }
 
@@ -4975,9 +4982,11 @@ HSADispatch::dispatchKernel(hsa_queue_t* lockedHsaQueue, const void *hostKernarg
     DBOUTL(DB_AQL, " dispatch_aql " << *this << "(hwq=" << lockedHsaQueue << ") kernargs=" << hostKernargSize << " " << *q_aql );
     DBOUTL(DB_AQL2, rawAql(*q_aql));
 
+#if 0
     if (DBFLAG(DB_KERNARG)) {
         printKernarg(q_aql->kernarg_address, hostKernargSize);
     }
+#endif
 
     // Register signal callback.
     if (_activity_prof.is_enabled()) {
