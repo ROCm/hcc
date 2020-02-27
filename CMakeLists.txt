@@ -388,6 +388,9 @@ install(FILES ${CLANG_BIN_DIR}/lib/clang/${CLANG_VERSION}/lib/linux/libclang_rt.
 install( FILES ${CMAKE_CURRENT_SOURCE_DIR}/scripts/cmake/ImportedTargets.cmake
          DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/hcc )
 
+install( FILES ${CLANG_SRC_DIR}/gfxtargets.txt
+         DESTINATION ${PROJECT_BINARY_DIR}/bin/)
+
 add_custom_target(world DEPENDS clang_links)
 
 # move headers to build dir before building rocdl and hcc lib
