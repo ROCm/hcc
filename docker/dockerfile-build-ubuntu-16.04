@@ -37,7 +37,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
     debianutils \
     cmake \
     libnuma-dev \
-    rocm-utils \
+    rocm-dev \
     rocminfo \
     hsa-rocr-dev && \
     apt-get clean && \
