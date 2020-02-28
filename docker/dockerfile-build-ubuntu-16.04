@@ -42,5 +42,3 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
     hsa-rocr-dev && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
-
-RUN chmod 777 $(find /opt/rocm -type d)
