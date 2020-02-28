@@ -29,8 +29,6 @@ ENV PATH="$HCC_HOME/bin:$HIP_PATH/bin:${PATH}"
 ENV PATH="$ROCM_PATH/bin:${PATH}"
 ENV PATH="$OPENCL_ROOT/bin:${PATH}"
 
-RUN chmod 777 $(find /opt/rocm -type d)
-
 RUN wget https://github.com/github/hub/releases/download/v2.3.0-pre10/hub-linux-386-2.3.0-pre10.tgz
 RUN tar -xf hub-linux-386-2.3.0-pre10.tgz
 RUN hub-linux-386-2.3.0-pre10/install
