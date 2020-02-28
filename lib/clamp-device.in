@@ -219,8 +219,10 @@ fi
 $OPT $HCC_OPT -mtriple amdgcn-amd-amdhsa -mcpu=$AMDGPU_TARGET \
   -load $LIB/LLVMSelectAcceleratorCode@CMAKE_SHARED_LIBRARY_SUFFIX@ \
   -load $LIB/LLVMPromotePointerKernArgsToGlobal@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+  -load $LIB/LLVMPromoteConstant@CMAKE_SHARED_LIBRARY_SUFFIX@ \
   -select-accelerator-code -sac-enable-function-calls=$AMDGPU_FUNC_CALLS \
   -promote-pointer-kernargs-to-global \
+  -promote-constant \
   -infer-address-spaces \
   -verify < $2.linked.bc -o $2.opt.bc
 
