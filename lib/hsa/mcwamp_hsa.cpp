@@ -3485,7 +3485,7 @@ static inline void processPrintfPackets(PrintfPacket* packets, const unsigned in
       continue;
 
     // get the format
-    assert(pkt->type == PRINTF_CHAR_PKT || pkt->type == PRINTF_CONST_CHAR_PKT);
+    assert(pkt->type == PRINTF_CHAR_PTR || pkt->type == PRINTF_CONST_CHAR_PTR);
     const std::string formatString((const char*)pkt->data.cptr);
     ++pkt;
 
