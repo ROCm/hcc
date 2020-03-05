@@ -1606,25 +1606,46 @@ public:
     }
 
     bool isEmptyNoLock() {
-        if (!has_been_used) return true;
-
-        auto lastOp = back();
-
-        if (lastOp.get() == nullptr) return true;
-
-        hsa_signal_t signal = *(static_cast <hsa_signal_t*> (lastOp->getNativeHandle()));
-        if (signal.handle) {
-            hsa_signal_value_t v = hsa_signal_load_scacquire(signal);
-            if (v != 0) {
-                return false;
-            }
-        } else {
-            // youngest has no signal - enqueue a new one:
-            auto marker = EnqueueMarkerNoLock(hc::system_scope);
-            DBOUTL(DB_CMD2, "Inside HSAQueue::isEmpty and queue contained only no-signal ops, enqueued marker " << marker << " into " << *this);
-            return false;
+        if (!has_been_used) {
+            DBOUTL(DB_CMD2, "Inside HSAQueue::isEmpty " << *this << " !has_been_used");
+            return true;
         }
 
+        // We must handle the case that an external lib acquired rocr queue and inserted packets that we do not track in asyncOps.
+        // It is no longer sufficient to check just the last op's signal. We must also check the queue's indexes.
+
+        // The lastOp could be null, for example, if rocr queue was acquired by external library but this runtime did not yet create any HSAOp instance.
+        auto lastOp = back();
+        if (lastOp.get() != nullptr) {
+            hsa_signal_t signal = *(static_cast <hsa_signal_t*> (lastOp->getNativeHandle()));
+            if (signal.handle) {
+                auto value = hsa_signal_load_scacquire(signal);
+                DBOUTL(DB_CMD2, "Inside HSAQueue::isEmpty " << *this << " lastOp signal value " << value);
+                // We can early out here if last op is not finished.
+                if (0 != value) return false;
+            }
+            else {
+                // We can early out here, since lastOp existed but must have a signal.
+                auto marker = EnqueueMarkerNoLock(hc::system_scope);
+                DBOUTL(DB_CMD2, "Inside HSAQueue::isEmpty " << *this << " and lastOp had no signal, enqueued marker " << marker);
+                return false;
+            }
+        }
+
+        // If we get this far, we know that lastOP was either null or finished.
+
+        // The rocr queue could be null in some cases.
+        // 1) It was stolen (see createOrstealRocrQueue).
+        // 2) It was never acquired. Some ops like async copy might not need to acquire a rocr queue, so we could have a done lastOp but a null rocr queue.
+        if (this->rocrQueue != nullptr) {
+            auto q{this->rocrQueue->_hwQueue};
+            uint64_t read_index = hsa_queue_load_read_index_relaxed(q);
+            uint64_t write_index = hsa_queue_load_write_index_scacquire(q);
+            DBOUTL(DB_CMD2, "Inside HSAQueue::isEmpty " << *this << " read=?write " << read_index << "?=" << write_index << "=>" << (read_index == write_index));
+            return (read_index == write_index);
+        }
+
+        // If we get this far, we exhausted all possible reasons for a non-empty queue.
         return true;
     };
 
