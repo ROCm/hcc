@@ -39,6 +39,9 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
     libnuma-dev \
     rocm-utils \
     rocminfo \
-    hsa-rocr-dev && \
+    hsa-rocr-dev \
+    hsa-ext-rocr-dev && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
+
+RUN ln -sd `realpath /opt/rocm-*` /opt/rocm
