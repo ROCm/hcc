@@ -604,8 +604,12 @@ if("${DISTRO_ID}" MATCHES "opensuse" OR
    "${DISTRO_ID}" MATCHES "suse" OR
    "${DISTRO_ID}" MATCHES "sles" )
    set(HCC_GENERAL_RPM_DEP "coreutils, findutils, libelf-devel, pciutils, file, perl-File-Copy-Recursive, perl-File-Listing, perl-File-Which")
+elseif( "${DISTRO_ID}" MATCHES "centos" OR 
+        "${DISTRO_ID}" MATCHES "redhatenterpriseserver" AND 
+        "${DISTRO_RELEASE}" MATCHES "^7")
+    set(HCC_GENERAL_RPM_DEP "coreutils, findutils, elfutils-libelf, pciutils-libs, file, pth, perl-File-BaseDir, perl-File-Copy-Recursive, perl-File-Listing, perl-File-Which")
 else()
-   set(HCC_GENERAL_RPM_DEP "coreutils, findutils, elfutils-libelf, pciutils-libs, file, pth, perl-File-BaseDir, perl-File-Copy-Recursive, perl-File-Listing, perl-File-Which")
+   set(HCC_GENERAL_RPM_DEP "coreutils, findutils, elfutils-libelf, pciutils-libs, file, npth, perl-File-BaseDir, perl-File-Copy-Recursive, perl-File-Listing, perl-File-Which")
 endif ()
 
 set(CPACK_RPM_PACKAGE_REQUIRES "${HCC_GENERAL_RPM_DEP} ${HCC_ROCR_DEP} ${HCC_LIBCXX_RPM_DEP}" )
