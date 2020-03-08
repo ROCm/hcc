@@ -408,6 +408,10 @@ public:
 
     /// create KalmarQueue from current device
     virtual std::shared_ptr<KalmarQueue> createQueue(execute_order order = execute_in_order, queue_priority priority = priority_normal) = 0;
+
+    /// create KalmarQueue from current device that support cooperative queuing
+    virtual std::shared_ptr<KalmarQueue> createCooperativeQueue() = 0;
+   
     virtual ~KalmarDevice() {}
 
     std::shared_ptr<KalmarQueue> get_default_queue() {
@@ -502,6 +506,8 @@ public:
     uint32_t get_version() const override { return 0; }
 
     std::shared_ptr<KalmarQueue> createQueue(execute_order order = execute_in_order, queue_priority priority = priority_normal) override { return std::shared_ptr<KalmarQueue>(new CPUQueue(this)); }
+    std::shared_ptr<KalmarQueue> createCooperativeQueue() override { return createQueue(); }
+
     void* create(size_t count, struct rw_info* /* not used */ ) override { return kalmar_aligned_alloc(0x1000, count); }
     void release(void* ptr, struct rw_info* /* nout used */) override { kalmar_aligned_free(ptr); }
     void* CreateKernel(const char* fun, KalmarQueue *queue) override { return nullptr; }
