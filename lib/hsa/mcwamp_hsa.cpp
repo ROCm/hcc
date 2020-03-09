@@ -915,6 +915,18 @@ private:
 
 }; // end of HSACopy
 
+
+static hc::memory_scope fenceToScope(int fenceBits)
+{
+    switch (fenceBits) {
+        case 0: return hc::no_scope;
+        case 1: return hc::accelerator_scope;
+        case 2: return hc::system_scope;
+        default: STATUS_CHECK(HSA_STATUS_ERROR_INVALID_ARGUMENT, __LINE__);
+    };
+}
+
+
 class HSABarrier : public HSAOp {
 private:
     hsa_wait_state_t waitMode;
@@ -924,12 +936,19 @@ private:
     // HSABarrier instance
     int depCount;
     hc::memory_scope _acquire_scope;
+    hc::memory_scope _release_scope;
 
     // capture the state of _nextSyncNeedsSysRelease and _nextKernelNeedsSysAcquire after
     // the barrier is issued.  Cross-queue synchronziation commands which synchronize
     // with the barrier (create_blocking_marker) then can transer the correct "needs" flags.
     bool                                            _barrierNextSyncNeedsSysRelease;
     bool                                            _barrierNextKernelNeedsSysAcquire;
+
+    void setExternalAql(const hsa_barrier_and_packet_t &aql) {
+        _acquire_scope = fenceToScope(extractBits(aql.header, HSA_PACKET_HEADER_SCACQUIRE_FENCE_SCOPE, HSA_PACKET_HEADER_WIDTH_SCACQUIRE_FENCE_SCOPE));
+        _release_scope = fenceToScope(extractBits(aql.header, HSA_PACKET_HEADER_SCRELEASE_FENCE_SCOPE, HSA_PACKET_HEADER_WIDTH_SCRELEASE_FENCE_SCOPE));
+        _signal = aql.completion_signal;
+    }
 
 public:
     uint16_t  header;  // stores header of AQL packet.  Preserve so we can see flushes associated with this barrier.
@@ -963,13 +982,17 @@ public:
 
 
     // constructor with 1 prior dependency
-    HSABarrier(Kalmar::KalmarQueue *queue, std::shared_ptr <Kalmar::KalmarAsyncOp> dependent_op) :
+    HSABarrier(Kalmar::KalmarQueue *queue, std::shared_ptr <Kalmar::KalmarAsyncOp> dependent_op, const hsa_barrier_and_packet_t *aql=nullptr) :
         HSAOp(hc::HSA_OP_ID_BARRIER, queue, Kalmar::hcCommandMarker),
         _acquire_scope(hc::no_scope),
+        _release_scope(hc::no_scope),
         _barrierNextSyncNeedsSysRelease(false),
         _barrierNextKernelNeedsSysAcquire(false),
         waitMode(HSA_WAIT_STATE_BLOCKED)
     {
+        if (aql) {
+            setExternalAql(*aql);
+        }
         if (dependent_op != nullptr) {
             assert (dependent_op->getCommandKind() == Kalmar::hcCommandMarker);
 
@@ -987,14 +1010,18 @@ public:
     }
 
     // constructor with at most 5 prior dependencies
-    HSABarrier(Kalmar::KalmarQueue *queue, int count, std::shared_ptr <Kalmar::KalmarAsyncOp> *dependent_op_array) :
+    HSABarrier(Kalmar::KalmarQueue *queue, int count, std::shared_ptr <Kalmar::KalmarAsyncOp> *dependent_op_array, const hsa_barrier_and_packet_t *aql=nullptr) :
         HSAOp(hc::HSA_OP_ID_BARRIER, queue, Kalmar::hcCommandMarker),
         _acquire_scope(hc::no_scope),
+        _release_scope(hc::no_scope),
         _barrierNextSyncNeedsSysRelease(false),
         _barrierNextKernelNeedsSysAcquire(false),
         waitMode(HSA_WAIT_STATE_BLOCKED),
         depCount(0)
     {
+        if (aql) {
+            setExternalAql(*aql);
+        }
         if ((count >= 0) && (count <= 5)) {
             for (int i = 0; i < count; ++i) {
                 if (dependent_op_array[i]) {
@@ -2070,12 +2097,13 @@ public:
     // applied after the marker executes.  See hc::memory_scope
     std::shared_ptr<KalmarAsyncOp> EnqueueMarkerWithDependencyNoLock(int count,
             std::shared_ptr <KalmarAsyncOp> *depOps,
-            hc::memory_scope fenceScope) {
+            hc::memory_scope fenceScope,
+            const hsa_barrier_and_packet_t *aql=nullptr) {
 
         if ((count >= 0) && (count <= HSA_BARRIER_DEP_SIGNAL_CNT)) {
 
             // create shared_ptr instance
-            std::shared_ptr<HSABarrier> barrier = HSAOp::buildOp<HSABarrier>(this, count, depOps);
+            std::shared_ptr<HSABarrier> barrier = HSAOp::buildOp<HSABarrier>(this, count, depOps, aql);
 
             for (int i=0; i<count; i++) {
                 auto depOp = barrier->depAsyncOps[i];
@@ -2142,6 +2170,14 @@ public:
             hc::memory_scope fenceScope) {
         std::lock_guard<std::mutex> lg(qmutex);
         return EnqueueMarkerWithDependencyNoLock(count, depOps, fenceScope);
+    }
+
+    std::shared_ptr<KalmarAsyncOp> EnqueueMarkerWithDependency(int count,
+            std::shared_ptr <KalmarAsyncOp> *depOps,
+            const hsa_barrier_and_packet_t *aql) override {
+        std::lock_guard<std::mutex> lg(qmutex);
+        // scope will be determined from aql, so pass no_scope for now to match API
+        return EnqueueMarkerWithDependencyNoLock(count, depOps, hc::no_scope, aql);
     }
 
     std::shared_ptr<KalmarAsyncOp> EnqueueAsyncCopyExt(const void* src, void* dst, size_t size_bytes,
@@ -5044,7 +5080,7 @@ HSABarrier::wait() {
 inline void
 HSABarrier::enqueueAsync(hc::memory_scope fenceScope) {
 
-    hc::memory_scope toDoReleaseFenceScope = fenceScope;
+    hc::memory_scope toDoReleaseFenceScope = fenceScope > _release_scope ? fenceScope : _release_scope;
     hc::memory_scope toDoAcquireFenceScope = _acquire_scope;
 
     // queue already locked by caller
@@ -5065,7 +5101,6 @@ HSABarrier::enqueueAsync(hc::memory_scope fenceScope) {
     if (toDoReleaseFenceScope > toDoAcquireFenceScope) {
         DBOUTL( DB_CMD2, "  marker overriding acquireScope to " << fenceScope);
         toDoAcquireFenceScope = toDoReleaseFenceScope;
-        _acquire_scope = toDoAcquireFenceScope;
     }
 
     // set acquire scope:
@@ -5099,9 +5134,6 @@ HSABarrier::enqueueAsync(hc::memory_scope fenceScope) {
             STATUS_CHECK(HSA_STATUS_ERROR_INVALID_ARGUMENT, __LINE__);
     };
 
-    // Create a signal to wait for the barrier to finish.
-    _signal = Kalmar::ctx()->getSignal();
-
     // setup header
     header = HSA_PACKET_TYPE_BARRIER_AND << HSA_PACKET_HEADER_TYPE;
 #ifndef AMD_HSA
@@ -5120,7 +5152,8 @@ HSABarrier::enqueueAsync(hc::memory_scope fenceScope) {
 
     // Define the barrier packet to be at the calculated queue index address
     hsa_barrier_and_packet_t* barrier = &(((hsa_barrier_and_packet_t*)(rocrQueue->base_address))[index&queueMask]);
-    memset(barrier, 0, sizeof(hsa_barrier_and_packet_t));
+    // zero out all but the existing header (since it has INVALID bit set)
+    memset(reinterpret_cast<char*>(barrier)+16, 0, sizeof(hsa_barrier_and_packet_t)-16);
 
     // setup dependent signals
     if ((depCount > 0) && (depCount <= 5)) {
@@ -5129,6 +5162,10 @@ HSABarrier::enqueueAsync(hc::memory_scope fenceScope) {
       }
     }
 
+    // Create a signal to wait for the barrier to finish, if one does not already exist
+    if (_signal.handle == 0) {
+        _signal = Kalmar::ctx()->getSignal();
+    }
     barrier->completion_signal = _signal;
 
     // Set header last:

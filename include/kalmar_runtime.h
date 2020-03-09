@@ -10,6 +10,7 @@ class completion_future;
 }; // end namespace hc
 
 typedef struct hsa_kernel_dispatch_packet_s hsa_kernel_dispatch_packet_t;
+typedef struct hsa_barrier_and_packet_s hsa_barrier_and_packet_t;
 
 namespace Kalmar {
 namespace enums {
@@ -287,6 +288,9 @@ public:
 
   /// enqueue marker with prior dependency
   virtual std::shared_ptr<KalmarAsyncOp> EnqueueMarkerWithDependency(int count, std::shared_ptr <KalmarAsyncOp> *depOps, memory_scope scope) { return nullptr; }
+
+  /// enqueue marker with prior dependency
+  virtual std::shared_ptr<KalmarAsyncOp> EnqueueMarkerWithDependency(int count, std::shared_ptr <KalmarAsyncOp> *depOps, const hsa_barrier_and_packet_t *aql) { return nullptr; }
 
   virtual std::shared_ptr<KalmarAsyncOp> detectStreamDeps(hcCommandKind commandKind, KalmarAsyncOp *newCopyOp) { return nullptr; };
 
