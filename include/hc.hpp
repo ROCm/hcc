@@ -268,6 +268,24 @@ public:
 
     /**
      * This command inserts a marker event into the accelerator_view's command
+     * queue. This marker is returned as a completion_future object. When all
+     * commands that were submitted prior to the marker event creation have
+     * completed, the future is ready.
+     *
+     * Regardless of the accelerator_view's execute_order (execute_any_order, execute_in_order),
+     * the marker always ensures older commands complete before the returned completion_future
+     * is marked ready.   Thus, markers provide a mechanism to enforce order between
+     * commands in an execute_any_order accelerator_view.
+     *
+     * Memory acquire and release fences are inferred from the AQL packet header, as well as any possible completion_signal.
+     *
+     * @return A future which can be waited on, and will block until the
+     *         current batch of commands has completed.
+     */
+    completion_future create_marker(const hsa_barrier_and_packet_t *aql) const;
+
+    /**
+     * This command inserts a marker event into the accelerator_view's command
      * queue with a prior dependent asynchronous event.
      *
      * This marker is returned as a completion_future object. When its
@@ -1534,6 +1552,21 @@ accelerator_view::create_marker(memory_scope scope) const {
     }
 
     return completion_future(pQueue->EnqueueMarkerWithDependency(cnt, deps, scope));
+}
+
+inline completion_future
+accelerator_view::create_marker(const hsa_barrier_and_packet_t *aql) const {
+    std::shared_ptr<Kalmar::KalmarAsyncOp> deps[1];
+    // If necessary create an explicit dependency on previous command
+    // This is necessary for example if copy command is followed by marker - we need the marker to wait for the copy to complete.
+    std::shared_ptr<Kalmar::KalmarAsyncOp> depOp = pQueue->detectStreamDeps(hcCommandMarker, nullptr);
+
+    int cnt = 0;
+    if (depOp) {
+        deps[cnt++] = depOp; // retrieve async op associated with completion_future
+    }
+
+    return completion_future(pQueue->EnqueueMarkerWithDependency(cnt, deps, aql));
 }
 
 inline unsigned int accelerator_view::get_version() const { return get_accelerator().get_version(); }
