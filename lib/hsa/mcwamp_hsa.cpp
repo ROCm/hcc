@@ -1459,7 +1459,7 @@ public:
 
         auto op_getting_replaced = asyncOps[asyncOpsIndex]; // ref counts up, if it was a valid HSAOp
         if (op_getting_replaced != nullptr) {
-            if (op_getting_replaced->getNativeHandle() != 0) {
+            if (static_cast<hsa_signal_t*>(op_getting_replaced->getNativeHandle())->handle == 0) {
                 // No signal present in the op_getting_replaced, so it won't wait() on it as part of its dtor.
                 // Add it to this queue's vector of signal-less ops to free once we know they're finished.
                 asyncOpsWithoutSignal.push_back(std::move(op_getting_replaced));
@@ -1472,7 +1472,7 @@ public:
             }
         }
 
-        if (op->getNativeHandle() == 0) {
+        if (static_cast<hsa_signal_t*>(op->getNativeHandle())->handle == 0) {
             // new op does not have a signal. increment our growth counter.
             ++how_many_ops_have_we_seen_without_a_signal;
         }
