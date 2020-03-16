@@ -1464,9 +1464,8 @@ public:
                 // Add it to this queue's vector of signal-less ops to free once we know they're finished.
                 asyncOpsWithoutSignal.push_back(std::move(op_getting_replaced));
             }
-            else {
-                // op_getting_replaced has a signal, so wait on it.
-                // This tells us we can free any pending signal-less ops.
+            else if (asyncOpsWithoutSignal.size()) {
+                // We have pending ops to clear and op_getting_replaced has a signal, so wait on it, then clear.
                 op_getting_replaced->wait();
                 asyncOpsWithoutSignal.clear();
             }
@@ -1666,7 +1665,8 @@ public:
             }
             back()->wait();
             if (HCC_FLUSH_ON_WAIT) {
-                // aggressively cleanup resources
+                // aggressively cleanup resources, including pending signal-less ops
+                asyncOpsWithoutSignal.clear();
                 // but keep back() as a valid HSAOp, so decrement current insert index twice
                 int back_op_index = decrement(asyncOpsIndex); // index of back() op
                 int index = decrement(back_op_index); // index of first op to free
