@@ -776,9 +776,6 @@ protected:
     // Helps to track reference count of shared_ptr<HSAOp> within
     // HSAQueue::asyncOps.
     std::weak_ptr<HSAOp> _self;
-
-public:
-    std::vector< std::shared_ptr<HSAOp> > asyncOpsWithoutSignal;
 };
 std::ostream& operator<<(std::ostream& os, const HSAOp & op);
 
@@ -1285,6 +1282,7 @@ private:
     //
     std::vector< std::shared_ptr<HSAOp> > asyncOps;
     std::vector< std::shared_ptr<HSAOp> > asyncOpsWithoutSignal;
+    int how_many_ops_have_we_seen_without_a_signal;
 
     // index where the next asyncOp should be inserted into the asyncOps container
     int asyncOpsIndex;
@@ -1459,37 +1457,39 @@ public:
                     << (op->getCommandKind() == hcCommandKernel ? ((static_cast<HSADispatch*> (op.get()))->getKernelName()) : "")  // change to getLongKernelName() for mangled name
                     << std::endl);
 
-        if (((hsa_signal_t*)op->getNativeHandle())->handle == 0) {
-            // no signal present in the new HSAOp, so add to this queue's vector of signal-less ops
-            asyncOpsWithoutSignal.push_back(op);
-        }
-        else if (!asyncOpsWithoutSignal.empty()) {
-            // signal is present in the new HSAOp, and this queue has one or more signal-less ops needing a signal association
-            DBOUT(DB_SIG, "attaching " << asyncOpsWithoutSignal.size() << " ops without signals to " << *op
-                    << " signal="<< std::hex  << ((hsa_signal_t*)op->getNativeHandle())->handle << std::dec
-                    << " commandKind=" << getHcCommandKindString(op->getCommandKind())
-                    << " "
-                    << (op->getCommandKind() == hcCommandKernel ? ((std::static_pointer_cast<HSADispatch> (op))->getKernelName()) : "")  // change to getLongKernelName() for mangled name
-                    << std::endl);
-            if (!op->asyncOpsWithoutSignal.empty()) {
-                throw Kalmar::runtime_exception("new op does not have empty async ops list!", 0);
+        auto op_getting_replaced = asyncOps[asyncOpsIndex]; // ref counts up, if it was a valid HSAOp
+        if (op_getting_replaced != nullptr) {
+            if (static_cast<hsa_signal_t*>(op_getting_replaced->getNativeHandle())->handle == 0) {
+                // No signal present in the op_getting_replaced, so it won't wait() on it as part of its dtor.
+                // Add it to this queue's vector of signal-less ops to free once we know they're finished.
+                asyncOpsWithoutSignal.push_back(std::move(op_getting_replaced));
             }
-            // efficient swap of vector memory between this queue's signal-less ops and the new HSAOp's associated signal-less ops.
-            op->asyncOpsWithoutSignal.swap(asyncOpsWithoutSignal);
-            if (!asyncOpsWithoutSignal.empty()) {
-                throw Kalmar::runtime_exception("after swap, signal list not empty!", 0);
+            else if (asyncOpsWithoutSignal.size()) {
+                // We have pending ops to clear and op_getting_replaced has a signal, so wait on it, then clear.
+                op_getting_replaced->wait();
+                asyncOpsWithoutSignal.clear();
             }
         }
+
+        if (static_cast<hsa_signal_t*>(op->getNativeHandle())->handle == 0) {
+            // new op does not have a signal. increment our growth counter.
+            ++how_many_ops_have_we_seen_without_a_signal;
+        }
+        else {
+            how_many_ops_have_we_seen_without_a_signal = 0;
+        }
+
+        // new op goes in
         youngestCommandKind = op->getCommandKind();
         asyncOps[asyncOpsIndex] = std::move(op);
         asyncOpsIndex = increment(asyncOpsIndex);
 
-        // There are cases where rarely, if ever, an op is created that has a signal.
+        // There are cases where ops with signals could be rare.
         // To avoid uncontrolled growth of the asyncOpsWithoutSignal vector,
         // once we reach capacity, force a signal via barrier.
         // This will recurse eventually back into this pushAsyncOp function,
         // but is guaranteed to skip this check here.
-        if (asyncOpsWithoutSignal.size() > HCC_ASYNCOPS_WITHOUT_SIGNAL_SIZE) {
+        if (how_many_ops_have_we_seen_without_a_signal >= HCC_ASYNCOPS_WITHOUT_SIGNAL_SIZE) {
             DBOUT(DB_SIG, "ops without signals reached capacity, enqueuing marker\n");
             EnqueueMarkerNoLock(hc::no_scope);
         }
@@ -1665,7 +1665,8 @@ public:
             }
             back()->wait();
             if (HCC_FLUSH_ON_WAIT) {
-                // aggressively cleanup resources
+                // aggressively cleanup resources, including pending signal-less ops
+                asyncOpsWithoutSignal.clear();
                 // but keep back() as a valid HSAOp, so decrement current insert index twice
                 int back_op_index = decrement(asyncOpsIndex); // index of back() op
                 int index = decrement(back_op_index); // index of first op to free
@@ -4174,7 +4175,7 @@ HSAQueue::HSAQueue(KalmarDevice* pDev, hsa_agent_t agent, execute_order order, q
                      bool cooperative) :
     KalmarQueue(pDev, queuing_mode_automatic, order, priority),
     rocrQueue(nullptr),
-    asyncOps(HCC_ASYNCOPS_SIZE), asyncOpsIndex(0),
+    asyncOps(HCC_ASYNCOPS_SIZE), asyncOpsWithoutSignal(), how_many_ops_have_we_seen_without_a_signal(0), asyncOpsIndex(0),
     valid(true), _nextSyncNeedsSysRelease(false), _nextKernelNeedsSysAcquire(false), bufferKernelMap(), kernelBufferMap(),
     has_been_used(false), is_cooperative(cooperative)
 {
@@ -4835,9 +4836,6 @@ HSADispatch::dispose() {
     // call_once
     if (_dispose_flag.test_and_set()) return;
 
-    // clear reference counts for signal-less ops.
-    asyncOpsWithoutSignal.clear();
-
     if (kernargMemory != nullptr) {
       //std::cerr << "op#" << getSeqNum() << " releasing kernal arg buffer index=" << kernargMemoryIndex<< "\n";
       device->releaseKernargBuffer(kernargMemory, kernargMemoryIndex);
@@ -5187,8 +5185,6 @@ HSABarrier::dispose() {
     for (int i=0; i<depCount; i++) {
         depAsyncOps[i] = nullptr;
     }
-    // clear reference counts for signal-less ops.
-    asyncOpsWithoutSignal.clear();
 }
 
 inline uint64_t
@@ -5683,8 +5679,6 @@ HSACopy::dispose() {
 
     // clear reference counts for dependent ops.
     depAsyncOp = nullptr;
-    // clear reference counts for signal-less ops.
-    asyncOpsWithoutSignal.clear();
 
     // HSA signal may not necessarily be allocated by HSACopy instance
     if (_signal.handle) {
