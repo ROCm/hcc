@@ -3152,7 +3152,9 @@ public:
             pools.emplace_back(std::make_tuple( 512, std::vector<void*>(0), std::vector<void*>(0)));
             pools.emplace_back(std::make_tuple(1024, std::vector<void*>(0), std::vector<void*>(0)));
             pools.emplace_back(std::make_tuple(2048, std::vector<void*>(0), std::vector<void*>(0)));
-            pools.emplace_back(std::make_tuple(4096, std::vector<void*>(0), std::vector<void*>(0)));
+
+            // 4k + padding + implicit arguments
+            pools.emplace_back(std::make_tuple(4096 + 2 * 64, std::vector<void*>(0), std::vector<void*>(0)));
 
             if (HCC_KERNARG_MANAGER_EXTRA_BUFFER_SIZE > std::get<_buffer_size>(pools.back())) {
                 pools.emplace_back(std::make_tuple(HCC_KERNARG_MANAGER_EXTRA_BUFFER_SIZE,
