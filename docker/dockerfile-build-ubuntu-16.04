@@ -38,10 +38,15 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
     cmake \
     libnuma-dev \
     rocm-utils \
-    rocminfo \
-    hsa-rocr-dev \
-    hsa-ext-rocr-dev && \
+    rocminfo && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
 RUN ln -sd `realpath /opt/rocm-*` /opt/rocm
+RUN chmod -R 777 /opt/rocm
+
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends curl && \
+    curl -sL http://${REPO_RADEON}/rocm/apt/debian/rocm.gpg.key | apt-key add - && \
+    echo deb [arch=amd64] http://${REPO_RADEON}/rocm/apt/debian/ xenial main | tee /etc/apt/sources.list.d/rocm.list && \
+    apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    hsa-rocr-dev hsa-ext-rocr-dev
