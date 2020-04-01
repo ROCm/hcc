@@ -30,9 +30,12 @@ SOFTLINKS=(
 
 do_softlinks() {
 
+  ln -sd `realpath /opt/rocm-*` $ROCM_PATH
+ 
   mkdir -p "$ROCM_PATH/lib"
   mkdir -p "$ROCM_PATH/lib/cmake"
   mkdir -p "$ROCM_PATH/bin"
+  mkdir -p "$ROCM_PATH/include"
 
   if [ -L "$ROCM_PATH/hcc" ] ; then
     rm -f "$ROCM_PATH/hcc" 
