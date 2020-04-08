@@ -242,7 +242,7 @@ _default_path() {
     exit $ret
   fi
 
-  if [ $VERBOSE == 1 ]; then
+  if [ $VERBOSE != 0 ]; then
     echo "Generating AMD GCN kernel"
   fi
 
