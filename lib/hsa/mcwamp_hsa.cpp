@@ -4180,13 +4180,13 @@ void HSAQueue::dispose() {
 
         Kalmar::HSADevice* device = static_cast<Kalmar::HSADevice*>(getDev());
 
+        wait();
+
         // NOTE: needs to acquire rocrQueuesMutex and then the qumtex in this
         // sequence in order to avoid potential deadlock with other threads
         // executing createOrstealRocrQueue at the same time
         std::lock_guard<std::mutex> rl(device->rocrQueuesMutex);
         std::lock_guard<std::mutex> l(this->qmutex);
-
-        wait_no_lock();
 
         // clear asyncOps to trigger any lingering resource cleanup while we still hold the locks
         // this implicitly waits on all remaining async ops as they destruct, including the
