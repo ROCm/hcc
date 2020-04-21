@@ -225,6 +225,8 @@ $OPT $HCC_OPT -mtriple amdgcn-amd-amdhsa -mcpu=$AMDGPU_TARGET \
   -promote-constant \
   -infer-address-spaces \
   -verify < $2.linked.bc -o $2.opt.bc
+$OPT $HCC_OPT -mtriple amdgcn-amd-amdhsa -mcpu=$AMDGPU_TARGET \
+  -verify < $2.opt.bc -o $2.opt.bc
 
 # error handling for HCC-specific opt passes
 RETVAL=$?
