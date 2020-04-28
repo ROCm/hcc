@@ -52,6 +52,7 @@ static hsa_status_t findGlobalPool(hsa_amd_memory_pool_t pool, void* data)
     if ((HSA_AMD_SEGMENT_GLOBAL == segment) &&
         (flag & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_FINE_GRAINED)) {
         *((hsa_amd_memory_pool_t*)data) = pool;
+        return HSA_STATUS_INFO_BREAK;
     }
     return HSA_STATUS_SUCCESS;
 }
@@ -96,6 +97,7 @@ UnpinnedCopyEngine::UnpinnedCopyEngine(hsa_agent_t hsaAgent, hsa_agent_t cpuAgen
 {
     hsa_amd_memory_pool_t sys_pool;
     hsa_status_t err = hsa_amd_agent_iterate_memory_pools(_cpuAgent, findGlobalPool, &sys_pool);
+    ErrorCheck(err);
 
     // Generate a packed C-style array of agents, for use below with hsa_amd_agents_allow_access
     // TODO - should this include the CPU agents as well?

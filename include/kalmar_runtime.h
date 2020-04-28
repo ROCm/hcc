@@ -421,13 +421,18 @@ public:
         });
         return def;
 #else
+        std::shared_ptr<KalmarQueue> result;
         std::thread::id tid = std::this_thread::get_id();
-        tlsDefaultQueueMap_mutex.lock();
-        if (tlsDefaultQueueMap.find(tid) == tlsDefaultQueueMap.end()) {
-            tlsDefaultQueueMap[tid] = createQueue();
+        if (tlsDefaultQueueMap.find(tid) != tlsDefaultQueueMap.end()) {
+            result = tlsDefaultQueueMap[tid];
+        } else {
+            tlsDefaultQueueMap_mutex.lock();
+            if (tlsDefaultQueueMap.find(tid) == tlsDefaultQueueMap.end()) {
+                tlsDefaultQueueMap[tid] = createQueue();
+            }
+            result = tlsDefaultQueueMap[tid];
+            tlsDefaultQueueMap_mutex.unlock();
         }
-        std::shared_ptr<KalmarQueue> result = tlsDefaultQueueMap[tid];
-        tlsDefaultQueueMap_mutex.unlock();
         return result;
 #endif
     }
