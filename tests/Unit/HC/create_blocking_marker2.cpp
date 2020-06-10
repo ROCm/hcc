@@ -1,4 +1,4 @@
-// RUN: %hc %s -I/opt/rocm/hsa/include -L/opt/rocm/lib -lhsa-runtime64 -o %t.out && %t.out
+// RUN: %hc %s -I%hsa_header_path -L%hsa_library_path -lhsa-runtime64 -o %t.out && %t.out
 
 #include <hc.hpp>
 

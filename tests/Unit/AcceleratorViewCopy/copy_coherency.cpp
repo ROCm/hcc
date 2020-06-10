@@ -1,4 +1,4 @@
-// RUN: %hc %s -o %t.out -lhc_am -L/opt/rocm/lib -lhsa-runtime64 && %t.out
+// RUN: %hc %s -I%hsa_header_path -lhc_am -L%hsa_library_path -lhsa-runtime64 -o %t.out && %t.out
 //
 // Test coherency and flushes.  Need to flush GPU caches before H2D copy
 
