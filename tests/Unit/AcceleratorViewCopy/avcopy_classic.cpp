@@ -1,4 +1,4 @@
-// RUN: %hc %s -o %t.out -lhc_am -L/opt/rocm/lib -lhsa-runtime64 && %t.out
+// RUN: %hc %s -I%hsa_header_path -lhc_am -L%hsa_library_path -lhsa-runtime64 -o %t.out && %t.out
 //
 // Test "classic" GPU pattern of H2D copies, followed by Kernels, followed by
 // D2H.
@@ -7,7 +7,7 @@
 #include <hc.hpp>
 #include <hc_am.hpp>
 
-#include "/opt/rocm/include/hsa/hsa.h"
+#include <hsa/hsa.h>
 
 #include <algorithm>
 #include <cassert>
